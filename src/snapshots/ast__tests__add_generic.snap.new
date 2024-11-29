@@ -1,0 +1,9 @@
+---
+source: src/lib.rs
+assertion_line: 36
+expression: "apply_transform(\"add_generic\",)"
+snapshot_kind: text
+---
+fn main() {
+    println!("Hello world.");
+}

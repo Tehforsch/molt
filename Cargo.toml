@@ -1,0 +1,22 @@
+[package]
+name = "ast"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.5.21", features = ["derive"] }
+prettyplease = "0.2.32"
+proc-macro2 = "1.0.92"
+quote = "1.0.37"
+syn = { version = "2.0.89", features = ["full", "parsing"] }
+
+[dev-dependencies]
+insta = { version = "1.41.1"}
+
+[profile.dev.package]
+insta.opt-level = 3
+similar.opt-level = 3
+
+[[bin]]
+name = "ast_transform"
+path = "src/main.rs"

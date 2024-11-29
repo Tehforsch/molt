@@ -1,0 +1,9 @@
+fn $fn_name() {
+    println!("Hello world!");
+}
+
+==========
+
+const async unsafe fn $fn_name() {
+    println!("Hello world!");
+}
