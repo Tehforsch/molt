@@ -1,0 +1,3 @@
+let id: Ident;
+let e: Expr;
+let x: Const = { const $id: usize = $e; };

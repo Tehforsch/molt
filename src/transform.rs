@@ -1,105 +1,129 @@
-use std::path::Path;
+use crate::{
+    grammar::{self, Node, Pattern},
+    rust_ast::RustAst,
+    Transformation,
+};
 
-use syn::{Data, File};
+#[derive(Debug)]
+struct Match;
 
-use crate::grammar::{Item, ItemFn, PatternAst, Signature};
+#[derive(Debug)]
+struct NoMatch;
 
-pub const SEPARATOR: &'static str = "==========";
-pub const IDENT_IDENTIFIER: char = '$';
+type MatchResult = Result<Match, NoMatch>;
 
-pub struct Transform {
-    pub input: PatternAst,
-    pub output: PatternAst,
-}
-
-impl Transform {
-    pub(crate) fn from_path(path: &Path) -> Self {
-        // This is ugly, but might be a compromise at first.
-        let contents = std::fs::read_to_string(path).unwrap();
-        let split: Vec<_> = contents.split(SEPARATOR).collect();
-        if split.len() != 2 {
-            panic!(
-                "More than one separator ({}) found in transform file",
-                SEPARATOR
-            );
-        }
-        let input = PatternAst::from_str(split[0]);
-        let output = PatternAst::from_str(split[1]);
-        Transform { input, output }
-    }
-}
-
-pub trait Tf<Data> {
-    fn tf(self, input: &Data, output: &Data) -> Self;
-}
-
-impl Tf<Item> for syn::File {
-    fn tf(self, input: &Item, output: &Item) -> Self {
-        let items = self
-            .items
-            .into_iter()
-            .map(|item| item.tf(&input, &output))
-            .collect();
-        File {
-            items,
-            attrs: self.attrs,
-            shebang: self.shebang,
+impl Match {
+    fn from_bool(b: bool) -> Result<Match, NoMatch> {
+        if b {
+            Ok(Match)
+        } else {
+            Err(NoMatch)
         }
     }
 }
 
-impl Tf<Item> for syn::Item {
-    fn tf(self, input: &Item, output: &Item) -> Self {
+impl Transformation {
+    pub(crate) fn transform(&self, ast: RustAst) -> RustAst {
+        let node = self.top_level_node();
+        match ast.match_pattern(node) {
+            Ok(_) => println!("Match"),
+            Err(_) => println!("No match!"),
+        }
+        ast
+    }
+}
+
+trait MatchPattern<Pat> {
+    fn match_pattern(&self, t: &Pat) -> MatchResult;
+
+    fn cmp_pat(&self, pat: &Pattern<Pat>) -> MatchResult {
+        match pat {
+            Pattern::Exact(t) => self.match_pattern(t),
+            Pattern::Pattern(_) => {
+                // TODO record constraint
+                Ok(Match)
+            }
+        }
+    }
+}
+
+impl MatchPattern<Node> for RustAst {
+    fn match_pattern(&self, node: &Node) -> MatchResult {
+        // todo multiple items
+        let item = self.file.items.first().unwrap();
+        match node {
+            Node::Const(item_const) => item.match_pattern(item_const),
+            Node::Ident(_) => todo!(),
+            Node::Expr(expr) => item.match_pattern(expr),
+        }
+    }
+}
+
+impl MatchPattern<grammar::ItemConst> for syn::Item {
+    fn match_pattern(&self, item: &grammar::ItemConst) -> MatchResult {
         match self {
-            syn::Item::Fn(item_fn) => {
-                if let Item::Fn(input) = input {
-                    if let Item::Fn(output) = output {
-                        return syn::Item::Fn(item_fn.tf(input, output));
-                    }
+            syn::Item::Const(item_const) => item_const.match_pattern(item),
+            _ => Err(NoMatch),
+        }
+    }
+}
+
+impl MatchPattern<grammar::Expr> for syn::Item {
+    fn match_pattern(&self, item: &grammar::Expr) -> MatchResult {
+        match self {
+            syn::Item::Const(const_) => const_.expr.match_pattern(item),
+            _ => Err(NoMatch),
+        }
+    }
+}
+
+impl MatchPattern<syn::Ident> for grammar::Ident {
+    fn match_pattern(&self, t: &grammar::Ident) -> MatchResult {
+        Match::from_bool(self.to_string() == t.to_string())
+    }
+}
+
+impl MatchPattern<grammar::Expr> for syn::Expr {
+    fn match_pattern(&self, t: &grammar::Expr) -> MatchResult {
+        match self {
+            syn::Expr::Binary(i1) => {
+                if let grammar::Expr::Binary(i2) = t {
+                    i1.match_pattern(i2)
+                } else {
+                    Err(NoMatch)
                 }
-                syn::Item::Fn(item_fn)
+            }
+            syn::Expr::Unary(i1) => {
+                if let grammar::Expr::Unary(i2) = t {
+                    i1.match_pattern(i2)
+                } else {
+                    Err(NoMatch)
+                }
             }
             _ => todo!(),
         }
     }
 }
 
-impl Tf<ItemFn> for syn::ItemFn {
-    fn tf(self, input: &ItemFn, output: &ItemFn) -> Self {
-        syn::ItemFn {
-            attrs: self.attrs,
-            vis: self.vis,
-            sig: self.sig.tf(&input.sig, &output.sig),
-            block: self.block,
-        }
+impl MatchPattern<syn::ExprBinary> for grammar::ExprBinary {
+    fn match_pattern(&self, t: &syn::ExprBinary) -> MatchResult {
+        todo!()
     }
 }
 
-fn change_option<T>(opt: Option<T>, input_opt: Option<T>, output_opt: Option<T>) -> Option<T> {
-    if opt.is_some() == input_opt.is_some() {
-        output_opt
-    } else {
-        opt
+impl MatchPattern<syn::ExprUnary> for grammar::ExprUnary {
+    fn match_pattern(&self, t: &syn::ExprUnary) -> MatchResult {
+        todo!()
     }
 }
 
-impl Tf<Signature> for syn::Signature {
-    fn tf(self, input: &Signature, output: &Signature) -> Self {
-        let constness = change_option(self.constness, input.constness, output.constness);
-        let asyncness = change_option(self.asyncness, input.asyncness, output.asyncness);
-        let unsafety = change_option(self.unsafety, input.unsafety, output.unsafety);
-        syn::Signature {
-            constness,
-            asyncness,
-            unsafety,
-            abi: self.abi,
-            fn_token: self.fn_token,
-            ident: self.ident,
-            generics: self.generics,
-            paren_token: self.paren_token,
-            inputs: self.inputs,
-            variadic: self.variadic,
-            output: self.output,
-        }
+impl MatchPattern<grammar::ItemConst> for syn::ItemConst {
+    fn match_pattern(&self, item: &grammar::ItemConst) -> MatchResult {
+        // self.vis.match_pattern(&item.vis)?;
+        self.ident.cmp_pat(&item.ident)?;
+        // self.generics.match_pattern(&item.generics)?;
+        // self.ty.match_pattern(&item.ty)?;
+        (*self.expr).cmp_pat(&item.expr)?;
+        Ok(Match)
     }
 }
