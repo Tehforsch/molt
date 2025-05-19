@@ -1,15 +1,58 @@
-use syn::Ident;
+use proc_macro2::{Span, TokenStream};
+use quote::{quote, ToTokens};
+use syn::{Ident, Lit, LitStr, Token, Visibility};
 
 use crate::{
-    grammar::{Kind, Pattern},
+    grammar::{self, Kind, Pattern},
     transformation::SynVar,
 };
 
-pub(crate) const MANGLE_STR: &str = "__mangle_";
+pub(crate) const MANGLE_STR: &str = "__mangle";
 
-pub(crate) fn mangle_ident(ident: Ident, kind: Kind) -> Ident {
-    let name = format!("{}{}{}", MANGLE_STR, kind.to_str(), ident.to_string());
-    syn::Ident::new(&name, ident.span())
+trait Mangle: ToTokens {
+    fn from_mangled_str(name: &str) -> impl ToTokens;
+}
+
+pub(crate) fn mangle_str(ident: &str) -> String {
+    format!("{}_{}", MANGLE_STR, ident.to_string())
+}
+
+pub(crate) fn mangle(name: &str, kind: Kind) -> TokenStream {
+    let mangled_str = mangle_str(name);
+    let mut stream = TokenStream::new();
+    match kind {
+        Kind::Const => syn::ItemConst::from_mangled_str(&mangled_str).to_tokens(&mut stream),
+        Kind::Ident => syn::Ident::from_mangled_str(&mangled_str).to_tokens(&mut stream),
+        Kind::Expr => syn::Expr::from_mangled_str(&mangled_str).to_tokens(&mut stream),
+    }
+    stream
+}
+
+fn fake_span() -> Span {
+    // This is very very ugly and inefficient, but it seems like
+    // a simple solution for now.
+    let ts = quote! { "hello" };
+    ts.into_iter().next().unwrap().span()
+}
+
+impl Mangle for grammar::Ident {
+    fn from_mangled_str(name: &str) -> impl ToTokens {
+        grammar::Ident::new(name, fake_span())
+    }
+}
+
+impl Mangle for syn::Expr {
+    fn from_mangled_str(name: &str) -> impl ToTokens {
+        let lit = Lit::Str(LitStr::new(name, fake_span()));
+        quote! { #lit }
+    }
+}
+
+impl Mangle for syn::ItemConst {
+    fn from_mangled_str(name: &str) -> impl ToTokens {
+        let ident = syn::Ident::new(name, fake_span());
+        quote! { const #ident: usize = 0; }
+    }
 }
 
 pub(crate) trait Unmangle: Sized {
@@ -51,5 +94,21 @@ impl Unmangle for syn::Expr {
             }
         }
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::grammar::{unmangles_as_pattern, Kind};
+
+    use super::mangle;
+
+    #[test]
+    fn bijective() {
+        for kind in Kind::all_kinds() {
+            let mangled = mangle("foo", kind);
+            dbg!(kind);
+            assert!(unmangles_as_pattern(mangled, kind));
+        }
     }
 }

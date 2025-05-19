@@ -36,7 +36,7 @@ impl Convert<grammar::Expr> for syn::Expr {
             syn::Expr::Assign(expr_assign) => grammar::Expr::Assign(expr_assign),
             syn::Expr::Async(expr_async) => grammar::Expr::Async(expr_async),
             syn::Expr::Await(expr_await) => grammar::Expr::Await(expr_await),
-            syn::Expr::Binary(expr_binary) => grammar::Expr::Binary(expr_binary),
+            syn::Expr::Binary(expr_binary) => grammar::Expr::Binary(expr_binary.convert()),
             syn::Expr::Block(expr_block) => grammar::Expr::Block(expr_block),
             syn::Expr::Break(expr_break) => grammar::Expr::Break(expr_break),
             syn::Expr::Call(expr_call) => grammar::Expr::Call(expr_call),
@@ -72,6 +72,17 @@ impl Convert<grammar::Expr> for syn::Expr {
             syn::Expr::While(expr_while) => grammar::Expr::While(expr_while),
             syn::Expr::Yield(expr_yield) => grammar::Expr::Yield(expr_yield),
             _ => todo!(),
+        }
+    }
+}
+
+impl Convert<grammar::ExprBinary> for syn::ExprBinary {
+    fn convert(self) -> grammar::ExprBinary {
+        grammar::ExprBinary {
+            attrs: self.attrs,
+            left: self.left.unmangle().convert(),
+            op: self.op,
+            right: self.right.unmangle().convert(),
         }
     }
 }

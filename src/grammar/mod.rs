@@ -1,3 +1,5 @@
+use crate::convert::Convert;
+use crate::mangle::Unmangle;
 use crate::transformation::SynVar;
 
 pub(crate) enum Pattern<E> {
@@ -6,8 +8,8 @@ pub(crate) enum Pattern<E> {
 }
 
 macro_rules! define_node_and_kind {
-    ($(($variant_name: ident, $ty: ty)),*$(,)?) => {
-        #[derive(Copy, Clone)]
+    ($(($variant_name: ident, $ty: ty, $syn_type: ty)),*$(,)?) => {
+        #[derive(Copy, Clone, Debug)]
         pub(crate) enum Kind {
             $(
                 $variant_name,
@@ -27,6 +29,15 @@ macro_rules! define_node_and_kind {
                         Self::$variant_name => stringify!($variant_name),
                     )*
                 }
+            }
+
+            #[cfg(test)]
+            pub(crate) fn all_kinds() -> Vec<Kind> {
+                let mut items = vec![];
+                $(
+                    items.push(Self::$variant_name);
+                )*
+                items
             }
         }
 
@@ -48,13 +59,26 @@ macro_rules! define_node_and_kind {
             }
         }
 
+        #[cfg(test)]
+        pub(crate) fn unmangles_as_pattern(input: proc_macro2::TokenStream, kind: Kind) -> bool {
+            match kind {
+                $(
+                    Kind::$variant_name => {
+                        let syn_type = syn::parse2::<$syn_type>(input).unwrap();
+                        let pattern = syn_type.unmangle();
+                        matches!(pattern, Pattern::Pattern(_))
+                    },
+                )*
+            }
+        }
+
     }
 }
 
 define_node_and_kind! {
-    (Const, ItemConst),
-    (Ident, Ident),
-    (Expr, Expr),
+    (Const, ItemConst, syn::ItemConst),
+    (Ident, Ident, syn::Ident),
+    (Expr, Expr, syn::Expr),
 }
 
 pub type Ident = syn::Ident;
@@ -83,7 +107,7 @@ pub(crate) enum Expr {
     Await(syn::ExprAwait),
 
     /// A binary operation: `a + b`, `a += b`.
-    Binary(syn::ExprBinary),
+    Binary(ExprBinary),
 
     /// A blocked scope: `{ ... }`.
     Block(syn::ExprBlock),
@@ -221,5 +245,11 @@ pub(crate) enum Expr {
     // continue to compile and work for downstream users in the interim.
 }
 
-pub type ExprBinary = syn::ExprBinary;
+pub struct ExprBinary {
+    pub attrs: Vec<syn::Attribute>,
+    pub left: Pattern<Expr>,
+    pub op: syn::BinOp,
+    pub right: Pattern<Expr>,
+}
+
 pub type ExprUnary = syn::ExprUnary;

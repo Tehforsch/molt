@@ -105,15 +105,62 @@ impl MatchPattern<grammar::Expr> for syn::Expr {
     }
 }
 
-impl MatchPattern<syn::ExprBinary> for grammar::ExprBinary {
-    fn match_pattern(&self, t: &syn::ExprBinary) -> MatchResult {
-        todo!()
+impl MatchPattern<grammar::ExprBinary> for syn::ExprBinary {
+    fn match_pattern(&self, t: &grammar::ExprBinary) -> MatchResult {
+        let Self {
+            attrs: _,
+            left,
+            op,
+            right,
+        } = self;
+        // attrs.match_pattern(&t.attrs)?;
+        op.match_pattern(&t.op)?;
+        left.cmp_pat(&t.left)?;
+        right.cmp_pat(&t.right)?;
+        Ok(Match)
     }
 }
 
 impl MatchPattern<syn::ExprUnary> for grammar::ExprUnary {
     fn match_pattern(&self, t: &syn::ExprUnary) -> MatchResult {
         todo!()
+    }
+}
+
+impl MatchPattern<syn::BinOp> for syn::BinOp {
+    fn match_pattern(&self, t: &syn::BinOp) -> MatchResult {
+        let is_match = match self {
+            syn::BinOp::Add(_) => matches!(t, syn::BinOp::Add(_)),
+            syn::BinOp::Sub(_) => matches!(t, syn::BinOp::Sub(_)),
+            syn::BinOp::Mul(_) => matches!(t, syn::BinOp::Mul(_)),
+            syn::BinOp::Div(_) => matches!(t, syn::BinOp::Div(_)),
+            syn::BinOp::Rem(_) => matches!(t, syn::BinOp::Rem(_)),
+            syn::BinOp::And(_) => matches!(t, syn::BinOp::And(_)),
+            syn::BinOp::Or(_) => matches!(t, syn::BinOp::Or(_)),
+            syn::BinOp::BitXor(_) => matches!(t, syn::BinOp::BitXor(_)),
+            syn::BinOp::BitAnd(_) => matches!(t, syn::BinOp::BitAnd(_)),
+            syn::BinOp::BitOr(_) => matches!(t, syn::BinOp::BitOr(_)),
+            syn::BinOp::Shl(_) => matches!(t, syn::BinOp::Shl(_)),
+            syn::BinOp::Shr(_) => matches!(t, syn::BinOp::Shr(_)),
+            syn::BinOp::Eq(_) => matches!(t, syn::BinOp::Eq(_)),
+            syn::BinOp::Lt(_) => matches!(t, syn::BinOp::Lt(_)),
+            syn::BinOp::Le(_) => matches!(t, syn::BinOp::Le(_)),
+            syn::BinOp::Ne(_) => matches!(t, syn::BinOp::Ne(_)),
+            syn::BinOp::Ge(_) => matches!(t, syn::BinOp::Ge(_)),
+            syn::BinOp::Gt(_) => matches!(t, syn::BinOp::Gt(_)),
+            syn::BinOp::AddAssign(_) => matches!(t, syn::BinOp::AddAssign(_)),
+            syn::BinOp::SubAssign(_) => matches!(t, syn::BinOp::SubAssign(_)),
+            syn::BinOp::MulAssign(_) => matches!(t, syn::BinOp::MulAssign(_)),
+            syn::BinOp::DivAssign(_) => matches!(t, syn::BinOp::DivAssign(_)),
+            syn::BinOp::RemAssign(_) => matches!(t, syn::BinOp::RemAssign(_)),
+            syn::BinOp::BitXorAssign(_) => matches!(t, syn::BinOp::BitXorAssign(_)),
+            syn::BinOp::BitAndAssign(_) => matches!(t, syn::BinOp::BitAndAssign(_)),
+            syn::BinOp::BitOrAssign(_) => matches!(t, syn::BinOp::BitOrAssign(_)),
+            syn::BinOp::ShlAssign(_) => matches!(t, syn::BinOp::ShlAssign(_)),
+            syn::BinOp::ShrAssign(_) => matches!(t, syn::BinOp::ShrAssign(_)),
+            _ => todo!(),
+        };
+        Match::from_bool(is_match)
     }
 }
 

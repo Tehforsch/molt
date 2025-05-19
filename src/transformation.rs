@@ -13,7 +13,7 @@ use crate::{
     convert::Convert,
     error::emit_error,
     grammar::{Kind, Node},
-    mangle::mangle_ident,
+    mangle::mangle,
 };
 
 const IDENT_IDENTIFIER: char = '$';
@@ -149,8 +149,10 @@ fn annotate(tokens: TokenStream, map: &HashMap<Ident, Kind>) -> TokenStream {
                 if punct.as_char() == IDENT_IDENTIFIER {
                     if let Some(TokenTree::Ident(ident)) = token_iter.next() {
                         let kind = map[&ident];
-                        let ident = mangle_ident(ident, kind);
-                        new.append(ident);
+                        let tokens = mangle(&ident.to_string(), kind);
+                        for token in tokens.into_iter() {
+                            new.append(token);
+                        }
                     } else {
                         panic!("{} not followed by identifier.", IDENT_IDENTIFIER)
                     }
