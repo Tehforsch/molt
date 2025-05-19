@@ -13,14 +13,26 @@ mod rust_ast;
 mod transform;
 mod transformation;
 
+#[derive(Debug)]
+pub struct Error;
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Error.")
+    }
+}
+
+impl std::error::Error for Error {}
+
 pub fn dbgp(a: &impl ToTokens) {
     let s = quote::quote! { #a };
     dbg!(s.to_string());
 }
 
-pub fn apply_transform(path: &Path, transform_path: &Path) -> Result<String, ()> {
+pub fn apply_transform(path: &Path, transform_path: &Path) -> Result<String, Error> {
+    println!("Checking {:?}", path);
     let ast = RustAst::new(syn::parse_file(&std::fs::read_to_string(path).unwrap()).unwrap());
-    let tf = Transformation::from_path(transform_path)?;
+    let tf = Transformation::from_path(transform_path).map_err(|_| Error)?;
     let ast = tf.transform(ast);
     Ok(ast.dump())
 }
