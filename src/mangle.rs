@@ -1,6 +1,6 @@
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, ToTokens};
-use syn::{Ident, Lit, LitStr, Token, Visibility};
+use syn::{Lit, LitStr};
 
 use crate::{
     grammar::{self, Kind, Pattern},
@@ -9,8 +9,8 @@ use crate::{
 
 pub(crate) const MANGLE_STR: &str = "__mangle";
 
-trait Mangle: ToTokens {
-    fn from_mangled_str(name: &str) -> impl ToTokens;
+pub(crate) trait ToPlaceholderTokens: ToTokens {
+    fn to_placeholder_tokens(name: &str) -> impl ToTokens;
 }
 
 pub(crate) fn mangle_str(ident: &str) -> String {
@@ -19,13 +19,7 @@ pub(crate) fn mangle_str(ident: &str) -> String {
 
 pub(crate) fn mangle(name: &str, kind: Kind) -> TokenStream {
     let mangled_str = mangle_str(name);
-    let mut stream = TokenStream::new();
-    match kind {
-        Kind::Const => syn::ItemConst::from_mangled_str(&mangled_str).to_tokens(&mut stream),
-        Kind::Ident => syn::Ident::from_mangled_str(&mangled_str).to_tokens(&mut stream),
-        Kind::Expr => syn::Expr::from_mangled_str(&mangled_str).to_tokens(&mut stream),
-    }
-    stream
+    kind.to_placeholder_tokens(mangled_str)
 }
 
 fn fake_span() -> Span {
@@ -35,31 +29,38 @@ fn fake_span() -> Span {
     ts.into_iter().next().unwrap().span()
 }
 
-impl Mangle for grammar::Ident {
-    fn from_mangled_str(name: &str) -> impl ToTokens {
+impl ToPlaceholderTokens for grammar::Ident {
+    fn to_placeholder_tokens(name: &str) -> impl ToTokens {
         grammar::Ident::new(name, fake_span())
     }
 }
 
-impl Mangle for syn::Expr {
-    fn from_mangled_str(name: &str) -> impl ToTokens {
+impl ToPlaceholderTokens for syn::Expr {
+    fn to_placeholder_tokens(name: &str) -> impl ToTokens {
         let lit = Lit::Str(LitStr::new(name, fake_span()));
         quote! { #lit }
     }
 }
 
-impl Mangle for syn::ItemConst {
-    fn from_mangled_str(name: &str) -> impl ToTokens {
+impl ToPlaceholderTokens for syn::ItemConst {
+    fn to_placeholder_tokens(name: &str) -> impl ToTokens {
         let ident = syn::Ident::new(name, fake_span());
         quote! { const #ident: usize = 0; }
     }
 }
 
-pub(crate) trait Unmangle: Sized {
-    fn mangled_str(&self) -> Option<String>;
+impl ToPlaceholderTokens for syn::Lit {
+    fn to_placeholder_tokens(name: &str) -> impl ToTokens {
+        let lit = Lit::Str(LitStr::new(name, fake_span()));
+        quote! { #lit }
+    }
+}
 
-    fn unmangle(self) -> Pattern<Self> {
-        let name = self.mangled_str().and_then(|s| {
+pub(crate) trait FromPlaceholder: Sized {
+    fn get_mangled_str(&self) -> Option<String>;
+
+    fn from_placeholder(self) -> Pattern<Self> {
+        let name = self.get_mangled_str().and_then(|s| {
             if s.starts_with(MANGLE_STR) {
                 Some(s.replacen(MANGLE_STR, "", 1).to_string())
             } else {
@@ -74,24 +75,32 @@ pub(crate) trait Unmangle: Sized {
     }
 }
 
-impl Unmangle for syn::Ident {
-    fn mangled_str(&self) -> Option<String> {
+impl FromPlaceholder for syn::Ident {
+    fn get_mangled_str(&self) -> Option<String> {
         Some(self.to_string())
     }
 }
 
-impl Unmangle for syn::ItemConst {
-    fn mangled_str(&self) -> Option<String> {
+impl FromPlaceholder for syn::Lit {
+    fn get_mangled_str(&self) -> Option<String> {
+        if let syn::Lit::Str(lit_str) = &self {
+            return Some(lit_str.value());
+        } else {
+            None
+        }
+    }
+}
+
+impl FromPlaceholder for syn::ItemConst {
+    fn get_mangled_str(&self) -> Option<String> {
         Some(self.ident.to_string())
     }
 }
 
-impl Unmangle for syn::Expr {
-    fn mangled_str(&self) -> Option<String> {
+impl FromPlaceholder for syn::Expr {
+    fn get_mangled_str(&self) -> Option<String> {
         if let syn::Expr::Lit(lit) = self {
-            if let syn::Lit::Str(lit_str) = &lit.lit {
-                return Some(lit_str.value());
-            }
+            return lit.lit.get_mangled_str();
         }
         None
     }

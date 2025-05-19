@@ -1,5 +1,5 @@
-use crate::convert::Convert;
-use crate::mangle::Unmangle;
+use syn::Lit;
+
 use crate::transformation::SynVar;
 
 pub(crate) enum Pattern<E> {
@@ -23,14 +23,6 @@ macro_rules! define_node_and_kind {
         }
 
         impl Kind {
-            pub(crate) fn to_str(&self) -> &'static str {
-                match self {
-                    $(
-                        Self::$variant_name => stringify!($variant_name),
-                    )*
-                }
-            }
-
             #[cfg(test)]
             pub(crate) fn all_kinds() -> Vec<Kind> {
                 let mut items = vec![];
@@ -59,13 +51,29 @@ macro_rules! define_node_and_kind {
             }
         }
 
+        impl Kind {
+            pub(crate) fn to_placeholder_tokens(self, mangled_str: String) -> proc_macro2::TokenStream {
+                use crate::mangle::ToPlaceholderTokens;
+                use quote::ToTokens;
+                let mut stream = proc_macro2::TokenStream::new();
+                match self {
+                    $(
+                        Kind::$variant_name => <$syn_type>::to_placeholder_tokens(&mangled_str).to_tokens(&mut stream),
+                    )*
+                }
+                stream
+            }
+        }
+
+
         #[cfg(test)]
         pub(crate) fn unmangles_as_pattern(input: proc_macro2::TokenStream, kind: Kind) -> bool {
+            use crate::mangle::FromPlaceholder;
             match kind {
                 $(
                     Kind::$variant_name => {
                         let syn_type = syn::parse2::<$syn_type>(input).unwrap();
-                        let pattern = syn_type.unmangle();
+                        let pattern = syn_type.from_placeholder();
                         matches!(pattern, Pattern::Pattern(_))
                     },
                 )*
@@ -79,6 +87,7 @@ define_node_and_kind! {
     (Const, ItemConst, syn::ItemConst),
     (Ident, Ident, syn::Ident),
     (Expr, Expr, syn::Expr),
+    (Lit, Lit, syn::Lit),
 }
 
 pub type Ident = syn::Ident;
@@ -86,7 +95,7 @@ pub type Ident = syn::Ident;
 pub(crate) struct ItemConst {
     pub _attrs: Vec<syn::Attribute>,
     pub _vis: syn::Visibility,
-    pub ident: Pattern<syn::Ident>,
+    pub ident: Pattern<Ident>,
     pub _generics: syn::Generics,
     pub _ty: Box<syn::Type>,
     pub expr: Pattern<Expr>,
@@ -162,7 +171,7 @@ pub(crate) enum Expr {
     Let(syn::ExprLet),
 
     /// A literal in place of an expression: `1`, `"foo"`.
-    Lit(syn::ExprLit),
+    Lit(ExprLit),
 
     /// Conditionless loop: `loop { ... }`.
     Loop(syn::ExprLoop),
@@ -216,7 +225,7 @@ pub(crate) enum Expr {
     Tuple(syn::ExprTuple),
 
     /// A unary operation: `!x`, `*x`.
-    Unary(syn::ExprUnary),
+    Unary(ExprUnary),
 
     /// An unsafe block: `unsafe { ... }`.
     Unsafe(syn::ExprUnsafe),
@@ -246,10 +255,19 @@ pub(crate) enum Expr {
 }
 
 pub struct ExprBinary {
-    pub attrs: Vec<syn::Attribute>,
+    pub _attrs: Vec<syn::Attribute>,
     pub left: Pattern<Expr>,
     pub op: syn::BinOp,
     pub right: Pattern<Expr>,
 }
 
-pub type ExprUnary = syn::ExprUnary;
+pub struct ExprUnary {
+    pub _attrs: Vec<syn::Attribute>,
+    pub op: syn::UnOp,
+    pub expr: Pattern<Expr>,
+}
+
+pub struct ExprLit {
+    pub _attrs: Vec<syn::Attribute>,
+    pub lit: Pattern<syn::Lit>,
+}

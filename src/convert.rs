@@ -1,6 +1,6 @@
 use crate::{
     grammar::{self, Pattern},
-    mangle::Unmangle,
+    mangle::FromPlaceholder,
 };
 
 pub(crate) trait Convert<T> {
@@ -21,10 +21,10 @@ impl Convert<grammar::ItemConst> for syn::ItemConst {
         grammar::ItemConst {
             _attrs: self.attrs,
             _vis: self.vis,
-            ident: self.ident.unmangle(),
+            ident: self.ident.from_placeholder(),
             _generics: self.generics,
             _ty: self.ty,
-            expr: self.expr.unmangle().convert(),
+            expr: self.expr.from_placeholder().convert(),
         }
     }
 }
@@ -51,7 +51,7 @@ impl Convert<grammar::Expr> for syn::Expr {
             syn::Expr::Index(expr_index) => grammar::Expr::Index(expr_index),
             syn::Expr::Infer(expr_infer) => grammar::Expr::Infer(expr_infer),
             syn::Expr::Let(expr_let) => grammar::Expr::Let(expr_let),
-            syn::Expr::Lit(expr_lit) => grammar::Expr::Lit(expr_lit),
+            syn::Expr::Lit(expr_lit) => grammar::Expr::Lit(expr_lit.convert()),
             syn::Expr::Loop(expr_loop) => grammar::Expr::Loop(expr_loop),
             syn::Expr::Macro(expr_macro) => grammar::Expr::Macro(expr_macro),
             syn::Expr::Match(expr_match) => grammar::Expr::Match(expr_match),
@@ -67,7 +67,7 @@ impl Convert<grammar::Expr> for syn::Expr {
             syn::Expr::Try(expr_try) => grammar::Expr::Try(expr_try),
             syn::Expr::TryBlock(expr_try_block) => grammar::Expr::TryBlock(expr_try_block),
             syn::Expr::Tuple(expr_tuple) => grammar::Expr::Tuple(expr_tuple),
-            syn::Expr::Unary(expr_unary) => grammar::Expr::Unary(expr_unary),
+            syn::Expr::Unary(expr_unary) => grammar::Expr::Unary(expr_unary.convert()),
             syn::Expr::Unsafe(expr_unsafe) => grammar::Expr::Unsafe(expr_unsafe),
             syn::Expr::While(expr_while) => grammar::Expr::While(expr_while),
             syn::Expr::Yield(expr_yield) => grammar::Expr::Yield(expr_yield),
@@ -79,10 +79,28 @@ impl Convert<grammar::Expr> for syn::Expr {
 impl Convert<grammar::ExprBinary> for syn::ExprBinary {
     fn convert(self) -> grammar::ExprBinary {
         grammar::ExprBinary {
-            attrs: self.attrs,
-            left: self.left.unmangle().convert(),
+            _attrs: self.attrs,
+            left: self.left.from_placeholder().convert(),
             op: self.op,
-            right: self.right.unmangle().convert(),
+            right: self.right.from_placeholder().convert(),
+        }
+    }
+}
+
+impl Convert<grammar::ExprUnary> for syn::ExprUnary {
+    fn convert(self) -> grammar::ExprUnary {
+        grammar::ExprUnary {
+            _attrs: self.attrs,
+            op: self.op,
+            expr: self.expr.from_placeholder().convert(),
+        }
+    }
+}
+impl Convert<grammar::ExprLit> for syn::ExprLit {
+    fn convert(self) -> grammar::ExprLit {
+        grammar::ExprLit {
+            _attrs: self.attrs,
+            lit: self.lit.from_placeholder(),
         }
     }
 }

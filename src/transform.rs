@@ -53,8 +53,9 @@ impl MatchPattern<Node> for RustAst {
         let item = self.file.items.first().unwrap();
         match node {
             Node::Const(item_const) => item.match_pattern(item_const),
-            Node::Ident(_) => todo!(),
             Node::Expr(expr) => item.match_pattern(expr),
+            Node::Ident(_) => todo!(),
+            Node::Lit(_) => todo!(),
         }
     }
 }
@@ -83,6 +84,58 @@ impl MatchPattern<syn::Ident> for grammar::Ident {
     }
 }
 
+impl MatchPattern<syn::Lit> for syn::Lit {
+    fn match_pattern(&self, t: &syn::Lit) -> MatchResult {
+        let cmp_bool = || {
+            match self {
+                syn::Lit::Str(s1) => {
+                    if let syn::Lit::Str(s2) = t {
+                        return s1.value() == s2.value();
+                    }
+                }
+                syn::Lit::ByteStr(s1) => {
+                    if let syn::Lit::ByteStr(s2) = t {
+                        return s1.value() == s2.value();
+                    }
+                }
+                syn::Lit::CStr(s1) => {
+                    if let syn::Lit::CStr(s2) = t {
+                        return s1.value() == s2.value();
+                    }
+                }
+                syn::Lit::Byte(s1) => {
+                    if let syn::Lit::Byte(s2) = t {
+                        return s1.value() == s2.value();
+                    }
+                }
+                syn::Lit::Char(s1) => {
+                    if let syn::Lit::Char(s2) = t {
+                        return s1.value() == s2.value();
+                    }
+                }
+                syn::Lit::Int(s1) => {
+                    if let syn::Lit::Int(s2) = t {
+                        return s1.base10_digits() == s2.base10_digits();
+                    }
+                }
+                syn::Lit::Float(s1) => {
+                    if let syn::Lit::Float(s2) = t {
+                        return s1.base10_digits() == s2.base10_digits();
+                    }
+                }
+                syn::Lit::Bool(s1) => {
+                    if let syn::Lit::Bool(s2) = t {
+                        return s1.value() == s2.value();
+                    }
+                }
+                _ => todo!(),
+            }
+            false
+        };
+        Match::from_bool(cmp_bool())
+    }
+}
+
 impl MatchPattern<grammar::Expr> for syn::Expr {
     fn match_pattern(&self, t: &grammar::Expr) -> MatchResult {
         match self {
@@ -95,6 +148,13 @@ impl MatchPattern<grammar::Expr> for syn::Expr {
             }
             syn::Expr::Unary(i1) => {
                 if let grammar::Expr::Unary(i2) = t {
+                    i1.match_pattern(i2)
+                } else {
+                    Err(NoMatch)
+                }
+            }
+            syn::Expr::Lit(i1) => {
+                if let grammar::Expr::Lit(i2) = t {
                     i1.match_pattern(i2)
                 } else {
                     Err(NoMatch)
@@ -113,7 +173,6 @@ impl MatchPattern<grammar::ExprBinary> for syn::ExprBinary {
             op,
             right,
         } = self;
-        // attrs.match_pattern(&t.attrs)?;
         op.match_pattern(&t.op)?;
         left.cmp_pat(&t.left)?;
         right.cmp_pat(&t.right)?;
@@ -121,9 +180,20 @@ impl MatchPattern<grammar::ExprBinary> for syn::ExprBinary {
     }
 }
 
-impl MatchPattern<syn::ExprUnary> for grammar::ExprUnary {
-    fn match_pattern(&self, t: &syn::ExprUnary) -> MatchResult {
-        todo!()
+impl MatchPattern<grammar::ExprUnary> for syn::ExprUnary {
+    fn match_pattern(&self, t: &grammar::ExprUnary) -> MatchResult {
+        let Self { attrs: _, expr, op } = self;
+        op.match_pattern(&t.op)?;
+        expr.cmp_pat(&t.expr)?;
+        Ok(Match)
+    }
+}
+
+impl MatchPattern<grammar::ExprLit> for syn::ExprLit {
+    fn match_pattern(&self, t: &grammar::ExprLit) -> MatchResult {
+        let Self { attrs: _, lit } = self;
+        lit.cmp_pat(&t.lit)?;
+        Ok(Match)
     }
 }
 
@@ -158,6 +228,18 @@ impl MatchPattern<syn::BinOp> for syn::BinOp {
             syn::BinOp::BitOrAssign(_) => matches!(t, syn::BinOp::BitOrAssign(_)),
             syn::BinOp::ShlAssign(_) => matches!(t, syn::BinOp::ShlAssign(_)),
             syn::BinOp::ShrAssign(_) => matches!(t, syn::BinOp::ShrAssign(_)),
+            _ => todo!(),
+        };
+        Match::from_bool(is_match)
+    }
+}
+
+impl MatchPattern<syn::UnOp> for syn::UnOp {
+    fn match_pattern(&self, t: &syn::UnOp) -> MatchResult {
+        let is_match = match self {
+            syn::UnOp::Deref(_) => matches!(t, syn::UnOp::Deref(_)),
+            syn::UnOp::Not(_) => matches!(t, syn::UnOp::Not(_)),
+            syn::UnOp::Neg(_) => matches!(t, syn::UnOp::Neg(_)),
             _ => todo!(),
         };
         Match::from_bool(is_match)

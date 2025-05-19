@@ -24,7 +24,7 @@ pub(crate) struct SynVar {
 }
 
 pub(crate) struct SynVarDecl {
-    pub name: Ident,
+    pub _name: Ident,
     pub node: Option<Node>,
 }
 
@@ -128,11 +128,12 @@ fn rewrite_fully_qualified(
                 Kind::Const => Node::Const(syn::parse2::<syn::ItemConst>(stream)?.convert()),
                 Kind::Expr => Node::Expr(syn::parse2::<syn::Expr>(stream)?.convert()),
                 Kind::Ident => Node::Ident(syn::parse2::<syn::Ident>(stream)?),
+                Kind::Lit => Node::Lit(syn::parse2::<syn::Lit>(stream)?),
             })
         })
         .transpose()?;
     Ok(SynVarDecl {
-        name: var.name,
+        _name: var.name,
         node,
     })
 }
