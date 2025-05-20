@@ -33,8 +33,8 @@ pub fn run(path: &Path, spec_path: &Path) -> Result<(), Error> {
                 .spec
                 .match_pattern(ast, ctx, spec.spec.find_var(pat_var))
             {
-                Ok(_) => todo!(),
-                Err(_) => todo!(),
+                Ok(_) => println!("match"),
+                Err(_) => println!("no match"),
             }
         }
     };

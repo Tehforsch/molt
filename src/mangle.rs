@@ -73,7 +73,7 @@ impl ToPlaceholderTokens for syn::ExprUnary {
     fn to_placeholder_tokens(name: &str) -> impl ToTokens {
         let expr = syn::Expr::to_placeholder_tokens(name);
         quote! {
-            !(#expr)
+            !#expr
         }
     }
 }
@@ -82,7 +82,7 @@ impl ToPlaceholderTokens for syn::ExprBinary {
     fn to_placeholder_tokens(name: &str) -> impl ToTokens {
         let expr = syn::Expr::to_placeholder_tokens(name);
         quote! {
-            (#expr + #expr)
+            #expr + #expr
         }
     }
 }
@@ -184,7 +184,6 @@ mod tests {
     fn bijective() {
         for kind in Kind::all_kinds() {
             let mangled = mangle("foo", kind);
-            dbg!(kind);
             assert!(unmangles_as_pattern(mangled, kind));
         }
     }
