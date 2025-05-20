@@ -29,12 +29,13 @@ pub fn run(path: &Path, spec_path: &Path) -> Result<(), Error> {
             todo!()
         }
         Command::Match(pat_var) => {
-            match spec
+            let result = spec
                 .spec
-                .match_pattern(ast, ctx, spec.spec.find_var(pat_var))
-            {
-                Ok(_) => println!("match"),
-                Err(_) => println!("no match"),
+                .match_pattern(ast, ctx, spec.spec.find_var(pat_var));
+            for match_ in result.matches.iter() {
+                for binding in match_.bindings.iter() {
+                    println!("{:?} {:?}", binding.key, binding.value);
+                }
             }
         }
     };
