@@ -1,9 +1,9 @@
 use crate::{
     ctx::{AstCtx, Ctx, Id, NodeId, PatCtx},
     grammar::{
-        self, AsNode, Expr, ExprBinary, ExprLit, ExprUnary, GetKind, Ident, Item, ItemConst, Lit,
-        Node,
+        self, AsNode, Expr, ExprBinary, ExprLit, ExprUnary, Ident, Item, ItemConst, Lit, Node,
     },
+    mangle::Pattern,
     spec::{SynVar, SynVarDecl},
     Ast, Spec,
 };
@@ -11,40 +11,68 @@ use crate::{
 struct MatchCtx {
     pat_ctx: PatCtx,
     ast_ctx: AstCtx,
-    // matches: Vec<MatchData>,
-    // current_match: MatchData,
-    // vars: Vec<SynVarDecl>,
+}
+
+struct Matches {
+    match_: MatchData,
 }
 
 impl MatchCtx {
-    fn new(_vars: Vec<SynVarDecl>, pat_ctx: PatCtx, ast_ctx: AstCtx) -> Self {
+    fn new(pat_ctx: PatCtx, ast_ctx: AstCtx) -> Self {
+        Self { pat_ctx, ast_ctx }
+    }
+}
+
+impl Matches {
+    fn new(vars: &[SynVarDecl]) -> Self {
         Self {
-            pat_ctx,
-            ast_ctx,
-            // matches: vec![],
-            // current_match: MatchData::default(),
-            // vars,
+            match_: MatchData::new(&vars),
+        }
+    }
+
+    fn add_binding(&mut self, key: &SynVar, value: Id) {
+        if self
+            .match_
+            .bindings
+            .iter()
+            .any(|binding| &binding.key == key)
+        {
+            todo!()
+        }
+        self.match_.bindings.push(Binding {
+            value,
+            key: key.clone(),
+        });
+    }
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct MatchData {
+    bindings: Vec<Binding>,
+}
+impl MatchData {
+    fn new(vars: &[SynVarDecl]) -> Self {
+        Self {
+            bindings: vars
+                .iter()
+                .filter_map(|var| {
+                    var.node.map(|node| Binding {
+                        key: SynVar {
+                            name: var.name.clone(),
+                        },
+                        value: node,
+                    })
+                })
+                .collect(),
         }
     }
 }
 
-//     fn add_binding<T>(&mut self, arg: &T, var: &SynVar) {
-//         // Somehow record the fact that arg needs to match the pattern
-//         // contained in var. If var has a node, they need to be compared.
-//         // Afterwards, even if it does not have a node, record the fact that
-//         // `var` is now bound to `arg`, so that all further comparisons with
-//         // var match against arg.
-//         todo!()
-//     }
-// }
-
-// #[derive(Debug, Default)]
-// pub(crate) struct MatchData {
-//     bindings: Vec<Binding>,
-// }
-
-// #[derive(Debug)]
-// struct Binding {}
+#[derive(Debug)]
+struct Binding {
+    key: SynVar,
+    value: Id,
+}
 
 #[derive(Debug)]
 pub(crate) struct Match;
@@ -80,13 +108,14 @@ impl Spec {
 
     pub(crate) fn match_pattern(&self, ast: Ast, pat_ctx: Ctx, id: Id) -> MatchResult {
         let item = *ast.items.first().unwrap();
-        let ctx = MatchCtx::new(self.vars.clone(), pat_ctx, ast.ctx);
+        let ctx = MatchCtx::new(pat_ctx, ast.ctx);
+        let mut matches = Matches::new(&self.vars);
         let pat = ctx.pat_ctx.get_node(id).unwrap();
         let item = ctx.ast_ctx.get(item);
-        if let Node::Const(ref pat) = pat {
-            if let Item::Const(ref item) = item {
-                let item = ctx.ast_ctx.get(*item);
-                return item.cmp_direct(&ctx, pat);
+        if let Item::Const(ref item) = item {
+            let item = ctx.ast_ctx.get(*item);
+            if let Node::Const(ref pat) = pat {
+                item.cmp_direct(&ctx, &mut matches, pat)
             }
         }
         todo!()
@@ -105,30 +134,29 @@ impl Spec {
 }
 
 impl<T: CmpDirect + AsNode> CmpDirect for NodeId<T> {
-    fn cmp_direct(&self, ctx: &MatchCtx, pat: &NodeId<T>) -> MatchResult {
+    fn cmp_direct(&self, ctx: &MatchCtx, matches: &mut Matches, pat: &NodeId<T>) -> MatchResult {
         let concrete = ctx.ast_ctx.get(*self);
-        let pat = ctx.pat_ctx.get(*pat);
+        let pat = ctx.pat_ctx.get_pattern(*pat);
         match pat {
-            None => Ok(Match), // TODO: take care of syn vars
-            Some(pat) => concrete.cmp_direct(ctx, pat),
+            Pattern::Pattern(var) => {
+                matches.add_binding(&var, self.untyped());
+                Ok(Match)
+            }
+            Pattern::Exact(pat) => concrete.cmp_direct(ctx, matches, pat),
         }
     }
 }
 
 trait CmpDirect {
-    fn cmp_direct(&self, ctx: &MatchCtx, pat: &Self) -> MatchResult;
+    fn cmp_direct(&self, ctx: &MatchCtx, matches: &mut Matches, pat: &Self) -> MatchResult;
 }
 
-// trait CmpSub {
-// fn cmp_sub(&self, ctx: &MatchCtx, pat: &Node) -> MatchResult;
-// }
-
 impl CmpDirect for grammar::Item {
-    fn cmp_direct(&self, ctx: &MatchCtx, pat: &Self) -> MatchResult {
+    fn cmp_direct(&self, ctx: &MatchCtx, matches: &mut Matches, pat: &Self) -> MatchResult {
         match self {
             grammar::Item::Const(node_id) => {
                 if let grammar::Item::Const(pat) = pat {
-                    return node_id.cmp_direct(ctx, pat);
+                    return node_id.cmp_direct(ctx, matches, pat);
                 }
             }
             grammar::Item::Enum(item_enum) => todo!(),
@@ -151,13 +179,13 @@ impl CmpDirect for grammar::Item {
 }
 
 impl CmpDirect for Ident {
-    fn cmp_direct(&self, _: &MatchCtx, pat: &Self) -> MatchResult {
+    fn cmp_direct(&self, _: &MatchCtx, matches: &mut Matches, pat: &Self) -> MatchResult {
         Match::is_eq(&self.to_string(), &pat.to_string())
     }
 }
 
 impl CmpDirect for Lit {
-    fn cmp_direct(&self, _: &MatchCtx, pat: &Self) -> MatchResult {
+    fn cmp_direct(&self, _: &MatchCtx, matches: &mut Matches, pat: &Self) -> MatchResult {
         let cmp_bool = || {
             match self {
                 syn::Lit::Str(s1) => {
@@ -209,25 +237,25 @@ impl CmpDirect for Lit {
 }
 
 impl CmpDirect for Expr {
-    fn cmp_direct(&self, ctx: &MatchCtx, pat: &Self) -> MatchResult {
+    fn cmp_direct(&self, ctx: &MatchCtx, matches: &mut Matches, pat: &Self) -> MatchResult {
         match self {
             Expr::Binary(i1) => {
                 if let grammar::Expr::Binary(i2) = pat {
-                    i1.cmp_direct(ctx, i2)
+                    i1.cmp_direct(ctx, matches, i2)
                 } else {
                     Err(NoMatch)
                 }
             }
             Expr::Unary(i1) => {
                 if let grammar::Expr::Unary(i2) = pat {
-                    i1.cmp_direct(ctx, i2)
+                    i1.cmp_direct(ctx, matches, i2)
                 } else {
                     Err(NoMatch)
                 }
             }
             Expr::Lit(i1) => {
                 if let grammar::Expr::Lit(i2) = pat {
-                    i1.cmp_direct(ctx, i2)
+                    i1.cmp_direct(ctx, matches, i2)
                 } else {
                     Err(NoMatch)
                 }
@@ -238,54 +266,54 @@ impl CmpDirect for Expr {
 }
 
 impl CmpDirect for ExprBinary {
-    fn cmp_direct(&self, ctx: &MatchCtx, pat: &Self) -> MatchResult {
+    fn cmp_direct(&self, ctx: &MatchCtx, matches: &mut Matches, pat: &Self) -> MatchResult {
         let Self {
             _attrs: _,
             left,
             op,
             right,
         } = self;
-        op.cmp_direct(ctx, &pat.op)?;
-        left.cmp_direct(ctx, &pat.left)?;
-        right.cmp_direct(ctx, &pat.right)?;
+        op.cmp_direct(ctx, matches, &pat.op)?;
+        left.cmp_direct(ctx, matches, &pat.left)?;
+        right.cmp_direct(ctx, matches, &pat.right)?;
         Ok(Match)
     }
 }
 
 impl CmpDirect for ExprUnary {
-    fn cmp_direct(&self, ctx: &MatchCtx, pat: &Self) -> MatchResult {
+    fn cmp_direct(&self, ctx: &MatchCtx, matches: &mut Matches, pat: &Self) -> MatchResult {
         let Self {
             _attrs: _,
             expr,
             op,
         } = self;
-        op.cmp_direct(ctx, &pat.op)?;
-        expr.cmp_direct(ctx, &pat.expr)?;
+        op.cmp_direct(ctx, matches, &pat.op)?;
+        expr.cmp_direct(ctx, matches, &pat.expr)?;
         Ok(Match)
     }
 }
 
 impl CmpDirect for ExprLit {
-    fn cmp_direct(&self, ctx: &MatchCtx, pat: &Self) -> MatchResult {
+    fn cmp_direct(&self, ctx: &MatchCtx, matches: &mut Matches, pat: &Self) -> MatchResult {
         let Self { _attrs: _, lit } = self;
-        lit.cmp_direct(ctx, &pat.lit)?;
+        lit.cmp_direct(ctx, matches, &pat.lit)?;
         Ok(Match)
     }
 }
 
 impl CmpDirect for ItemConst {
-    fn cmp_direct(&self, ctx: &MatchCtx, pat: &Self) -> MatchResult {
+    fn cmp_direct(&self, ctx: &MatchCtx, matches: &mut Matches, pat: &Self) -> MatchResult {
         // self.vis.match_pattern(&item.vis)?;
-        self.ident.cmp_direct(ctx, &pat.ident)?;
+        self.ident.cmp_direct(ctx, matches, &pat.ident)?;
         // self.generics.match_pattern(&item.generics)?;
         // self.ty.match_pattern(&item.ty)?;
-        self.expr.cmp_direct(ctx, &pat.expr)?;
+        self.expr.cmp_direct(ctx, matches, &pat.expr)?;
         Ok(Match)
     }
 }
 
 impl CmpDirect for syn::BinOp {
-    fn cmp_direct(&self, _: &MatchCtx, pat: &Self) -> MatchResult {
+    fn cmp_direct(&self, _: &MatchCtx, matches: &mut Matches, pat: &Self) -> MatchResult {
         let is_match = match self {
             syn::BinOp::Add(_) => matches!(pat, syn::BinOp::Add(_)),
             syn::BinOp::Sub(_) => matches!(pat, syn::BinOp::Sub(_)),
@@ -322,7 +350,7 @@ impl CmpDirect for syn::BinOp {
 }
 
 impl CmpDirect for syn::UnOp {
-    fn cmp_direct(&self, _: &MatchCtx, pat: &Self) -> MatchResult {
+    fn cmp_direct(&self, _: &MatchCtx, matches: &mut Matches, pat: &Self) -> MatchResult {
         let is_match = match self {
             syn::UnOp::Deref(_) => matches!(pat, syn::UnOp::Deref(_)),
             syn::UnOp::Not(_) => matches!(pat, syn::UnOp::Not(_)),

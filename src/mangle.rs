@@ -11,7 +11,7 @@ pub(crate) const MANGLE_STR: &str = "__mangle";
 
 #[derive(Clone)]
 pub(crate) enum Pattern<E> {
-    Exact(Box<E>),
+    Exact(E),
     Pattern(SynVar),
 }
 
@@ -20,7 +20,7 @@ pub(crate) trait ToPlaceholderTokens: ToTokens {
 }
 
 pub(crate) fn mangle_str(ident: &str) -> String {
-    format!("{}_{}", MANGLE_STR, ident.to_string())
+    format!("{}{}", MANGLE_STR, ident.to_string())
 }
 
 pub(crate) fn mangle(name: &str, kind: Kind) -> TokenStream {
@@ -110,7 +110,7 @@ pub(crate) trait FromPlaceholder: Sized {
         if let Some(name) = name {
             Pattern::Pattern(SynVar { name })
         } else {
-            Pattern::Exact(Box::new(self))
+            Pattern::Exact(self)
         }
     }
 }
@@ -176,7 +176,7 @@ impl FromPlaceholder for syn::ExprLit {
 
 #[cfg(test)]
 mod tests {
-    use crate::grammar::{unmangles_as_pattern, Kind};
+    use crate::grammar::{unmangle_pattern_var_name, Kind};
 
     use super::mangle;
 
@@ -184,7 +184,12 @@ mod tests {
     fn bijective() {
         for kind in Kind::all_kinds() {
             let mangled = mangle("foo", kind);
-            assert!(unmangles_as_pattern(mangled, kind));
+            assert_eq!(
+                unmangle_pattern_var_name(mangled, kind),
+                Some("foo".to_string()),
+                "{:?}",
+                kind
+            );
         }
     }
 }

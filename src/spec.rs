@@ -32,7 +32,7 @@ pub(crate) struct SynVar {
 
 #[derive(Clone)]
 pub(crate) struct SynVarDecl {
-    pub name: Ident,
+    pub name: String,
     pub node: Option<Id>,
 }
 
@@ -165,7 +165,7 @@ fn rewrite_fully_qualified(
         .transpose()?;
     let node = node.map(|node| ctx.add_node(node));
     Ok(SynVarDecl {
-        name: var.name,
+        name: var.name.to_string(),
         node,
     })
 }

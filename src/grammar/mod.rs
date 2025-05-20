@@ -3,9 +3,11 @@ use crate::ctx::NodeId;
 pub(crate) trait AsNode {
     fn as_node(self) -> Node;
     fn from_node(node: &Node) -> Option<&Self>;
+    #[allow(unused)]
     fn from_node_mut(node: &mut Node) -> Option<&mut Self>;
 }
 
+#[allow(unused)]
 pub(crate) trait GetKind {
     fn get_kind() -> Kind;
 }
@@ -102,14 +104,19 @@ macro_rules! define_node_and_kind {
         )*
 
         #[cfg(test)]
-        pub(crate) fn unmangles_as_pattern(input: proc_macro2::TokenStream, kind: Kind) -> bool {
+        pub(crate) fn unmangle_pattern_var_name(input: proc_macro2::TokenStream, kind: Kind) -> Option<String> {
             use crate::mangle::{FromPlaceholder, Pattern};
             match kind {
                 $(
                     Kind::$variant_name => {
                         let syn_type = syn::parse2::<$syn_type>(input).unwrap();
                         let pattern = syn_type.from_placeholder();
-                        matches!(pattern, Pattern::Pattern(_))
+                        if let Pattern::Pattern(var) = pattern {
+                            Some(var.name)
+                        }
+                        else {
+                            None
+                        }
                     },
                 )*
             }

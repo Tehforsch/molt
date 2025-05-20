@@ -7,7 +7,7 @@ use crate::{
     spec::SynVar,
 };
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub(crate) enum Id {
     Var(usize),
     Node(usize),
@@ -85,14 +85,21 @@ impl Ctx {
         self.get_node(id.id).map(|node| T::from_node(node).unwrap())
     }
 
+    pub(crate) fn get_pattern<T: AsNode>(&self, id: NodeId<T>) -> Pattern<&T> {
+        match id.id {
+            Id::Node(node) => Pattern::Exact(T::from_node(&self.nodes[node]).unwrap()),
+            Id::Var(var) => Pattern::Pattern(self.vars[var].clone()),
+        }
+    }
+
     // pub(crate) fn get_mut<T: AsNode>(&mut self, id: NodeId<T>) -> &T {
     //     T::from_node_mut(&mut self.nodes[id.id.0]).unwrap()
     // }
 
-    pub(crate) fn typed<T: AsNode>(&self, id: Id) -> NodeId<T> {
-        // TODO: safety checks
-        id.typed()
-    }
+    // pub(crate) fn typed<T: AsNode>(&self, id: Id) -> NodeId<T> {
+    //     // TODO: safety checks
+    //     id.typed()
+    // }
 }
 
 impl AstCtx {
@@ -105,9 +112,9 @@ impl AstCtx {
         self.0.get(id).unwrap()
     }
 
-    pub(crate) fn typed<T: AsNode>(&self, id: Id) -> NodeId<T> {
-        self.0.typed(id)
-    }
+    // pub(crate) fn typed<T: AsNode>(&self, id: Id) -> NodeId<T> {
+    //     self.0.typed(id)
+    // }
 }
 
 impl<T> NodeId<T> {

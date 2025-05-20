@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::{
     ctx::{AstCtx, Ctx, NodeId},
-    grammar::{AsNode, Item},
+    grammar::Item,
 };
 
 pub(crate) struct Ast {
