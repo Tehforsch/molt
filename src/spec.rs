@@ -23,11 +23,12 @@ pub(crate) enum Command {
     Match(SynVar),
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub(crate) struct SynVar {
     pub name: String,
 }
 
+#[derive(Clone)]
 pub(crate) struct SynVarDecl {
     pub name: Ident,
     pub node: Option<Node>,

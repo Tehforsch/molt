@@ -2,6 +2,7 @@ use syn::Lit;
 
 use crate::spec::SynVar;
 
+#[derive(Clone)]
 pub(crate) enum Pattern<E> {
     Exact(Box<E>),
     Pattern(SynVar),
@@ -16,6 +17,7 @@ macro_rules! define_node_and_kind {
             )*
         }
 
+        #[derive(Clone)]
         pub(crate) enum Node {
             $(
                 $variant_name($ty),
@@ -92,6 +94,7 @@ define_node_and_kind! {
 
 pub type Ident = syn::Ident;
 
+#[derive(Clone)]
 pub(crate) struct ItemConst {
     pub _attrs: Vec<syn::Attribute>,
     pub _vis: syn::Visibility,
@@ -101,6 +104,7 @@ pub(crate) struct ItemConst {
     pub expr: Pattern<Expr>,
 }
 
+#[derive(Clone)]
 #[allow(dead_code)]
 pub(crate) enum Expr {
     /// A slice literal expression: `[a, b, c, d]`.
@@ -254,6 +258,7 @@ pub(crate) enum Expr {
     // continue to compile and work for downstream users in the interim.
 }
 
+#[derive(Clone)]
 pub struct ExprBinary {
     pub _attrs: Vec<syn::Attribute>,
     pub left: Pattern<Expr>,
@@ -261,12 +266,14 @@ pub struct ExprBinary {
     pub right: Pattern<Expr>,
 }
 
+#[derive(Clone)]
 pub struct ExprUnary {
     pub _attrs: Vec<syn::Attribute>,
     pub op: syn::UnOp,
     pub expr: Pattern<Expr>,
 }
 
+#[derive(Clone)]
 pub struct ExprLit {
     pub _attrs: Vec<syn::Attribute>,
     pub lit: Pattern<syn::Lit>,

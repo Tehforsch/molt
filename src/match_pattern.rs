@@ -1,9 +1,42 @@
 use crate::{
     grammar::{self, Node, Pattern},
     rust_ast::RustAst,
-    spec::SynVar,
+    spec::{SynVar, SynVarDecl},
     Spec,
 };
+
+struct Ctx {
+    // matches: Vec<MatchData>,
+    current_match: MatchData,
+    vars: Vec<SynVarDecl>,
+}
+
+impl Ctx {
+    fn new(vars: Vec<SynVarDecl>) -> Self {
+        Self {
+            // matches: vec![],
+            current_match: MatchData::default(),
+            vars,
+        }
+    }
+
+    fn add_binding<T>(&mut self, arg: &T, var: &SynVar) {
+        // Somehow record the fact that arg needs to match the pattern
+        // contained in var. If var has a node, they need to be compared.
+        // Afterwards, even if it does not have a node, record the fact that
+        // `var` is now bound to `arg`, so that all further comparisons with
+        // var match against arg.
+        todo!()
+    }
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct MatchData {
+    bindings: Vec<Binding>,
+}
+
+#[derive(Debug)]
+struct Binding {}
 
 #[derive(Debug)]
 pub(crate) struct Match;
@@ -14,7 +47,11 @@ pub(crate) struct NoMatch;
 pub(crate) type MatchResult = Result<Match, NoMatch>;
 
 impl Match {
-    fn from_bool(b: bool) -> Result<Match, NoMatch> {
+    fn is_eq<T: PartialEq<T>>(t1: &T, t2: &T) -> MatchResult {
+        Match::from_bool(t1 == t2)
+    }
+
+    fn from_bool(b: bool) -> MatchResult {
         if b {
             Ok(Match)
         } else {
@@ -39,18 +76,19 @@ impl Spec {
     }
 
     pub(crate) fn match_pattern(&self, ast: RustAst, node: &Node) -> MatchResult {
-        ast.match_pattern(&node)
+        let mut ctx = Ctx::new(self.vars.clone());
+        ast.match_pattern(&mut ctx, &node)
     }
 }
 
-trait MatchPattern<Pat> {
-    fn match_pattern(&self, t: &Pat) -> MatchResult;
+trait MatchPattern<Pat>: Sized {
+    fn match_pattern(&self, ctx: &mut Ctx, t: &Pat) -> MatchResult;
 
-    fn cmp_pat(&self, pat: &Pattern<Pat>) -> MatchResult {
+    fn cmp_pat(&self, ctx: &mut Ctx, pat: &Pattern<Pat>) -> MatchResult {
         match pat {
-            Pattern::Exact(t) => self.match_pattern(t),
-            Pattern::Pattern(_) => {
-                // TODO record constraint
+            Pattern::Exact(t) => self.match_pattern(ctx, t),
+            Pattern::Pattern(var) => {
+                ctx.add_binding(self, var);
                 Ok(Match)
             }
         }
@@ -58,12 +96,12 @@ trait MatchPattern<Pat> {
 }
 
 impl MatchPattern<Node> for RustAst {
-    fn match_pattern(&self, node: &Node) -> MatchResult {
+    fn match_pattern(&self, ctx: &mut Ctx, node: &Node) -> MatchResult {
         // todo multiple items
         let item = self.file.items.first().unwrap();
         match node {
-            Node::Const(item_const) => item.match_pattern(item_const),
-            Node::Expr(expr) => item.match_pattern(expr),
+            Node::Const(item_const) => item.match_pattern(ctx, item_const),
+            Node::Expr(expr) => item.match_pattern(ctx, expr),
             Node::Ident(_) => todo!(),
             Node::Lit(_) => todo!(),
         }
@@ -71,31 +109,31 @@ impl MatchPattern<Node> for RustAst {
 }
 
 impl MatchPattern<grammar::ItemConst> for syn::Item {
-    fn match_pattern(&self, item: &grammar::ItemConst) -> MatchResult {
+    fn match_pattern(&self, ctx: &mut Ctx, item: &grammar::ItemConst) -> MatchResult {
         match self {
-            syn::Item::Const(item_const) => item_const.match_pattern(item),
+            syn::Item::Const(item_const) => item_const.match_pattern(ctx, item),
             _ => Err(NoMatch),
         }
     }
 }
 
 impl MatchPattern<grammar::Expr> for syn::Item {
-    fn match_pattern(&self, item: &grammar::Expr) -> MatchResult {
+    fn match_pattern(&self, ctx: &mut Ctx, item: &grammar::Expr) -> MatchResult {
         match self {
-            syn::Item::Const(const_) => const_.expr.match_pattern(item),
+            syn::Item::Const(const_) => const_.expr.match_pattern(ctx, item),
             _ => Err(NoMatch),
         }
     }
 }
 
 impl MatchPattern<syn::Ident> for grammar::Ident {
-    fn match_pattern(&self, t: &grammar::Ident) -> MatchResult {
-        Match::from_bool(self.to_string() == t.to_string())
+    fn match_pattern(&self, _: &mut Ctx, t: &grammar::Ident) -> MatchResult {
+        Match::is_eq(&self.to_string(), &t.to_string())
     }
 }
 
 impl MatchPattern<syn::Lit> for syn::Lit {
-    fn match_pattern(&self, t: &syn::Lit) -> MatchResult {
+    fn match_pattern(&self, _: &mut Ctx, t: &syn::Lit) -> MatchResult {
         let cmp_bool = || {
             match self {
                 syn::Lit::Str(s1) => {
@@ -147,25 +185,25 @@ impl MatchPattern<syn::Lit> for syn::Lit {
 }
 
 impl MatchPattern<grammar::Expr> for syn::Expr {
-    fn match_pattern(&self, t: &grammar::Expr) -> MatchResult {
+    fn match_pattern(&self, ctx: &mut Ctx, t: &grammar::Expr) -> MatchResult {
         match self {
             syn::Expr::Binary(i1) => {
                 if let grammar::Expr::Binary(i2) = t {
-                    i1.match_pattern(i2)
+                    i1.match_pattern(ctx, i2)
                 } else {
                     Err(NoMatch)
                 }
             }
             syn::Expr::Unary(i1) => {
                 if let grammar::Expr::Unary(i2) = t {
-                    i1.match_pattern(i2)
+                    i1.match_pattern(ctx, i2)
                 } else {
                     Err(NoMatch)
                 }
             }
             syn::Expr::Lit(i1) => {
                 if let grammar::Expr::Lit(i2) = t {
-                    i1.match_pattern(i2)
+                    i1.match_pattern(ctx, i2)
                 } else {
                     Err(NoMatch)
                 }
@@ -176,39 +214,39 @@ impl MatchPattern<grammar::Expr> for syn::Expr {
 }
 
 impl MatchPattern<grammar::ExprBinary> for syn::ExprBinary {
-    fn match_pattern(&self, t: &grammar::ExprBinary) -> MatchResult {
+    fn match_pattern(&self, ctx: &mut Ctx, t: &grammar::ExprBinary) -> MatchResult {
         let Self {
             attrs: _,
             left,
             op,
             right,
         } = self;
-        op.match_pattern(&t.op)?;
-        left.cmp_pat(&t.left)?;
-        right.cmp_pat(&t.right)?;
+        op.match_pattern(ctx, &t.op)?;
+        left.cmp_pat(ctx, &t.left)?;
+        right.cmp_pat(ctx, &t.right)?;
         Ok(Match)
     }
 }
 
 impl MatchPattern<grammar::ExprUnary> for syn::ExprUnary {
-    fn match_pattern(&self, t: &grammar::ExprUnary) -> MatchResult {
+    fn match_pattern(&self, ctx: &mut Ctx, t: &grammar::ExprUnary) -> MatchResult {
         let Self { attrs: _, expr, op } = self;
-        op.match_pattern(&t.op)?;
-        expr.cmp_pat(&t.expr)?;
+        op.match_pattern(ctx, &t.op)?;
+        expr.cmp_pat(ctx, &t.expr)?;
         Ok(Match)
     }
 }
 
 impl MatchPattern<grammar::ExprLit> for syn::ExprLit {
-    fn match_pattern(&self, t: &grammar::ExprLit) -> MatchResult {
+    fn match_pattern(&self, ctx: &mut Ctx, t: &grammar::ExprLit) -> MatchResult {
         let Self { attrs: _, lit } = self;
-        lit.cmp_pat(&t.lit)?;
+        lit.cmp_pat(ctx, &t.lit)?;
         Ok(Match)
     }
 }
 
 impl MatchPattern<syn::BinOp> for syn::BinOp {
-    fn match_pattern(&self, t: &syn::BinOp) -> MatchResult {
+    fn match_pattern(&self, _: &mut Ctx, t: &syn::BinOp) -> MatchResult {
         let is_match = match self {
             syn::BinOp::Add(_) => matches!(t, syn::BinOp::Add(_)),
             syn::BinOp::Sub(_) => matches!(t, syn::BinOp::Sub(_)),
@@ -245,7 +283,7 @@ impl MatchPattern<syn::BinOp> for syn::BinOp {
 }
 
 impl MatchPattern<syn::UnOp> for syn::UnOp {
-    fn match_pattern(&self, t: &syn::UnOp) -> MatchResult {
+    fn match_pattern(&self, _: &mut Ctx, t: &syn::UnOp) -> MatchResult {
         let is_match = match self {
             syn::UnOp::Deref(_) => matches!(t, syn::UnOp::Deref(_)),
             syn::UnOp::Not(_) => matches!(t, syn::UnOp::Not(_)),
@@ -257,12 +295,12 @@ impl MatchPattern<syn::UnOp> for syn::UnOp {
 }
 
 impl MatchPattern<grammar::ItemConst> for syn::ItemConst {
-    fn match_pattern(&self, item: &grammar::ItemConst) -> MatchResult {
+    fn match_pattern(&self, ctx: &mut Ctx, item: &grammar::ItemConst) -> MatchResult {
         // self.vis.match_pattern(&item.vis)?;
-        self.ident.cmp_pat(&item.ident)?;
+        self.ident.cmp_pat(ctx, &item.ident)?;
         // self.generics.match_pattern(&item.generics)?;
         // self.ty.match_pattern(&item.ty)?;
-        (*self.expr).cmp_pat(&item.expr)?;
+        (*self.expr).cmp_pat(ctx, &item.expr)?;
         Ok(Match)
     }
 }

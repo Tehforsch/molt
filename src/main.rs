@@ -30,7 +30,7 @@ fn get_cargo_source_files(path: &Path) -> Result<Vec<PathBuf>, Box<dyn Error>> {
             src.list_files(pkg)?
                 .into_iter()
                 .map(|entry| entry.to_path_buf())
-                .filter(|path| path.extension().map(|ext| ext == "rs").unwrap_or(false)),
+                .filter(|path| path.extension().map_or(false, |ext| ext == "rs")),
         );
     }
 
