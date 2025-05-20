@@ -1,6 +1,6 @@
 use syn::Lit;
 
-use crate::transformation::SynVar;
+use crate::spec::SynVar;
 
 pub(crate) enum Pattern<E> {
     Exact(Box<E>),

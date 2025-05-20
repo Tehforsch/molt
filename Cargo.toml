@@ -1,5 +1,5 @@
 [package]
-name = "ast"
+name = "molt"
 version = "0.1.0"
 edition = "2021"
 
@@ -20,5 +20,5 @@ insta.opt-level = 3
 similar.opt-level = 3
 
 [[bin]]
-name = "ast_transform"
+name = "molt"
 path = "src/main.rs"

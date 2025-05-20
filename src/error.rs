@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use codespan_reporting::{
     diagnostic::{Diagnostic, Label},
     files::SimpleFile,
@@ -7,16 +9,60 @@ use codespan_reporting::{
     },
 };
 
+#[derive(Debug)]
+pub enum ResolveError {
+    MultipleCommandGiven,
+    NoCommandGiven,
+}
+
+#[derive(Debug)]
+pub enum Error {
+    Parse(syn::Error),
+    Resolve(ResolveError),
+}
+
+impl Error {
+    fn span(&self) -> Option<Range<usize>> {
+        match self {
+            Error::Parse(error) => Some(error.span().byte_range()),
+            Error::Resolve(_) => None,
+        }
+    }
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::Parse(error) => write!(f, "{}", error),
+            Error::Resolve(_) => write!(f, "Error during resolution."),
+        }
+    }
+}
+
+impl std::error::Error for Error {}
+
+impl From<ResolveError> for Error {
+    fn from(value: ResolveError) -> Self {
+        Self::Resolve(value)
+    }
+}
+
+impl From<syn::Error> for Error {
+    fn from(value: syn::Error) -> Self {
+        Self::Parse(value)
+    }
+}
+
 pub(crate) type SourceFile = SimpleFile<String, String>;
 
-pub(crate) fn emit_error(file: &SourceFile, err: syn::Error) {
+pub(crate) fn emit_error(file: &SourceFile, err: &Error) {
     let writer = StandardStream::stderr(ColorChoice::Always);
     let config = codespan_reporting::term::Config::default();
-    let span = err.span().byte_range();
     let message = format!("{}", err);
-    let diagnostic = Diagnostic::error()
-        .with_message(&message)
-        .with_labels(vec![Label::primary((), span).with_message(&message)]);
+    let mut diagnostic = Diagnostic::error().with_message(&message);
+    if let Some(span) = err.span() {
+        diagnostic = diagnostic.with_labels(vec![Label::primary((), span).with_message(&message)]);
+    }
     term::emit(&mut writer.lock(), &config, file, &diagnostic).unwrap();
 }
 

@@ -11,12 +11,17 @@ use syn::Ident;
 
 use crate::{
     convert::Convert,
-    error::emit_error,
+    error::{emit_error, Error, ResolveError},
     grammar::{Kind, Node},
     mangle::mangle,
 };
 
 const IDENT_IDENTIFIER: char = '$';
+
+pub(crate) enum Command {
+    Transform(SynVar, SynVar),
+    Match(SynVar),
+}
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub(crate) struct SynVar {
@@ -24,18 +29,22 @@ pub(crate) struct SynVar {
 }
 
 pub(crate) struct SynVarDecl {
-    pub _name: Ident,
+    pub name: Ident,
     pub node: Option<Node>,
 }
 
-pub(crate) struct Transformation {
-    pub vars: Vec<SynVarDecl>,
-    pub command: Command,
+#[derive(Debug, Default)]
+pub(crate) struct Dependencies {
+    pub vars: HashSet<Ident>,
 }
 
-pub(crate) enum Command {
-    Transform(SynVar, SynVar),
-    Match(SynVar),
+pub(crate) struct Spec {
+    pub vars: Vec<SynVarDecl>,
+}
+
+pub(crate) struct FullSpec {
+    pub spec: Spec,
+    pub command: Command,
 }
 
 pub(crate) struct ParseSynVarDecl {
@@ -45,38 +54,40 @@ pub(crate) struct ParseSynVarDecl {
     pub node: Option<TokenStream>,
 }
 
-pub(crate) struct ParseTransform {
+pub(crate) struct ParseSpec {
     pub vars: Vec<ParseSynVarDecl>,
-    pub command: Command,
+    pub commands: Vec<Command>,
 }
 
-impl Transformation {
-    pub(crate) fn from_path(path: &Path) -> Result<Self, ()> {
+impl FullSpec {
+    pub(crate) fn from_path(path: &Path) -> Result<Self, Error> {
         let contents = std::fs::read_to_string(path).unwrap();
         let tokens = TokenStream::from_str(&contents).unwrap();
-        let result: Result<Transformation, syn::Error> =
-            syn::parse2(tokens).and_then(|res| resolve_parsed_transform(res));
+        let result: Result<FullSpec, Error> = syn::parse2(tokens)
+            .map_err(|e| e.into())
+            .and_then(|res| resolve_parsed_transform(res).map_err(|e| e.into()));
         match result {
             Ok(res) => Ok(res),
             Err(err) => {
                 let file = SimpleFile::new(format!("{:?}", path), contents);
-                emit_error(&file, err);
-                return Err(());
+                emit_error(&file, &err);
+                return Err(err);
             }
         }
     }
+}
 
-    pub(crate) fn top_level_node(&self) -> &Node {
-        self.vars.last().unwrap().node.as_ref().unwrap()
+fn get_single_command(mut commands: Vec<Command>) -> Result<Command, Error> {
+    if commands.len() == 0 {
+        return Err(ResolveError::NoCommandGiven.into());
+    } else if commands.len() > 1 {
+        return Err(ResolveError::MultipleCommandGiven.into());
+    } else {
+        Ok(commands.remove(0))
     }
 }
 
-#[derive(Debug, Default)]
-pub(crate) struct Dependencies {
-    pub vars: HashSet<Ident>,
-}
-
-fn resolve_parsed_transform(tf: ParseTransform) -> Result<Transformation, syn::Error> {
+fn resolve_parsed_transform(tf: ParseSpec) -> Result<FullSpec, Error> {
     // Topologically sort the variable declarations according to
     // their dependencies (i.e. which variables they reference)
     let mut deps_map: HashMap<_, _> = tf
@@ -115,12 +126,15 @@ fn resolve_parsed_transform(tf: ParseTransform) -> Result<Transformation, syn::E
         .iter()
         .map(|var| (var.name.clone(), var.kind))
         .collect();
-    Ok(Transformation {
+    let spec = Spec {
         vars: sorted
             .into_iter()
             .map(|var| rewrite_fully_qualified(var, &kind_map))
             .collect::<Result<_, syn::Error>>()?,
-        command: tf.command,
+    };
+    Ok(FullSpec {
+        spec,
+        command: get_single_command(tf.commands)?,
     })
 }
 
@@ -141,7 +155,7 @@ fn rewrite_fully_qualified(
         })
         .transpose()?;
     Ok(SynVarDecl {
-        _name: var.name,
+        name: var.name,
         node,
     })
 }

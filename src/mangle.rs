@@ -4,7 +4,7 @@ use syn::{Lit, LitStr};
 
 use crate::{
     grammar::{self, Kind, Pattern},
-    transformation::SynVar,
+    spec::SynVar,
 };
 
 pub(crate) const MANGLE_STR: &str = "__mangle";

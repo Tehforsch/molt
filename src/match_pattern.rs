@@ -1,16 +1,17 @@
 use crate::{
     grammar::{self, Node, Pattern},
     rust_ast::RustAst,
-    Transformation,
+    spec::SynVar,
+    Spec,
 };
 
 #[derive(Debug)]
-struct Match;
+pub(crate) struct Match;
 
 #[derive(Debug)]
-struct NoMatch;
+pub(crate) struct NoMatch;
 
-type MatchResult = Result<Match, NoMatch>;
+pub(crate) type MatchResult = Result<Match, NoMatch>;
 
 impl Match {
     fn from_bool(b: bool) -> Result<Match, NoMatch> {
@@ -22,14 +23,23 @@ impl Match {
     }
 }
 
-impl Transformation {
-    pub(crate) fn transform(&self, ast: RustAst) -> RustAst {
-        let node = self.top_level_node();
-        match ast.match_pattern(node) {
-            Ok(_) => println!("Match"),
-            Err(_) => println!("No match!"),
-        }
-        ast
+impl Spec {
+    pub(crate) fn find_var(&self, var: &SynVar) -> &Node {
+        self.vars
+            .iter()
+            .find(|v| v.name.to_string() == var.name)
+            .unwrap()
+            .node
+            .as_ref()
+            .unwrap()
+    }
+
+    pub(crate) fn transform(&self, _ast: RustAst, _input: &Node, _output: &Node) -> RustAst {
+        todo!()
+    }
+
+    pub(crate) fn match_pattern(&self, ast: RustAst, node: &Node) -> MatchResult {
+        ast.match_pattern(&node)
     }
 }
 

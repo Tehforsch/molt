@@ -10,7 +10,7 @@ use syn::{
 use crate::{
     convert::Convert,
     grammar::{ItemConst, Kind},
-    transformation::{Command, Dependencies, ParseSynVarDecl, ParseTransform, SynVar},
+    spec::{Command, Dependencies, ParseSpec, ParseSynVarDecl, SynVar},
 };
 
 pub(crate) mod commands {
@@ -22,7 +22,7 @@ enum Declaration {
     Command(Command),
 }
 
-impl Parse for ParseTransform {
+impl Parse for ParseSpec {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut decls = vec![];
         while !input.is_empty() {
@@ -36,19 +36,7 @@ impl Parse for ParseTransform {
                 Declaration::Command(command) => commands.push(command),
             }
         }
-        let command = if commands.len() == 0 {
-            // Not the greatest error span
-            return Err(syn::Error::new(input.cursor().span(), "No command given."));
-        } else if commands.len() > 1 {
-            // Not the greatest error span
-            return Err(syn::Error::new(
-                input.cursor().span(),
-                "Multiple commands given.",
-            ));
-        } else {
-            commands.remove(0)
-        };
-        Ok(ParseTransform { vars, command })
+        Ok(ParseSpec { vars, commands })
     }
 }
 

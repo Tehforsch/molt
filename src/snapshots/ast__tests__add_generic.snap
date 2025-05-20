@@ -1,7 +1,0 @@
----
-source: src/main.rs
-expression: "apply_transformation(\"add_generic\",\nTransformation::AddGeneric(AddGeneric { name: \"foo\".to_string() }))"
----
-fn main<foo>() {
-    println!("Hello world.");
-}

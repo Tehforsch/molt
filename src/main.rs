@@ -1,9 +1,9 @@
 mod cli;
 
-use ast::apply_transform;
 use cargo::{core::Workspace, sources::PathSource, GlobalContext};
 use clap::Parser;
 use cli::CliArgs;
+use molt::run;
 use std::{
     error::Error,
     path::{Path, PathBuf},
@@ -42,7 +42,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let source_files = source_files(&args.input_file)?;
     for file in source_files {
-        let output = apply_transform(&file, &args.transform_file)?;
+        run(&file, &args.transform_file)?;
         // println!("{}", output);
     }
 
