@@ -1,42 +1,56 @@
 use crate::{
-    grammar::{self, Pattern},
-    mangle::FromPlaceholder,
+    ctx::Ctx,
+    grammar::{self},
 };
 
 pub(crate) trait Convert<T> {
-    fn convert(self) -> T;
+    fn convert(self, ctx: &mut Ctx) -> T;
 }
 
-impl<Out, In: Convert<Out>> Convert<Pattern<Out>> for Pattern<In> {
-    fn convert(self) -> Pattern<Out> {
+impl Convert<grammar::Item> for syn::Item {
+    fn convert(self, ctx: &mut Ctx) -> grammar::Item {
         match self {
-            Pattern::Exact(t) => Pattern::Exact(Box::new(t.convert())),
-            Pattern::Pattern(syn_var) => Pattern::Pattern(syn_var),
+            syn::Item::Const(s) => grammar::Item::Const(ctx.add_convert(s)),
+            syn::Item::Enum(s) => grammar::Item::Enum(s),
+            syn::Item::ExternCrate(s) => grammar::Item::ExternCrate(s),
+            syn::Item::Fn(s) => grammar::Item::Fn(s),
+            syn::Item::ForeignMod(s) => grammar::Item::ForeignMod(s),
+            syn::Item::Impl(s) => grammar::Item::Impl(s),
+            syn::Item::Macro(s) => grammar::Item::Macro(s),
+            syn::Item::Mod(s) => grammar::Item::Mod(s),
+            syn::Item::Static(s) => grammar::Item::Static(s),
+            syn::Item::Struct(s) => grammar::Item::Struct(s),
+            syn::Item::Trait(s) => grammar::Item::Trait(s),
+            syn::Item::TraitAlias(s) => grammar::Item::TraitAlias(s),
+            syn::Item::Type(s) => grammar::Item::Type(s),
+            syn::Item::Union(s) => grammar::Item::Union(s),
+            syn::Item::Use(s) => grammar::Item::Use(s),
+            _ => todo!(),
         }
     }
 }
 
 impl Convert<grammar::ItemConst> for syn::ItemConst {
-    fn convert(self) -> grammar::ItemConst {
+    fn convert(self, ctx: &mut Ctx) -> grammar::ItemConst {
         grammar::ItemConst {
             _attrs: self.attrs,
             _vis: self.vis,
-            ident: self.ident.from_placeholder(),
+            ident: ctx.add_convert(self.ident),
             _generics: self.generics,
             _ty: self.ty,
-            expr: self.expr.from_placeholder().convert(),
+            expr: ctx.add_convert(*self.expr),
         }
     }
 }
 
 impl Convert<grammar::Expr> for syn::Expr {
-    fn convert(self) -> grammar::Expr {
+    fn convert(self, ctx: &mut Ctx) -> grammar::Expr {
         match self {
             syn::Expr::Array(expr_array) => grammar::Expr::Array(expr_array),
             syn::Expr::Assign(expr_assign) => grammar::Expr::Assign(expr_assign),
             syn::Expr::Async(expr_async) => grammar::Expr::Async(expr_async),
             syn::Expr::Await(expr_await) => grammar::Expr::Await(expr_await),
-            syn::Expr::Binary(expr_binary) => grammar::Expr::Binary(expr_binary.convert()),
+            syn::Expr::Binary(expr_binary) => grammar::Expr::Binary(ctx.add_convert(expr_binary)),
             syn::Expr::Block(expr_block) => grammar::Expr::Block(expr_block),
             syn::Expr::Break(expr_break) => grammar::Expr::Break(expr_break),
             syn::Expr::Call(expr_call) => grammar::Expr::Call(expr_call),
@@ -51,7 +65,7 @@ impl Convert<grammar::Expr> for syn::Expr {
             syn::Expr::Index(expr_index) => grammar::Expr::Index(expr_index),
             syn::Expr::Infer(expr_infer) => grammar::Expr::Infer(expr_infer),
             syn::Expr::Let(expr_let) => grammar::Expr::Let(expr_let),
-            syn::Expr::Lit(expr_lit) => grammar::Expr::Lit(expr_lit.convert()),
+            syn::Expr::Lit(expr_lit) => grammar::Expr::Lit(ctx.add_convert(expr_lit)),
             syn::Expr::Loop(expr_loop) => grammar::Expr::Loop(expr_loop),
             syn::Expr::Macro(expr_macro) => grammar::Expr::Macro(expr_macro),
             syn::Expr::Match(expr_match) => grammar::Expr::Match(expr_match),
@@ -67,7 +81,7 @@ impl Convert<grammar::Expr> for syn::Expr {
             syn::Expr::Try(expr_try) => grammar::Expr::Try(expr_try),
             syn::Expr::TryBlock(expr_try_block) => grammar::Expr::TryBlock(expr_try_block),
             syn::Expr::Tuple(expr_tuple) => grammar::Expr::Tuple(expr_tuple),
-            syn::Expr::Unary(expr_unary) => grammar::Expr::Unary(expr_unary.convert()),
+            syn::Expr::Unary(expr_unary) => grammar::Expr::Unary(ctx.add_convert(expr_unary)),
             syn::Expr::Unsafe(expr_unsafe) => grammar::Expr::Unsafe(expr_unsafe),
             syn::Expr::While(expr_while) => grammar::Expr::While(expr_while),
             syn::Expr::Yield(expr_yield) => grammar::Expr::Yield(expr_yield),
@@ -77,30 +91,42 @@ impl Convert<grammar::Expr> for syn::Expr {
 }
 
 impl Convert<grammar::ExprBinary> for syn::ExprBinary {
-    fn convert(self) -> grammar::ExprBinary {
+    fn convert(self, ctx: &mut Ctx) -> grammar::ExprBinary {
         grammar::ExprBinary {
             _attrs: self.attrs,
-            left: self.left.from_placeholder().convert(),
+            left: ctx.add_convert(*self.left),
             op: self.op,
-            right: self.right.from_placeholder().convert(),
+            right: ctx.add_convert(*self.right),
         }
     }
 }
 
 impl Convert<grammar::ExprUnary> for syn::ExprUnary {
-    fn convert(self) -> grammar::ExprUnary {
+    fn convert(self, ctx: &mut Ctx) -> grammar::ExprUnary {
         grammar::ExprUnary {
             _attrs: self.attrs,
             op: self.op,
-            expr: self.expr.from_placeholder().convert(),
+            expr: ctx.add_convert(*self.expr),
         }
     }
 }
 impl Convert<grammar::ExprLit> for syn::ExprLit {
-    fn convert(self) -> grammar::ExprLit {
+    fn convert(self, ctx: &mut Ctx) -> grammar::ExprLit {
         grammar::ExprLit {
             _attrs: self.attrs,
-            lit: self.lit.from_placeholder(),
+            lit: ctx.add_convert(self.lit),
         }
+    }
+}
+
+impl Convert<grammar::Ident> for syn::Ident {
+    fn convert(self, _: &mut Ctx) -> grammar::Ident {
+        self
+    }
+}
+
+impl Convert<grammar::Lit> for syn::Lit {
+    fn convert(self, _: &mut Ctx) -> grammar::Lit {
+        self
     }
 }

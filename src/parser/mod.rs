@@ -8,8 +8,7 @@ use syn::{
 };
 
 use crate::{
-    convert::Convert,
-    grammar::{ItemConst, Kind},
+    grammar::Kind,
     spec::{Command, Dependencies, ParseSpec, ParseSynVarDecl, SynVar},
 };
 
@@ -118,12 +117,5 @@ impl Parse for Dependencies {
             }
         }
         Ok(Dependencies { vars })
-    }
-}
-
-impl Parse for ItemConst {
-    fn parse(input: ParseStream) -> Result<Self> {
-        let const_ = syn::ItemConst::parse(input)?;
-        Ok(const_.convert())
     }
 }

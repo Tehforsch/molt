@@ -11,6 +11,7 @@ use syn::Ident;
 
 use crate::{
     convert::Convert,
+    ctx::{Ctx, Id},
     error::{emit_error, Error, ResolveError},
     grammar::{Kind, Node},
     mangle::mangle,
@@ -19,6 +20,7 @@ use crate::{
 const IDENT_IDENTIFIER: char = '$';
 
 pub(crate) enum Command {
+    #[allow(dead_code)]
     Transform(SynVar, SynVar),
     Match(SynVar),
 }
@@ -31,7 +33,7 @@ pub(crate) struct SynVar {
 #[derive(Clone)]
 pub(crate) struct SynVarDecl {
     pub name: Ident,
-    pub node: Option<Node>,
+    pub node: Option<Id>,
 }
 
 #[derive(Debug, Default)]
@@ -61,10 +63,10 @@ pub(crate) struct ParseSpec {
 }
 
 impl FullSpec {
-    pub(crate) fn from_path(path: &Path) -> Result<Self, Error> {
+    pub(crate) fn from_path(path: &Path) -> Result<(Ctx, Self), Error> {
         let contents = std::fs::read_to_string(path).unwrap();
         let tokens = TokenStream::from_str(&contents).unwrap();
-        let result: Result<FullSpec, Error> = syn::parse2(tokens)
+        let result: Result<(Ctx, FullSpec), Error> = syn::parse2(tokens)
             .map_err(|e| e.into())
             .and_then(|res| resolve_parsed_transform(res).map_err(|e| e.into()));
         match result {
@@ -88,7 +90,7 @@ fn get_single_command(mut commands: Vec<Command>) -> Result<Command, Error> {
     }
 }
 
-fn resolve_parsed_transform(tf: ParseSpec) -> Result<FullSpec, Error> {
+fn resolve_parsed_transform(tf: ParseSpec) -> Result<(Ctx, FullSpec), Error> {
     // Topologically sort the variable declarations according to
     // their dependencies (i.e. which variables they reference)
     let mut deps_map: HashMap<_, _> = tf
@@ -127,19 +129,24 @@ fn resolve_parsed_transform(tf: ParseSpec) -> Result<FullSpec, Error> {
         .iter()
         .map(|var| (var.name.clone(), var.kind))
         .collect();
+    let mut ctx = Ctx::default();
     let spec = Spec {
         vars: sorted
             .into_iter()
-            .map(|var| rewrite_fully_qualified(var, &kind_map))
+            .map(|var| rewrite_fully_qualified(&mut ctx, var, &kind_map))
             .collect::<Result<_, syn::Error>>()?,
     };
-    Ok(FullSpec {
-        spec,
-        command: get_single_command(tf.commands)?,
-    })
+    Ok((
+        ctx,
+        FullSpec {
+            spec,
+            command: get_single_command(tf.commands)?,
+        },
+    ))
 }
 
 fn rewrite_fully_qualified(
+    ctx: &mut Ctx,
     var: ParseSynVarDecl,
     kind_map: &HashMap<Ident, Kind>,
 ) -> Result<SynVarDecl, syn::Error> {
@@ -148,13 +155,15 @@ fn rewrite_fully_qualified(
         .map(|node| {
             let stream = annotate(node, kind_map);
             Ok::<_, syn::Error>(match var.kind {
-                Kind::Const => Node::Const(syn::parse2::<syn::ItemConst>(stream)?.convert()),
-                Kind::Expr => Node::Expr(syn::parse2::<syn::Expr>(stream)?.convert()),
+                Kind::Const => Node::Const(syn::parse2::<syn::ItemConst>(stream)?.convert(ctx)),
+                Kind::Expr => Node::Expr(syn::parse2::<syn::Expr>(stream)?.convert(ctx)),
                 Kind::Ident => Node::Ident(syn::parse2::<syn::Ident>(stream)?),
                 Kind::Lit => Node::Lit(syn::parse2::<syn::Lit>(stream)?),
+                _ => todo!(),
             })
         })
         .transpose()?;
+    let node = node.map(|node| ctx.add_node(node));
     Ok(SynVarDecl {
         name: var.name,
         node,

@@ -3,11 +3,17 @@ use quote::{quote, ToTokens};
 use syn::{Lit, LitStr};
 
 use crate::{
-    grammar::{self, Kind, Pattern},
+    grammar::{self, Kind},
     spec::SynVar,
 };
 
 pub(crate) const MANGLE_STR: &str = "__mangle";
+
+#[derive(Clone)]
+pub(crate) enum Pattern<E> {
+    Exact(Box<E>),
+    Pattern(SynVar),
+}
 
 pub(crate) trait ToPlaceholderTokens: ToTokens {
     fn to_placeholder_tokens(name: &str) -> impl ToTokens;
@@ -35,6 +41,13 @@ impl ToPlaceholderTokens for grammar::Ident {
     }
 }
 
+impl ToPlaceholderTokens for syn::Item {
+    fn to_placeholder_tokens(name: &str) -> impl ToTokens {
+        let ident = syn::Ident::new(name, fake_span());
+        quote! { const #ident: usize = 0; }
+    }
+}
+
 impl ToPlaceholderTokens for syn::Expr {
     fn to_placeholder_tokens(name: &str) -> impl ToTokens {
         let lit = Lit::Str(LitStr::new(name, fake_span()));
@@ -53,6 +66,33 @@ impl ToPlaceholderTokens for syn::Lit {
     fn to_placeholder_tokens(name: &str) -> impl ToTokens {
         let lit = Lit::Str(LitStr::new(name, fake_span()));
         quote! { #lit }
+    }
+}
+
+impl ToPlaceholderTokens for syn::ExprUnary {
+    fn to_placeholder_tokens(name: &str) -> impl ToTokens {
+        let expr = syn::Expr::to_placeholder_tokens(name);
+        quote! {
+            !(#expr)
+        }
+    }
+}
+
+impl ToPlaceholderTokens for syn::ExprBinary {
+    fn to_placeholder_tokens(name: &str) -> impl ToTokens {
+        let expr = syn::Expr::to_placeholder_tokens(name);
+        quote! {
+            (#expr + #expr)
+        }
+    }
+}
+
+impl ToPlaceholderTokens for syn::ExprLit {
+    fn to_placeholder_tokens(name: &str) -> impl ToTokens {
+        let lit = syn::Lit::to_placeholder_tokens(name);
+        quote! {
+            #lit
+        }
     }
 }
 
@@ -91,6 +131,16 @@ impl FromPlaceholder for syn::Lit {
     }
 }
 
+impl FromPlaceholder for syn::Item {
+    fn get_mangled_str(&self) -> Option<String> {
+        if let syn::Item::Const(const_item) = self {
+            syn::ItemConst::get_mangled_str(const_item)
+        } else {
+            None
+        }
+    }
+}
+
 impl FromPlaceholder for syn::ItemConst {
     fn get_mangled_str(&self) -> Option<String> {
         Some(self.ident.to_string())
@@ -103,6 +153,24 @@ impl FromPlaceholder for syn::Expr {
             return lit.lit.get_mangled_str();
         }
         None
+    }
+}
+
+impl FromPlaceholder for syn::ExprUnary {
+    fn get_mangled_str(&self) -> Option<String> {
+        self.expr.get_mangled_str()
+    }
+}
+
+impl FromPlaceholder for syn::ExprBinary {
+    fn get_mangled_str(&self) -> Option<String> {
+        self.left.get_mangled_str()
+    }
+}
+
+impl FromPlaceholder for syn::ExprLit {
+    fn get_mangled_str(&self) -> Option<String> {
+        self.lit.get_mangled_str()
     }
 }
 
