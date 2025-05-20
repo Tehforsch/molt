@@ -10,16 +10,74 @@ use syn::{
 use crate::{
     convert::Convert,
     grammar::{ItemConst, Kind},
-    transformation::{Dependencies, ParseSynVarDecl, ParseTransform, SynVar},
+    transformation::{Command, Dependencies, ParseSynVarDecl, ParseTransform, SynVar},
 };
+
+pub(crate) mod commands {
+    syn::custom_keyword!(transform);
+}
+
+enum Declaration {
+    SynVarDecl(ParseSynVarDecl),
+    Command(Command),
+}
 
 impl Parse for ParseTransform {
     fn parse(input: ParseStream) -> Result<Self> {
-        let mut vars = vec![];
+        let mut decls = vec![];
         while !input.is_empty() {
-            vars.push(ParseSynVarDecl::parse(input)?);
+            decls.push(Declaration::parse(input)?);
         }
-        Ok(ParseTransform { vars })
+        let mut commands = vec![];
+        let mut vars = vec![];
+        for decl in decls.into_iter() {
+            match decl {
+                Declaration::SynVarDecl(var) => vars.push(var),
+                Declaration::Command(command) => commands.push(command),
+            }
+        }
+        let command = if commands.len() == 0 {
+            // Not the greatest error span
+            return Err(syn::Error::new(input.cursor().span(), "No command given."));
+        } else if commands.len() > 1 {
+            // Not the greatest error span
+            return Err(syn::Error::new(
+                input.cursor().span(),
+                "Multiple commands given.",
+            ));
+        } else {
+            commands.remove(0)
+        };
+        Ok(ParseTransform { vars, command })
+    }
+}
+
+impl Parse for Declaration {
+    fn parse(input: ParseStream) -> Result<Self> {
+        if input.peek(commands::transform) || input.peek(Token![match]) {
+            Ok(Self::Command(input.parse()?))
+        } else {
+            Ok(Self::SynVarDecl(input.parse()?))
+        }
+    }
+}
+
+impl Parse for Command {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let command = if input.peek(commands::transform) {
+            let _: commands::transform = input.parse()?;
+            let input_var: SynVar = input.parse()?;
+            let _: Token![-] = input.parse()?;
+            let _: Token![>] = input.parse()?;
+            let output_var: SynVar = input.parse()?;
+            Command::Transform(input_var, output_var)
+        } else {
+            let _: Token![match] = input.parse()?;
+            let match_var: SynVar = input.parse()?;
+            Command::Match(match_var)
+        };
+        let _: Token![;] = input.parse()?;
+        Ok(command)
     }
 }
 

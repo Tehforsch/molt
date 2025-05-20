@@ -1,6 +1,6 @@
 ---
 source: src/lib.rs
-assertion_line: 49
+assertion_line: 61
 expression: apply_transform(stringify! (rename))
 snapshot_kind: text
 ---

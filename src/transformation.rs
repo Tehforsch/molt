@@ -30,6 +30,12 @@ pub(crate) struct SynVarDecl {
 
 pub(crate) struct Transformation {
     pub vars: Vec<SynVarDecl>,
+    pub command: Command,
+}
+
+pub(crate) enum Command {
+    Transform(SynVar, SynVar),
+    Match(SynVar),
 }
 
 pub(crate) struct ParseSynVarDecl {
@@ -41,6 +47,7 @@ pub(crate) struct ParseSynVarDecl {
 
 pub(crate) struct ParseTransform {
     pub vars: Vec<ParseSynVarDecl>,
+    pub command: Command,
 }
 
 impl Transformation {
@@ -113,6 +120,7 @@ fn resolve_parsed_transform(tf: ParseTransform) -> Result<Transformation, syn::E
             .into_iter()
             .map(|var| rewrite_fully_qualified(var, &kind_map))
             .collect::<Result<_, syn::Error>>()?,
+        command: tf.command,
     })
 }
 
