@@ -24,6 +24,7 @@ pub fn run(path: &Path, spec_path: &Path) -> Result<(), Error> {
     println!("Checking {:?}", path);
     let ast = Ast::parse(path);
     let (ctx, spec) = FullSpec::from_path(spec_path)?;
+    dbg!(&spec);
     match &spec.command {
         Command::Transform(_, _) => {
             todo!()

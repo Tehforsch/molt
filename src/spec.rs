@@ -19,6 +19,7 @@ use crate::{
 
 const IDENT_IDENTIFIER: char = '$';
 
+#[derive(Debug)]
 pub(crate) enum Command {
     #[allow(dead_code)]
     Transform(SynVar, SynVar),
@@ -30,7 +31,13 @@ pub(crate) struct SynVar {
     pub name: String,
 }
 
-#[derive(Clone)]
+impl std::fmt::Display for SynVar {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "${}", self.name)
+    }
+}
+
+#[derive(Clone, Debug)]
 pub(crate) struct SynVarDecl {
     pub name: String,
     pub node: Option<Id>,
@@ -41,10 +48,12 @@ pub(crate) struct Dependencies {
     pub vars: HashSet<Ident>,
 }
 
+#[derive(Debug)]
 pub(crate) struct Spec {
     pub vars: Vec<SynVarDecl>,
 }
 
+#[derive(Debug)]
 pub(crate) struct FullSpec {
     pub spec: Spec,
     pub command: Command,
@@ -155,11 +164,10 @@ fn rewrite_fully_qualified(
         .map(|node| {
             let stream = annotate(node, kind_map);
             Ok::<_, syn::Error>(match var.kind {
-                Kind::Const => Node::Const(syn::parse2::<syn::ItemConst>(stream)?.convert(ctx)),
                 Kind::Expr => Node::Expr(syn::parse2::<syn::Expr>(stream)?.convert(ctx)),
                 Kind::Ident => Node::Ident(syn::parse2::<syn::Ident>(stream)?),
                 Kind::Lit => Node::Lit(syn::parse2::<syn::Lit>(stream)?),
-                _ => todo!(),
+                Kind::Item => Node::Item(syn::parse2::<syn::Item>(stream)?.convert(ctx)),
             })
         })
         .transpose()?;

@@ -55,44 +55,10 @@ impl ToPlaceholderTokens for syn::Expr {
     }
 }
 
-impl ToPlaceholderTokens for syn::ItemConst {
-    fn to_placeholder_tokens(name: &str) -> impl ToTokens {
-        let ident = syn::Ident::new(name, fake_span());
-        quote! { const #ident: usize = 0; }
-    }
-}
-
 impl ToPlaceholderTokens for syn::Lit {
     fn to_placeholder_tokens(name: &str) -> impl ToTokens {
         let lit = Lit::Str(LitStr::new(name, fake_span()));
         quote! { #lit }
-    }
-}
-
-impl ToPlaceholderTokens for syn::ExprUnary {
-    fn to_placeholder_tokens(name: &str) -> impl ToTokens {
-        let expr = syn::Expr::to_placeholder_tokens(name);
-        quote! {
-            !#expr
-        }
-    }
-}
-
-impl ToPlaceholderTokens for syn::ExprBinary {
-    fn to_placeholder_tokens(name: &str) -> impl ToTokens {
-        let expr = syn::Expr::to_placeholder_tokens(name);
-        quote! {
-            #expr + #expr
-        }
-    }
-}
-
-impl ToPlaceholderTokens for syn::ExprLit {
-    fn to_placeholder_tokens(name: &str) -> impl ToTokens {
-        let lit = syn::Lit::to_placeholder_tokens(name);
-        quote! {
-            #lit
-        }
     }
 }
 
@@ -134,16 +100,10 @@ impl FromPlaceholder for syn::Lit {
 impl FromPlaceholder for syn::Item {
     fn get_mangled_str(&self) -> Option<String> {
         if let syn::Item::Const(const_item) = self {
-            syn::ItemConst::get_mangled_str(const_item)
+            Some(const_item.ident.to_string())
         } else {
             None
         }
-    }
-}
-
-impl FromPlaceholder for syn::ItemConst {
-    fn get_mangled_str(&self) -> Option<String> {
-        Some(self.ident.to_string())
     }
 }
 
@@ -153,24 +113,6 @@ impl FromPlaceholder for syn::Expr {
             return lit.lit.get_mangled_str();
         }
         None
-    }
-}
-
-impl FromPlaceholder for syn::ExprUnary {
-    fn get_mangled_str(&self) -> Option<String> {
-        self.expr.get_mangled_str()
-    }
-}
-
-impl FromPlaceholder for syn::ExprBinary {
-    fn get_mangled_str(&self) -> Option<String> {
-        self.left.get_mangled_str()
-    }
-}
-
-impl FromPlaceholder for syn::ExprLit {
-    fn get_mangled_str(&self) -> Option<String> {
-        self.lit.get_mangled_str()
     }
 }
 

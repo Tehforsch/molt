@@ -1,4 +1,4 @@
-use crate::ctx::NodeId;
+use crate::ctx::{MatchCtx, NodeId};
 use crate::match_pattern::{CmpDirect, Matches};
 
 pub(crate) trait AsNode {
@@ -110,6 +110,16 @@ macro_rules! define_node_and_kind {
             }
         }
 
+        impl CustomDebug for Node {
+            fn deb(&self, ctx: &MatchCtx) -> String {
+                match self {
+                    $(
+                        Self::$variant_name(s) => s.deb(ctx),
+                    )*
+                }
+            }
+        }
+
         #[cfg(test)]
         pub(crate) fn unmangle_pattern_var_name(input: proc_macro2::TokenStream, kind: Kind) -> Option<String> {
             use crate::mangle::{FromPlaceholder, Pattern};
@@ -133,14 +143,10 @@ macro_rules! define_node_and_kind {
 }
 
 define_node_and_kind! {
-    (Const, ItemConst, syn::ItemConst),
     (Ident, Ident, syn::Ident),
     (Expr, Expr, syn::Expr),
     (Lit, Lit, syn::Lit),
     (Item, Item, syn::Item),
-    (ExprBinary, ExprBinary, syn::ExprBinary),
-    (ExprUnary, ExprUnary, syn::ExprUnary),
-    (ExprLit, ExprLit, syn::ExprLit),
 }
 
 pub type Ident = syn::Ident;
@@ -150,7 +156,7 @@ pub type Lit = syn::Lit;
 #[derive(Clone)]
 pub enum Item {
     /// A constant item: `const MAX: u16 = 65535`.
-    Const(NodeId<ItemConst>),
+    Const(ItemConst),
     /// An enum definition: `enum Foo<A, B> { A(A), B(B) }`.
     Enum(syn::ItemEnum),
     /// An `extern crate` item: `extern crate serde`.
@@ -198,11 +204,11 @@ pub(crate) struct ItemConst {
 pub(crate) enum Expr {
     // supported
     /// A unary operation: `!x`, `*x`.
-    Unary(NodeId<ExprUnary>),
+    Unary(ExprUnary),
     /// A binary operation: `a + b`, `a += b`.
-    Binary(NodeId<ExprBinary>),
+    Binary(ExprBinary),
     /// A literal in place of an expression: `1`, `"foo"`.
-    Lit(NodeId<ExprLit>),
+    Lit(ExprLit),
 
     /// A slice literal expression: `[a, b, c, d]`.
     Array(syn::ExprArray),
@@ -309,4 +315,165 @@ pub struct ExprUnary {
 pub struct ExprLit {
     pub _attrs: Vec<syn::Attribute>,
     pub lit: NodeId<Lit>,
+}
+
+pub(crate) trait CustomDebug {
+    fn deb(&self, ctx: &MatchCtx) -> String;
+}
+
+macro_rules! impl_deb_syn_type {
+    ($ty: ty) => {
+        impl CustomDebug for $ty {
+            fn deb(&self, _: &MatchCtx) -> String {
+                quote::quote! { #self }.to_string()
+            }
+        }
+    };
+}
+
+impl_deb_syn_type!(Lit);
+impl_deb_syn_type!(Ident);
+
+impl_deb_syn_type!(syn::ItemEnum);
+impl_deb_syn_type!(syn::ItemExternCrate);
+impl_deb_syn_type!(syn::ItemFn);
+impl_deb_syn_type!(syn::ItemForeignMod);
+impl_deb_syn_type!(syn::ItemImpl);
+impl_deb_syn_type!(syn::ItemMacro);
+impl_deb_syn_type!(syn::ItemMod);
+impl_deb_syn_type!(syn::ItemStatic);
+impl_deb_syn_type!(syn::ItemStruct);
+impl_deb_syn_type!(syn::ItemTrait);
+impl_deb_syn_type!(syn::ItemUse);
+impl_deb_syn_type!(syn::ItemUnion);
+impl_deb_syn_type!(syn::ItemType);
+impl_deb_syn_type!(syn::ItemTraitAlias);
+impl_deb_syn_type!(syn::BinOp);
+impl_deb_syn_type!(syn::UnOp);
+impl_deb_syn_type!(syn::ExprArray);
+impl_deb_syn_type!(syn::ExprAssign);
+impl_deb_syn_type!(syn::ExprAsync);
+impl_deb_syn_type!(syn::ExprAwait);
+impl_deb_syn_type!(syn::ExprBlock);
+impl_deb_syn_type!(syn::ExprBreak);
+impl_deb_syn_type!(syn::ExprCall);
+impl_deb_syn_type!(syn::ExprCast);
+impl_deb_syn_type!(syn::ExprClosure);
+impl_deb_syn_type!(syn::ExprConst);
+impl_deb_syn_type!(syn::ExprContinue);
+impl_deb_syn_type!(syn::ExprField);
+impl_deb_syn_type!(syn::ExprForLoop);
+impl_deb_syn_type!(syn::ExprGroup);
+impl_deb_syn_type!(syn::ExprIf);
+impl_deb_syn_type!(syn::ExprIndex);
+impl_deb_syn_type!(syn::ExprInfer);
+impl_deb_syn_type!(syn::ExprLet);
+impl_deb_syn_type!(syn::ExprLoop);
+impl_deb_syn_type!(syn::ExprMacro);
+impl_deb_syn_type!(syn::ExprMatch);
+impl_deb_syn_type!(syn::ExprMethodCall);
+impl_deb_syn_type!(syn::ExprParen);
+impl_deb_syn_type!(syn::ExprPath);
+impl_deb_syn_type!(syn::ExprRange);
+impl_deb_syn_type!(syn::ExprRawAddr);
+impl_deb_syn_type!(syn::ExprReference);
+impl_deb_syn_type!(syn::ExprRepeat);
+impl_deb_syn_type!(syn::ExprReturn);
+impl_deb_syn_type!(syn::ExprStruct);
+impl_deb_syn_type!(syn::ExprTry);
+impl_deb_syn_type!(syn::ExprTryBlock);
+impl_deb_syn_type!(syn::ExprTuple);
+impl_deb_syn_type!(syn::ExprUnsafe);
+impl_deb_syn_type!(syn::ExprWhile);
+impl_deb_syn_type!(syn::ExprYield);
+impl_deb_syn_type!(syn::Type);
+
+impl CustomDebug for ExprLit {
+    fn deb(&self, ctx: &MatchCtx) -> String {
+        let mut items = vec![];
+        items.push(self.lit.deb(ctx));
+        items.join(" ")
+    }
+}
+
+impl CustomDebug for ExprUnary {
+    fn deb(&self, ctx: &MatchCtx) -> String {
+        format!("{}{}", self.op.deb(ctx), self.expr.deb(ctx))
+    }
+}
+
+impl CustomDebug for ExprBinary {
+    fn deb(&self, ctx: &MatchCtx) -> String {
+        format!(
+            "({} {} {})",
+            self.left.deb(ctx),
+            self.op.deb(ctx),
+            self.right.deb(ctx)
+        )
+    }
+}
+
+impl CustomDebug for ItemConst {
+    fn deb(&self, ctx: &MatchCtx) -> String {
+        format!(
+            "const {}: {} = {};",
+            self.ident.deb(ctx),
+            self._ty.deb(ctx),
+            self.expr.deb(ctx)
+        )
+    }
+}
+
+macro_rules! impl_deb_enum {
+    ($ty: ty, ($($ident: ident),*$(,)?)) => {
+        impl CustomDebug for $ty {
+            fn deb(&self, ctx: &MatchCtx) -> String {
+                match self {
+                    $(
+                        Self::$ident(s) => s.deb(ctx),
+                    )*
+                }
+            }
+        }
+    };
+}
+
+impl_deb_enum!(
+    Item,
+    (
+        Const,
+        Enum,
+        ExternCrate,
+        Fn,
+        ForeignMod,
+        Impl,
+        Macro,
+        Mod,
+        Static,
+        Struct,
+        Trait,
+        TraitAlias,
+        Type,
+        Union,
+        Use,
+    )
+);
+
+impl_deb_enum!(
+    Expr,
+    (
+        Unary, Binary, Lit, Array, Assign, Async, Await, Block, Break, Call, Cast, Closure, Const,
+        Continue, Field, ForLoop, Group, If, Index, Infer, Let, Loop, Macro, Match, MethodCall,
+        Paren, Path, Range, RawAddr, Reference, Repeat, Return, Struct, Try, TryBlock, Tuple,
+        Unsafe, While, Yield,
+    )
+);
+
+impl<T: CustomDebug + AsNode> CustomDebug for NodeId<T> {
+    fn deb(&self, ctx: &MatchCtx) -> String {
+        match ctx.get(*self) {
+            crate::mangle::Pattern::Exact(t) => t.deb(ctx),
+            crate::mangle::Pattern::Pattern(var) => format!("${}", var.name),
+        }
+    }
 }

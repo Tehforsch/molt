@@ -10,7 +10,7 @@ pub(crate) trait Convert<T> {
 impl Convert<grammar::Item> for syn::Item {
     fn convert(self, ctx: &mut impl ConvertCtx) -> grammar::Item {
         match self {
-            syn::Item::Const(s) => grammar::Item::Const(ctx.add_convert(s)),
+            syn::Item::Const(s) => grammar::Item::Const(ctx.convert(s)),
             syn::Item::Enum(s) => grammar::Item::Enum(s),
             syn::Item::ExternCrate(s) => grammar::Item::ExternCrate(s),
             syn::Item::Fn(s) => grammar::Item::Fn(s),
@@ -50,7 +50,7 @@ impl Convert<grammar::Expr> for syn::Expr {
             syn::Expr::Assign(expr_assign) => grammar::Expr::Assign(expr_assign),
             syn::Expr::Async(expr_async) => grammar::Expr::Async(expr_async),
             syn::Expr::Await(expr_await) => grammar::Expr::Await(expr_await),
-            syn::Expr::Binary(expr_binary) => grammar::Expr::Binary(ctx.add_convert(expr_binary)),
+            syn::Expr::Binary(expr_binary) => grammar::Expr::Binary(ctx.convert(expr_binary)),
             syn::Expr::Block(expr_block) => grammar::Expr::Block(expr_block),
             syn::Expr::Break(expr_break) => grammar::Expr::Break(expr_break),
             syn::Expr::Call(expr_call) => grammar::Expr::Call(expr_call),
@@ -65,7 +65,7 @@ impl Convert<grammar::Expr> for syn::Expr {
             syn::Expr::Index(expr_index) => grammar::Expr::Index(expr_index),
             syn::Expr::Infer(expr_infer) => grammar::Expr::Infer(expr_infer),
             syn::Expr::Let(expr_let) => grammar::Expr::Let(expr_let),
-            syn::Expr::Lit(expr_lit) => grammar::Expr::Lit(ctx.add_convert(expr_lit)),
+            syn::Expr::Lit(expr_lit) => grammar::Expr::Lit(ctx.convert(expr_lit)),
             syn::Expr::Loop(expr_loop) => grammar::Expr::Loop(expr_loop),
             syn::Expr::Macro(expr_macro) => grammar::Expr::Macro(expr_macro),
             syn::Expr::Match(expr_match) => grammar::Expr::Match(expr_match),
@@ -81,7 +81,7 @@ impl Convert<grammar::Expr> for syn::Expr {
             syn::Expr::Try(expr_try) => grammar::Expr::Try(expr_try),
             syn::Expr::TryBlock(expr_try_block) => grammar::Expr::TryBlock(expr_try_block),
             syn::Expr::Tuple(expr_tuple) => grammar::Expr::Tuple(expr_tuple),
-            syn::Expr::Unary(expr_unary) => grammar::Expr::Unary(ctx.add_convert(expr_unary)),
+            syn::Expr::Unary(expr_unary) => grammar::Expr::Unary(ctx.convert(expr_unary)),
             syn::Expr::Unsafe(expr_unsafe) => grammar::Expr::Unsafe(expr_unsafe),
             syn::Expr::While(expr_while) => grammar::Expr::While(expr_while),
             syn::Expr::Yield(expr_yield) => grammar::Expr::Yield(expr_yield),

@@ -1,0 +1,7 @@
+let ident2: Ident;
+let ident: Ident = { $ident2 };
+let e: Expr;
+let expr: Expr = { 5 + $e };
+let pat: Item = { const $ident: usize = $expr; };
+
+match $pat;
