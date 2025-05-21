@@ -1,7 +1,0 @@
----
-source: src/lib.rs
-assertion_line: 75
-expression: match_pattern(stringify! (rename))
-snapshot_kind: text
----
-No match

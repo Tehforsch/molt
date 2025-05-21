@@ -7,7 +7,7 @@ use crate::{
     },
     mangle::Pattern,
     spec::{SynVar, SynVarDecl},
-    Ast, Spec,
+    Spec,
 };
 
 pub(crate) struct Matches {
@@ -193,8 +193,8 @@ impl Match {
         });
     }
 
-    pub(crate) fn iter_bindings(&self) -> impl Iterator<Item = (&SynVar, &Binding)> {
-        self.bindings.iter()
+    pub(crate) fn iter_vars(&self) -> impl Iterator<Item = &SynVar> {
+        self.bindings.keys()
     }
 
     pub(crate) fn get_binding(&self, var: &SynVar) -> &Binding {
@@ -209,15 +209,6 @@ pub(crate) struct MatchResult {
 }
 
 impl Spec {
-    pub(crate) fn find_node_for_var(&self, var: &SynVar) -> Id {
-        self.vars
-            .iter()
-            .find(|v| v.name.to_string() == var.name)
-            .unwrap()
-            .node
-            .unwrap()
-    }
-
     pub(crate) fn match_pattern(
         &self,
         ast_ctx: AstCtx,

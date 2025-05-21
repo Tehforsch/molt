@@ -2,11 +2,14 @@ use std::path::Path;
 
 use codespan_reporting::files::SimpleFile;
 
-use crate::ctx::{AstCtx, ConvertCtx};
+use crate::{
+    ctx::{AstCtx, ConvertCtx},
+    error::SourceFile,
+};
 
 pub(crate) struct Ast {
     pub ctx: AstCtx,
-    pub file: SimpleFile<String, String>,
+    pub file: SourceFile,
 }
 
 impl Ast {

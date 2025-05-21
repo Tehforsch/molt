@@ -1,0 +1,9 @@
+---
+source: src/lib.rs
+expression: match_pattern(stringify! (exprs))
+---
+note: Match
+  ┌─ "test_data/exprs.rs":3:1
+  │
+3 │ const z: usize = 5;
+  │ ^^^^^^^^^^^^^^^^^^^ $pat
