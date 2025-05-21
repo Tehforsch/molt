@@ -1,7 +1,17 @@
 use std::path::Path;
 
 use ast::Ast;
+use codespan_reporting::{
+    diagnostic::{Diagnostic, Label},
+    files::SimpleFile,
+    term::{
+        self,
+        termcolor::{ColorChoice, StandardStream},
+        Config,
+    },
+};
 use error::Error;
+use grammar::{CustomDebug, GetSpan};
 use quote::ToTokens;
 use spec::{Command, FullSpec, Spec};
 
@@ -24,17 +34,42 @@ pub fn run(path: &Path, spec_path: &Path) -> Result<(), Error> {
     println!("Checking {:?}", path);
     let ast = Ast::parse(path);
     let (ctx, spec) = FullSpec::from_path(spec_path)?;
-    dbg!(&spec);
     match &spec.command {
         Command::Transform(_, _) => {
             todo!()
         }
         Command::Match(pat_var) => {
-            spec.spec
-                .match_pattern(ast, ctx, spec.spec.find_node_for_var(pat_var));
+            show_matches(ast.file, spec.spec.match_pattern(ast.ctx, ctx, pat_var));
         }
     };
     Ok(())
+}
+
+fn show_matches(file: SimpleFile<String, String>, result: match_pattern::MatchResult) {
+    let ctx = result.ctx;
+    for match_ in result.matches.iter() {
+        let writer = StandardStream::stderr(ColorChoice::Always);
+        let config = Config::default();
+        // print main match
+        let binding = match_.get_binding(&result.var);
+        let node = ctx.get_node(binding.ast.unwrap()).unwrap();
+        let span = node.get_span(&ctx);
+        let mut diagnostic =
+            Diagnostic::note()
+                .with_message("Match")
+                .with_labels(vec![
+                    Label::primary((), span.byte_range()).with_message(&result.var)
+                ]);
+        for (key, binding) in match_.iter_bindings() {
+            if key == &result.var {
+                continue;
+            }
+            if let Some(node) = binding.ast.and_then(|value| ctx.get_node(value)) {
+                diagnostic = diagnostic.with_note(format!("{} = {}", key, node.deb(&ctx)));
+            }
+        }
+        term::emit(&mut writer.lock(), &config, &file, &diagnostic).unwrap();
+    }
 }
 
 #[cfg(test)]

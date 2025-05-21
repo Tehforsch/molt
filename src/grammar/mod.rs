@@ -1,3 +1,7 @@
+use proc_macro2::Span;
+use syn::spanned::Spanned;
+use syn::Token;
+
 use crate::ctx::{MatchCtx, NodeId};
 use crate::match_pattern::{CmpDirect, Matches};
 
@@ -6,6 +10,10 @@ pub(crate) trait AsNode {
     fn from_node(node: &Node) -> Option<&Self>;
     #[allow(unused)]
     fn from_node_mut(node: &mut Node) -> Option<&mut Self>;
+}
+
+pub(crate) trait GetSpan {
+    fn get_span(&self, ctx: &MatchCtx) -> Span;
 }
 
 macro_rules! define_node_and_kind {
@@ -120,6 +128,16 @@ macro_rules! define_node_and_kind {
             }
         }
 
+        impl GetSpan for Node {
+            fn get_span(&self, ctx: &MatchCtx) -> Span {
+                match self {
+                    $(
+                        Self::$variant_name(s) => s.get_span(ctx),
+                    )*
+                }
+            }
+        }
+
         #[cfg(test)]
         pub(crate) fn unmangle_pattern_var_name(input: proc_macro2::TokenStream, kind: Kind) -> Option<String> {
             use crate::mangle::{FromPlaceholder, Pattern};
@@ -138,6 +156,7 @@ macro_rules! define_node_and_kind {
                 )*
             }
         }
+
 
     }
 }
@@ -197,6 +216,8 @@ pub(crate) struct ItemConst {
     pub _generics: syn::Generics,
     pub _ty: Box<syn::Type>,
     pub expr: NodeId<Expr>,
+    pub const_token: Token![const],
+    pub semi_token: Token![;],
 }
 
 #[derive(Clone)]
@@ -328,6 +349,12 @@ macro_rules! impl_deb_syn_type {
                 quote::quote! { #self }.to_string()
             }
         }
+
+        impl GetSpan for $ty {
+            fn get_span(&self, _: &MatchCtx) -> Span {
+                <Self as Spanned>::span(self)
+            }
+        }
     };
 }
 
@@ -387,42 +414,51 @@ impl_deb_syn_type!(syn::ExprUnsafe);
 impl_deb_syn_type!(syn::ExprWhile);
 impl_deb_syn_type!(syn::ExprYield);
 impl_deb_syn_type!(syn::Type);
+impl_deb_syn_type!(Token![;]);
+impl_deb_syn_type!(Token![const]);
 
-impl CustomDebug for ExprLit {
-    fn deb(&self, ctx: &MatchCtx) -> String {
-        let mut items = vec![];
-        items.push(self.lit.deb(ctx));
-        items.join(" ")
+macro_rules! impl_deb_custom_type {
+    ($ty: ty, $fmt_str: literal, ($($ident: ident),*$(,)?)) => {
+        impl CustomDebug for $ty {
+            fn deb(&self, ctx: &MatchCtx) -> String {
+                format!(
+                    $fmt_str,
+                    $(
+                        self.$ident.deb(ctx),
+                    )*
+                )
+            }
+        }
+
+        impl GetSpan for $ty {
+            fn get_span(&self, ctx: &MatchCtx) -> Span {
+                let mut span: Option<Span> = None;
+                $(
+                    let new_span = self.$ident.get_span(ctx);
+                    if let Some(ref mut span) = span {
+                        if let Some(joined) = span.join(new_span) {
+                            *span = joined
+                        } else {
+                            panic!()
+                        }
+                    } else {
+                        span = Some(new_span);
+                    }
+                )*
+                span.unwrap()
+            }
+        }
     }
 }
 
-impl CustomDebug for ExprUnary {
-    fn deb(&self, ctx: &MatchCtx) -> String {
-        format!("{}{}", self.op.deb(ctx), self.expr.deb(ctx))
-    }
-}
-
-impl CustomDebug for ExprBinary {
-    fn deb(&self, ctx: &MatchCtx) -> String {
-        format!(
-            "({} {} {})",
-            self.left.deb(ctx),
-            self.op.deb(ctx),
-            self.right.deb(ctx)
-        )
-    }
-}
-
-impl CustomDebug for ItemConst {
-    fn deb(&self, ctx: &MatchCtx) -> String {
-        format!(
-            "const {}: {} = {};",
-            self.ident.deb(ctx),
-            self._ty.deb(ctx),
-            self.expr.deb(ctx)
-        )
-    }
-}
+impl_deb_custom_type!(ExprLit, "{}", (lit));
+impl_deb_custom_type!(ExprUnary, "{}{}", (op, expr));
+impl_deb_custom_type!(ExprBinary, "({} {} {})", (left, op, right));
+impl_deb_custom_type!(
+    ItemConst,
+    "{} {}: {} = {}{}",
+    (const_token, ident, _ty, expr, semi_token)
+);
 
 macro_rules! impl_deb_enum {
     ($ty: ty, ($($ident: ident),*$(,)?)) => {
@@ -431,6 +467,16 @@ macro_rules! impl_deb_enum {
                 match self {
                     $(
                         Self::$ident(s) => s.deb(ctx),
+                    )*
+                }
+            }
+        }
+
+        impl GetSpan for $ty {
+            fn get_span(&self, ctx: &MatchCtx) -> Span {
+                match self {
+                    $(
+                        Self::$ident(s) => s.get_span(ctx),
                     )*
                 }
             }
@@ -474,6 +520,15 @@ impl<T: CustomDebug + AsNode> CustomDebug for NodeId<T> {
         match ctx.get(*self) {
             crate::mangle::Pattern::Exact(t) => t.deb(ctx),
             crate::mangle::Pattern::Pattern(var) => format!("${}", var.name),
+        }
+    }
+}
+
+impl<T: GetSpan + AsNode> GetSpan for NodeId<T> {
+    fn get_span(&self, ctx: &MatchCtx) -> Span {
+        match ctx.get(*self) {
+            crate::mangle::Pattern::Exact(t) => t.get_span(ctx),
+            crate::mangle::Pattern::Pattern(_) => unimplemented!(),
         }
     }
 }

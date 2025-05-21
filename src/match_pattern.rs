@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    ctx::{Id, MatchCtx, NodeId, PatCtx},
+    ctx::{AstCtx, Id, MatchCtx, NodeId, PatCtx},
     grammar::{
         self, CustomDebug, Expr, ExprBinary, ExprLit, ExprUnary, Ident, ItemConst, Lit, Node,
     },
@@ -14,7 +14,7 @@ pub(crate) struct Matches {
     matches: Vec<Match>,
     current: Match,
     vars: Vec<SynVarDecl>,
-    todo: Vec<Comparison>,
+    todo: Vec<(SynVar, Id)>,
 }
 
 impl Matches {
@@ -71,32 +71,40 @@ impl Matches {
         self.check(false)
     }
 
-    fn add_todo(&mut self, ast: Id, pat: Id) {
-        self.todo.push(Comparison { ast, pat })
+    fn add_todo(&mut self, var: SynVar, ast: Id) {
+        self.todo.push((var, ast))
     }
 
-    fn add_binding(&mut self, ctx: &MatchCtx, key: &SynVar, ast_id: Id) {
-        println!(
-            "\tBind {} to {}",
-            key.name,
-            ctx.ast_ctx.get_node(ast_id).deb(ctx)
-        );
-        if let Some(pat_id) = self.current().bindings[&key] {
+    fn add_binding(&mut self, ctx: &MatchCtx, key: &SynVar, ast_id: Id, debug_print: bool) {
+        if debug_print {
+            println!(
+                "\tBind {} to {}",
+                key.name,
+                ctx.ast_ctx.get_node(ast_id).deb(ctx)
+            );
+        }
+        let binding = self.current_mut().bindings.get_mut(&key).unwrap();
+        if let Some(ast_id_2) = binding.ast {
             self.cmp_nodes(
                 ctx,
                 ctx.ast_ctx.get_node(ast_id),
-                ctx.pat_ctx.get_node(pat_id),
+                ctx.ast_ctx.get_node(ast_id_2),
             );
         } else {
-            self.current_mut()
-                .bindings
-                .insert(key.clone(), Some(ast_id));
+            binding.ast = Some(ast_id);
+            if let Some(pat_id) = binding.pat {
+                self.cmp_nodes(
+                    ctx,
+                    ctx.ast_ctx.get_node(ast_id),
+                    ctx.pat_ctx.get_node(pat_id),
+                );
+            }
         }
     }
 
     fn run(&mut self, ctx: &MatchCtx) {
-        while let Some(todo) = self.todo.pop() {
-            self.cmp_id(ctx, todo.ast, todo.pat);
+        while let Some((var, id)) = self.todo.pop() {
+            self.add_binding(ctx, &var, id, false);
             while let Some(cmp) = self.current.cmps.pop() {
                 if !self.current().valid {
                     break;
@@ -110,7 +118,7 @@ impl Matches {
     fn cmp_id(&mut self, ctx: &MatchCtx, ast_id: Id, pat_id: Id) {
         match ctx.pat_ctx.get_pattern(pat_id) {
             Pattern::Pattern(var) => {
-                self.add_binding(ctx, &var, ast_id);
+                self.add_binding(ctx, &var, ast_id, true);
             }
             Pattern::Exact(pat) => self.cmp_nodes(ctx, ctx.ast_ctx.get_node(ast_id), pat),
         }
@@ -140,9 +148,21 @@ struct Comparison {
     pat: Id,
 }
 
+#[derive(Debug)]
+pub(crate) struct Binding {
+    pub pat: Option<Id>,
+    pub ast: Option<Id>,
+}
+
+impl Binding {
+    fn new(pat: Option<Id>) -> Self {
+        Self { pat, ast: None }
+    }
+}
+
 #[derive(Debug, Default)]
 pub(crate) struct Match {
-    bindings: HashMap<SynVar, Option<Id>>,
+    bindings: HashMap<SynVar, Binding>,
     cmps: Vec<Comparison>,
     valid: bool,
 }
@@ -157,7 +177,7 @@ impl Match {
                         SynVar {
                             name: var.name.clone(),
                         },
-                        var.node,
+                        Binding::new(var.node),
                     )
                 })
                 .collect(),
@@ -172,11 +192,20 @@ impl Match {
             pat: pat.untyped(),
         });
     }
+
+    pub(crate) fn iter_bindings(&self) -> impl Iterator<Item = (&SynVar, &Binding)> {
+        self.bindings.iter()
+    }
+
+    pub(crate) fn get_binding(&self, var: &SynVar) -> &Binding {
+        &self.bindings[&var]
+    }
 }
 
 pub(crate) struct MatchResult {
-    pub _matches: Matches,
-    pub _ctx: MatchCtx,
+    pub matches: Matches,
+    pub ctx: MatchCtx,
+    pub var: SynVar,
 }
 
 impl Spec {
@@ -189,26 +218,23 @@ impl Spec {
             .unwrap()
     }
 
-    pub(crate) fn match_pattern(&self, ast: Ast, pat_ctx: PatCtx, pat_id: Id) -> MatchResult {
-        let ctx = MatchCtx::new(pat_ctx, ast.ctx);
+    pub(crate) fn match_pattern(
+        &self,
+        ast_ctx: AstCtx,
+        pat_ctx: PatCtx,
+        var: &SynVar,
+    ) -> MatchResult {
+        let ctx = MatchCtx::new(pat_ctx, ast_ctx);
         let mut matches = Matches::new(&self.vars);
         for item in ctx.ast_ctx.iter() {
-            matches.add_todo(item, pat_id);
+            matches.add_todo(var.clone(), item);
         }
         matches.run(&ctx);
-        for (i, match_) in matches.iter().enumerate() {
-            println!("Match {i}");
-            for (key, value) in match_.bindings.iter() {
-                if let Some(node) = value.and_then(|value| ctx.get_node(value)) {
-                    println!("\t{} = {:?}", key, node.deb(&ctx));
-                }
-            }
+        MatchResult {
+            matches,
+            ctx,
+            var: var.clone(),
         }
-        let result = MatchResult {
-            _matches: matches,
-            _ctx: ctx,
-        };
-        result
     }
 }
 

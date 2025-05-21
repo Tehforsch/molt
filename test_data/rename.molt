@@ -1,5 +1,3 @@
-let c: Ident = { z };
-let id: Ident = { $c };
-let pat: Const = { const $id: usize = 5; };
+let pat: Item = { const z: usize = 5; };
 
 match $pat;

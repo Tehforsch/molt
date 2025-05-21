@@ -39,6 +39,8 @@ impl Convert<grammar::ItemConst> for syn::ItemConst {
             _generics: self.generics,
             _ty: self.ty,
             expr: ctx.add_convert(*self.expr),
+            const_token: self.const_token,
+            semi_token: self.semi_token,
         }
     }
 }
