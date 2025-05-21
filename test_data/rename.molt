@@ -1,4 +1,4 @@
-let id: Ident;
+let id: Ident = { z };
 let pat: Const = { const $id: usize = 5; };
 
 match $pat;

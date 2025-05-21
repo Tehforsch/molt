@@ -1,15 +1,11 @@
 use crate::ctx::NodeId;
+use crate::match_pattern::{CmpDirect, Matches};
 
 pub(crate) trait AsNode {
     fn as_node(self) -> Node;
     fn from_node(node: &Node) -> Option<&Self>;
     #[allow(unused)]
     fn from_node_mut(node: &mut Node) -> Option<&mut Self>;
-}
-
-#[allow(unused)]
-pub(crate) trait GetKind {
-    fn get_kind() -> Kind;
 }
 
 macro_rules! define_node_and_kind {
@@ -95,13 +91,24 @@ macro_rules! define_node_and_kind {
             }
         )*
 
-        $(
-            impl GetKind for $ty {
-                fn get_kind() -> Kind {
-                    Kind::$variant_name
+        impl Node {
+            pub(crate) fn kind(&self) -> Kind {
+                match self {
+                    $(
+                        Self::$variant_name(_) => Kind::$variant_name,
+                    )*
                 }
             }
-        )*
+
+            pub(crate) fn cmp_equal_kinds(matches: &mut Matches, concrete: &Self, pat: &Self) {
+                assert_eq!(concrete.kind(), pat.kind());
+                match concrete {
+                    $(
+                        Node::$variant_name(s) => s.cmp_direct(matches, <$ty>::from_node(pat).unwrap()),
+                    )*
+                }
+            }
+        }
 
         #[cfg(test)]
         pub(crate) fn unmangle_pattern_var_name(input: proc_macro2::TokenStream, kind: Kind) -> Option<String> {

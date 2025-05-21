@@ -1,14 +1,14 @@
 use crate::{
-    ctx::Ctx,
+    ctx::ConvertCtx,
     grammar::{self},
 };
 
 pub(crate) trait Convert<T> {
-    fn convert(self, ctx: &mut Ctx) -> T;
+    fn convert(self, ctx: &mut impl ConvertCtx) -> T;
 }
 
 impl Convert<grammar::Item> for syn::Item {
-    fn convert(self, ctx: &mut Ctx) -> grammar::Item {
+    fn convert(self, ctx: &mut impl ConvertCtx) -> grammar::Item {
         match self {
             syn::Item::Const(s) => grammar::Item::Const(ctx.add_convert(s)),
             syn::Item::Enum(s) => grammar::Item::Enum(s),
@@ -31,7 +31,7 @@ impl Convert<grammar::Item> for syn::Item {
 }
 
 impl Convert<grammar::ItemConst> for syn::ItemConst {
-    fn convert(self, ctx: &mut Ctx) -> grammar::ItemConst {
+    fn convert(self, ctx: &mut impl ConvertCtx) -> grammar::ItemConst {
         grammar::ItemConst {
             _attrs: self.attrs,
             _vis: self.vis,
@@ -44,7 +44,7 @@ impl Convert<grammar::ItemConst> for syn::ItemConst {
 }
 
 impl Convert<grammar::Expr> for syn::Expr {
-    fn convert(self, ctx: &mut Ctx) -> grammar::Expr {
+    fn convert(self, ctx: &mut impl ConvertCtx) -> grammar::Expr {
         match self {
             syn::Expr::Array(expr_array) => grammar::Expr::Array(expr_array),
             syn::Expr::Assign(expr_assign) => grammar::Expr::Assign(expr_assign),
@@ -91,7 +91,7 @@ impl Convert<grammar::Expr> for syn::Expr {
 }
 
 impl Convert<grammar::ExprBinary> for syn::ExprBinary {
-    fn convert(self, ctx: &mut Ctx) -> grammar::ExprBinary {
+    fn convert(self, ctx: &mut impl ConvertCtx) -> grammar::ExprBinary {
         grammar::ExprBinary {
             _attrs: self.attrs,
             left: ctx.add_convert(*self.left),
@@ -102,7 +102,7 @@ impl Convert<grammar::ExprBinary> for syn::ExprBinary {
 }
 
 impl Convert<grammar::ExprUnary> for syn::ExprUnary {
-    fn convert(self, ctx: &mut Ctx) -> grammar::ExprUnary {
+    fn convert(self, ctx: &mut impl ConvertCtx) -> grammar::ExprUnary {
         grammar::ExprUnary {
             _attrs: self.attrs,
             op: self.op,
@@ -111,7 +111,7 @@ impl Convert<grammar::ExprUnary> for syn::ExprUnary {
     }
 }
 impl Convert<grammar::ExprLit> for syn::ExprLit {
-    fn convert(self, ctx: &mut Ctx) -> grammar::ExprLit {
+    fn convert(self, ctx: &mut impl ConvertCtx) -> grammar::ExprLit {
         grammar::ExprLit {
             _attrs: self.attrs,
             lit: ctx.add_convert(self.lit),
@@ -120,13 +120,13 @@ impl Convert<grammar::ExprLit> for syn::ExprLit {
 }
 
 impl Convert<grammar::Ident> for syn::Ident {
-    fn convert(self, _: &mut Ctx) -> grammar::Ident {
+    fn convert(self, _: &mut impl ConvertCtx) -> grammar::Ident {
         self
     }
 }
 
 impl Convert<grammar::Lit> for syn::Lit {
-    fn convert(self, _: &mut Ctx) -> grammar::Lit {
+    fn convert(self, _: &mut impl ConvertCtx) -> grammar::Lit {
         self
     }
 }

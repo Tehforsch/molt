@@ -11,7 +11,7 @@ use syn::Ident;
 
 use crate::{
     convert::Convert,
-    ctx::{Ctx, Id},
+    ctx::{Id, PatCtx},
     error::{emit_error, Error, ResolveError},
     grammar::{Kind, Node},
     mangle::mangle,
@@ -63,10 +63,10 @@ pub(crate) struct ParseSpec {
 }
 
 impl FullSpec {
-    pub(crate) fn from_path(path: &Path) -> Result<(Ctx, Self), Error> {
+    pub(crate) fn from_path(path: &Path) -> Result<(PatCtx, Self), Error> {
         let contents = std::fs::read_to_string(path).unwrap();
         let tokens = TokenStream::from_str(&contents).unwrap();
-        let result: Result<(Ctx, FullSpec), Error> = syn::parse2(tokens)
+        let result: Result<(PatCtx, FullSpec), Error> = syn::parse2(tokens)
             .map_err(|e| e.into())
             .and_then(|res| resolve_parsed_transform(res).map_err(|e| e.into()));
         match result {
@@ -90,7 +90,7 @@ fn get_single_command(mut commands: Vec<Command>) -> Result<Command, Error> {
     }
 }
 
-fn resolve_parsed_transform(tf: ParseSpec) -> Result<(Ctx, FullSpec), Error> {
+fn resolve_parsed_transform(tf: ParseSpec) -> Result<(PatCtx, FullSpec), Error> {
     // Topologically sort the variable declarations according to
     // their dependencies (i.e. which variables they reference)
     let mut deps_map: HashMap<_, _> = tf
@@ -129,7 +129,7 @@ fn resolve_parsed_transform(tf: ParseSpec) -> Result<(Ctx, FullSpec), Error> {
         .iter()
         .map(|var| (var.name.clone(), var.kind))
         .collect();
-    let mut ctx = Ctx::default();
+    let mut ctx = PatCtx::default();
     let spec = Spec {
         vars: sorted
             .into_iter()
@@ -146,7 +146,7 @@ fn resolve_parsed_transform(tf: ParseSpec) -> Result<(Ctx, FullSpec), Error> {
 }
 
 fn rewrite_fully_qualified(
-    ctx: &mut Ctx,
+    ctx: &mut PatCtx,
     var: ParseSynVarDecl,
     kind_map: &HashMap<Ident, Kind>,
 ) -> Result<SynVarDecl, syn::Error> {
