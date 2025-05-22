@@ -2,8 +2,8 @@ use std::marker::PhantomData;
 
 use crate::{
     convert::Convert,
-    grammar::{AsNode, Node},
-    mangle::{FromPlaceholder, Pattern},
+    grammar::{Node, ToNode},
+    mangle::{Pattern, Unmangle},
     spec::SynVar,
     CustomDebug,
 };
@@ -50,6 +50,7 @@ impl<T> NodeList<T> {
 }
 
 pub(crate) enum MatchingMode {
+    #[allow(unused)]
     Exact,
     // ContainsAllInOrder,
     ContainsAll,
@@ -57,10 +58,7 @@ pub(crate) enum MatchingMode {
 
 impl<T> Clone for NodeId<T> {
     fn clone(&self) -> Self {
-        Self {
-            _marker: PhantomData,
-            id: self.id,
-        }
+        *self
     }
 }
 
@@ -83,9 +81,9 @@ impl Id {
 
 pub(crate) trait ConvertCtx {
     fn convert<S, T: Convert<S>>(&mut self, t: T) -> S;
-    fn add_convert<S: AsNode, T: Convert<S> + FromPlaceholder>(&mut self, t: T) -> NodeId<S>;
+    fn add_convert<S: ToNode, T: Convert<S> + Unmangle>(&mut self, t: T) -> NodeId<S>;
 
-    fn add_convert_list<S: AsNode, T: Convert<S> + FromPlaceholder>(
+    fn add_convert_list<S: ToNode, T: Convert<S> + Unmangle>(
         &mut self,
         t: impl IntoIterator<Item = T>,
     ) -> NodeList<S> {
@@ -125,8 +123,8 @@ impl Ctx {
 }
 
 impl AstCtx {
-    pub(crate) fn add<T: AsNode>(&mut self, t: T) -> NodeId<T> {
-        Id(InternalId::AstNode(self.ctx.add_node(t.as_node()))).typed()
+    pub(crate) fn add<T: ToNode>(&mut self, t: T) -> NodeId<T> {
+        Id(InternalId::AstNode(self.ctx.add_node(t.to_node()))).typed()
     }
 
     pub(crate) fn get_node(&self, id: Id) -> &Node {
@@ -147,7 +145,7 @@ impl ConvertCtx for AstCtx {
         t.convert(self)
     }
 
-    fn add_convert<S: AsNode, T: Convert<S> + FromPlaceholder>(&mut self, t: T) -> NodeId<S> {
+    fn add_convert<S: ToNode, T: Convert<S> + Unmangle>(&mut self, t: T) -> NodeId<S> {
         let s = t.convert(self);
         self.add(s)
     }
@@ -159,15 +157,15 @@ impl PatCtx {
         Id(InternalId::Var(self.vars.len() - 1))
     }
 
-    fn add_var<T: AsNode>(&mut self, var: SynVar) -> NodeId<T> {
+    fn add_var<T: ToNode>(&mut self, var: SynVar) -> NodeId<T> {
         if self.vars.contains(&var) {
             todo!("Merge duplicates")
         }
         self.add_var_internal(var).typed()
     }
 
-    pub(crate) fn add<T: AsNode>(&mut self, t: T) -> NodeId<T> {
-        Id(InternalId::PatNode(self.ctx.add_node(t.as_node()))).typed()
+    pub(crate) fn add<T: ToNode>(&mut self, t: T) -> NodeId<T> {
+        Id(InternalId::PatNode(self.ctx.add_node(t.to_node()))).typed()
     }
 
     pub(crate) fn add_node(&mut self, node: Node) -> Id {
@@ -196,8 +194,8 @@ impl ConvertCtx for PatCtx {
         t.convert(self)
     }
 
-    fn add_convert<S: AsNode, T: Convert<S> + FromPlaceholder>(&mut self, t: T) -> NodeId<S> {
-        match T::from_placeholder(t) {
+    fn add_convert<S: ToNode, T: Convert<S> + Unmangle>(&mut self, t: T) -> NodeId<S> {
+        match T::unmangle(t) {
             Pattern::Exact(t) => {
                 let s = t.convert(self);
                 self.add(s)
@@ -217,7 +215,7 @@ impl MatchCtx {
         Self { pat_ctx, ast_ctx }
     }
 
-    pub(crate) fn get<T: AsNode>(&self, id: NodeId<T>) -> Pattern<&T> {
+    pub(crate) fn get<T: ToNode>(&self, id: NodeId<T>) -> Pattern<&T> {
         let node = match id.id.0 {
             InternalId::AstNode(idx) => &self.ast_ctx.ctx.nodes[idx],
             InternalId::PatNode(idx) => &self.pat_ctx.ctx.nodes[idx],

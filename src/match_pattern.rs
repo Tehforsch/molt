@@ -17,7 +17,7 @@ pub(crate) struct Matches {
 
 impl Matches {
     fn new(ctx: &MatchCtx, vars: &[SynVarDecl], var: SynVar, ast: Id) -> Self {
-        let mut match_ = Match::new(&vars);
+        let mut match_ = Match::new(vars);
         match_.add_binding(ctx, &var, ast, false);
         Self {
             current: vec![match_],
@@ -174,7 +174,6 @@ impl Match {
             }
             MatchingMode::ContainsAll => {
                 if ts2.is_empty() {
-                    return;
                 } else if ts2.len() == 1 {
                     let item2 = ts2.get(0).unwrap();
                     let fork = Fork::new(
@@ -202,7 +201,7 @@ impl Match {
                 ctx.ast_ctx.get_node(ast_id).deb(ctx)
             );
         }
-        let binding = self.bindings.get_mut(&key).unwrap();
+        let binding = self.bindings.get_mut(key).unwrap();
         if let Some(ast_id_2) = binding.ast {
             self.cmp_nodes(
                 ctx,
@@ -226,7 +225,7 @@ impl Match {
     }
 
     pub(crate) fn get_binding(&self, var: &SynVar) -> &Binding {
-        &self.bindings[&var]
+        &self.bindings[var]
     }
 
     fn make_forks(mut self) -> impl Iterator<Item = Match> {
@@ -286,7 +285,6 @@ impl CmpDirect for grammar::Item {
                 } else {
                     ctx.no_match()
                 }
-                return;
             }
             grammar::Item::Fn(fn_ast) => {
                 if let grammar::Item::Fn(fn_pat) = pat {
@@ -294,7 +292,6 @@ impl CmpDirect for grammar::Item {
                 } else {
                     ctx.no_match()
                 }
-                return;
             }
             _ => todo!(), // grammar::Item::Enum(item_enum) => todo!(),
                           // grammar::Item::ExternCrate(item_extern_crate) => todo!(),

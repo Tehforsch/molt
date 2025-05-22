@@ -5,11 +5,9 @@ use syn::{token, Token};
 use crate::ctx::{MatchCtx, NodeId, NodeList};
 use crate::match_pattern::{CmpDirect, Match};
 
-pub(crate) trait AsNode {
-    fn as_node(self) -> Node;
+pub(crate) trait ToNode {
+    fn to_node(self) -> Node;
     fn from_node(node: &Node) -> Option<&Self>;
-    #[allow(unused)]
-    fn from_node_mut(node: &mut Node) -> Option<&mut Self>;
 }
 
 pub(crate) trait GetSpan {
@@ -74,12 +72,12 @@ macro_rules! define_node_and_kind {
 
         impl Kind {
             pub(crate) fn to_placeholder_tokens(self, mangled_str: String) -> proc_macro2::TokenStream {
-                use crate::mangle::ToPlaceholderTokens;
+                use crate::mangle::Mangle;
                 use quote::ToTokens;
                 let mut stream = proc_macro2::TokenStream::new();
                 match self {
                     $(
-                        Kind::$variant_name => <$syn_ty>::to_placeholder_tokens(&mangled_str).to_tokens(&mut stream),
+                        Kind::$variant_name => <$syn_ty>::mangle(&mangled_str).to_tokens(&mut stream),
                     )*
                 }
                 stream
@@ -107,21 +105,13 @@ macro_rules! define_node_and_kind {
         }
 
         $(
-            impl AsNode for $ty {
-                fn as_node(self) -> Node {
+            impl ToNode for $ty {
+                fn to_node(self) -> Node {
                     Node::$variant_name(self)
                 }
 
                 fn from_node(node: &Node) -> Option<&Self> {
                     if let Node::$variant_name(ref item) = node {
-                        Some(item)
-                    } else {
-                        None
-                    }
-                }
-
-                fn from_node_mut(node: &mut Node) -> Option<&mut Self> {
-                    if let Node::$variant_name(ref mut item) = node {
                         Some(item)
                     } else {
                         None
@@ -171,12 +161,12 @@ macro_rules! define_node_and_kind {
 
         #[cfg(test)]
         pub(crate) fn unmangle_pattern_var_name(input: proc_macro2::TokenStream, kind: Kind) -> Option<String> {
-            use crate::mangle::{FromPlaceholder, Pattern};
+            use crate::mangle::{Unmangle, Pattern};
             match kind {
                 $(
                     Kind::$variant_name => {
                         let syn_type = syn::parse2::<$syn_ty>(input).unwrap();
-                        let pattern = syn_type.from_placeholder();
+                        let pattern = syn_type.unmangle();
                         if let Pattern::Pattern(var) = pattern {
                             Some(var.name)
                         }
@@ -605,7 +595,7 @@ impl_deb_enum!(
     )
 );
 
-impl<T: CustomDebug + AsNode> CustomDebug for NodeId<T> {
+impl<T: CustomDebug + ToNode> CustomDebug for NodeId<T> {
     fn deb(&self, ctx: &MatchCtx) -> String {
         match ctx.get(*self) {
             crate::mangle::Pattern::Exact(t) => t.deb(ctx),
@@ -614,7 +604,7 @@ impl<T: CustomDebug + AsNode> CustomDebug for NodeId<T> {
     }
 }
 
-impl<T: GetSpan + AsNode> GetSpan for NodeId<T> {
+impl<T: GetSpan + ToNode> GetSpan for NodeId<T> {
     fn get_span(&self, ctx: &MatchCtx) -> Option<Span> {
         match ctx.get(*self) {
             crate::mangle::Pattern::Exact(t) => t.get_span(ctx),
@@ -623,7 +613,7 @@ impl<T: GetSpan + AsNode> GetSpan for NodeId<T> {
     }
 }
 
-impl<T: CustomDebug + AsNode> CustomDebug for NodeList<T> {
+impl<T: CustomDebug + ToNode> CustomDebug for NodeList<T> {
     fn deb(&self, ctx: &MatchCtx) -> String {
         self.items
             .iter()
@@ -633,7 +623,7 @@ impl<T: CustomDebug + AsNode> CustomDebug for NodeList<T> {
     }
 }
 
-impl<T: GetSpan + AsNode> GetSpan for NodeList<T> {
+impl<T: GetSpan + ToNode> GetSpan for NodeList<T> {
     fn get_span(&self, ctx: &MatchCtx) -> Option<Span> {
         self.items
             .iter()

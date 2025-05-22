@@ -15,17 +15,12 @@ pub(crate) enum Pattern<E> {
     Pattern(SynVar),
 }
 
-pub(crate) trait ToPlaceholderTokens: ToTokens {
-    fn to_placeholder_tokens(name: &str) -> impl ToTokens;
+pub(crate) trait Mangle: ToTokens {
+    fn mangle(name: &str) -> impl ToTokens;
 }
 
 pub(crate) fn mangle_str(ident: &str, kind: Kind) -> String {
-    format!(
-        "{}_{}_{}",
-        MANGLE_STR,
-        ident.to_string(),
-        format!("{:?}", kind)
-    )
+    format!("{}_{}_{}", MANGLE_STR, ident, kind)
 }
 
 fn unmangle(name: &str, desired_kind: Kind) -> Option<String> {
@@ -42,66 +37,66 @@ fn unmangle(name: &str, desired_kind: Kind) -> Option<String> {
 
 pub(crate) fn mangle(name: &str, kind: Kind) -> TokenStream {
     let mangled_str = mangle_str(name, kind);
-    let t = kind.to_placeholder_tokens(mangled_str);
-    t
+
+    kind.to_placeholder_tokens(mangled_str)
 }
 
 fn fake_span() -> Span {
     Span::call_site()
 }
 
-impl ToPlaceholderTokens for grammar::Ident {
-    fn to_placeholder_tokens(name: &str) -> impl ToTokens {
+impl Mangle for grammar::Ident {
+    fn mangle(name: &str) -> impl ToTokens {
         grammar::Ident::new(name, fake_span())
     }
 }
 
-impl ToPlaceholderTokens for syn::Item {
-    fn to_placeholder_tokens(name: &str) -> impl ToTokens {
+impl Mangle for syn::Item {
+    fn mangle(name: &str) -> impl ToTokens {
         let ident = syn::Ident::new(name, fake_span());
         quote! { const #ident: usize = 0; }
     }
 }
 
-impl ToPlaceholderTokens for syn::Expr {
-    fn to_placeholder_tokens(name: &str) -> impl ToTokens {
+impl Mangle for syn::Expr {
+    fn mangle(name: &str) -> impl ToTokens {
         let lit = Lit::Str(LitStr::new(name, fake_span()));
         quote! { #lit }
     }
 }
 
-impl ToPlaceholderTokens for syn::Lit {
-    fn to_placeholder_tokens(name: &str) -> impl ToTokens {
+impl Mangle for syn::Lit {
+    fn mangle(name: &str) -> impl ToTokens {
         let lit = Lit::Str(LitStr::new(name, fake_span()));
         quote! { #lit }
     }
 }
 
-impl ToPlaceholderTokens for syn::ItemFn {
-    fn to_placeholder_tokens(name: &str) -> impl ToTokens {
+impl Mangle for syn::ItemFn {
+    fn mangle(name: &str) -> impl ToTokens {
         let ident = syn::Ident::new(name, fake_span());
         quote! { fn #ident() {} }
     }
 }
 
-impl ToPlaceholderTokens for syn::Signature {
-    fn to_placeholder_tokens(name: &str) -> impl ToTokens {
+impl Mangle for syn::Signature {
+    fn mangle(name: &str) -> impl ToTokens {
         let ident = syn::Ident::new(name, fake_span());
         quote! { fn #ident() }
     }
 }
 
-impl ToPlaceholderTokens for syn::FnArg {
-    fn to_placeholder_tokens(name: &str) -> impl ToTokens {
+impl Mangle for syn::FnArg {
+    fn mangle(name: &str) -> impl ToTokens {
         let ident = syn::Ident::new(name, fake_span());
         quote! { #ident: Foo }
     }
 }
 
-pub(crate) trait FromPlaceholder: Sized + GetKind {
+pub(crate) trait Unmangle: Sized + GetKind {
     fn get_mangled_str(&self) -> Option<String>;
 
-    fn from_placeholder(self) -> Pattern<Self> {
+    fn unmangle(self) -> Pattern<Self> {
         let name = self.get_mangled_str().and_then(|s| {
             if s.starts_with(MANGLE_STR) {
                 unmangle(&s, Self::get_kind())
@@ -117,23 +112,23 @@ pub(crate) trait FromPlaceholder: Sized + GetKind {
     }
 }
 
-impl FromPlaceholder for syn::Ident {
+impl Unmangle for syn::Ident {
     fn get_mangled_str(&self) -> Option<String> {
         Some(self.to_string())
     }
 }
 
-impl FromPlaceholder for syn::Lit {
+impl Unmangle for syn::Lit {
     fn get_mangled_str(&self) -> Option<String> {
         if let syn::Lit::Str(lit_str) = &self {
-            return Some(lit_str.value());
+            Some(lit_str.value())
         } else {
             None
         }
     }
 }
 
-impl FromPlaceholder for syn::Item {
+impl Unmangle for syn::Item {
     fn get_mangled_str(&self) -> Option<String> {
         if let syn::Item::Const(const_item) = self {
             Some(const_item.ident.to_string())
@@ -143,7 +138,7 @@ impl FromPlaceholder for syn::Item {
     }
 }
 
-impl FromPlaceholder for syn::Expr {
+impl Unmangle for syn::Expr {
     fn get_mangled_str(&self) -> Option<String> {
         if let syn::Expr::Lit(lit) = self {
             return lit.lit.get_mangled_str();
@@ -152,13 +147,13 @@ impl FromPlaceholder for syn::Expr {
     }
 }
 
-impl FromPlaceholder for syn::Signature {
+impl Unmangle for syn::Signature {
     fn get_mangled_str(&self) -> Option<String> {
         Some(self.ident.to_string())
     }
 }
 
-impl FromPlaceholder for syn::FnArg {
+impl Unmangle for syn::FnArg {
     fn get_mangled_str(&self) -> Option<String> {
         match self {
             syn::FnArg::Receiver(_) => None,

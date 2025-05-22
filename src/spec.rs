@@ -77,21 +77,21 @@ impl FullSpec {
         let tokens = TokenStream::from_str(&contents).unwrap();
         let result: Result<(PatCtx, FullSpec), Error> = syn::parse2(tokens)
             .map_err(|e| e.into())
-            .and_then(|res| resolve_parsed_transform(res).map_err(|e| e.into()));
+            .and_then(resolve_parsed_transform);
         match result {
             Ok(res) => Ok(res),
             Err(err) => {
                 let file = SimpleFile::new(format!("{:?}", path), contents);
                 emit_error(&file, &err);
-                return Err(err);
+                Err(err)
             }
         }
     }
 }
 
 fn get_single_command(mut commands: Vec<Command>) -> Result<Command, Error> {
-    if commands.len() == 0 {
-        return Err(ResolveError::NoCommandGiven.into());
+    if commands.is_empty() {
+        Err(ResolveError::NoCommandGiven.into())
     } else if commands.len() > 1 {
         return Err(ResolveError::MultipleCommandGiven.into());
     } else {
