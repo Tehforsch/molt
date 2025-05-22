@@ -3,7 +3,7 @@ use syn::spanned::Spanned;
 use syn::{token, Token};
 
 use crate::ctx::{MatchCtx, NodeId, NodeList};
-use crate::match_pattern::{CmpDirect, Matches};
+use crate::match_pattern::{CmpDirect, Match};
 
 pub(crate) trait AsNode {
     fn as_node(self) -> Node;
@@ -139,11 +139,11 @@ macro_rules! define_node_and_kind {
                 }
             }
 
-            pub(crate) fn cmp_equal_kinds(matches: &mut Matches, ast: &Self, pat: &Self) {
+            pub(crate) fn cmp_equal_kinds(ctx: &mut Match, ast: &Self, pat: &Self) {
                 assert_eq!(ast.kind(), pat.kind());
                 match ast {
                     $(
-                        Node::$variant_name(s) => s.cmp_direct(matches, <$ty>::from_node(pat).unwrap()),
+                        Node::$variant_name(s) => s.cmp_direct(ctx, <$ty>::from_node(pat).unwrap()),
                     )*
                 }
             }

@@ -43,6 +43,7 @@ impl<T> NodeList<T> {
         self.items.is_empty()
     }
 
+    #[allow(unused)]
     pub(crate) fn get(&self, idx: usize) -> Option<&NodeId<T>> {
         self.items.get(idx)
     }
