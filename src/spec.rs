@@ -1,10 +1,9 @@
 use std::{
     collections::{HashMap, HashSet},
-    path::Path,
     str::FromStr,
 };
 
-use codespan_reporting::files::SimpleFile;
+use codespan_reporting::files::Files;
 use proc_macro2::{Group, TokenStream, TokenTree};
 use quote::TokenStreamExt;
 use syn::Ident;
@@ -12,8 +11,9 @@ use syn::Ident;
 use crate::{
     convert::Convert,
     ctx::{Id, PatCtx},
-    error::{emit_error, Error, ResolveError},
+    error::{Error, ResolveError, emit_error},
     grammar::{Kind, Node},
+    input::Input,
     mangle::mangle,
 };
 
@@ -72,17 +72,17 @@ pub(crate) struct ParseSpec {
 }
 
 impl FullSpec {
-    pub(crate) fn from_path(path: &Path) -> Result<(PatCtx, Self), Error> {
-        let contents = std::fs::read_to_string(path).unwrap();
-        let tokens = TokenStream::from_str(&contents).unwrap();
+    pub(crate) fn new(input: &Input) -> Result<(PatCtx, Self), Error> {
+        let file_id = input.molt_file_id();
+        let source = input.source(file_id).unwrap();
+        let tokens = TokenStream::from_str(&source).unwrap();
         let result: Result<(PatCtx, FullSpec), Error> = syn::parse2(tokens)
             .map_err(|e| e.into())
             .and_then(resolve_parsed_transform);
         match result {
             Ok(res) => Ok(res),
             Err(err) => {
-                let file = SimpleFile::new(format!("{:?}", path), contents);
-                emit_error(&file, &err);
+                emit_error(input, file_id, &err);
                 Err(err)
             }
         }

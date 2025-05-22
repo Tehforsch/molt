@@ -1,6 +1,6 @@
 use proc_macro2::Span;
 use syn::spanned::Spanned;
-use syn::{token, Token};
+use syn::{Token, token};
 
 use crate::ctx::{MatchCtx, NodeId, NodeList};
 use crate::match_pattern::{CmpDirect, Match};
@@ -111,7 +111,7 @@ macro_rules! define_node_and_kind {
                 }
 
                 fn from_node(node: &Node) -> Option<&Self> {
-                    if let Node::$variant_name(ref item) = node {
+                    if let Node::$variant_name(item) = node {
                         Some(item)
                     } else {
                         None

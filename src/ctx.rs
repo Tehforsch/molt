@@ -5,7 +5,6 @@ use crate::{
     grammar::{Node, ToNode},
     mangle::{Pattern, Unmangle},
     spec::SynVar,
-    CustomDebug,
 };
 
 #[derive(Copy, Clone, Debug)]
@@ -240,7 +239,9 @@ impl MatchCtx {
         }
     }
 
+    #[cfg(feature = "debug-print")]
     pub(crate) fn dump(&self) {
+        use crate::grammar::CustomDebug;
         println!("--------------------------------");
         for idx in self.ast_ctx.ctx.iter() {
             let node = self.ast_ctx.get_node(Id(InternalId::AstNode(idx)));

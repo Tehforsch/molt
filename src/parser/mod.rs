@@ -1,10 +1,9 @@
 use std::collections::HashSet;
 
 use syn::{
-    braced,
+    Ident, Result, Token, braced,
     parse::{Parse, ParseStream},
     token::Brace,
-    Ident, Result, Token,
 };
 
 use crate::{

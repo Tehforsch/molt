@@ -1,7 +1,0 @@
----
-source: src/lib.rs
-assertion_line: 133
-expression: match_pattern(stringify! (indirection))
-snapshot_kind: text
----
-

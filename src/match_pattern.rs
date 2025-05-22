@@ -1,15 +1,18 @@
 use std::collections::HashMap;
 
 use crate::{
+    Spec,
     ctx::{AstCtx, Id, MatchCtx, MatchingMode, NodeId, NodeList, PatCtx},
     grammar::{
-        self, CustomDebug, Expr, ExprBinary, ExprLit, ExprParen, ExprUnary, FnArg, Ident,
-        ItemConst, ItemFn, Lit, Node, Signature,
+        self, Expr, ExprBinary, ExprLit, ExprParen, ExprUnary, FnArg, Ident, ItemConst, ItemFn,
+        Lit, Node, Signature,
     },
     mangle::Pattern,
     spec::{SynVar, SynVarDecl},
-    Spec,
 };
+
+#[cfg(feature = "debug-print")]
+use crate::grammar::CustomDebug;
 
 pub(crate) struct Matches {
     current: Vec<Match>,
@@ -138,14 +141,15 @@ impl Match {
         t1.cmp_direct(self, t2)
     }
 
-    fn cmp_nodes(&mut self, ctx: &MatchCtx, ast: &Node, pat: &Node) {
+    fn cmp_nodes(&mut self, _ctx: &MatchCtx, ast: &Node, pat: &Node) {
+        #[cfg(feature = "debug-print")]
         if ast.kind() == pat.kind() {
             println!(
                 "Compare ({:?} {:?})\n\t{}\n\t{}",
                 ast.kind(),
                 pat.kind(),
-                ast.deb(ctx),
-                pat.deb(ctx),
+                ast.deb(_ctx),
+                pat.deb(_ctx),
             );
         }
         if ast.kind() == pat.kind() {
@@ -195,6 +199,7 @@ impl Match {
 
     fn add_binding(&mut self, ctx: &MatchCtx, key: &SynVar, ast_id: Id, debug_print: bool) {
         if debug_print {
+            #[cfg(feature = "debug-print")]
             println!(
                 "\tBind {} to {}",
                 key.name,
@@ -255,6 +260,7 @@ impl Spec {
         var: &SynVar,
     ) -> MatchResult {
         let ctx = MatchCtx::new(pat_ctx, ast_ctx);
+        #[cfg(feature = "debug-print")]
         ctx.dump();
         let matches = ctx
             .ast_ctx
@@ -293,20 +299,7 @@ impl CmpDirect for grammar::Item {
                     ctx.no_match()
                 }
             }
-            _ => todo!(), // grammar::Item::Enum(item_enum) => todo!(),
-                          // grammar::Item::ExternCrate(item_extern_crate) => todo!(),
-                          // grammar::Item::Fn(item_fn) => todo!(),
-                          // grammar::Item::ForeignMod(item_foreign_mod) => todo!(),
-                          // grammar::Item::Impl(item_impl) => todo!(),
-                          // grammar::Item::Macro(item_macro) => todo!(),
-                          // grammar::Item::Mod(item_mod) => todo!(),
-                          // grammar::Item::Static(item_static) => todo!(),
-                          // grammar::Item::Struct(item_struct) => todo!(),
-                          // grammar::Item::Trait(item_trait) => todo!(),
-                          // grammar::Item::TraitAlias(item_trait_alias) => todo!(),
-                          // grammar::Item::Type(item_type) => todo!(),
-                          // grammar::Item::Union(item_union) => todo!(),
-                          // grammar::Item::Use(item_use) => todo!(),
+            _ => ctx.no_match(),
         }
     }
 }

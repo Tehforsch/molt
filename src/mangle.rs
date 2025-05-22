@@ -1,5 +1,5 @@
 use proc_macro2::{Span, TokenStream};
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 use syn::{Lit, LitStr};
 
 use crate::{
@@ -167,7 +167,7 @@ impl Unmangle for syn::FnArg {
 
 #[cfg(test)]
 mod tests {
-    use crate::grammar::{unmangle_pattern_var_name, Kind};
+    use crate::grammar::{Kind, unmangle_pattern_var_name};
 
     use super::mangle;
 

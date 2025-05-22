@@ -1,26 +1,17 @@
-use std::path::Path;
-
-use codespan_reporting::files::SimpleFile;
-
 use crate::{
+    Error,
     ctx::{AstCtx, ConvertCtx},
-    error::SourceFile,
+    input::RustSourceFile,
 };
 
-pub(crate) struct Ast {
-    pub ctx: AstCtx,
-    pub file: SourceFile,
-}
-
-impl Ast {
-    pub(crate) fn parse(path: &Path) -> Ast {
-        let contents = std::fs::read_to_string(path).unwrap();
-        let ast = syn::parse_file(&contents).unwrap();
-        let file = SimpleFile::new(format!("{:?}", path), contents);
+impl AstCtx {
+    pub(crate) fn parse(file: &RustSourceFile) -> Result<Self, Error> {
+        let contents = file.contents();
+        let ast = syn::parse_file(&contents).map_err(|e| Error::Parse(e))?;
         let mut ctx = AstCtx::default();
         for item in ast.items.into_iter() {
             ctx.add_convert(item);
         }
-        Ast { ctx, file }
+        Ok(ctx)
     }
 }
