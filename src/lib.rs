@@ -128,4 +128,5 @@ mod tests {
     test_match_pattern!(exprs);
     test_match_pattern!(multiple_vars);
     test_match_pattern!(function);
+    test_match_pattern!(function2);
 }

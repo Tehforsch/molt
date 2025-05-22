@@ -25,6 +25,35 @@ pub(crate) struct NodeId<T> {
     id: Id,
 }
 
+pub(crate) struct NodeList<T> {
+    pub items: Vec<NodeId<T>>,
+    pub matching_mode: MatchingMode,
+}
+
+impl<T> NodeList<T> {
+    pub(crate) fn iter(&self) -> impl Iterator<Item = &NodeId<T>> {
+        self.items.iter()
+    }
+
+    pub(crate) fn len(&self) -> usize {
+        self.items.len()
+    }
+
+    pub(crate) fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+
+    pub(crate) fn get(&self, idx: usize) -> Option<&NodeId<T>> {
+        self.items.get(idx)
+    }
+}
+
+pub(crate) enum MatchingMode {
+    Exact,
+    // ContainsAllInOrder,
+    ContainsAll,
+}
+
 impl<T> Clone for NodeId<T> {
     fn clone(&self) -> Self {
         Self {
@@ -52,8 +81,19 @@ impl Id {
 }
 
 pub(crate) trait ConvertCtx {
-    fn add_convert<S: AsNode, T: Convert<S> + FromPlaceholder>(&mut self, t: T) -> NodeId<S>;
     fn convert<S, T: Convert<S>>(&mut self, t: T) -> S;
+    fn add_convert<S: AsNode, T: Convert<S> + FromPlaceholder>(&mut self, t: T) -> NodeId<S>;
+
+    fn add_convert_list<S: AsNode, T: Convert<S> + FromPlaceholder>(
+        &mut self,
+        t: impl IntoIterator<Item = T>,
+    ) -> NodeList<S> {
+        let items = t.into_iter().map(|item| self.add_convert(item)).collect();
+        NodeList {
+            items,
+            matching_mode: MatchingMode::ContainsAll,
+        }
+    }
 }
 
 #[derive(Default)]

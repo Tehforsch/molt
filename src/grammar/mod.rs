@@ -2,7 +2,7 @@ use proc_macro2::Span;
 use syn::spanned::Spanned;
 use syn::{token, Token};
 
-use crate::ctx::{MatchCtx, NodeId};
+use crate::ctx::{MatchCtx, NodeId, NodeList};
 use crate::match_pattern::{CmpDirect, Matches};
 
 pub(crate) trait AsNode {
@@ -198,6 +198,7 @@ define_node_and_kind! {
     (Lit, Lit, syn::Lit),
     (Item, Item, syn::Item),
     (Signature, Signature, syn::Signature),
+    (FnArg, FnArg, syn::FnArg),
 }
 
 pub type Ident = syn::Ident;
@@ -268,10 +269,30 @@ pub struct Signature {
     pub ident: NodeId<Ident>,
     pub generics: syn::Generics,
     pub _paren_token: token::Paren,
-    pub inputs: syn::punctuated::Punctuated<syn::FnArg, Token![,]>,
+    pub inputs: NodeList<FnArg>,
     pub _variadic: Option<syn::Variadic>,
     pub output: syn::ReturnType,
 }
+
+pub struct FnArg {
+    pub ident: NodeId<Ident>,
+}
+
+// pub struct Receiver {
+//     pub attrs: Vec<syn::Attribute>,
+//     pub reference: Option<(Token![&], Option<syn::Lifetime>)>,
+//     pub mutability: Option<Token![mut]>,
+//     pub self_token: Token![self],
+//     pub colon_token: Option<Token![:]>,
+//     pub ty: Box<syn::Type>,
+// }
+
+// pub struct PatType {
+//     pub attrs: Vec<syn::Attribute>,
+//     pub pat: Box<syn::Pat>,
+//     pub colon_token: Token![:],
+//     pub ty: Box<syn::Type>,
+// }
 
 #[allow(dead_code)]
 pub(crate) enum Expr {
@@ -527,6 +548,7 @@ impl_deb_custom_type!(
     "{} {} {} ({}) {}",
     (fn_token, ident, generics, inputs, output)
 );
+impl_deb_custom_type!(FnArg, "{}: FooType", (ident));
 
 macro_rules! impl_deb_enum {
     ($ty: ty, ($($ident: ident),*$(,)?)) => {
@@ -601,6 +623,31 @@ impl<T: GetSpan + AsNode> GetSpan for NodeId<T> {
     }
 }
 
+impl<T: CustomDebug + AsNode> CustomDebug for NodeList<T> {
+    fn deb(&self, ctx: &MatchCtx) -> String {
+        self.items
+            .iter()
+            .map(|item| item.deb(ctx))
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+}
+
+impl<T: GetSpan + AsNode> GetSpan for NodeList<T> {
+    fn get_span(&self, ctx: &MatchCtx) -> Option<Span> {
+        self.items
+            .iter()
+            .map(|item| item.get_span(ctx))
+            .fold(None, |acc, span| {
+                if let Some(span) = span {
+                    acc.map_or(Some(span), |acc: Span| acc.join(span))
+                } else {
+                    acc
+                }
+            })
+    }
+}
+
 impl<T, P> GetSpan for syn::punctuated::Punctuated<T, P> {
     fn get_span(&self, _: &MatchCtx) -> Option<Span> {
         // TODO, but not sure how
@@ -633,5 +680,11 @@ impl GetKind for syn::Item {
 impl GetKind for syn::Signature {
     fn get_kind() -> Kind {
         Kind::Signature
+    }
+}
+
+impl GetKind for syn::FnArg {
+    fn get_kind() -> Kind {
+        Kind::FnArg
     }
 }

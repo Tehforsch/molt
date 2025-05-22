@@ -1,0 +1,7 @@
+---
+source: src/lib.rs
+assertion_line: 131
+expression: match_pattern(stringify! (function2))
+snapshot_kind: text
+---
+

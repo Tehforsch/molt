@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
 use crate::{
-    ctx::{AstCtx, Id, MatchCtx, NodeId, PatCtx},
+    ctx::{AstCtx, Id, MatchCtx, MatchingMode, NodeId, NodeList, PatCtx},
     grammar::{
-        self, CustomDebug, Expr, ExprBinary, ExprLit, ExprUnary, Ident, ItemConst, ItemFn, Lit,
-        Node, Signature,
+        self, CustomDebug, Expr, ExprBinary, ExprLit, ExprUnary, FnArg, Ident, ItemConst, ItemFn,
+        Lit, Node, Signature,
     },
     mangle::Pattern,
     spec::{SynVar, SynVarDecl},
@@ -56,6 +56,33 @@ impl Matches {
     // This exists purely to make the calls look symmetrical
     fn cmp_direct<T: CmpDirect>(&mut self, t1: &T, t2: &T) {
         t1.cmp_direct(self, t2)
+    }
+
+    fn fork<T: CmpDirect>(&mut self, ast: NodeId<T>, pat: NodeId<T>) {
+        self.current_mut().cmp(ast, pat);
+    }
+
+    fn cmp_lists<T: CmpDirect>(&mut self, ts1: &NodeList<T>, ts2: &NodeList<T>) {
+        match ts2.matching_mode {
+            MatchingMode::Exact => {
+                self.eq(ts1.len(), ts2.len());
+                for (item1, item2) in ts1.iter().zip(ts2.iter()) {
+                    self.cmp(*item1, *item2);
+                }
+            }
+            MatchingMode::ContainsAll => {
+                if ts2.is_empty() {
+                    return;
+                } else if ts2.len() == 1 {
+                    let item2 = ts2.get(0).unwrap();
+                    for item1 in ts1.iter() {
+                        self.fork(*item1, *item2);
+                    }
+                } else {
+                    todo!()
+                }
+            }
+        }
     }
 
     fn check(&mut self, val: bool) {
@@ -469,7 +496,7 @@ impl CmpDirect for Signature {
         // matches.cmp_direct(&self.abi, &pat.abi);
         matches.cmp(self.ident, pat.ident);
         matches.cmp_direct(&self.generics, &pat.generics);
-        // matches.cmp_direct(&self.inputs, &pat.inputs);
+        matches.cmp_lists(&self.inputs, &pat.inputs);
         matches.cmp_direct(&self.output, &pat.output);
     }
 }
@@ -483,5 +510,11 @@ impl CmpDirect for syn::Generics {
 impl CmpDirect for syn::ReturnType {
     fn cmp_direct(&self, _: &mut Matches, _: &Self) {
         // todo
+    }
+}
+
+impl CmpDirect for FnArg {
+    fn cmp_direct(&self, matches: &mut Matches, pat: &Self) {
+        matches.cmp(self.ident, pat.ident);
     }
 }

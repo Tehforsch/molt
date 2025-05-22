@@ -156,9 +156,24 @@ impl Convert<grammar::Signature> for syn::Signature {
             ident: ctx.add_convert(self.ident),
             generics: self.generics,
             _paren_token: self.paren_token,
-            inputs: self.inputs,
+            inputs: ctx.add_convert_list(self.inputs),
             _variadic: self.variadic,
             output: self.output,
+        }
+    }
+}
+
+impl Convert<grammar::FnArg> for syn::FnArg {
+    fn convert(self, ctx: &mut impl ConvertCtx) -> grammar::FnArg {
+        let ident = match self {
+            syn::FnArg::Receiver(_) => todo!(),
+            syn::FnArg::Typed(pat_type) => match &*pat_type.pat {
+                syn::Pat::Ident(pat_ident) => pat_ident.ident.clone(),
+                _ => todo!(),
+            },
+        };
+        grammar::FnArg {
+            ident: ctx.add_convert(ident),
         }
     }
 }

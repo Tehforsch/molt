@@ -5,7 +5,7 @@ expression: match_pattern(stringify! (function))
 note: Match
   ┌─ "test_data/function.rs":3:1
   │  
-3 │ ╭ fn foo(asd: usize) {
+3 │ ╭ fn foo(bar: usize) {
 4 │ │     println!("hello world");
 5 │ │ }
   │ ╰─^ $f

@@ -171,6 +171,7 @@ fn rewrite_fully_qualified(
                 Kind::Signature => {
                     Node::Signature(syn::parse2::<syn::Signature>(stream)?.convert(ctx))
                 }
+                Kind::FnArg => Node::FnArg(syn::parse2::<syn::FnArg>(stream)?.convert(ctx)),
             })
         })
         .transpose()?;

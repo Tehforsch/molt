@@ -91,6 +91,13 @@ impl ToPlaceholderTokens for syn::Signature {
     }
 }
 
+impl ToPlaceholderTokens for syn::FnArg {
+    fn to_placeholder_tokens(name: &str) -> impl ToTokens {
+        let ident = syn::Ident::new(name, fake_span());
+        quote! { #ident: Foo }
+    }
+}
+
 pub(crate) trait FromPlaceholder: Sized + GetKind {
     fn get_mangled_str(&self) -> Option<String>;
 
@@ -148,6 +155,18 @@ impl FromPlaceholder for syn::Expr {
 impl FromPlaceholder for syn::Signature {
     fn get_mangled_str(&self) -> Option<String> {
         Some(self.ident.to_string())
+    }
+}
+
+impl FromPlaceholder for syn::FnArg {
+    fn get_mangled_str(&self) -> Option<String> {
+        match self {
+            syn::FnArg::Receiver(_) => None,
+            syn::FnArg::Typed(pat_type) => match &*pat_type.pat {
+                syn::Pat::Ident(pat_ident) => Some(pat_ident.ident.to_string()),
+                _ => None,
+            },
+        }
     }
 }
 
