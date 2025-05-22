@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use crate::{
     ctx::{AstCtx, Id, MatchCtx, MatchingMode, NodeId, NodeList, PatCtx},
     grammar::{
-        self, CustomDebug, Expr, ExprBinary, ExprLit, ExprUnary, FnArg, Ident, ItemConst, ItemFn,
-        Lit, Node, Signature,
+        self, CustomDebug, Expr, ExprBinary, ExprLit, ExprParen, ExprUnary, FnArg, Ident,
+        ItemConst, ItemFn, Lit, Node, Signature,
     },
     mangle::Pattern,
     spec::{SynVar, SynVarDecl},
@@ -156,7 +156,7 @@ impl Match {
     }
 
     fn cmp_id(&mut self, ctx: &MatchCtx, ast_id: Id, pat_id: Id) {
-        match ctx.pat_ctx.get_pattern(pat_id) {
+        match ctx.get_pattern(pat_id) {
             Pattern::Pattern(var) => {
                 self.add_binding(ctx, &var, ast_id, true);
             }
@@ -390,7 +390,15 @@ impl CmpDirect for Expr {
                     return;
                 }
             }
-            _ => todo!(),
+            Expr::Paren(i1) => {
+                if let grammar::Expr::Paren(i2) = pat {
+                    ctx.cmp_direct(i1, i2);
+                    return;
+                }
+            }
+            _ => {
+                todo!()
+            }
         }
         ctx.no_match()
     }
@@ -427,6 +435,12 @@ impl CmpDirect for ExprLit {
     fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
         let Self { _attrs: _, lit } = self;
         ctx.cmp(*lit, pat.lit);
+    }
+}
+
+impl CmpDirect for ExprParen {
+    fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
+        ctx.cmp(self.expr, pat.expr);
     }
 }
 

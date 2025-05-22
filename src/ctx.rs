@@ -158,10 +158,18 @@ impl PatCtx {
     }
 
     fn add_var<T: ToNode>(&mut self, var: SynVar) -> NodeId<T> {
-        if self.vars.contains(&var) {
-            todo!("Merge duplicates")
-        }
-        self.add_var_internal(var).typed()
+        let id = if let Some(var) = self
+            .vars
+            .iter()
+            .enumerate()
+            .find(|(_, v)| var == **v)
+            .map(|(i, _)| Id(InternalId::Var(i)))
+        {
+            var
+        } else {
+            self.add_var_internal(var)
+        };
+        id.typed()
     }
 
     pub(crate) fn add<T: ToNode>(&mut self, t: T) -> NodeId<T> {
@@ -170,14 +178,6 @@ impl PatCtx {
 
     pub(crate) fn add_node(&mut self, node: Node) -> Id {
         Id(InternalId::PatNode(self.ctx.add_node(node)))
-    }
-
-    pub(crate) fn get_pattern(&self, id: Id) -> Pattern<&Node> {
-        match id.0 {
-            InternalId::PatNode(node) => Pattern::Exact(&self.ctx.nodes[node]),
-            InternalId::Var(var) => Pattern::Pattern(self.vars[var].clone()),
-            InternalId::AstNode(_) => unreachable!(),
-        }
     }
 
     pub(crate) fn get_node(&self, id: Id) -> &Node {
@@ -229,6 +229,14 @@ impl MatchCtx {
             InternalId::AstNode(idx) => Some(&self.ast_ctx.ctx.nodes[idx]),
             InternalId::PatNode(idx) => Some(&self.pat_ctx.ctx.nodes[idx]),
             InternalId::Var(_) => None,
+        }
+    }
+
+    pub(crate) fn get_pattern(&self, id: Id) -> Pattern<&Node> {
+        match id.0 {
+            InternalId::PatNode(node) => Pattern::Exact(&self.pat_ctx.ctx.nodes[node]),
+            InternalId::Var(var) => Pattern::Pattern(self.pat_ctx.vars[var].clone()),
+            InternalId::AstNode(node) => Pattern::Exact(&self.ast_ctx.ctx.nodes[node]),
         }
     }
 

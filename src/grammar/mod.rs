@@ -347,7 +347,7 @@ pub(crate) enum Expr {
     /// A method call expression: `x.foo::<T>(a, b)`.
     MethodCall(syn::ExprMethodCall),
     /// A parenthesized expression: `(a + b)`.
-    Paren(syn::ExprParen),
+    Paren(ExprParen),
     /// A path like `std::mem::replace` possibly containing generic
     /// parameters and a qualified self-type.
     /// A plain identifier like `x` is a path of length 1.
@@ -396,6 +396,11 @@ pub struct ExprUnary {
 pub struct ExprLit {
     pub _attrs: Vec<syn::Attribute>,
     pub lit: NodeId<Lit>,
+}
+
+pub struct ExprParen {
+    pub _attrs: Vec<syn::Attribute>,
+    pub expr: NodeId<Expr>,
 }
 
 pub(crate) trait CustomDebug {
@@ -527,6 +532,7 @@ macro_rules! impl_deb_custom_type {
 impl_deb_custom_type!(ExprLit, "{}", (lit));
 impl_deb_custom_type!(ExprUnary, "{}{}", (op, expr));
 impl_deb_custom_type!(ExprBinary, "({} {} {})", (left, op, right));
+impl_deb_custom_type!(ExprParen, "{}", (expr));
 impl_deb_custom_type!(
     ItemConst,
     "{} {}: {} = {}{}",

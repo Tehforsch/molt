@@ -72,7 +72,7 @@ impl Convert<grammar::Expr> for syn::Expr {
             syn::Expr::Macro(expr_macro) => grammar::Expr::Macro(expr_macro),
             syn::Expr::Match(expr_match) => grammar::Expr::Match(expr_match),
             syn::Expr::MethodCall(expr_method_call) => grammar::Expr::MethodCall(expr_method_call),
-            syn::Expr::Paren(expr_paren) => grammar::Expr::Paren(expr_paren),
+            syn::Expr::Paren(expr_paren) => grammar::Expr::Paren(ctx.convert(expr_paren)),
             syn::Expr::Path(expr_path) => grammar::Expr::Path(expr_path),
             syn::Expr::Range(expr_range) => grammar::Expr::Range(expr_range),
             syn::Expr::RawAddr(expr_raw_addr) => grammar::Expr::RawAddr(expr_raw_addr),
@@ -99,6 +99,15 @@ impl Convert<grammar::ExprBinary> for syn::ExprBinary {
             left: ctx.add_convert(*self.left),
             op: self.op,
             right: ctx.add_convert(*self.right),
+        }
+    }
+}
+
+impl Convert<grammar::ExprParen> for syn::ExprParen {
+    fn convert(self, ctx: &mut impl ConvertCtx) -> grammar::ExprParen {
+        grammar::ExprParen {
+            _attrs: self.attrs,
+            expr: ctx.add_convert(*self.expr),
         }
     }
 }

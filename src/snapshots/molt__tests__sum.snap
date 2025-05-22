@@ -1,0 +1,11 @@
+---
+source: src/lib.rs
+expression: match_pattern(stringify! (sum))
+---
+note: Match
+  ┌─ "test_data/sum.rs":1:23
+  │
+1 │ pub const x: usize = (10 + 90) + (10 + 90);
+  │                       ^^^^^^^^^^^^^^^^^^^ $pat
+  │
+  = $e = (10 + 90)
