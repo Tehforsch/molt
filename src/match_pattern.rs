@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use crate::{
     ctx::{AstCtx, Id, MatchCtx, NodeId, PatCtx},
     grammar::{
-        self, CustomDebug, Expr, ExprBinary, ExprLit, ExprUnary, Ident, ItemConst, Lit, Node,
+        self, CustomDebug, Expr, ExprBinary, ExprLit, ExprUnary, Ident, ItemConst, ItemFn, Lit,
+        Node, Signature,
     },
     mangle::Pattern,
     spec::{SynVar, SynVarDecl},
@@ -65,6 +66,10 @@ impl Matches {
 
     fn eq<T: PartialEq>(&mut self, t1: T, t2: T) {
         self.check(t1 == t2)
+    }
+
+    fn same<T: syn::token::Token>(&mut self, t1: &Option<T>, t2: &Option<T>) {
+        self.check(t1.is_some() == t2.is_some())
     }
 
     fn no_match(&mut self) {
@@ -216,6 +221,7 @@ impl Spec {
         var: &SynVar,
     ) -> MatchResult {
         let ctx = MatchCtx::new(pat_ctx, ast_ctx);
+        ctx.dump();
         let mut matches = Matches::new(&self.vars);
         for item in ctx.ast_ctx.iter() {
             matches.add_todo(var.clone(), item);
@@ -239,6 +245,14 @@ impl CmpDirect for grammar::Item {
             grammar::Item::Const(c_ast) => {
                 if let grammar::Item::Const(c_pat) = pat {
                     matches.cmp_direct(c_ast, c_pat);
+                } else {
+                    matches.no_match()
+                }
+                return;
+            }
+            grammar::Item::Fn(fn_ast) => {
+                if let grammar::Item::Fn(fn_pat) = pat {
+                    matches.cmp_direct(fn_ast, fn_pat);
                 } else {
                     matches.no_match()
                 }
@@ -437,5 +451,37 @@ impl CmpDirect for syn::UnOp {
             _ => todo!(),
         };
         matches.check(is_match)
+    }
+}
+
+impl CmpDirect for ItemFn {
+    fn cmp_direct(&self, matches: &mut Matches, pat: &Self) {
+        matches.cmp(self.sig, pat.sig);
+        // matches.cmp_direct(self.expr, pat.expr);
+    }
+}
+
+impl CmpDirect for Signature {
+    fn cmp_direct(&self, matches: &mut Matches, pat: &Self) {
+        matches.same(&self.constness, &pat.constness);
+        matches.same(&self.asyncness, &pat.asyncness);
+        matches.same(&self.unsafety, &pat.unsafety);
+        // matches.cmp_direct(&self.abi, &pat.abi);
+        matches.cmp(self.ident, pat.ident);
+        matches.cmp_direct(&self.generics, &pat.generics);
+        // matches.cmp_direct(&self.inputs, &pat.inputs);
+        matches.cmp_direct(&self.output, &pat.output);
+    }
+}
+
+impl CmpDirect for syn::Generics {
+    fn cmp_direct(&self, _: &mut Matches, _: &Self) {
+        // todo
+    }
+}
+
+impl CmpDirect for syn::ReturnType {
+    fn cmp_direct(&self, _: &mut Matches, _: &Self) {
+        // todo
     }
 }

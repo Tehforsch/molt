@@ -13,7 +13,7 @@ impl Convert<grammar::Item> for syn::Item {
             syn::Item::Const(s) => grammar::Item::Const(ctx.convert(s)),
             syn::Item::Enum(s) => grammar::Item::Enum(s),
             syn::Item::ExternCrate(s) => grammar::Item::ExternCrate(s),
-            syn::Item::Fn(s) => grammar::Item::Fn(s),
+            syn::Item::Fn(s) => grammar::Item::Fn(ctx.convert(s)),
             syn::Item::ForeignMod(s) => grammar::Item::ForeignMod(s),
             syn::Item::Impl(s) => grammar::Item::Impl(s),
             syn::Item::Macro(s) => grammar::Item::Macro(s),
@@ -130,5 +130,35 @@ impl Convert<grammar::Ident> for syn::Ident {
 impl Convert<grammar::Lit> for syn::Lit {
     fn convert(self, _: &mut impl ConvertCtx) -> grammar::Lit {
         self
+    }
+}
+
+impl Convert<grammar::ItemFn> for syn::ItemFn {
+    fn convert(self, ctx: &mut impl ConvertCtx) -> grammar::ItemFn {
+        let sig = ctx.add_convert(self.sig);
+        grammar::ItemFn {
+            _attrs: self.attrs,
+            vis: self.vis,
+            sig,
+            block: self.block,
+        }
+    }
+}
+
+impl Convert<grammar::Signature> for syn::Signature {
+    fn convert(self, ctx: &mut impl ConvertCtx) -> grammar::Signature {
+        grammar::Signature {
+            constness: self.constness,
+            asyncness: self.asyncness,
+            unsafety: self.unsafety,
+            _abi: self.abi,
+            fn_token: self.fn_token,
+            ident: ctx.add_convert(self.ident),
+            generics: self.generics,
+            _paren_token: self.paren_token,
+            inputs: self.inputs,
+            _variadic: self.variadic,
+            output: self.output,
+        }
     }
 }

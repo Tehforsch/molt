@@ -168,6 +168,9 @@ fn rewrite_fully_qualified(
                 Kind::Ident => Node::Ident(syn::parse2::<syn::Ident>(stream)?),
                 Kind::Lit => Node::Lit(syn::parse2::<syn::Lit>(stream)?),
                 Kind::Item => Node::Item(syn::parse2::<syn::Item>(stream)?.convert(ctx)),
+                Kind::Signature => {
+                    Node::Signature(syn::parse2::<syn::Signature>(stream)?.convert(ctx))
+                }
             })
         })
         .transpose()?;

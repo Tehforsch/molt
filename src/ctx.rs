@@ -5,6 +5,7 @@ use crate::{
     grammar::{AsNode, Node},
     mangle::{FromPlaceholder, Pattern},
     spec::SynVar,
+    CustomDebug,
 };
 
 #[derive(Copy, Clone, Debug)]
@@ -189,6 +190,25 @@ impl MatchCtx {
             InternalId::AstNode(idx) => Some(&self.ast_ctx.ctx.nodes[idx]),
             InternalId::PatNode(idx) => Some(&self.pat_ctx.ctx.nodes[idx]),
             InternalId::Var(_) => None,
+        }
+    }
+
+    pub(crate) fn dump(&self) {
+        println!("--------------------------------");
+        for idx in self.ast_ctx.ctx.iter() {
+            let node = self.ast_ctx.get_node(Id(InternalId::AstNode(idx)));
+            let kind_str = format!("{}", node.kind());
+            println!("AstNode({:02}): {:13} = {}", idx, kind_str, node.deb(self));
+        }
+        println!("--------------------------------");
+        for idx in self.pat_ctx.ctx.iter() {
+            let node = self.pat_ctx.get_node(Id(InternalId::PatNode(idx)));
+            let kind_str = format!("{}", node.kind());
+            println!("PatNode({:02}): {:13} = {}", idx, kind_str, node.deb(self));
+        }
+        println!("--------------------------------");
+        for (idx, var) in self.pat_ctx.vars.iter().enumerate() {
+            println!("PatVar({:02}): {:14} = {}", idx, "", var.name);
         }
     }
 }

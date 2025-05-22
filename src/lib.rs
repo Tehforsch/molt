@@ -12,7 +12,6 @@ use codespan_reporting::{
 use error::Error;
 use grammar::{CustomDebug, GetSpan};
 use match_pattern::MatchResult;
-use quote::ToTokens;
 use spec::{Command, FullSpec, Spec};
 
 mod ast;
@@ -24,11 +23,6 @@ mod mangle;
 mod match_pattern;
 mod parser;
 mod spec;
-
-pub fn dbgp(a: &impl ToTokens) {
-    let s = quote::quote! { #a };
-    dbg!(s.to_string());
-}
 
 pub fn run(path: &Path, spec_path: &Path) -> Result<(), Error> {
     println!("Checking {:?}", path);
@@ -57,7 +51,7 @@ impl MatchResult {
             .map(|match_| {
                 let binding = match_.get_binding(&self.var);
                 let node = self.ctx.get_node(binding.ast.unwrap()).unwrap();
-                let span = node.get_span(&self.ctx);
+                let span = node.get_span(&self.ctx).unwrap();
                 let mut diagnostic =
                     Diagnostic::note()
                         .with_message("Match")
@@ -133,4 +127,5 @@ mod tests {
     test_match_pattern!(ident);
     test_match_pattern!(exprs);
     test_match_pattern!(multiple_vars);
+    test_match_pattern!(function);
 }

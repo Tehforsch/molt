@@ -1,6 +1,6 @@
 use proc_macro2::Span;
 use syn::spanned::Spanned;
-use syn::Token;
+use syn::{token, Token};
 
 use crate::ctx::{MatchCtx, NodeId};
 use crate::match_pattern::{CmpDirect, Matches};
@@ -13,24 +13,35 @@ pub(crate) trait AsNode {
 }
 
 pub(crate) trait GetSpan {
-    fn get_span(&self, ctx: &MatchCtx) -> Span;
+    fn get_span(&self, ctx: &MatchCtx) -> Option<Span>;
+}
+
+pub(crate) trait GetKind {
+    fn get_kind() -> Kind;
 }
 
 macro_rules! define_node_and_kind {
-    ($(($variant_name: ident, $ty: ty, $syn_type: ty)),*$(,)?) => {
-        #[derive(Copy, Clone, Debug, PartialEq)]
+    ($(($variant_name: ident, $ty: ty, $syn_ty: ty)),*$(,)?) => {
+        #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
         pub(crate) enum Kind {
             $(
                 $variant_name,
             )*
         }
 
-        #[derive(Clone)]
         pub(crate) enum Node {
             $(
                 $variant_name($ty),
             )*
         }
+
+        $(
+            impl GetKind for $ty {
+                fn get_kind() -> Kind {
+                    Kind::$variant_name
+                }
+            }
+        )*
 
         impl Kind {
             #[cfg(test)]
@@ -68,10 +79,30 @@ macro_rules! define_node_and_kind {
                 let mut stream = proc_macro2::TokenStream::new();
                 match self {
                     $(
-                        Kind::$variant_name => <$syn_type>::to_placeholder_tokens(&mangled_str).to_tokens(&mut stream),
+                        Kind::$variant_name => <$syn_ty>::to_placeholder_tokens(&mangled_str).to_tokens(&mut stream),
                     )*
                 }
                 stream
+            }
+
+            pub(crate) fn from_str(s: &str) -> Self {
+                $(
+                    if s == stringify!($variant_name) {
+                        return Self::$variant_name;
+                    }
+                )*
+                panic!();
+            }
+
+        }
+
+        impl std::fmt::Display for Kind {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                match self {
+                    $(
+                        Self::$variant_name => write!(f, stringify!($variant_name)),
+                    )*
+                }
             }
         }
 
@@ -108,9 +139,9 @@ macro_rules! define_node_and_kind {
                 }
             }
 
-            pub(crate) fn cmp_equal_kinds(matches: &mut Matches, concrete: &Self, pat: &Self) {
-                assert_eq!(concrete.kind(), pat.kind());
-                match concrete {
+            pub(crate) fn cmp_equal_kinds(matches: &mut Matches, ast: &Self, pat: &Self) {
+                assert_eq!(ast.kind(), pat.kind());
+                match ast {
                     $(
                         Node::$variant_name(s) => s.cmp_direct(matches, <$ty>::from_node(pat).unwrap()),
                     )*
@@ -129,7 +160,7 @@ macro_rules! define_node_and_kind {
         }
 
         impl GetSpan for Node {
-            fn get_span(&self, ctx: &MatchCtx) -> Span {
+            fn get_span(&self, ctx: &MatchCtx) -> Option<Span> {
                 match self {
                     $(
                         Self::$variant_name(s) => s.get_span(ctx),
@@ -144,7 +175,7 @@ macro_rules! define_node_and_kind {
             match kind {
                 $(
                     Kind::$variant_name => {
-                        let syn_type = syn::parse2::<$syn_type>(input).unwrap();
+                        let syn_type = syn::parse2::<$syn_ty>(input).unwrap();
                         let pattern = syn_type.from_placeholder();
                         if let Pattern::Pattern(var) = pattern {
                             Some(var.name)
@@ -166,23 +197,25 @@ define_node_and_kind! {
     (Expr, Expr, syn::Expr),
     (Lit, Lit, syn::Lit),
     (Item, Item, syn::Item),
+    (Signature, Signature, syn::Signature),
 }
 
 pub type Ident = syn::Ident;
 pub type Lit = syn::Lit;
 
 #[allow(dead_code)]
-#[derive(Clone)]
 pub enum Item {
+    // Supported
     /// A constant item: `const MAX: u16 = 65535`.
     Const(ItemConst),
+    /// A free-standing function: `fn process(n: usize) -> Result<()> { ...
+    /// }`.
+    Fn(ItemFn),
+
     /// An enum definition: `enum Foo<A, B> { A(A), B(B) }`.
     Enum(syn::ItemEnum),
     /// An `extern crate` item: `extern crate serde`.
     ExternCrate(syn::ItemExternCrate),
-    /// A free-standing function: `fn process(n: usize) -> Result<()> { ...
-    /// }`.
-    Fn(syn::ItemFn),
     /// A block of foreign items: `extern "C" { ... }`.
     ForeignMod(syn::ItemForeignMod),
     /// An impl block providing trait or associated items: `impl<A> Trait
@@ -208,7 +241,6 @@ pub enum Item {
     Use(syn::ItemUse),
 }
 
-#[derive(Clone)]
 pub(crate) struct ItemConst {
     pub _attrs: Vec<syn::Attribute>,
     pub _vis: syn::Visibility,
@@ -220,7 +252,27 @@ pub(crate) struct ItemConst {
     pub semi_token: Token![;],
 }
 
-#[derive(Clone)]
+pub struct ItemFn {
+    pub _attrs: Vec<syn::Attribute>,
+    pub vis: syn::Visibility,
+    pub sig: NodeId<Signature>,
+    pub block: Box<syn::Block>,
+}
+
+pub struct Signature {
+    pub constness: Option<Token![const]>,
+    pub asyncness: Option<Token![async]>,
+    pub unsafety: Option<Token![unsafe]>,
+    pub _abi: Option<syn::Abi>,
+    pub fn_token: Token![fn],
+    pub ident: NodeId<Ident>,
+    pub generics: syn::Generics,
+    pub _paren_token: token::Paren,
+    pub inputs: syn::punctuated::Punctuated<syn::FnArg, Token![,]>,
+    pub _variadic: Option<syn::Variadic>,
+    pub output: syn::ReturnType,
+}
+
 #[allow(dead_code)]
 pub(crate) enum Expr {
     // supported
@@ -317,7 +369,6 @@ pub(crate) enum Expr {
     Yield(syn::ExprYield),
 }
 
-#[derive(Clone)]
 pub struct ExprBinary {
     pub _attrs: Vec<syn::Attribute>,
     pub left: NodeId<Expr>,
@@ -325,14 +376,12 @@ pub struct ExprBinary {
     pub right: NodeId<Expr>,
 }
 
-#[derive(Clone)]
 pub struct ExprUnary {
     pub _attrs: Vec<syn::Attribute>,
     pub op: syn::UnOp,
     pub expr: NodeId<Expr>,
 }
 
-#[derive(Clone)]
 pub struct ExprLit {
     pub _attrs: Vec<syn::Attribute>,
     pub lit: NodeId<Lit>,
@@ -351,8 +400,8 @@ macro_rules! impl_deb_syn_type {
         }
 
         impl GetSpan for $ty {
-            fn get_span(&self, _: &MatchCtx) -> Span {
-                <Self as Spanned>::span(self)
+            fn get_span(&self, _: &MatchCtx) -> Option<Span> {
+                Some(<Self as Spanned>::span(self))
             }
         }
     };
@@ -414,8 +463,17 @@ impl_deb_syn_type!(syn::ExprUnsafe);
 impl_deb_syn_type!(syn::ExprWhile);
 impl_deb_syn_type!(syn::ExprYield);
 impl_deb_syn_type!(syn::Type);
+impl_deb_syn_type!(syn::Visibility);
+impl_deb_syn_type!(syn::ReturnType);
+impl_deb_syn_type!(syn::Generics);
+impl_deb_syn_type!(syn::Block);
+impl_deb_syn_type!(syn::FnArg);
+
 impl_deb_syn_type!(Token![;]);
 impl_deb_syn_type!(Token![const]);
+impl_deb_syn_type!(Token![async]);
+impl_deb_syn_type!(Token![unsafe]);
+impl_deb_syn_type!(Token![fn]);
 
 macro_rules! impl_deb_custom_type {
     ($ty: ty, $fmt_str: literal, ($($ident: ident),*$(,)?)) => {
@@ -431,21 +489,25 @@ macro_rules! impl_deb_custom_type {
         }
 
         impl GetSpan for $ty {
-            fn get_span(&self, ctx: &MatchCtx) -> Span {
+            fn get_span(&self, ctx: &MatchCtx) -> Option<Span> {
                 let mut span: Option<Span> = None;
                 $(
                     let new_span = self.$ident.get_span(ctx);
-                    if let Some(ref mut span) = span {
-                        if let Some(joined) = span.join(new_span) {
-                            *span = joined
-                        } else {
-                            panic!()
+                    if let Some(new_span) = new_span {
+                        // TODO: wow this is ugly, but otherwise
+                        // we get weird spans
+                        if new_span.byte_range() != (0..0) {
+                            if let Some(ref mut span) = span {
+                                if let Some(joined) = span.join(new_span) {
+                                    *span = joined
+                                }
+                            } else {
+                                span = Some(new_span);
+                            }
                         }
-                    } else {
-                        span = Some(new_span);
                     }
                 )*
-                span.unwrap()
+                span
             }
         }
     }
@@ -458,6 +520,12 @@ impl_deb_custom_type!(
     ItemConst,
     "{} {}: {} = {}{}",
     (const_token, ident, _ty, expr, semi_token)
+);
+impl_deb_custom_type!(ItemFn, "{}{} {}", (vis, sig, block));
+impl_deb_custom_type!(
+    Signature,
+    "{} {} {} ({}) {}",
+    (fn_token, ident, generics, inputs, output)
 );
 
 macro_rules! impl_deb_enum {
@@ -473,7 +541,7 @@ macro_rules! impl_deb_enum {
         }
 
         impl GetSpan for $ty {
-            fn get_span(&self, ctx: &MatchCtx) -> Span {
+            fn get_span(&self, ctx: &MatchCtx) -> Option<Span> {
                 match self {
                     $(
                         Self::$ident(s) => s.get_span(ctx),
@@ -525,10 +593,45 @@ impl<T: CustomDebug + AsNode> CustomDebug for NodeId<T> {
 }
 
 impl<T: GetSpan + AsNode> GetSpan for NodeId<T> {
-    fn get_span(&self, ctx: &MatchCtx) -> Span {
+    fn get_span(&self, ctx: &MatchCtx) -> Option<Span> {
         match ctx.get(*self) {
             crate::mangle::Pattern::Exact(t) => t.get_span(ctx),
             crate::mangle::Pattern::Pattern(_) => unimplemented!(),
         }
+    }
+}
+
+impl<T, P> GetSpan for syn::punctuated::Punctuated<T, P> {
+    fn get_span(&self, _: &MatchCtx) -> Option<Span> {
+        // TODO, but not sure how
+        None
+    }
+}
+
+impl<T: CustomDebug, P> CustomDebug for syn::punctuated::Punctuated<T, P> {
+    fn deb(&self, ctx: &MatchCtx) -> String {
+        // very much todo
+        self.iter()
+            .map(|item| item.deb(ctx))
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+}
+
+impl GetKind for syn::Expr {
+    fn get_kind() -> Kind {
+        Kind::Expr
+    }
+}
+
+impl GetKind for syn::Item {
+    fn get_kind() -> Kind {
+        Kind::Item
+    }
+}
+
+impl GetKind for syn::Signature {
+    fn get_kind() -> Kind {
+        Kind::Signature
     }
 }

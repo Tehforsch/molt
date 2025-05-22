@@ -3,7 +3,7 @@ use quote::{quote, ToTokens};
 use syn::{Lit, LitStr};
 
 use crate::{
-    grammar::{self, Kind},
+    grammar::{self, GetKind, Kind},
     spec::SynVar,
 };
 
@@ -19,20 +19,35 @@ pub(crate) trait ToPlaceholderTokens: ToTokens {
     fn to_placeholder_tokens(name: &str) -> impl ToTokens;
 }
 
-pub(crate) fn mangle_str(ident: &str) -> String {
-    format!("{}{}", MANGLE_STR, ident.to_string())
+pub(crate) fn mangle_str(ident: &str, kind: Kind) -> String {
+    format!(
+        "{}_{}_{}",
+        MANGLE_STR,
+        ident.to_string(),
+        format!("{:?}", kind)
+    )
+}
+
+fn unmangle(name: &str, desired_kind: Kind) -> Option<String> {
+    let name = name.replacen(&format!("{}_", MANGLE_STR), "", 1);
+    let split: Vec<_> = name.split("_").collect();
+    let name = split[0];
+    let kind = Kind::from_str(split[1]);
+    if desired_kind == kind {
+        Some(name.to_string())
+    } else {
+        None
+    }
 }
 
 pub(crate) fn mangle(name: &str, kind: Kind) -> TokenStream {
-    let mangled_str = mangle_str(name);
-    kind.to_placeholder_tokens(mangled_str)
+    let mangled_str = mangle_str(name, kind);
+    let t = kind.to_placeholder_tokens(mangled_str);
+    t
 }
 
 fn fake_span() -> Span {
-    // This is very very ugly and inefficient, but it seems like
-    // a simple solution for now.
-    let ts = quote! { "hello" };
-    ts.into_iter().next().unwrap().span()
+    Span::call_site()
 }
 
 impl ToPlaceholderTokens for grammar::Ident {
@@ -62,13 +77,27 @@ impl ToPlaceholderTokens for syn::Lit {
     }
 }
 
-pub(crate) trait FromPlaceholder: Sized {
+impl ToPlaceholderTokens for syn::ItemFn {
+    fn to_placeholder_tokens(name: &str) -> impl ToTokens {
+        let ident = syn::Ident::new(name, fake_span());
+        quote! { fn #ident() {} }
+    }
+}
+
+impl ToPlaceholderTokens for syn::Signature {
+    fn to_placeholder_tokens(name: &str) -> impl ToTokens {
+        let ident = syn::Ident::new(name, fake_span());
+        quote! { fn #ident() }
+    }
+}
+
+pub(crate) trait FromPlaceholder: Sized + GetKind {
     fn get_mangled_str(&self) -> Option<String>;
 
     fn from_placeholder(self) -> Pattern<Self> {
         let name = self.get_mangled_str().and_then(|s| {
             if s.starts_with(MANGLE_STR) {
-                Some(s.replacen(MANGLE_STR, "", 1).to_string())
+                unmangle(&s, Self::get_kind())
             } else {
                 None
             }
@@ -113,6 +142,12 @@ impl FromPlaceholder for syn::Expr {
             return lit.lit.get_mangled_str();
         }
         None
+    }
+}
+
+impl FromPlaceholder for syn::Signature {
+    fn get_mangled_str(&self) -> Option<String> {
+        Some(self.ident.to_string())
     }
 }
 
