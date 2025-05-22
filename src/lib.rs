@@ -130,4 +130,5 @@ mod tests {
     test_match_pattern!(function);
     test_match_pattern!(function2);
     test_match_pattern!(sum);
+    test_match_pattern!(indirection);
 }
