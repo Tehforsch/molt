@@ -1,5 +1,3 @@
 let ident2: Ident;
 let ident: Ident;
 let pat: Ident = { $ident };
-
-match $pat;

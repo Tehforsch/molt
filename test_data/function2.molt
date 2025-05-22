@@ -1,5 +1,3 @@
 let ident: Ident;
 let arg: Ident;
 let f: Item = { fn $ident($arg: usize) {} };
-
-match $f;

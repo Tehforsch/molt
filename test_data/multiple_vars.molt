@@ -2,5 +2,3 @@ let ident: Ident = { x };
 let e: Expr;
 let expr: Expr = { 5 + $e };
 let pat: Item = { const $ident: usize = $expr; };
-
-match $pat;

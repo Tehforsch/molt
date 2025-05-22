@@ -89,9 +89,19 @@ impl FullSpec {
     }
 }
 
-fn get_single_command(mut commands: Vec<Command>) -> Result<Command, Error> {
+fn get_command(mut commands: Vec<Command>, spec: &Spec) -> Result<Command, Error> {
     if commands.is_empty() {
-        Err(ResolveError::NoCommandGiven.into())
+        // Topological sorting ensures that this
+        // variable contains no other variables,
+        // so it is most likely the variable
+        // we want to match for.
+        if let Some(var) = spec.vars.last() {
+            Ok(Command::Match(SynVar {
+                name: var.name.clone(),
+            }))
+        } else {
+            Err(ResolveError::NoCommandGiven.into())
+        }
     } else if commands.len() > 1 {
         return Err(ResolveError::MultipleCommandGiven.into());
     } else {
@@ -145,13 +155,8 @@ fn resolve_parsed_transform(tf: ParseSpec) -> Result<(PatCtx, FullSpec), Error> 
             .map(|var| rewrite_fully_qualified(&mut ctx, var, &kind_map))
             .collect::<Result<_, syn::Error>>()?,
     };
-    Ok((
-        ctx,
-        FullSpec {
-            spec,
-            command: get_single_command(tf.commands)?,
-        },
-    ))
+    let command = get_command(tf.commands, &spec)?;
+    Ok((ctx, FullSpec { spec, command }))
 }
 
 fn rewrite_fully_qualified(

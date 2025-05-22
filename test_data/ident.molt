@@ -1,4 +1,2 @@
 let ident: Ident;
 let pat: Item = { const $ident: usize = 10; };
-
-match $pat;
