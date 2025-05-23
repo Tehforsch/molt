@@ -1,6 +1,6 @@
 pub use rustc_lexer::Base;
 
-use super::TokenizerError;
+use super::{Mode, TokenizerError};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Token {
@@ -12,6 +12,7 @@ pub struct Token {
 pub enum TokenKind {
     Ident,
     RawIdent,
+    Keyword(Keyword),
     Literal {
         kind: LiteralKind,
         suffix_start: usize,
@@ -62,8 +63,12 @@ pub enum LiteralKind {
 }
 
 impl Token {
-    pub fn from_rustc_token(value: rustc_lexer::Token) -> Result<Option<Self>, TokenizerError> {
-        TokenKind::from_rustc_token_kind(value.kind).map(|opt| {
+    pub(super) fn from_rustc_token(
+        code: &str,
+        mode: Mode,
+        value: rustc_lexer::Token,
+    ) -> Result<Option<Self>, TokenizerError> {
+        TokenKind::from_rustc_token_kind(code, mode, value.kind).map(|opt| {
             opt.map(|kind| Self {
                 kind,
                 len: value.len,
@@ -74,6 +79,8 @@ impl Token {
 
 impl TokenKind {
     fn from_rustc_token_kind(
+        code: &str,
+        mode: Mode,
         value: rustc_lexer::TokenKind,
     ) -> Result<Option<Self>, TokenizerError> {
         let kind = match value {
@@ -85,7 +92,13 @@ impl TokenKind {
                 return LiteralKind::from_rustc_literal_kind(kind)
                     .map(|kind| Some(TokenKind::Literal { kind, suffix_start }));
             }
-            rustc_lexer::TokenKind::Ident => TokenKind::Ident,
+            rustc_lexer::TokenKind::Ident => {
+                if let Some(kw) = Keyword::new(code, mode) {
+                    TokenKind::Keyword(kw)
+                } else {
+                    TokenKind::Ident
+                }
+            }
             rustc_lexer::TokenKind::RawIdent => TokenKind::RawIdent,
             rustc_lexer::TokenKind::Lifetime { starts_with_number } => {
                 TokenKind::Lifetime { starts_with_number }
@@ -172,3 +185,112 @@ impl LiteralKind {
         }
     }
 }
+
+macro_rules! define_kw {
+    (
+        RUST
+        $(($ident1: ident, $lit1: literal)),* ,
+        MOLT
+        $(($ident2: ident, $lit2: literal)),* ,
+    ) => {
+        #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+        pub enum Keyword {
+            $(
+                $ident1,
+            )*
+            $(
+                $ident2,
+            )*
+        }
+
+        impl Keyword {
+            fn new(s: &str, mode: Mode) -> Option<Self> {
+                match s {
+                    $(
+                        $lit1 => Some(Self::$ident1),
+                    )*
+                    $(
+                        $lit2 if matches!(mode, Mode::Molt) => Some(Self::$ident2),
+                    )*
+                    _ => None,
+                }
+            }
+        }
+
+        #[cfg(test)]
+        #[test]
+        fn check_kw() {
+            $(
+                assert!(matches!(Keyword::new($lit1, Mode::Rust), Some(Keyword::$ident1)));
+                assert!(matches!(Keyword::new($lit1, Mode::Molt), Some(Keyword::$ident1)));
+            )*
+            $(
+                assert!(matches!(Keyword::new($lit2, Mode::Rust), None));
+                assert!(matches!(Keyword::new($lit2, Mode::Molt), Some(Keyword::$ident2)));
+            )*
+        }
+    }
+}
+
+define_kw!(
+    RUST
+    // Rust keywords
+    (Abstract, "abstract"),
+    (As, "as"),
+    (Async, "async"),
+    (Auto, "auto"),
+    (Await, "await"),
+    (Become, "become"),
+    (Box, "box"),
+    (Break, "break"),
+    (Const, "const"),
+    (Continue, "continue"),
+    (Crate, "crate"),
+    (Default, "default"),
+    (Do, "do"),
+    (Dyn, "dyn"),
+    (Else, "else"),
+    (Enum, "enum"),
+    (Extern, "extern"),
+    (Final, "final"),
+    (Fn, "fn"),
+    (For, "for"),
+    (If, "if"),
+    (Impl, "impl"),
+    (In, "in"),
+    (Loop, "loop"),
+    (Macro, "macro"),
+    (Mod, "mod"),
+    (Move, "move"),
+    (Mut, "mut"),
+    (Override, "override"),
+    (Priv, "priv"),
+    (Pub, "pub"),
+    (Raw, "raw"),
+    (Ref, "ref"),
+    (Return, "return"),
+    (UpperSelf, "Self"),
+    (LowerSelf, "self"),
+    (Static, "static"),
+    (Struct, "struct"),
+    (Super, "super"),
+    (Trait, "trait"),
+    (Try, "try"),
+    (Type, "type"),
+    (Typeof, "typeof"),
+    (Union, "union"),
+    (Unsafe, "unsafe"),
+    (Unsized, "unsized"),
+    (Use, "use"),
+    (Virtual, "virtual"),
+    (Where, "where"),
+    (While, "while"),
+    (Yield, "yield"),
+    (Let, "let"),
+    (Match, "match"),
+    MOLT
+    // Molt keywords
+    (Ident, "Ident"),
+    (Lit, "Lit"),
+    (Transform, "transform"),
+);

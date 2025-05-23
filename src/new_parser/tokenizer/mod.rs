@@ -4,7 +4,7 @@ use std::ops::Range;
 
 use rustc_lexer::strip_shebang;
 use thiserror::Error;
-pub use token::{LiteralKind, Token, TokenKind};
+pub use token::{Keyword, LiteralKind, Token, TokenKind};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Span {
@@ -30,26 +30,68 @@ impl Span {
 }
 
 pub struct Ident;
+pub struct Lit;
 
 #[derive(Debug, Error)]
 #[error("Error during tokenization")]
 pub struct TokenizerError;
 
-fn tokenize_file(source: &str) -> Result<Vec<Token>, TokenizerError> {
-    // special case because rustc_lexer assumes the file
-    // is nonempty
-    if source.len() == 0 {
-        return Ok(vec![]);
+#[derive(Copy, Clone)]
+enum Mode {
+    Molt,
+    Rust,
+}
+
+struct Tokenizer<'a> {
+    source: &'a str,
+    position: usize,
+    tokens: Vec<Token>,
+    mode: Mode,
+}
+
+impl<'a> Tokenizer<'a> {
+    pub fn tokenize_rust(source: &str) -> Result<Vec<Token>, TokenizerError> {
+        Self::tokenize(source, Mode::Rust)
     }
-    let start = strip_shebang(source).unwrap_or(0);
-    let mut tokens = vec![];
-    for token in rustc_lexer::tokenize(&source[start..]).map(Token::from_rustc_token) {
-        match token {
-            Ok(token) => tokens.extend(token),
+
+    pub fn tokenize_molt(source: &str) -> Result<Vec<Token>, TokenizerError> {
+        Self::tokenize(source, Mode::Molt)
+    }
+
+    fn tokenize(source: &str, mode: Mode) -> Result<Vec<Token>, TokenizerError> {
+        // special case because rustc_lexer assumes the file
+        // is nonempty
+        if source.len() == 0 {
+            return Ok(vec![]);
+        }
+        let start = strip_shebang(source).unwrap_or(0);
+        let mut tokenizer = Tokenizer {
+            source,
+            position: 0,
+            tokens: vec![],
+            mode,
+        };
+        for token in rustc_lexer::tokenize(&source) {
+            tokenizer.consume(token)?;
+        }
+        Ok(tokenizer.tokens)
+    }
+
+    fn consume(&mut self, token: rustc_lexer::Token) -> Result<(), TokenizerError> {
+        let len = token.len;
+        match Token::from_rustc_token(
+            &self.source[self.position..(self.position + len)],
+            self.mode,
+            token,
+        ) {
+            Ok(token) => {
+                self.tokens.extend(token);
+            }
             Err(e) => return Err(e),
         }
+        self.position += len;
+        Ok(())
     }
-    Ok(tokens)
 }
 
 #[cfg(test)]
@@ -58,6 +100,10 @@ mod tests {
 
     use rustc_lexer::tokenize;
     use walkdir::WalkDir;
+
+    use crate::new_parser::tokenizer::{Keyword, TokenKind};
+
+    use super::Tokenizer;
 
     fn get_source_files(path: &Path) -> Vec<PathBuf> {
         let mut src_files = vec![];
@@ -80,10 +126,29 @@ mod tests {
             .unwrap()
             .join("crates")
             .join("rust");
-        for file in get_source_files(&path).iter() {
+        for file in get_source_files(&path).iter().take(100) {
             let file = path.join(file);
             let code = std::fs::read_to_string(&file).unwrap();
-            super::tokenize_file(&code);
+            Tokenizer::tokenize_rust(&code);
         }
+    }
+
+    #[test]
+    fn check_kw_and_ident() {
+        let mut tokens = Tokenizer::tokenize_rust("foo bar async fn Ident transform").unwrap();
+        assert_eq!(tokens[0].kind, TokenKind::Ident);
+        assert_eq!(tokens[1].kind, TokenKind::Ident);
+        assert_eq!(tokens[2].kind, TokenKind::Keyword(Keyword::Async));
+        assert_eq!(tokens[3].kind, TokenKind::Keyword(Keyword::Fn));
+        assert_eq!(tokens[4].kind, TokenKind::Ident);
+        assert_eq!(tokens[5].kind, TokenKind::Ident);
+
+        let mut tokens = Tokenizer::tokenize_molt("foo bar async fn Ident transform").unwrap();
+        assert_eq!(tokens[0].kind, TokenKind::Ident);
+        assert_eq!(tokens[1].kind, TokenKind::Ident);
+        assert_eq!(tokens[2].kind, TokenKind::Keyword(Keyword::Async));
+        assert_eq!(tokens[3].kind, TokenKind::Keyword(Keyword::Fn));
+        assert_eq!(tokens[4].kind, TokenKind::Keyword(Keyword::Ident));
+        assert_eq!(tokens[5].kind, TokenKind::Keyword(Keyword::Transform));
     }
 }

@@ -20,4 +20,10 @@ pub(crate) enum Command {
     Match(Var),
 }
 
-pub(crate) enum Kind {}
+pub(crate) enum Kind {
+    Ident,
+}
+
+pub(crate) enum Node {
+    Ident(Ident),
+}

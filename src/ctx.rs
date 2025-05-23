@@ -106,7 +106,7 @@ pub(crate) struct PatCtx {
 }
 
 #[derive(Default)]
-struct Ctx {
+pub(crate) struct Ctx {
     nodes: Vec<Node>,
 }
 

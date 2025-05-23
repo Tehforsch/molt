@@ -1,6 +1,8 @@
 mod cursor;
 mod error;
 mod molt_grammar;
+mod node;
+mod parse;
 mod rust_grammar;
 mod tokenizer;
 
@@ -9,8 +11,10 @@ use error::ParseError as Error;
 use error::ParseErrorKind as ErrorKind;
 use tokenizer::{Token, TokenKind};
 
-pub use error::ParseError;
+pub use error::{ParseError, ParseErrorKind};
 pub use tokenizer::{Span, TokenizerError};
+
+use crate::ctx::Ctx;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
@@ -55,16 +59,7 @@ trait Delimiter: Default {
 pub struct Parser {
     cursor: Cursor,
     current_node_start: usize,
-}
-
-impl Peek for Parser {
-    fn peek(&self) -> TokenKind {
-        self.cursor.peek()
-    }
-
-    fn peek_next(&self) -> TokenKind {
-        self.cursor.peek_next()
-    }
+    ctx: Ctx,
 }
 
 impl Parser {
@@ -72,23 +67,9 @@ impl Parser {
         Self {
             cursor: Cursor::new(tokens),
             current_node_start: 0,
+            ctx: Ctx::default(),
         }
     }
-
-    // pub fn parse_program(&mut self) -> Result<Ast, Vec<SpannedError>> {
-    //     let mut stmts = vec![];
-    //     let mut errs = vec![];
-    //     while !self.is_at_end() {
-    //         let start = self.start_span();
-    //         let result = self.parse::<Stmt>();
-    //     }
-    //     self.check_tokenizer_errors(&mut errs);
-    //     if errs.is_empty() {
-    //         Ok(stmts)
-    //     } else {
-    //         Err(errs)
-    //     }
-    // }
 
     fn parse<T: Parse>(&mut self) -> Result<T> {
         T::parse(self)
@@ -116,9 +97,20 @@ impl Parser {
     }
 
     fn error(&self, kind: ErrorKind) -> Result<(), Error> {
-        Err(Error::new(
-            kind,
-            Span::new(self.current_node_start, self.cursor.pos()),
-        ))
+        Err(self.make_error(kind))
+    }
+
+    fn make_error(&self, kind: ErrorKind) -> Error {
+        Error::new(kind, Span::new(self.current_node_start, self.cursor.pos()))
+    }
+}
+
+impl Peek for Parser {
+    fn peek(&self) -> TokenKind {
+        self.cursor.peek()
+    }
+
+    fn peek_next(&self) -> TokenKind {
+        self.cursor.peek_next()
     }
 }

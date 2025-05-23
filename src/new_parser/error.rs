@@ -13,4 +13,5 @@ impl ParseError {
 
 pub enum ParseErrorKind {
     TokenExpected(TokenKind),
+    InvalidNodeKind,
 }
