@@ -26,11 +26,11 @@ impl Matches {
 
     fn run(&mut self, ctx: &MatchCtx) -> Vec<Match> {
         let mut matches = vec![];
-        while let Some(mut match_) = self.current.pop() {
+        'outer: while let Some(mut match_) = self.current.pop() {
             while let Some(cmp) = match_.cmps.pop() {
                 match_.cmp_id(ctx, cmp.ast, cmp.pat);
                 if !match_.valid {
-                    break;
+                    break 'outer;
                 }
             }
             if match_.forks.is_empty() {
