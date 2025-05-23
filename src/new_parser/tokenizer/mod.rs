@@ -4,7 +4,7 @@ use std::ops::Range;
 
 use rustc_lexer::strip_shebang;
 use thiserror::Error;
-use token::Token;
+pub use token::{LiteralKind, Token, TokenKind};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Span {
@@ -13,6 +13,10 @@ pub struct Span {
 }
 
 impl Span {
+    pub fn new(start: usize, end: usize) -> Self {
+        Self { start, end }
+    }
+
     pub(crate) fn from_range(range: Range<usize>) -> Self {
         Self {
             start: range.start,

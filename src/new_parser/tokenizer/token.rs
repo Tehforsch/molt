@@ -2,6 +2,7 @@ pub use rustc_lexer::Base;
 
 use super::TokenizerError;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Token {
     pub kind: TokenKind,
     pub len: usize,
@@ -45,7 +46,7 @@ pub enum TokenKind {
     Slash,
     Caret,
     Percent,
-    Unknown,
+    Eof,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -79,6 +80,7 @@ impl TokenKind {
             rustc_lexer::TokenKind::LineComment => return Ok(None),
             rustc_lexer::TokenKind::BlockComment { .. } => return Ok(None),
             rustc_lexer::TokenKind::Whitespace => return Ok(None),
+            rustc_lexer::TokenKind::Unknown => return Err(TokenizerError),
             rustc_lexer::TokenKind::Literal { kind, suffix_start } => {
                 return LiteralKind::from_rustc_literal_kind(kind)
                     .map(|kind| Some(TokenKind::Literal { kind, suffix_start }));
@@ -115,7 +117,6 @@ impl TokenKind {
             rustc_lexer::TokenKind::Slash => TokenKind::Slash,
             rustc_lexer::TokenKind::Caret => TokenKind::Caret,
             rustc_lexer::TokenKind::Percent => TokenKind::Percent,
-            rustc_lexer::TokenKind::Unknown => TokenKind::Unknown,
         };
         Ok(Some(kind))
     }
