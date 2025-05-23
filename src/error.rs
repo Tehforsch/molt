@@ -8,65 +8,53 @@ use codespan_reporting::{
     },
 };
 
-use crate::input::{FileId, Input};
+use crate::{
+    input::{FileId, Input},
+    new_parser::{Span, TokenizerError},
+};
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum ResolveError {
+    #[error("Multiple commands given.")]
     MultipleCommandGiven,
+    #[error("No commands given.")]
     NoCommandGiven,
 }
 
 #[derive(Debug)]
 pub enum Error {
     Parse(syn::Error),
+    Tokenize(TokenizerError),
     Resolve(ResolveError),
     Misc(String),
 }
 
 impl Error {
-    fn span(&self) -> Option<Range<usize>> {
+    fn span(&self) -> Option<Span> {
         match self {
-            Error::Parse(error) => Some(error.span().byte_range()),
+            Error::Parse(error) => Some(Span::from_range(error.span().byte_range())),
+            Error::Tokenize(error) => None,
             Error::Resolve(_) => None,
             Error::Misc(_) => None,
         }
     }
 }
 
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // TODO
-        match self {
-            Error::Parse(error) => write!(f, "{}", error),
-            Error::Resolve(_) => write!(f, "Error during resolution."),
-            Error::Misc(s) => write!(f, "{}", s),
-        }
+pub(crate) fn make_error_diagnostic(file: FileId, err: &Error) -> Diagnostic<FileId> {
+    let message = format!("{}", err);
+    let mut diagnostic = Diagnostic::error().with_message(&message);
+    if let Some(span) = err.span() {
+        diagnostic = diagnostic.with_labels(vec![
+            Label::primary(file, span.range()).with_message(&message),
+        ]);
     }
-}
-
-impl std::error::Error for Error {}
-
-impl From<ResolveError> for Error {
-    fn from(value: ResolveError) -> Self {
-        Self::Resolve(value)
-    }
-}
-
-impl From<syn::Error> for Error {
-    fn from(value: syn::Error) -> Self {
-        Self::Parse(value)
-    }
+    diagnostic
 }
 
 pub(crate) fn emit_error(input: &Input, file: FileId, err: &Error) {
     let writer = StandardStream::stderr(ColorChoice::Always);
     let config = codespan_reporting::term::Config::default();
-    let message = format!("{}", err);
-    let mut diagnostic = Diagnostic::error().with_message(&message);
-    if let Some(span) = err.span() {
-        diagnostic =
-            diagnostic.with_labels(vec![Label::primary(file, span).with_message(&message)]);
-    }
+    let diagnostic = make_error_diagnostic(file, err);
     term::emit(&mut writer.lock(), &config, input, &diagnostic).unwrap();
 }
 
@@ -80,22 +68,29 @@ pub(crate) fn emit_diagnostic_str(input: &Input, diagnostic: Diagnostic<FileId>)
     String::from_utf8(writer.into_inner()).unwrap()
 }
 
-// #[cfg(test)]
-// pub(crate) fn emit_errors_str<T: AsCodespanError>(
-//     file: &SourceFile,
-//     errs: impl Iterator<Item = T>,
-// ) -> String {
-//     use codespan_reporting::term::termcolor::Buffer;
+macro_rules! impl_from {
+    ($ty: ty, $ident: ident) => {
+        impl From<$ty> for Error {
+            fn from(t: $ty) -> Self {
+                Self::$ident(t)
+            }
+        }
+    };
+}
 
-//     let mut writer = Buffer::no_color();
-//     let config = codespan_reporting::term::Config::default();
-//     for err in errs {
-//         let diagnostic = Diagnostic::error()
-//             .with_message(err.message())
-//             .with_labels(vec![
-//                 Label::primary((), err.span()).with_message(err.message())
-//             ]);
-//         term::emit(&mut writer, &config, file, &diagnostic).unwrap();
-//     }
-//     String::from_utf8(writer.into_inner()).unwrap()
-// }
+impl_from!(ResolveError, Resolve);
+impl_from!(syn::Error, Parse);
+impl_from!(TokenizerError, Tokenize);
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::Parse(error) => write!(f, "{}", error),
+            Error::Tokenize(error) => write!(f, "{}", error),
+            Error::Resolve(error) => write!(f, "{}", error),
+            Error::Misc(s) => write!(f, "{}", s),
+        }
+    }
+}
+
+impl std::error::Error for Error {}
