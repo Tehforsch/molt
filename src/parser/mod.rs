@@ -1,120 +1,144 @@
-use std::collections::HashSet;
+mod cursor;
+mod error;
+mod molt_grammar;
+mod node;
+mod parse;
+mod rust_grammar;
+mod tokenizer;
 
-use syn::{
-    Ident, Result, Token, braced,
-    parse::{Parse, ParseStream},
-    token::Brace,
-};
+use cursor::Cursor;
+use error::ParseError as Error;
+use error::ParseErrorKind as ErrorKind;
+use tokenizer::{Token, TokenKind};
 
-use crate::{
-    grammar::Kind,
-    spec::{Command, Dependencies, ParseSpec, ParseSynVarDecl, SynVar},
-};
+pub use error::{ParseError, ParseErrorKind};
+pub(crate) use node::{CustomDebug, GetKind, Kind, Node, Pattern, ToNode};
+pub(crate) use rust_grammar::RustFile;
+pub(crate) use tokenizer::Tokenizer;
+pub use tokenizer::{Span, TokenizerError};
 
-pub(crate) mod commands {
-    syn::custom_keyword!(transform);
+pub use tokenizer::{Ident, Lit};
+
+use crate::ctx::Ctx;
+
+pub type Result<T, E = Error> = std::result::Result<T, E>;
+
+#[derive(Copy, Clone)]
+pub enum Mode {
+    Molt,
+    Rust,
 }
 
-enum Declaration {
-    SynVarDecl(ParseSynVarDecl),
-    Command(Command),
+pub(crate) trait Parse: Sized {
+    fn parse(parser: &mut Parser) -> Result<Self>;
 }
 
-impl Parse for ParseSpec {
-    fn parse(input: ParseStream) -> Result<Self> {
-        let mut decls = vec![];
-        while !input.is_empty() {
-            decls.push(Declaration::parse(input)?);
-        }
-        let mut commands = vec![];
-        let mut vars = vec![];
-        for decl in decls.into_iter() {
-            match decl {
-                Declaration::SynVarDecl(var) => vars.push(var),
-                Declaration::Command(command) => commands.push(command),
-            }
-        }
-        Ok(ParseSpec { vars, commands })
+trait Matches: Sized {
+    fn matches(p: &impl Peek) -> bool;
+}
+
+trait Peek: Sized {
+    fn peek(&self) -> TokenKind;
+    fn peek_next(&self) -> TokenKind;
+
+    fn matches<T: Matches>(&self) -> bool {
+        T::matches(self)
+    }
+
+    fn token_matches(&self, kind: TokenKind) -> bool {
+        self.peek() == kind
+    }
+
+    fn next_token_matches(&self, kind: TokenKind) -> bool {
+        self.peek_next() == kind
+    }
+
+    fn parse_from_peek<T: FromPeek>(&self) -> Option<T> {
+        T::from_peek(self)
     }
 }
 
-impl Parse for Declaration {
-    fn parse(input: ParseStream) -> Result<Self> {
-        if input.peek(commands::transform) || input.peek(Token![match]) {
-            Ok(Self::Command(input.parse()?))
+trait FromPeek: Sized {
+    fn from_peek(p: &impl Peek) -> Option<Self>;
+}
+
+trait Delimiter: Default {
+    fn start() -> TokenKind;
+    fn end() -> TokenKind;
+}
+
+pub struct Parser {
+    cursor: Cursor,
+    node_positions: Vec<usize>,
+    ctx: Ctx,
+    mode: Mode,
+}
+
+impl Parser {
+    pub fn new(tokens: Vec<Token>, mode: Mode) -> Self {
+        Self {
+            cursor: Cursor::new(tokens),
+            node_positions: vec![0],
+            ctx: Ctx::default(),
+            mode,
+        }
+    }
+
+    pub fn parse_file<T: Parse>(mut self) -> Result<(T, Ctx)> {
+        Ok((T::parse(&mut self)?, self.ctx))
+    }
+
+    fn parse<T: Parse>(&mut self) -> Result<T> {
+        T::parse(self)
+    }
+
+    fn advance(&mut self) -> Token {
+        self.cursor.advance()
+    }
+
+    fn consume_if_matches(&mut self, expected: TokenKind) -> bool {
+        self.consume(expected).is_ok()
+    }
+
+    fn consume(&mut self, expected: TokenKind) -> Result<()> {
+        if self.peek() != expected {
+            self.error(ErrorKind::TokenExpected(expected))
         } else {
-            Ok(Self::SynVarDecl(input.parse()?))
+            self.advance();
+            Ok(())
         }
     }
-}
 
-impl Parse for Command {
-    fn parse(input: ParseStream) -> Result<Self> {
-        let command = if input.peek(commands::transform) {
-            let _: commands::transform = input.parse()?;
-            let input_var: SynVar = input.parse()?;
-            let _: Token![-] = input.parse()?;
-            let _: Token![>] = input.parse()?;
-            let output_var: SynVar = input.parse()?;
-            Command::Transform(input_var, output_var)
-        } else {
-            let _: Token![match] = input.parse()?;
-            let match_var: SynVar = input.parse()?;
-            Command::Match(match_var)
-        };
-        let _: Token![;] = input.parse()?;
-        Ok(command)
+    fn is_at_end(&self) -> bool {
+        self.peek() == TokenKind::Eof
+    }
+
+    fn error(&self, kind: ErrorKind) -> Result<(), Error> {
+        Err(self.make_error(kind))
+    }
+
+    fn make_error(&self, kind: ErrorKind) -> Error {
+        Error::new(
+            kind,
+            Span::new(*self.node_positions.last().unwrap(), self.cursor.pos()),
+        )
+    }
+
+    fn push_node_pos(&mut self) {
+        self.node_positions.push(self.cursor.pos());
+    }
+
+    fn pop_node_pos(&mut self) {
+        self.node_positions.pop();
     }
 }
 
-impl Parse for ParseSynVarDecl {
-    fn parse(input: ParseStream) -> Result<Self> {
-        let _ = input.parse::<Token![let]>();
-        let name = input.parse()?;
-        let _ = input.parse::<Token![:]>();
-        let kind = input.parse::<Kind>()?;
-        let node = if input.peek(Token![=]) {
-            let _ = input.parse::<Token![=]>()?;
-            let node;
-            let _: Brace = braced!(node in input);
-            Some(node.parse()?)
-        } else {
-            None
-        };
-        let _ = input.parse::<Token![;]>()?;
-        Ok(ParseSynVarDecl { name, node, kind })
+impl Peek for Parser {
+    fn peek(&self) -> TokenKind {
+        self.cursor.peek()
     }
-}
 
-impl Parse for SynVar {
-    fn parse(input: ParseStream) -> Result<Self> {
-        let _ = input.parse::<Token![$]>();
-        let name: Ident = input.parse()?;
-        Ok(SynVar {
-            name: name.to_string(),
-        })
-    }
-}
-
-impl Parse for Dependencies {
-    fn parse(input: ParseStream) -> Result<Self> {
-        let mut vars = HashSet::default();
-        while !input.is_empty() {
-            if input.peek(Token![$]) {
-                let _ = input.parse::<Token![$]>();
-                let name = input.parse()?;
-                vars.insert(name);
-            } else {
-                // advance by one?
-                input.step(|cursor| {
-                    if let Some((_tt, next)) = cursor.token_tree() {
-                        Ok(((), next)) // discard the token tree, advance cursor
-                    } else {
-                        Err(cursor.error("expected a token"))
-                    }
-                })?;
-            }
-        }
-        Ok(Dependencies { vars })
+    fn peek_next(&self) -> TokenKind {
+        self.cursor.peek_next()
     }
 }

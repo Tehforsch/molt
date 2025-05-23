@@ -6,6 +6,8 @@ use rustc_lexer::strip_shebang;
 use thiserror::Error;
 pub use token::{Keyword, LiteralKind, Token, TokenKind};
 
+use super::Mode;
+
 #[derive(Clone, Copy, Debug)]
 pub struct Span {
     start: usize,
@@ -36,13 +38,7 @@ pub struct Lit;
 #[error("Error during tokenization")]
 pub struct TokenizerError;
 
-#[derive(Copy, Clone)]
-enum Mode {
-    Molt,
-    Rust,
-}
-
-struct Tokenizer<'a> {
+pub struct Tokenizer<'a> {
     source: &'a str,
     position: usize,
     tokens: Vec<Token>,
@@ -101,7 +97,7 @@ mod tests {
     use rustc_lexer::tokenize;
     use walkdir::WalkDir;
 
-    use crate::new_parser::tokenizer::{Keyword, TokenKind};
+    use crate::parser::tokenizer::{Keyword, TokenKind};
 
     use super::Tokenizer;
 

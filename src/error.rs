@@ -8,9 +8,10 @@ use codespan_reporting::{
     },
 };
 
+use crate::parser::ParseError;
 use crate::{
     input::{FileId, Input},
-    new_parser::{Span, TokenizerError},
+    parser::{Span, TokenizerError},
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -23,7 +24,7 @@ pub enum ResolveError {
 
 #[derive(Debug)]
 pub enum Error {
-    Parse(syn::Error),
+    Parse(ParseError),
     Tokenize(TokenizerError),
     Resolve(ResolveError),
     Misc(String),
@@ -32,7 +33,7 @@ pub enum Error {
 impl Error {
     fn span(&self) -> Option<Span> {
         match self {
-            Error::Parse(error) => Some(Span::from_range(error.span().byte_range())),
+            Error::Parse(error) => Some(Span::from_range(error.span().range())),
             Error::Tokenize(error) => None,
             Error::Resolve(_) => None,
             Error::Misc(_) => None,
@@ -79,7 +80,7 @@ macro_rules! impl_from {
 }
 
 impl_from!(ResolveError, Resolve);
-impl_from!(syn::Error, Parse);
+impl_from!(ParseError, Parse);
 impl_from!(TokenizerError, Tokenize);
 
 impl std::fmt::Display for Error {

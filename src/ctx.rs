@@ -1,9 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-    convert::Convert,
-    grammar::{Node, ToNode},
-    mangle::{Pattern, Unmangle},
+    parser::{Mode, Node, Pattern, Span, ToNode},
     spec::SynVar,
 };
 
@@ -78,22 +76,6 @@ impl Id {
     }
 }
 
-pub(crate) trait ConvertCtx {
-    fn convert<S, T: Convert<S>>(&mut self, t: T) -> S;
-    fn add_convert<S: ToNode, T: Convert<S> + Unmangle>(&mut self, t: T) -> NodeId<S>;
-
-    fn add_convert_list<S: ToNode, T: Convert<S> + Unmangle>(
-        &mut self,
-        t: impl IntoIterator<Item = T>,
-    ) -> NodeList<S> {
-        let items = t.into_iter().map(|item| self.add_convert(item)).collect();
-        NodeList {
-            items,
-            matching_mode: MatchingMode::ContainsAll,
-        }
-    }
-}
-
 #[derive(Default)]
 pub(crate) struct AstCtx {
     ctx: Ctx,
@@ -116,12 +98,20 @@ impl Ctx {
         self.nodes.len() - 1
     }
 
+    pub(crate) fn add<T: ToNode>(&mut self, t: T, mode: Mode) -> NodeId<T> {
+        Id(InternalId::AstNode(self.add_node(t.to_node()))).typed()
+    }
+
     fn iter(&self) -> impl Iterator<Item = usize> {
         0..self.nodes.len()
     }
 }
 
 impl AstCtx {
+    pub(crate) fn new(ctx: Ctx) -> Self {
+        Self { ctx }
+    }
+
     pub(crate) fn add<T: ToNode>(&mut self, t: T) -> NodeId<T> {
         Id(InternalId::AstNode(self.ctx.add_node(t.to_node()))).typed()
     }
@@ -136,17 +126,6 @@ impl AstCtx {
 
     pub(crate) fn iter(&self) -> impl Iterator<Item = Id> {
         self.ctx.iter().map(|id| Id(InternalId::AstNode(id)))
-    }
-}
-
-impl ConvertCtx for AstCtx {
-    fn convert<S, T: Convert<S>>(&mut self, t: T) -> S {
-        t.convert(self)
-    }
-
-    fn add_convert<S: ToNode, T: Convert<S> + Unmangle>(&mut self, t: T) -> NodeId<S> {
-        let s = t.convert(self);
-        self.add(s)
     }
 }
 
@@ -188,22 +167,6 @@ impl PatCtx {
     }
 }
 
-impl ConvertCtx for PatCtx {
-    fn convert<S, T: Convert<S>>(&mut self, t: T) -> S {
-        t.convert(self)
-    }
-
-    fn add_convert<S: ToNode, T: Convert<S> + Unmangle>(&mut self, t: T) -> NodeId<S> {
-        match T::unmangle(t) {
-            Pattern::Exact(t) => {
-                let s = t.convert(self);
-                self.add(s)
-            }
-            Pattern::Pattern(syn_var) => self.add_var(syn_var),
-        }
-    }
-}
-
 pub(crate) struct MatchCtx {
     pub pat_ctx: PatCtx,
     pub ast_ctx: AstCtx,
@@ -239,24 +202,29 @@ impl MatchCtx {
         }
     }
 
+    pub(crate) fn get_span(&self, id: Id) -> Option<Span> {
+        todo!()
+    }
+
     #[cfg(feature = "debug-print")]
     pub(crate) fn dump(&self) {
-        use crate::grammar::CustomDebug;
-        println!("--------------------------------");
-        for idx in self.ast_ctx.ctx.iter() {
-            let node = self.ast_ctx.get_node(Id(InternalId::AstNode(idx)));
-            let kind_str = format!("{}", node.kind());
-            println!("AstNode({:02}): {:13} = {}", idx, kind_str, node.deb(self));
-        }
-        println!("--------------------------------");
-        for idx in self.pat_ctx.ctx.iter() {
-            let node = self.pat_ctx.get_node(Id(InternalId::PatNode(idx)));
-            let kind_str = format!("{}", node.kind());
-            println!("PatNode({:02}): {:13} = {}", idx, kind_str, node.deb(self));
-        }
-        println!("--------------------------------");
-        for (idx, var) in self.pat_ctx.vars.iter().enumerate() {
-            println!("PatVar({:02}): {:14} = {}", idx, "", var.name);
-        }
+        todo!()
+        // use crate::grammar::CustomDebug;
+        // println!("--------------------------------");
+        // for idx in self.ast_ctx.ctx.iter() {
+        //     let node = self.ast_ctx.get_node(Id(InternalId::AstNode(idx)));
+        //     let kind_str = format!("{}", node.kind());
+        //     println!("AstNode({:02}): {:13} = {}", idx, kind_str, node.deb(self));
+        // }
+        // println!("--------------------------------");
+        // for idx in self.pat_ctx.ctx.iter() {
+        //     let node = self.pat_ctx.get_node(Id(InternalId::PatNode(idx)));
+        //     let kind_str = format!("{}", node.kind());
+        //     println!("PatNode({:02}): {:13} = {}", idx, kind_str, node.deb(self));
+        // }
+        // println!("--------------------------------");
+        // for (idx, var) in self.pat_ctx.vars.iter().enumerate() {
+        //     println!("PatVar({:02}): {:14} = {}", idx, "", var.name);
+        // }
     }
 }

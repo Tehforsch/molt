@@ -1,22 +1,19 @@
 #![allow(unused)]
 
 mod ast;
-mod convert;
 mod ctx;
 mod error;
-mod grammar;
 mod input;
-mod mangle;
 mod match_pattern;
-mod new_parser;
 mod parser;
 mod spec;
 
 use codespan_reporting::diagnostic::Label;
 use ctx::AstCtx;
-use grammar::{CustomDebug, GetSpan};
 use match_pattern::MatchResult;
 use spec::{Command, FullSpec, Spec};
+
+use crate::parser::CustomDebug;
 
 pub use error::Error;
 pub use input::{Diagnostic, FileId, Input, MoltSource};
@@ -28,9 +25,9 @@ impl MatchResult {
             .map(|match_| {
                 let binding = match_.get_binding(&self.var);
                 let node = self.ctx.get_node(binding.ast.unwrap()).unwrap();
-                let span = node.get_span(&self.ctx).unwrap();
+                let span = self.ctx.get_span(binding.ast.unwrap()).unwrap();
                 let mut diagnostic = Diagnostic::note().with_message("Match").with_labels(vec![
-                    Label::primary(file_id, span.byte_range()).with_message(&self.var),
+                    Label::primary(file_id, span.range()).with_message(&self.var),
                 ]);
                 let mut keys = match_.iter_vars().collect::<Vec<_>>();
                 keys.sort_by_key(|var| &var.name);

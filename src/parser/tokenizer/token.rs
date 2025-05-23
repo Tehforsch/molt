@@ -1,6 +1,8 @@
 pub use rustc_lexer::Base;
 
-use super::{Mode, TokenizerError};
+use crate::parser::Mode;
+
+use super::TokenizerError;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Token {

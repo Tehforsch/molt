@@ -1,17 +1,16 @@
 use crate::{
     Error,
-    ctx::{AstCtx, ConvertCtx},
+    ctx::AstCtx,
     input::RustSourceFile,
+    parser::{Mode, Parse, Parser, RustFile, Tokenizer},
 };
 
 impl AstCtx {
     pub(crate) fn parse(file: &RustSourceFile) -> Result<Self, Error> {
         let contents = file.contents();
-        let ast = syn::parse_file(&contents).map_err(|e| Error::Parse(e))?;
-        let mut ctx = AstCtx::default();
-        for item in ast.items.into_iter() {
-            ctx.add_convert(item);
-        }
-        Ok(ctx)
+        let tokens = Tokenizer::tokenize_rust(contents)?;
+        let parser = Parser::new(tokens, Mode::Rust);
+        let (file, ctx) = parser.parse_file::<RustFile>()?;
+        Ok(AstCtx::new(ctx))
     }
 }

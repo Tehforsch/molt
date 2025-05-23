@@ -1,6 +1,6 @@
-use crate::ctx::Id;
+use crate::ctx::{Id, NodeId};
 
-use super::tokenizer::Ident;
+use super::{Kind, tokenizer::Ident};
 
 pub(crate) struct File {
     pub vars: Vec<VarDecl>,
@@ -8,22 +8,14 @@ pub(crate) struct File {
 }
 
 pub(crate) struct VarDecl {
-    pub name: Var,
+    pub name: NodeId<Ident>,
     // TODO make this optional and infer if possible.
     pub kind: Kind,
     pub node: Id,
 }
 
-pub(crate) struct Var(Ident);
+pub(crate) struct Var(NodeId<Ident>);
 
 pub(crate) enum Command {
     Match(Var),
-}
-
-pub(crate) enum Kind {
-    Ident,
-}
-
-pub(crate) enum Node {
-    Ident(Ident),
 }
