@@ -1,16 +1,13 @@
 use std::marker::PhantomData;
 
-use crate::{
-    parser::{Mode, Node, Pattern, Span, ToNode},
-    spec::SynVar,
-};
+use crate::parser::{Mode, Node, Pattern, Span, ToNode, Var, VarDecl, VarId};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub(crate) struct Id(InternalId);
 
 // TODO: This distinction exists only to make sure we index into the
 // correct context everywhere. We can get rid of it on release builds.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 enum InternalId {
     AstNode(usize),
     PatNode(usize),
@@ -61,6 +58,26 @@ impl<T> Clone for NodeId<T> {
 
 impl<T> Copy for NodeId<T> {}
 
+impl<T> std::fmt::Debug for NodeId<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.id.fmt(f)
+    }
+}
+
+impl<T> PartialEq for NodeId<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.id.eq(&other.id)
+    }
+}
+
+impl<T> std::hash::Hash for NodeId<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state)
+    }
+}
+
+impl<T> Eq for NodeId<T> {}
+
 impl<T> NodeId<T> {
     pub(crate) fn untyped(self) -> Id {
         self.id
@@ -84,7 +101,7 @@ pub(crate) struct AstCtx {
 #[derive(Default)]
 pub(crate) struct PatCtx {
     ctx: Ctx,
-    vars: Vec<SynVar>,
+    vars: Vec<VarId>,
 }
 
 #[derive(Default)]
@@ -130,12 +147,16 @@ impl AstCtx {
 }
 
 impl PatCtx {
-    fn add_var_internal(&mut self, var: SynVar) -> Id {
+    pub(crate) fn new(ctx: Ctx) -> Self {
+        Self { ctx, vars: vec![] }
+    }
+
+    fn add_var_internal(&mut self, var: VarId) -> Id {
         self.vars.push(var);
         Id(InternalId::Var(self.vars.len() - 1))
     }
 
-    fn add_var<T: ToNode>(&mut self, var: SynVar) -> NodeId<T> {
+    fn add_var<T: ToNode>(&mut self, var: VarId) -> NodeId<T> {
         let id = if let Some(var) = self
             .vars
             .iter()
@@ -181,7 +202,7 @@ impl MatchCtx {
         let node = match id.id.0 {
             InternalId::AstNode(idx) => &self.ast_ctx.ctx.nodes[idx],
             InternalId::PatNode(idx) => &self.pat_ctx.ctx.nodes[idx],
-            InternalId::Var(idx) => return Pattern::Pattern(self.pat_ctx.vars[idx].clone()),
+            InternalId::Var(idx) => return Pattern::Pattern(self.pat_ctx.vars[idx]),
         };
         Pattern::Exact(T::from_node(node).unwrap())
     }
@@ -203,6 +224,10 @@ impl MatchCtx {
     }
 
     pub(crate) fn get_span(&self, id: Id) -> Option<Span> {
+        todo!()
+    }
+
+    pub(crate) fn get_var(&self, var: VarId) -> Var {
         todo!()
     }
 

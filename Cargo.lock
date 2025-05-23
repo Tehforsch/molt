@@ -175,10 +175,7 @@ dependencies = [
  "clap",
  "codespan-reporting",
  "insta",
- "proc-macro2",
- "quote",
  "rustc_lexer",
- "syn",
  "thiserror",
  "walkdir",
 ]

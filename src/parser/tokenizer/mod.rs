@@ -31,7 +31,10 @@ impl Span {
     }
 }
 
+#[derive(Debug)]
 pub struct Ident;
+
+#[derive(Debug)]
 pub struct Lit;
 
 #[derive(Debug, Error)]
@@ -54,7 +57,7 @@ impl<'a> Tokenizer<'a> {
         Self::tokenize(source, Mode::Molt)
     }
 
-    fn tokenize(source: &str, mode: Mode) -> Result<Vec<Token>, TokenizerError> {
+    pub fn tokenize(source: &str, mode: Mode) -> Result<Vec<Token>, TokenizerError> {
         // special case because rustc_lexer assumes the file
         // is nonempty
         if source.len() == 0 {

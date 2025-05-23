@@ -4,36 +4,15 @@ use std::{
 };
 
 use codespan_reporting::files::Files;
-use proc_macro2::{Group, TokenStream, TokenTree};
-use quote::TokenStreamExt;
-use syn::Ident;
 
 use crate::{
-    ctx::{Id, PatCtx},
+    ctx::{Id, NodeId, PatCtx},
     error::{Error, ResolveError, emit_error},
     input::Input,
-    parser::Kind,
+    parser::{Ident, Kind, MoltFile},
 };
 
 const IDENT_IDENTIFIER: char = '$';
-
-#[derive(Debug)]
-pub(crate) enum Command {
-    #[allow(dead_code)]
-    Transform(SynVar, SynVar),
-    Match(SynVar),
-}
-
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
-pub(crate) struct SynVar {
-    pub name: String,
-}
-
-impl std::fmt::Display for SynVar {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "${}", self.name)
-    }
-}
 
 #[derive(Clone, Debug)]
 pub(crate) struct SynVarDecl {
@@ -41,51 +20,14 @@ pub(crate) struct SynVarDecl {
     pub node: Option<Id>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub(crate) struct Dependencies {
-    pub vars: HashSet<Ident>,
+    pub vars: HashSet<NodeId<Ident>>,
 }
 
 #[derive(Debug)]
 pub(crate) struct Spec {
     pub vars: Vec<SynVarDecl>,
-}
-
-#[derive(Debug)]
-pub(crate) struct FullSpec {
-    pub spec: Spec,
-    pub command: Command,
-}
-
-pub(crate) struct ParseSynVarDecl {
-    pub name: Ident,
-    // TODO make this optional and infer if possible.
-    pub kind: Kind,
-    pub node: Option<TokenStream>,
-}
-
-pub(crate) struct ParseSpec {
-    pub vars: Vec<ParseSynVarDecl>,
-    pub commands: Vec<Command>,
-}
-
-impl FullSpec {
-    pub(crate) fn new(input: &Input) -> Result<(PatCtx, Self), Error> {
-        let file_id = input.molt_file_id();
-        let source = input.source(file_id).unwrap();
-        todo!()
-        // let tokens = TokenStream::from_str(&source).unwrap();
-        // let result: Result<(PatCtx, FullSpec), Error> = syn::parse2(tokens)
-        //     .map_err(|e| e.into())
-        //     .and_then(resolve_parsed_transform);
-        // match result {
-        //     Ok(res) => Ok(res),
-        //     Err(err) => {
-        //         emit_error(input, file_id, &err);
-        //         Err(err)
-        //     }
-        // }
-    }
 }
 
 // fn get_command(mut commands: Vec<Command>, spec: &Spec) -> Result<Command, Error> {
@@ -108,7 +50,7 @@ impl FullSpec {
 //     }
 // }
 
-// fn resolve_parsed_transform(tf: ParseSpec) -> Result<(PatCtx, FullSpec), Error> {
+// fn resolve_parsed_transform(tf: ParseSpec) -> Result<(PatCtx, File), Error> {
 //     // Topologically sort the variable declarations according to
 //     // their dependencies (i.e. which variables they reference)
 //     let mut deps_map: HashMap<_, _> = tf
@@ -155,7 +97,7 @@ impl FullSpec {
 //             .collect::<Result<_, syn::Error>>()?,
 //     };
 //     let command = get_command(tf.commands, &spec)?;
-//     Ok((ctx, FullSpec { spec, command }))
+//     Ok((ctx, File { spec, command }))
 // }
 
 // fn rewrite_fully_qualified(

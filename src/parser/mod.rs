@@ -12,6 +12,7 @@ use error::ParseErrorKind as ErrorKind;
 use tokenizer::{Token, TokenKind};
 
 pub use error::{ParseError, ParseErrorKind};
+pub(crate) use molt_grammar::{Command, MoltFile, Var, VarDecl, VarId};
 pub(crate) use node::{CustomDebug, GetKind, Kind, Node, Pattern, ToNode};
 pub(crate) use rust_grammar::RustFile;
 pub(crate) use tokenizer::Tokenizer;
@@ -20,6 +21,20 @@ pub use tokenizer::{Span, TokenizerError};
 pub use tokenizer::{Ident, Lit};
 
 use crate::ctx::Ctx;
+
+fn parse_file<T: Parse>(code: &str, mode: Mode) -> Result<(T, Ctx), crate::Error> {
+    let tokens = Tokenizer::tokenize(code, mode)?;
+    let mut parser = Parser::new(tokens, mode);
+    Ok((parser.parse::<T>()?, parser.ctx))
+}
+
+pub fn parse_rust_file(code: &str) -> Result<(RustFile, Ctx), crate::Error> {
+    parse_file::<RustFile>(code, Mode::Rust)
+}
+
+pub fn parse_molt_file(code: &str) -> Result<(MoltFile, Ctx), crate::Error> {
+    parse_file::<MoltFile>(code, Mode::Molt)
+}
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
@@ -82,10 +97,6 @@ impl Parser {
             ctx: Ctx::default(),
             mode,
         }
-    }
-
-    pub fn parse_file<T: Parse>(mut self) -> Result<(T, Ctx)> {
-        Ok((T::parse(&mut self)?, self.ctx))
     }
 
     fn parse<T: Parse>(&mut self) -> Result<T> {

@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
 use crate::{
-    Spec,
+    MoltFile,
     ctx::{AstCtx, Id, MatchCtx, MatchingMode, NodeId, NodeList, PatCtx},
-    parser::{Ident, Lit, Node, Pattern},
-    spec::{SynVar, SynVarDecl},
+    parser::{Ident, Lit, Node, Pattern, VarDecl, VarId},
 };
 
 #[cfg(feature = "debug-print")]
@@ -15,9 +14,9 @@ pub(crate) struct Matches {
 }
 
 impl Matches {
-    fn new(ctx: &MatchCtx, vars: &[SynVarDecl], var: SynVar, ast: Id) -> Self {
+    fn new(ctx: &MatchCtx, vars: &[VarDecl], var: VarId, ast: Id) -> Self {
         let mut match_ = Match::new(vars);
-        match_.add_binding(ctx, &var, ast, false);
+        match_.add_binding(ctx, var, ast, false);
         Self {
             current: vec![match_],
         }
@@ -84,25 +83,18 @@ impl Binding {
 
 #[derive(Debug, Default)]
 pub(crate) struct Match {
-    bindings: HashMap<SynVar, Binding>,
+    bindings: HashMap<VarId, Binding>,
     cmps: Vec<Comparison>,
     forks: Vec<Fork>,
     valid: bool,
 }
 
 impl Match {
-    fn new(vars: &[SynVarDecl]) -> Self {
+    fn new(vars: &[VarDecl]) -> Self {
         Self {
             bindings: vars
                 .iter()
-                .map(|var| {
-                    (
-                        SynVar {
-                            name: var.name.clone(),
-                        },
-                        Binding::new(var.node),
-                    )
-                })
+                .map(|var| (var.name, Binding::new(var.node)))
                 .collect(),
             cmps: vec![],
             forks: vec![],
@@ -120,7 +112,7 @@ impl Match {
         self.check(t1 == t2)
     }
 
-    fn same<T: syn::token::Token>(&mut self, t1: &Option<T>, t2: &Option<T>) {
+    fn same<T>(&mut self, t1: &Option<T>, t2: &Option<T>) {
         self.check(t1.is_some() == t2.is_some())
     }
 
@@ -158,7 +150,7 @@ impl Match {
     fn cmp_id(&mut self, ctx: &MatchCtx, ast_id: Id, pat_id: Id) {
         match ctx.get_pattern(pat_id) {
             Pattern::Pattern(var) => {
-                self.add_binding(ctx, &var, ast_id, true);
+                self.add_binding(ctx, var, ast_id, true);
             }
             Pattern::Exact(pat) => self.cmp_nodes(ctx, ctx.ast_ctx.get_node(ast_id), pat),
         }
@@ -193,16 +185,16 @@ impl Match {
         self.forks.push(fork);
     }
 
-    fn add_binding(&mut self, ctx: &MatchCtx, key: &SynVar, ast_id: Id, debug_print: bool) {
+    fn add_binding(&mut self, ctx: &MatchCtx, key: VarId, ast_id: Id, debug_print: bool) {
         if debug_print {
             #[cfg(feature = "debug-print")]
             println!(
                 "\tBind {} to {}",
-                key.name,
+                key.deb(ctx),
                 ctx.ast_ctx.get_node(ast_id).deb(ctx)
             );
         }
-        let binding = self.bindings.get_mut(key).unwrap();
+        let binding = self.bindings.get_mut(&key).unwrap();
         if let Some(ast_id_2) = binding.ast {
             self.cmp_nodes(
                 ctx,
@@ -221,12 +213,12 @@ impl Match {
         }
     }
 
-    pub(crate) fn iter_vars(&self) -> impl Iterator<Item = &SynVar> {
-        self.bindings.keys()
+    pub(crate) fn iter_vars(&self) -> impl Iterator<Item = VarId> {
+        self.bindings.keys().cloned()
     }
 
-    pub(crate) fn get_binding(&self, var: &SynVar) -> &Binding {
-        &self.bindings[var]
+    pub(crate) fn get_binding(&self, var: VarId) -> &Binding {
+        &self.bindings[&var]
     }
 
     fn make_forks(mut self) -> impl Iterator<Item = Match> {
@@ -245,15 +237,15 @@ impl Match {
 pub(crate) struct MatchResult {
     pub matches: Vec<Match>,
     pub ctx: MatchCtx,
-    pub var: SynVar,
+    pub var: VarId,
 }
 
-impl Spec {
+impl MoltFile {
     pub(crate) fn match_pattern(
         &self,
         ast_ctx: AstCtx,
         pat_ctx: PatCtx,
-        var: &SynVar,
+        var: VarId,
     ) -> MatchResult {
         let ctx = MatchCtx::new(pat_ctx, ast_ctx);
         #[cfg(feature = "debug-print")]

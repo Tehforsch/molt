@@ -1,14 +1,13 @@
 use crate::ctx::MatchCtx;
 use crate::match_pattern::{CmpDirect, Match};
-use crate::spec::SynVar;
 
 use super::tokenizer::{Keyword, Lit, TokenKind};
 use super::{Parse, ParseErrorKind, Parser, tokenizer::Ident};
+use super::{Var, VarId};
 
-#[derive(Clone)]
 pub(crate) enum Pattern<E> {
     Exact(E),
-    Pattern(SynVar),
+    Pattern(VarId),
 }
 
 pub(crate) trait ToNode {
@@ -154,6 +153,18 @@ impl CustomDebug for Lit {
 }
 
 impl CustomDebug for Ident {
+    fn deb(&self, ctx: &MatchCtx) -> String {
+        todo!()
+    }
+}
+
+impl CustomDebug for VarId {
+    fn deb(&self, ctx: &MatchCtx) -> String {
+        todo!()
+    }
+}
+
+impl CustomDebug for Var {
     fn deb(&self, ctx: &MatchCtx) -> String {
         todo!()
     }
