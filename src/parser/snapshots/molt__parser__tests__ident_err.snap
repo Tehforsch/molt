@@ -1,9 +1,10 @@
 ---
 source: src/parser/tests.rs
-expression: "crate :: parser :: tests :: parse_molt_err :: < Ident > (\"let x = 3;\")"
+expression: "crate :: parser :: tests :: parse_molt_err :: < Ident > (\"async\")"
+snapshot_kind: text
 ---
 error: Wrong token.
-  ┌─ CLI input:1:1
+  ┌─ CLI input:1:6
   │
-1 │ let x = 3;
-  │ ^ Wrong token.
+1 │ async
+  │      ^ Wrong token.

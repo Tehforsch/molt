@@ -41,7 +41,7 @@ impl Cursor {
         self.current()
     }
 
-    fn current(&self) -> Token {
+    pub(super) fn current(&self) -> Token {
         *self.tokens.get(self.index).unwrap_or(&eof())
     }
 

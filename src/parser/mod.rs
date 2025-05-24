@@ -125,12 +125,17 @@ impl Parser {
     }
 
     fn consume_if_matches(&mut self, expected: TokenKind) -> bool {
-        self.consume(expected).is_ok()
+        if self.peek() != expected {
+            false
+        } else {
+            self.advance();
+            true
+        }
     }
 
     fn consume(&mut self, expected: TokenKind) -> Result<()> {
         if self.peek() != expected {
-            self.error(ErrorKind::TokenExpected(expected))
+            self.token_error(ErrorKind::TokenExpected(expected))
         } else {
             self.advance();
             Ok(())
@@ -148,6 +153,17 @@ impl Parser {
 
     fn is_at_end(&self) -> bool {
         self.peek() == TokenKind::Eof
+    }
+
+    fn token_error(&mut self, kind: ErrorKind) -> Result<(), Error> {
+        self.advance();
+        Err(Error::new(
+            kind,
+            Span::new(
+                self.cursor.pos(),
+                self.cursor.pos() + self.cursor.current().len,
+            ),
+        ))
     }
 
     fn error(&self, kind: ErrorKind) -> Result<(), Error> {

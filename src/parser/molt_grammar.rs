@@ -2,6 +2,7 @@ use crate::ctx::Id;
 
 use super::{Kind, tokenizer::Ident};
 
+#[derive(Debug)]
 pub(crate) struct MoltFile {
     pub vars: Vec<VarDecl>,
     pub commands: Vec<Command>,
@@ -27,6 +28,7 @@ pub(crate) struct VarId(pub Id);
 #[derive(Debug)]
 pub(crate) struct Var(Ident);
 
+#[derive(Debug)]
 pub(crate) enum Command {
     Match(VarId),
 }

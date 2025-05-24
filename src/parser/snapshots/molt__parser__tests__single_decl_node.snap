@@ -1,0 +1,28 @@
+---
+source: src/parser/tests.rs
+expression: "crate :: parser :: tests :: parse_molt_ok :: < MoltFile >\n(\"let foo: Lit = { \\\"hi\\\" };\")"
+snapshot_kind: text
+---
+MoltFile {
+    vars: [
+        VarDecl {
+            id: VarId(
+                Id(
+                    Var(
+                        0,
+                    ),
+                ),
+            ),
+            kind: Lit,
+            node: Some(
+                Id(
+                    PatNode(
+                        0,
+                    ),
+                ),
+            ),
+        },
+    ],
+    commands: [],
+    sorted: false,
+}

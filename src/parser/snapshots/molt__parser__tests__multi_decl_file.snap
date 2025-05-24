@@ -1,0 +1,45 @@
+---
+source: src/parser/tests.rs
+expression: "crate :: parser :: tests :: parse_molt_ok :: < MoltFile >\n(\"let foo: Ident = bar; let foo: Ident = bar;\")"
+snapshot_kind: text
+---
+MoltFile {
+    vars: [
+        VarDecl {
+            id: VarId(
+                Id(
+                    Var(
+                        0,
+                    ),
+                ),
+            ),
+            kind: Ident,
+            node: Some(
+                Id(
+                    PatNode(
+                        0,
+                    ),
+                ),
+            ),
+        },
+        VarDecl {
+            id: VarId(
+                Id(
+                    Var(
+                        1,
+                    ),
+                ),
+            ),
+            kind: Ident,
+            node: Some(
+                Id(
+                    PatNode(
+                        1,
+                    ),
+                ),
+            ),
+        },
+    ],
+    commands: [],
+    sorted: false,
+}
