@@ -1,0 +1,9 @@
+---
+source: src/parser/tests.rs
+expression: "crate :: parser :: tests :: parse_molt_err :: < Ident > (\"let x = 3;\")"
+---
+error: Wrong token.
+  ┌─ CLI input:1:1
+  │
+1 │ let x = 3;
+  │ ^ Wrong token.

@@ -8,6 +8,12 @@ pub(crate) struct MoltFile {
     pub sorted: bool,
 }
 
+pub(crate) enum Decl {
+    VarDecl(VarDecl),
+    Command(Command),
+}
+
+#[derive(Debug)]
 pub(crate) struct VarDecl {
     pub id: VarId,
     // TODO make this optional and infer if possible.
@@ -32,6 +38,10 @@ impl VarId {
 }
 
 impl Var {
+    pub(crate) fn new(ident: Ident) -> Self {
+        Self(ident)
+    }
+
     pub(crate) fn ident(&self) -> Ident {
         self.0
     }

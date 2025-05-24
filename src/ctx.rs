@@ -115,7 +115,7 @@ impl Ctx {
         Id(InternalId::Var(self.vars.len() - 1))
     }
 
-    pub(crate) fn add_var(&mut self, var: Var) -> Id {
+    pub(crate) fn add_var(&mut self, var: Var) -> VarId {
         if let Some(var) = self
             .vars
             .iter()
@@ -123,24 +123,27 @@ impl Ctx {
             .find(|(_, v)| var.ident() == v.ident())
             .map(|(i, _)| Id(InternalId::Var(i)))
         {
-            var
+            VarId(var)
         } else {
-            self.add_var_internal(var)
+            VarId(self.add_var_internal(var))
         }
     }
 
-    fn add_node(&mut self, node: Node) -> usize {
+    fn add_node_internal(&mut self, node: Node) -> usize {
         self.nodes.push(node);
         self.nodes.len() - 1
     }
 
-    pub(crate) fn add<T: ToNode>(&mut self, t: T, mode: Mode) -> NodeId<T> {
-        let id = self.add_node(t.to_node());
+    pub(crate) fn add_node(&mut self, node: Node, mode: Mode) -> Id {
+        let id = self.add_node_internal(node);
         match mode {
             Mode::Molt => Id(InternalId::PatNode(id)),
             Mode::Rust => Id(InternalId::AstNode(id)),
         }
-        .typed()
+    }
+
+    pub(crate) fn add<T: ToNode>(&mut self, t: T, mode: Mode) -> NodeId<T> {
+        self.add_node(t.to_node(), mode).typed()
     }
 
     fn iter(&self) -> impl Iterator<Item = usize> {
@@ -155,7 +158,7 @@ impl AstCtx {
     }
 
     pub(crate) fn add<T: ToNode>(&mut self, t: T) -> NodeId<T> {
-        Id(InternalId::AstNode(self.ctx.add_node(t.to_node()))).typed()
+        Id(InternalId::AstNode(self.ctx.add_node_internal(t.to_node()))).typed()
     }
 
     pub(crate) fn get_node(&self, id: Id) -> &Node {
@@ -177,11 +180,11 @@ impl PatCtx {
     }
 
     pub(crate) fn add<T: ToNode>(&mut self, t: T) -> NodeId<T> {
-        Id(InternalId::PatNode(self.ctx.add_node(t.to_node()))).typed()
+        Id(InternalId::PatNode(self.ctx.add_node_internal(t.to_node()))).typed()
     }
 
     pub(crate) fn add_node(&mut self, node: Node) -> Id {
-        Id(InternalId::PatNode(self.ctx.add_node(node)))
+        Id(InternalId::PatNode(self.ctx.add_node_internal(node)))
     }
 
     pub(crate) fn get_node(&self, id: Id) -> &Node {

@@ -19,6 +19,7 @@ impl ParseError {
 #[derive(Debug)]
 pub enum ParseErrorKind {
     TokenExpected(TokenKind),
+    UnexpectedToken,
     InvalidNodeKind,
 }
 
@@ -27,6 +28,7 @@ impl std::fmt::Display for ParseError {
         // TODO
         match self.kind {
             ParseErrorKind::TokenExpected(_) => write!(f, "Wrong token."),
+            ParseErrorKind::UnexpectedToken => write!(f, "Unexpected token"),
             ParseErrorKind::InvalidNodeKind => write!(f, "Invalid node kind."),
         }
     }

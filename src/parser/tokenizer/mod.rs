@@ -4,6 +4,7 @@ use std::ops::Range;
 
 use rustc_lexer::strip_shebang;
 use thiserror::Error;
+use token::LiteralKind;
 pub use token::{Keyword, Token, TokenKind};
 
 use super::Mode;
@@ -34,8 +35,23 @@ impl Span {
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Ident(Span);
 
+impl Ident {
+    pub(crate) fn new(span: Span) -> Self {
+        Self(span)
+    }
+}
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Lit(Span);
+pub struct Lit {
+    kind: LiteralKind,
+    span: Span,
+}
+
+impl Lit {
+    pub(crate) fn new(lit: LiteralKind, span: Span) -> Self {
+        Self { kind: lit, span }
+    }
+}
 
 #[derive(Debug, Error)]
 #[error("Error during tokenization")]

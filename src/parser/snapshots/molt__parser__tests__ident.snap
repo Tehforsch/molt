@@ -1,0 +1,10 @@
+---
+source: src/parser/tests.rs
+expression: "crate :: parser :: tests :: parse_molt_ok :: < Ident > (\"foo\")"
+---
+Ident(
+    Span {
+        start: 0,
+        end: 3,
+    },
+)

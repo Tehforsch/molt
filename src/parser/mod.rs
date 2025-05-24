@@ -4,6 +4,8 @@ mod molt_grammar;
 mod node;
 mod parse;
 mod rust_grammar;
+#[cfg(test)]
+mod tests;
 mod tokenizer;
 
 use cursor::Cursor;
@@ -12,8 +14,8 @@ use error::ParseErrorKind as ErrorKind;
 use tokenizer::{Token, TokenKind};
 
 pub use error::{ParseError, ParseErrorKind};
-pub(crate) use molt_grammar::{Command, MoltFile, Var, VarDecl, VarId};
-pub(crate) use node::{CustomDebug, GetKind, Kind, Node, Pattern, ToNode};
+pub(crate) use molt_grammar::{Command, Decl, MoltFile, Var, VarDecl, VarId};
+pub(crate) use node::{CustomDebug, Kind, Node, Pattern, ToNode};
 pub(crate) use rust_grammar::RustFile;
 pub(crate) use tokenizer::Tokenizer;
 pub use tokenizer::{Span, TokenizerError};
@@ -103,6 +105,21 @@ impl Parser {
         T::parse(self)
     }
 
+    fn parse_spanned<T: Parse>(&mut self) -> Result<T> {
+        self.push_node_pos();
+        let parsed = self.parse::<T>()?;
+        self.pop_node_pos();
+        Ok(parsed)
+    }
+
+    fn push_node_pos(&mut self) {
+        self.node_positions.push(self.cursor.pos());
+    }
+
+    fn pop_node_pos(&mut self) {
+        self.node_positions.pop();
+    }
+
     fn advance(&mut self) -> Token {
         self.cursor.advance()
     }
@@ -120,6 +137,15 @@ impl Parser {
         }
     }
 
+    fn consume_pat<T>(&mut self, f: impl Fn(TokenKind) -> Option<T>) -> Result<T> {
+        if let Some(t) = f(self.peek()) {
+            self.advance();
+            Ok(t)
+        } else {
+            Err(self.make_error(ErrorKind::UnexpectedToken))
+        }
+    }
+
     fn is_at_end(&self) -> bool {
         self.peek() == TokenKind::Eof
     }
@@ -133,14 +159,6 @@ impl Parser {
             kind,
             Span::new(*self.node_positions.last().unwrap(), self.cursor.pos()),
         )
-    }
-
-    fn push_node_pos(&mut self) {
-        self.node_positions.push(self.cursor.pos());
-    }
-
-    fn pop_node_pos(&mut self) {
-        self.node_positions.pop();
     }
 }
 

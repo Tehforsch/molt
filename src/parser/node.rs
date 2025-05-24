@@ -112,6 +112,14 @@ macro_rules! define_node_and_kind {
                     )*
                 }
             }
+
+            pub(crate) fn parse_with_kind(parser: &mut Parser, kind: Kind) -> super::Result<Self> {
+                match kind {
+                    $(
+                        Kind::$variant_name => Ok(Node::$variant_name(parser.parse_spanned::<$ty>()?)),
+                    )*
+                }
+            }
         }
 
         impl CustomDebug for Node {
