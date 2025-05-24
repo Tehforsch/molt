@@ -4,11 +4,11 @@ use std::ops::Range;
 
 use rustc_lexer::strip_shebang;
 use thiserror::Error;
-pub use token::{Keyword, LiteralKind, Token, TokenKind};
+pub use token::{Keyword, Token, TokenKind};
 
 use super::Mode;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Span {
     start: usize,
     end: usize,
@@ -31,11 +31,11 @@ impl Span {
     }
 }
 
-#[derive(Debug)]
-pub struct Ident;
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct Ident(Span);
 
-#[derive(Debug)]
-pub struct Lit;
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct Lit(Span);
 
 #[derive(Debug, Error)]
 #[error("Error during tokenization")]
@@ -49,10 +49,12 @@ pub struct Tokenizer<'a> {
 }
 
 impl<'a> Tokenizer<'a> {
+    #[cfg(test)]
     pub fn tokenize_rust(source: &str) -> Result<Vec<Token>, TokenizerError> {
         Self::tokenize(source, Mode::Rust)
     }
 
+    #[cfg(test)]
     pub fn tokenize_molt(source: &str) -> Result<Vec<Token>, TokenizerError> {
         Self::tokenize(source, Mode::Molt)
     }
@@ -64,6 +66,7 @@ impl<'a> Tokenizer<'a> {
             return Ok(vec![]);
         }
         let start = strip_shebang(source).unwrap_or(0);
+        let source = &source[start..];
         let mut tokenizer = Tokenizer {
             source,
             position: 0,
@@ -97,7 +100,6 @@ impl<'a> Tokenizer<'a> {
 mod tests {
     use std::path::{Path, PathBuf};
 
-    use rustc_lexer::tokenize;
     use walkdir::WalkDir;
 
     use crate::parser::tokenizer::{Keyword, TokenKind};
@@ -119,7 +121,7 @@ mod tests {
 
     #[test]
     fn tokenize_stuff() {
-        let mut path = std::env::current_dir()
+        let path = std::env::current_dir()
             .unwrap()
             .parent()
             .unwrap()
@@ -128,13 +130,13 @@ mod tests {
         for file in get_source_files(&path).iter().take(100) {
             let file = path.join(file);
             let code = std::fs::read_to_string(&file).unwrap();
-            Tokenizer::tokenize_rust(&code);
+            Tokenizer::tokenize_rust(&code).unwrap();
         }
     }
 
     #[test]
     fn check_kw_and_ident() {
-        let mut tokens = Tokenizer::tokenize_rust("foo bar async fn Ident transform").unwrap();
+        let tokens = Tokenizer::tokenize_rust("foo bar async fn Ident transform").unwrap();
         assert_eq!(tokens[0].kind, TokenKind::Ident);
         assert_eq!(tokens[1].kind, TokenKind::Ident);
         assert_eq!(tokens[2].kind, TokenKind::Keyword(Keyword::Async));
@@ -142,7 +144,7 @@ mod tests {
         assert_eq!(tokens[4].kind, TokenKind::Ident);
         assert_eq!(tokens[5].kind, TokenKind::Ident);
 
-        let mut tokens = Tokenizer::tokenize_molt("foo bar async fn Ident transform").unwrap();
+        let tokens = Tokenizer::tokenize_molt("foo bar async fn Ident transform").unwrap();
         assert_eq!(tokens[0].kind, TokenKind::Ident);
         assert_eq!(tokens[1].kind, TokenKind::Ident);
         assert_eq!(tokens[2].kind, TokenKind::Keyword(Keyword::Async));

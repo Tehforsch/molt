@@ -4,21 +4,14 @@ use super::node::ToNode;
 use super::tokenizer::Ident;
 use super::tokenizer::Keyword::Let;
 use super::tokenizer::TokenKind::{Colon, Eq, Keyword};
-use super::{Kind, MoltFile, Node, RustFile, VarId};
+use super::{MoltFile, Node, RustFile, Var, VarId};
 use super::{Parse, Parser, Result, molt_grammar::VarDecl};
-
-impl Parse for MoltFile {
-    fn parse(parser: &mut Parser) -> Result<Self> {
-        todo!()
-    }
-}
 
 impl Parse for VarDecl {
     fn parse(parser: &mut Parser) -> Result<Self> {
         parser.consume(Keyword(Let))?;
-        let name: Ident = parser.parse()?;
-        // TODO add this to vars. Need to change ctx for that.
-        let name: VarId = todo!();
+        let var: Var = parser.parse()?;
+        let name: VarId = VarId::new(parser.ctx.add_var(var));
         parser.consume(Colon)?;
         let kind = parser.parse()?;
         let node = if parser.consume_if_matches(Eq) {
@@ -26,7 +19,11 @@ impl Parse for VarDecl {
         } else {
             None
         };
-        Ok(Self { name, kind, node })
+        Ok(Self {
+            id: name,
+            kind,
+            node,
+        })
     }
 }
 
@@ -46,6 +43,12 @@ impl Parse for Ident {
     }
 }
 
+impl Parse for Var {
+    fn parse(parser: &mut Parser) -> Result<Self> {
+        todo!()
+    }
+}
+
 impl Parse for Node {
     fn parse(parser: &mut Parser) -> Result<Self> {
         todo!()
@@ -55,5 +58,11 @@ impl Parse for Node {
 impl Parse for RustFile {
     fn parse(parser: &mut Parser) -> Result<Self> {
         Ok(Self)
+    }
+}
+
+impl Parse for MoltFile {
+    fn parse(parser: &mut Parser) -> Result<Self> {
+        todo!()
     }
 }

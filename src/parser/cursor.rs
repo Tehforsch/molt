@@ -1,6 +1,5 @@
 use super::{
-    Peek, Span, TokenizerError,
-    error::ParseError,
+    Peek,
     tokenizer::{Token, TokenKind},
 };
 

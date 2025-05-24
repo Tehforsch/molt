@@ -90,11 +90,6 @@ impl Input {
         }
     }
 
-    #[cfg(test)]
-    pub(crate) fn fake(file_name: &str, code: &str) -> Self {
-        Self::new(MoltSource::FromCli(Contents::new(code.to_string())))
-    }
-
     pub fn with_rust_src_file<P: AsRef<Path>>(mut self, file: P) -> Result<Self, crate::Error> {
         self.rust_src.push(RustSourceFile::new(file)?);
         Ok(Self {
@@ -130,11 +125,11 @@ impl Input {
         FileId::Molt
     }
 
-    pub(crate) fn iter_rust_src(&self) -> impl Iterator<Item = (FileId, &RustSourceFile)> {
+    pub(crate) fn iter_rust_src(&self) -> impl Iterator<Item = FileId> {
         self.rust_src
             .iter()
             .enumerate()
-            .map(|(i, file)| (FileId::Rust(i), file))
+            .map(|(i, _)| FileId::Rust(i))
     }
 }
 

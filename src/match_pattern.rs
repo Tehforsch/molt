@@ -94,7 +94,7 @@ impl Match {
         Self {
             bindings: vars
                 .iter()
-                .map(|var| (var.name, Binding::new(var.node)))
+                .map(|var| (var.id, Binding::new(var.node)))
                 .collect(),
             cmps: vec![],
             forks: vec![],
@@ -148,7 +148,7 @@ impl Match {
     }
 
     fn cmp_id(&mut self, ctx: &MatchCtx, ast_id: Id, pat_id: Id) {
-        match ctx.get_pattern(pat_id) {
+        match ctx.get_pat_node(pat_id) {
             Pattern::Pattern(var) => {
                 self.add_binding(ctx, var, ast_id, true);
             }
@@ -524,12 +524,12 @@ pub(crate) trait CmpDirect {
 
 impl CmpDirect for Lit {
     fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
-        todo!()
+        ctx.eq(self, pat)
     }
 }
 
 impl CmpDirect for Ident {
     fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
-        todo!()
+        ctx.eq(self, pat)
     }
 }

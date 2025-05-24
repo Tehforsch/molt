@@ -169,3 +169,19 @@ impl CustomDebug for Var {
         todo!()
     }
 }
+
+impl<'a, T> Pattern<&'a T> {
+    pub(crate) fn map<S>(&self, f: impl Fn(&'a T) -> &'a S) -> Pattern<&'a S> {
+        match self {
+            Pattern::Exact(t) => Pattern::Exact(f(t)),
+            Pattern::Pattern(var_id) => Pattern::Pattern(*var_id),
+        }
+    }
+
+    pub(crate) fn as_exact(&self) -> Option<&'a T> {
+        match self {
+            Pattern::Exact(t) => Some(t),
+            Pattern::Pattern(_) => None,
+        }
+    }
+}

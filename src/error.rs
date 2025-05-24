@@ -1,5 +1,3 @@
-use std::ops::Range;
-
 use codespan_reporting::{
     diagnostic::{Diagnostic, Label},
     term::{
@@ -8,19 +6,11 @@ use codespan_reporting::{
     },
 };
 
-use crate::parser::ParseError;
 use crate::{
     input::{FileId, Input},
     parser::{Span, TokenizerError},
 };
-
-#[derive(Debug, thiserror::Error)]
-pub enum ResolveError {
-    #[error("Multiple commands given.")]
-    MultipleCommandGiven,
-    #[error("No commands given.")]
-    NoCommandGiven,
-}
+use crate::{parser::ParseError, resolve::ResolveError};
 
 #[derive(Debug)]
 pub enum Error {
@@ -34,7 +24,7 @@ impl Error {
     fn span(&self) -> Option<Span> {
         match self {
             Error::Parse(error) => Some(Span::from_range(error.span().range())),
-            Error::Tokenize(error) => None,
+            Error::Tokenize(_) => None,
             Error::Resolve(_) => None,
             Error::Misc(_) => None,
         }

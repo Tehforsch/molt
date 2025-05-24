@@ -26,7 +26,7 @@ impl std::fmt::Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // TODO
         match self.kind {
-            ParseErrorKind::TokenExpected(token_kind) => write!(f, "Wrong token."),
+            ParseErrorKind::TokenExpected(_) => write!(f, "Wrong token."),
             ParseErrorKind::InvalidNodeKind => write!(f, "Invalid node kind."),
         }
     }
