@@ -14,7 +14,7 @@ use error::ParseErrorKind as ErrorKind;
 use tokenizer::{Token, TokenKind};
 
 pub use error::{ParseError, ParseErrorKind};
-pub(crate) use molt_grammar::{Command, Decl, MoltFile, Var, VarDecl, VarId};
+pub(crate) use molt_grammar::{Command, Decl, MoltFile, Todo, Var, VarDecl, VarId};
 pub(crate) use node::{CustomDebug, Kind, Node, Pattern, ToNode};
 pub(crate) use rust_grammar::RustFile;
 pub(crate) use tokenizer::Tokenizer;
@@ -113,7 +113,7 @@ impl Parser {
     }
 
     fn push_node_pos(&mut self) {
-        self.node_positions.push(self.cursor.pos());
+        self.node_positions.push(self.cursor.char_pos());
     }
 
     fn pop_node_pos(&mut self) {
@@ -156,25 +156,11 @@ impl Parser {
     }
 
     fn token_error(&mut self, kind: ErrorKind) -> Result<(), Error> {
-        self.advance();
-        Err(Error::new(
-            kind,
-            Span::new(
-                self.cursor.pos(),
-                self.cursor.pos() + self.cursor.current().len,
-            ),
-        ))
-    }
-
-    fn error(&self, kind: ErrorKind) -> Result<(), Error> {
         Err(self.make_error(kind))
     }
 
-    fn make_error(&self, kind: ErrorKind) -> Error {
-        Error::new(
-            kind,
-            Span::new(*self.node_positions.last().unwrap(), self.cursor.pos()),
-        )
+    fn make_error(&mut self, kind: ErrorKind) -> Error {
+        Error::new(kind, self.cursor.current_token_span())
     }
 }
 

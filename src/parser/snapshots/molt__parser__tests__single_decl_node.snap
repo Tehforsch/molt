@@ -13,7 +13,6 @@ MoltFile {
                     ),
                 ),
             ),
-            kind: Lit,
             node: Some(
                 Id(
                     PatNode(

@@ -1,7 +1,6 @@
 ---
 source: src/parser/tests.rs
-expression: "crate :: parser :: tests :: parse_molt_ok :: < MoltFile >\n(\"let foo: Ident = bar;\")"
-snapshot_kind: text
+expression: "crate :: parser :: tests :: parse_molt_ok :: < MoltFile >\n(\"let foo: Ident = { bar };\")"
 ---
 MoltFile {
     vars: [
@@ -13,7 +12,6 @@ MoltFile {
                     ),
                 ),
             ),
-            kind: Ident,
             node: Some(
                 Id(
                     PatNode(

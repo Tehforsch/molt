@@ -1,5 +1,5 @@
 use super::{
-    Peek,
+    Peek, Span,
     tokenizer::{Token, TokenKind},
 };
 
@@ -19,9 +19,9 @@ impl Peek for Cursor {
     }
 }
 
-fn eof() -> Token {
+fn eof(pos: usize) -> Token {
     Token {
-        len: 1,
+        span: Span::new(pos, pos),
         kind: TokenKind::Eof,
     }
 }
@@ -36,20 +36,28 @@ impl Cursor {
     }
 
     pub fn advance(&mut self) -> Token {
-        self.pos += self.current().len;
+        self.pos += 1;
         self.index += 1;
         self.current()
     }
 
-    pub(super) fn current(&self) -> Token {
-        *self.tokens.get(self.index).unwrap_or(&eof())
+    fn current(&self) -> Token {
+        *self.tokens.get(self.index).unwrap_or(&eof(self.pos))
     }
 
     fn next(&self) -> Token {
-        *self.tokens.get(self.index + 1).unwrap_or(&eof())
+        *self.tokens.get(self.index + 1).unwrap_or(&eof(self.pos))
     }
 
     pub fn pos(&self) -> usize {
         self.pos
+    }
+
+    pub(crate) fn char_pos(&self) -> usize {
+        self.current().span.start()
+    }
+
+    pub(crate) fn current_token_span(&self) -> super::Span {
+        self.current().span
     }
 }

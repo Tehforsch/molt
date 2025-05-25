@@ -30,6 +30,14 @@ impl Span {
     pub(crate) fn range(self) -> Range<usize> {
         self.start..self.end
     }
+
+    pub fn start(&self) -> usize {
+        self.start
+    }
+
+    pub fn end(&self) -> usize {
+        self.end
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -97,13 +105,10 @@ impl<'a> Tokenizer<'a> {
 
     fn consume(&mut self, token: rustc_lexer::Token) -> Result<(), TokenizerError> {
         let len = token.len;
-        match Token::from_rustc_token(
-            &self.source[self.position..(self.position + len)],
-            self.mode,
-            token,
-        ) {
-            Ok(token) => {
-                self.tokens.extend(token);
+        let span = Span::new(self.position, self.position + len);
+        match TokenKind::from_rustc_token_kind(&self.source[span.range()], self.mode, token.kind) {
+            Ok(kind) => {
+                self.tokens.extend(kind.map(|kind| Token { kind, span }));
             }
             Err(e) => return Err(e),
         }

@@ -1,6 +1,6 @@
 ---
 source: src/parser/tests.rs
-expression: "crate :: parser :: tests :: parse_molt_ok :: < VarDecl >\n(\"let foo: Ident = bar;\")"
+expression: "crate :: parser :: tests :: parse_molt_ok :: < VarDecl >\n(\"let foo: Ident = { bar };\")"
 ---
 VarDecl {
     id: VarId(
@@ -10,7 +10,6 @@ VarDecl {
             ),
         ),
     ),
-    kind: Ident,
     node: Some(
         Id(
             PatNode(

@@ -4,7 +4,7 @@ expression: "crate :: parser :: tests :: parse_molt_err :: < Ident > (\"async\")
 snapshot_kind: text
 ---
 error: Wrong token.
-  ┌─ CLI input:1:6
+  ┌─ CLI input:1:1
   │
 1 │ async
-  │      ^ Wrong token.
+  │ ^^^^^ Wrong token.

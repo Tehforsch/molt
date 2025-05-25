@@ -3,7 +3,7 @@ use crate::match_pattern::{CmpDirect, Match};
 
 use super::tokenizer::{Keyword, Lit, TokenKind};
 use super::{Parse, ParseErrorKind, Parser, tokenizer::Ident};
-use super::{Var, VarId};
+use super::{Todo, Var, VarId};
 
 pub(crate) enum Pattern<E> {
     Exact(E),

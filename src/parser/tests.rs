@@ -1,5 +1,5 @@
 use crate::{
-    Error, Input, MoltFile, MoltSource,
+    Error, Input, MoltFile,
     ctx::Ctx,
     error::{emit_diagnostic_str, make_error_diagnostic},
     parser::{Ident, VarDecl},
@@ -53,11 +53,11 @@ macro_rules! parse_test_err {
 parse_test_ok!(ident, Ident, "foo");
 parse_test_err!(ident_err, Ident, "async");
 
-parse_test_ok!(var_decl, VarDecl, "let foo: Ident = bar;");
-parse_test_ok!(single_decl_file, MoltFile, "let foo: Ident = bar;");
+parse_test_ok!(var_decl, VarDecl, "let foo: Ident = { bar };");
+parse_test_ok!(single_decl_file, MoltFile, "let foo: Ident = { bar };");
 parse_test_ok!(
     multi_decl_file,
     MoltFile,
-    "let foo: Ident; let foo: Ident = bar;"
+    "let foo: Ident; let foo: Ident = { bar };"
 );
 parse_test_ok!(single_decl_node, MoltFile, "let foo: Lit = { \"hi\" };");

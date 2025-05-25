@@ -53,11 +53,7 @@ impl Parse for VarDecl {
             None
         };
         parser.consume(Semi)?;
-        Ok(Self {
-            id: name,
-            kind,
-            node,
-        })
+        Ok(Self { id: name, node })
     }
 }
 
@@ -71,7 +67,7 @@ impl<T: Parse + ToNode> Parse for NodeId<T> {
 
 impl Parse for Lit {
     fn parse(parser: &mut Parser) -> Result<Self> {
-        let start = parser.cursor.pos();
+        let span = parser.cursor.current_token_span();
         let lit = parser.consume_pat(|kind| {
             if let TokenKind::Literal { kind, .. } = kind {
                 Some(kind)
@@ -79,18 +75,14 @@ impl Parse for Lit {
                 None
             }
         })?;
-        let end = parser.cursor.pos();
-        let span = Span::new(start, end);
         Ok(Lit::new(lit, span))
     }
 }
 
 impl Parse for Ident {
     fn parse(parser: &mut Parser) -> Result<Self> {
-        let start = parser.cursor.pos();
+        let span = parser.cursor.current_token_span();
         parser.consume(TokenKind::Ident)?;
-        let end = parser.cursor.pos();
-        let span = Span::new(start, end);
         Ok(Ident::new(span))
     }
 }

@@ -2,12 +2,12 @@ pub use rustc_lexer::Base;
 
 use crate::parser::Mode;
 
-use super::TokenizerError;
+use super::{Span, TokenizerError};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Token {
     pub kind: TokenKind,
-    pub len: usize,
+    pub span: Span,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -64,23 +64,8 @@ pub enum LiteralKind {
     RawByteStr { n_hashes: usize, started: bool },
 }
 
-impl Token {
-    pub(super) fn from_rustc_token(
-        code: &str,
-        mode: Mode,
-        value: rustc_lexer::Token,
-    ) -> Result<Option<Self>, TokenizerError> {
-        TokenKind::from_rustc_token_kind(code, mode, value.kind).map(|opt| {
-            opt.map(|kind| Self {
-                kind,
-                len: value.len,
-            })
-        })
-    }
-}
-
 impl TokenKind {
-    fn from_rustc_token_kind(
+    pub fn from_rustc_token_kind(
         code: &str,
         mode: Mode,
         value: rustc_lexer::TokenKind,

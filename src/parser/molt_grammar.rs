@@ -1,6 +1,6 @@
 use crate::ctx::Id;
 
-use super::{Kind, tokenizer::Ident};
+use super::tokenizer::Ident;
 
 #[derive(Debug)]
 pub(crate) struct MoltFile {
@@ -17,8 +17,6 @@ pub(crate) enum Decl {
 #[derive(Debug)]
 pub(crate) struct VarDecl {
     pub id: VarId,
-    // TODO make this optional and infer if possible.
-    pub kind: Kind,
     pub node: Option<Id>,
 }
 
@@ -48,3 +46,6 @@ impl Var {
         self.0
     }
 }
+
+#[derive(Debug)]
+pub(crate) struct Todo;
