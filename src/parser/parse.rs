@@ -111,9 +111,3 @@ impl Parse for Command {
         Ok(command)
     }
 }
-
-impl Parse for RustFile {
-    fn parse(parser: &mut Parser) -> Result<Self> {
-        Ok(Self)
-    }
-}

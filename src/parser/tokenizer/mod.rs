@@ -1,11 +1,9 @@
-mod token;
-
 use std::ops::Range;
 
+use crate::parser::token::LiteralKind;
+pub use crate::parser::token::{Keyword, Token, TokenKind};
 use rustc_lexer::strip_shebang;
 use thiserror::Error;
-use token::LiteralKind;
-pub use token::{Keyword, Token, TokenKind};
 
 use super::Mode;
 
@@ -172,5 +170,11 @@ mod tests {
         assert_eq!(tokens[3].kind, TokenKind::Keyword(Keyword::Fn));
         assert_eq!(tokens[4].kind, TokenKind::Keyword(Keyword::Ident));
         assert_eq!(tokens[5].kind, TokenKind::Keyword(Keyword::Transform));
+    }
+
+    #[test]
+    fn test_special_chars() {
+        let tokens = Tokenizer::tokenize_rust("_").unwrap();
+        assert_eq!(tokens[0].kind, TokenKind::Ident);
     }
 }

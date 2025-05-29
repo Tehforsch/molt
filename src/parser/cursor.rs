@@ -10,11 +10,11 @@ pub struct Cursor {
 }
 
 impl Peek for Cursor {
-    fn peek_next(&self) -> TokenKind {
+    fn peek_next_token(&self) -> TokenKind {
         self.next().kind
     }
 
-    fn peek(&self) -> TokenKind {
+    fn peek_token(&self) -> TokenKind {
         self.current().kind
     }
 }

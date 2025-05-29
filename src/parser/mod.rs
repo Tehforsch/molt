@@ -6,11 +6,13 @@ mod parse;
 mod rust_grammar;
 #[cfg(test)]
 mod tests;
+pub mod token;
 mod tokenizer;
 
 use cursor::Cursor;
 use error::ParseError as Error;
 use error::ParseErrorKind as ErrorKind;
+use token::IsToken;
 use tokenizer::{Token, TokenKind};
 
 pub use error::{ParseError, ParseErrorKind};
@@ -55,23 +57,23 @@ trait Matches: Sized {
 }
 
 trait Peek: Sized {
-    fn peek(&self) -> TokenKind;
-    fn peek_next(&self) -> TokenKind;
+    fn peek_token(&self) -> TokenKind;
+    fn peek_next_token(&self) -> TokenKind;
+
+    fn peek<T: IsToken>(&self) -> bool {
+        T::is_token(self.peek_token())
+    }
 
     fn matches<T: Matches>(&self) -> bool {
         T::matches(self)
     }
 
     fn token_matches(&self, kind: TokenKind) -> bool {
-        self.peek() == kind
+        self.peek_token() == kind
     }
 
     fn next_token_matches(&self, kind: TokenKind) -> bool {
-        self.peek_next() == kind
-    }
-
-    fn parse_from_peek<T: FromPeek>(&self) -> Option<T> {
-        T::from_peek(self)
+        self.peek_next_token() == kind
     }
 }
 
@@ -125,7 +127,7 @@ impl Parser {
     }
 
     fn consume_if_matches(&mut self, expected: TokenKind) -> bool {
-        if self.peek() != expected {
+        if self.peek_token() != expected {
             false
         } else {
             self.advance();
@@ -134,7 +136,7 @@ impl Parser {
     }
 
     fn consume(&mut self, expected: TokenKind) -> Result<()> {
-        if self.peek() != expected {
+        if self.peek_token() != expected {
             self.token_error(ErrorKind::TokenExpected(expected))
         } else {
             self.advance();
@@ -143,7 +145,7 @@ impl Parser {
     }
 
     fn consume_pat<T>(&mut self, f: impl Fn(TokenKind) -> Option<T>) -> Result<T> {
-        if let Some(t) = f(self.peek()) {
+        if let Some(t) = f(self.peek_token()) {
             self.advance();
             Ok(t)
         } else {
@@ -152,7 +154,7 @@ impl Parser {
     }
 
     fn is_at_end(&self) -> bool {
-        self.peek() == TokenKind::Eof
+        self.peek_token() == TokenKind::Eof
     }
 
     fn token_error(&mut self, kind: ErrorKind) -> Result<(), Error> {
@@ -162,14 +164,34 @@ impl Parser {
     fn make_error(&mut self, kind: ErrorKind) -> Error {
         Error::new(kind, self.cursor.current_token_span())
     }
+
+    fn lookahead1(&self) -> Lookahead1 {
+        Lookahead1 {
+            token: self.cursor.peek_next_token(),
+        }
+    }
 }
 
 impl Peek for Parser {
-    fn peek(&self) -> TokenKind {
-        self.cursor.peek()
+    fn peek_token(&self) -> TokenKind {
+        self.cursor.peek_token()
     }
 
-    fn peek_next(&self) -> TokenKind {
-        self.cursor.peek_next()
+    fn peek_next_token(&self) -> TokenKind {
+        self.cursor.peek_next_token()
+    }
+}
+
+pub struct Lookahead1 {
+    token: TokenKind,
+}
+
+impl Peek for Lookahead1 {
+    fn peek_token(&self) -> TokenKind {
+        self.token
+    }
+
+    fn peek_next_token(&self) -> TokenKind {
+        unimplemented!()
     }
 }
