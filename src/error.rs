@@ -5,17 +5,18 @@ use codespan_reporting::{
         termcolor::{ColorChoice, StandardStream},
     },
 };
+use proc_macro2::LexError;
 
+use crate::resolve::ResolveError;
 use crate::{
     input::{FileId, Input},
-    parser::{Span, TokenizerError},
+    parser::Span,
 };
-use crate::{parser::ParseError, resolve::ResolveError};
 
 #[derive(Debug)]
 pub enum Error {
-    Parse(ParseError),
-    Tokenize(TokenizerError),
+    Parse(syn::Error),
+    Tokenize(LexError),
     Resolve(ResolveError),
     Misc(String),
 }
@@ -23,7 +24,7 @@ pub enum Error {
 impl Error {
     fn span(&self) -> Option<Span> {
         match self {
-            Error::Parse(error) => Some(Span::from_range(error.span().range())),
+            Error::Parse(error) => Some(Span::from_range(error.span().byte_range())),
             Error::Tokenize(_) => None,
             Error::Resolve(_) => None,
             Error::Misc(_) => None,
@@ -70,8 +71,8 @@ macro_rules! impl_from {
 }
 
 impl_from!(ResolveError, Resolve);
-impl_from!(ParseError, Parse);
-impl_from!(TokenizerError, Tokenize);
+impl_from!(syn::Error, Parse);
+impl_from!(LexError, Tokenize);
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

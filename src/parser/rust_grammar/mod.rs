@@ -1,11 +1,8 @@
 mod parse;
 
-use crate::{
-    Token,
-    parser::{Parse, Parser, Result},
-};
+use syn::{Ident, Token};
 
-use super::Ident;
+use crate::parser::{Parse, Parser, Result};
 
 pub(crate) struct RustFile {
     items: Vec<Item>,

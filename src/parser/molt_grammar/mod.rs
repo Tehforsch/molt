@@ -1,6 +1,6 @@
-use crate::ctx::Id;
+use syn::Ident;
 
-use super::tokenizer::Ident;
+use crate::ctx::Id;
 
 #[derive(Debug)]
 pub(crate) struct MoltFile {
@@ -43,7 +43,7 @@ impl Var {
     }
 
     pub(crate) fn ident(&self) -> Ident {
-        self.0
+        self.0.clone()
     }
 }
 

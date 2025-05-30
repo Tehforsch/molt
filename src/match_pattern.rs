@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
+use syn::{Ident, Lit};
+
 use crate::{
     MoltFile,
     ctx::{AstCtx, Id, MatchCtx, MatchingMode, NodeId, NodeList, PatCtx},
-    parser::{Ident, Lit, Node, Pattern, VarDecl, VarId},
+    parser::{Node, Pattern, VarDecl, VarId},
 };
 
 #[cfg(feature = "debug-print")]
@@ -524,7 +526,8 @@ pub(crate) trait CmpDirect {
 
 impl CmpDirect for Lit {
     fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
-        ctx.eq(self, pat)
+        todo!()
+        // ctx.eq(self, pat)
     }
 }
 
