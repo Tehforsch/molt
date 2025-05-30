@@ -18,7 +18,7 @@ MoltFile {
             id: VarId(
                 Id(
                     Var(
-                        1,
+                        0,
                     ),
                 ),
             ),

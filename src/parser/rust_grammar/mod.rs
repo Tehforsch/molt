@@ -74,7 +74,7 @@ macro_rules! impl_temp_struct {
         pub struct $name;
 
         impl Parse for $name {
-            fn parse(_: &mut Parser) -> Result<Self> {
+            fn parse(_: &Parser) -> Result<Self> {
                 todo!()
             }
         }

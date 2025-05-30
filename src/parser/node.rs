@@ -3,7 +3,7 @@ use syn::{Ident, Lit};
 use crate::ctx::MatchCtx;
 use crate::match_pattern::{CmpDirect, Match};
 
-use super::{Parse, Parser};
+use super::{Parse, ParseStream};
 use super::{Todo, Var, VarId};
 
 pub(crate) enum Pattern<E> {
@@ -47,15 +47,21 @@ macro_rules! define_node_and_kind {
             }
         )*
 
+        mod kind_kws {
+            $(
+                syn::custom_keyword!($variant_name);
+            )*
+        }
+
         impl Parse for Kind {
-            fn parse(parser: &mut Parser) -> super::Result<Self> {
-                todo!()
-                // $(
-                //     if parser.consume_if_matches(TokenKind::Keyword(Keyword::$variant_name)) {
-                //         return Ok(Kind::$variant_name);
-                //     }
-                // )*
-                // Err(parser.make_error(ParseErrorKind::InvalidNodeKind))
+            fn parse(parser: ParseStream) -> super::Result<Self> {
+                $(
+                    if parser.peek(kind_kws::$variant_name) {
+                        let _: kind_kws::$variant_name = parser.parse()?;
+                        return Ok(Kind::$variant_name);
+                    }
+                )*
+                Err(todo!())
             }
         }
 
@@ -115,7 +121,7 @@ macro_rules! define_node_and_kind {
                 }
             }
 
-            pub(crate) fn parse_with_kind(parser: &mut Parser, kind: Kind) -> super::Result<Self> {
+            pub(crate) fn parse_with_kind(parser: ParseStream, kind: Kind) -> super::Result<Self> {
                 match kind {
                     $(
                         Kind::$variant_name => Ok(Node::$variant_name(parser.parse::<$ty>()?)),

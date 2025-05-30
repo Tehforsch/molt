@@ -1,12 +1,10 @@
-use crate::parser::{Parse, Parser};
+use crate::parser::{Parse, ParseStream, Parser};
 
 use super::super::Result;
 use super::{Attribute, Expr, Generics, ItemConst, RustFile, Type, Visibility};
 
-pub type ParseStream<'a> = &'a mut Parser<'a>;
-
 impl Parse for RustFile {
-    fn parse(parser: &mut Parser) -> Result<Self> {
+    fn parse(parser: &Parser) -> Result<Self> {
         todo!()
         // Ok(Self)
     }
