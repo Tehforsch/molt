@@ -2,9 +2,9 @@ use syn::Token;
 
 use crate::{
     ctx::NodeId,
-    parser::{
-        Kind, Node, Parse, ParseStream, Result, ToNode, UserKind, braced, rust_grammar::Ident,
-    },
+    node::{Node, ToNode, UserKind},
+    parser::{Parse, ParseStream, Result, braced},
+    rust_grammar::Ident,
 };
 
 use super::{Command, Decl, MoltFile, UntypedVar, Var, VarDecl, VarId};

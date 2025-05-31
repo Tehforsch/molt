@@ -1,7 +1,8 @@
 use crate::{
-    Error, Input, MoltFile,
+    Error, Input,
     ctx::Ctx,
     error::{emit_diagnostic_str, make_error_diagnostic},
+    molt_grammar::MoltFile,
     parser::VarDecl,
 };
 

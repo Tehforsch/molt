@@ -6,11 +6,12 @@ use syn::{Token, ext::IdentExt};
 use crate::{
     ctx::{NodeId, NodeList, PatCtx},
     match_pattern::Match,
-    parser::{Parse, Parser, Result},
+    molt_grammar::UntypedVar,
+    parser::{Parse, ParseStream, Parser, Result},
     resolve::{Dependencies, GetDependencies},
 };
 
-use super::{Kind, ParseStream, UntypedVar, UserKind};
+use super::node::{Kind, UserKind};
 
 #[derive(Clone)]
 pub struct Ident(syn::Ident);
@@ -20,7 +21,7 @@ pub struct Lit(syn::Lit);
 
 pub struct Attribute(syn::Attribute);
 
-pub(crate) struct RustFile {
+pub struct RustFile {
     items: Vec<NodeId<Item>>,
 }
 

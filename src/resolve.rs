@@ -1,9 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::{
-    Command, Error, MoltFile, PatCtx, VarId,
+    Error, PatCtx,
     ctx::{Id, NodeId},
-    parser::{Pattern, ToNode},
+    molt_grammar::{Command, MoltFile, VarId},
+    node::{Pattern, ToNode},
 };
 
 #[derive(Debug, thiserror::Error)]

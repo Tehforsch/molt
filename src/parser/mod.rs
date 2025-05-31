@@ -1,6 +1,3 @@
-pub(crate) mod molt_grammar;
-mod node;
-pub(crate) mod rust_grammar;
 mod span;
 #[cfg(test)]
 mod tests;
@@ -10,14 +7,15 @@ use std::rc::Rc;
 use std::str::FromStr;
 use std::{cell::Cell, marker::PhantomData};
 
-pub(crate) use molt_grammar::{Command, Decl, MoltFile, Todo, UntypedVar, Var, VarDecl, VarId};
-pub(crate) use node::{Kind, Node, Pattern, ToNode, UserKind};
-pub(crate) use rust_grammar::RustFile;
-use rust_grammar::{Attribute, Ident};
-pub(crate) use span::Span;
 use syn::token::Token;
 
 use crate::ctx::{Ctx, Id, NodeId, NodeList};
+use crate::molt_grammar::{Command, Decl, MoltFile, Todo, UntypedVar, Var, VarDecl, VarId};
+use crate::node::{Node, ToNode};
+use crate::rust_grammar::RustFile;
+use crate::rust_grammar::{Attribute, Ident};
+
+pub(crate) use span::Span;
 
 pub type Result<T, E = syn::Error> = std::result::Result<T, E>;
 
@@ -56,7 +54,7 @@ impl<T> Spanned<T> {
     }
 }
 
-struct SpanMarker {
+pub(crate) struct SpanMarker {
     start: usize,
 }
 
@@ -66,10 +64,11 @@ pub(crate) trait Parse: Sized {
 
 pub(crate) struct Parser<'a> {
     ctx: Rc<RefCell<Ctx>>,
-    // TODO make this properly private, this should never be touched
-    // from outside.  Currently, since the parsing is done in
-    // submodules of parser, this can still be accessed.
-    stream: syn::parse::ParseStream<'a>,
+    // TODO make this properly private, I'd like this to never be touched
+    // from outside.  Unfortunately, the `parenthesized!`, `braced!`, etc.
+    // macros still use this field directly and it might not be so easy to
+    // change this for now.
+    pub stream: syn::parse::ParseStream<'a>,
     mode: Mode,
     // This is a really ugly field to accomodate the fact that
     // `syn::parse::ParseStream::prev_span` is a private method
@@ -93,26 +92,30 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse<T: Parse>(&self) -> Result<T> {
+    pub fn parse<T: Parse>(&self) -> Result<T> {
         *self.prev_span.borrow_mut() = self.stream.span();
         T::parse(self)
     }
 
-    fn parse_spanned<T: Parse>(&self) -> Result<Spanned<T>> {
+    pub fn parse_spanned<T: Parse>(&self) -> Result<Spanned<T>> {
         let marker = self.span_marker();
         let t = T::parse(self)?;
         Ok(self.make_spanned(marker, t))
     }
 
-    fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.stream.is_empty()
     }
 
-    fn peek<T: syn::parse::Peek>(&self, token: T) -> bool {
+    // TODO own the trait here and
+    // make all node kinds return true
+    // on peek if the encountered item is
+    // a var
+    pub fn peek<T: syn::parse::Peek>(&self, token: T) -> bool {
         self.stream.peek(token)
     }
 
-    fn clone_with<'b>(&self, stream: &'b syn::parse::ParseBuffer<'b>) -> Parser<'b> {
+    pub fn clone_with<'b>(&self, stream: &'b syn::parse::ParseBuffer<'b>) -> Parser<'b> {
         Parser {
             ctx: self.ctx.clone(),
             stream: &stream,
@@ -121,31 +124,31 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn add_var(&self, var: Var) -> VarId {
+    pub fn add_var(&self, var: Var) -> VarId {
         self.ctx.borrow_mut().add_var(var)
     }
 
-    fn add_var_typed<T: ToNode>(&self, var: Var) -> NodeId<T> {
+    pub fn add_var_typed<T: ToNode>(&self, var: Var) -> NodeId<T> {
         self.ctx.borrow_mut().add_var_typed(var)
     }
 
-    fn add_node(&self, node: Spanned<Node>) -> Id {
+    pub fn add_node(&self, node: Spanned<Node>) -> Id {
         self.ctx.borrow_mut().add_node(node, self.mode)
     }
 
-    fn add_item<T: ToNode>(&self, t: Spanned<T>) -> NodeId<T> {
+    pub fn add_item<T: ToNode>(&self, t: Spanned<T>) -> NodeId<T> {
         self.ctx.borrow_mut().add(t, self.mode)
     }
 
-    fn lookahead1(&self) -> Lookahead1 {
+    pub fn lookahead1(&self) -> Lookahead1 {
         Lookahead1(self.stream.lookahead1())
     }
 
-    fn call<T>(&'a self, function: fn(ParseStream<'a>) -> Result<T>) -> Result<T> {
+    pub fn call<T>(&'a self, function: fn(ParseStream<'a>) -> Result<T>) -> Result<T> {
         function(self)
     }
 
-    fn call_internal<T>(
+    pub fn call_internal<T>(
         &'a self,
         function: fn(syn::parse::ParseStream<'a>) -> Result<T>,
     ) -> Result<T> {
@@ -153,38 +156,38 @@ impl<'a> Parser<'a> {
         function(self.stream)
     }
 
-    fn span_marker(&self) -> SpanMarker {
+    pub fn span_marker(&self) -> SpanMarker {
         let start = self.stream.span().byte_range().start;
         SpanMarker { start }
     }
 
-    fn make_spanned<T>(&self, marker: SpanMarker, item: T) -> Spanned<T> {
+    pub fn make_spanned<T>(&self, marker: SpanMarker, item: T) -> Spanned<T> {
         let end = self.prev_span.borrow().byte_range().end;
         let span = Span::new(marker.start, end);
         Spanned { span, item }
     }
 
-    fn error(&self, s: &str) -> syn::Error {
+    pub fn error(&self, s: &str) -> syn::Error {
         syn::Error::new(self.stream.span(), s)
     }
 }
 
-struct Lookahead1<'a>(syn::parse::Lookahead1<'a>);
+pub(crate) struct Lookahead1<'a>(syn::parse::Lookahead1<'a>);
 
 impl<'a> Lookahead1<'a> {
     // TODO own the trait here and
     // make all node kinds return true
     // on peek if the encountered item is
     // a var
-    fn peek<T: syn::parse::Peek>(&self, token: T) -> bool {
+    pub fn peek<T: syn::parse::Peek>(&self, token: T) -> bool {
         self.0.peek(token)
     }
 
-    fn peek_ident(&self) -> bool {
+    pub fn peek_ident(&self) -> bool {
         self.0.peek(syn::Ident) || self.0.peek(syn::Token![$])
     }
 
-    fn error(self) -> syn::Error {
+    pub fn error(self) -> syn::Error {
         self.0.error()
     }
 }
@@ -250,11 +253,11 @@ fn convert_attrs(input: ParseStream, attrs: Vec<syn::Attribute>) -> Result<NodeL
 }
 
 impl Attribute {
-    fn parse_inner(input: ParseStream) -> Result<NodeList<Self>> {
+    pub fn parse_inner(input: ParseStream) -> Result<NodeList<Self>> {
         convert_attrs(input, syn::Attribute::parse_inner(input.stream)?)
     }
 
-    fn parse_outer(input: ParseStream) -> Result<NodeList<Self>> {
+    pub fn parse_outer(input: ParseStream) -> Result<NodeList<Self>> {
         convert_attrs(input, syn::Attribute::parse_outer(input.stream)?)
     }
 }

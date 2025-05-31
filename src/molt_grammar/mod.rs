@@ -1,8 +1,9 @@
 mod parse;
 
 use crate::ctx::Id;
+use crate::node::{Kind, UserKind};
 
-use super::{Kind, UserKind, rust_grammar::Ident};
+use super::rust_grammar::Ident;
 
 #[derive(Debug)]
 pub(crate) struct MoltFile {

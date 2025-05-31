@@ -1,9 +1,7 @@
 use syn::Token;
 
-use crate::parser::{Parse, ParseStream, Parser};
-
-use super::super::Result;
 use super::{Attribute, Expr, Generics, Ident, Item, ItemConst, Lit, RustFile, Type, Visibility};
+use crate::parser::{Parse, ParseStream, Parser, Result};
 
 impl Parse for RustFile {
     fn parse(input: ParseStream) -> Result<Self> {

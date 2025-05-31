@@ -1,6 +1,10 @@
 use std::marker::PhantomData;
 
-use crate::parser::{Kind, Mode, Node, Pattern, Span, Spanned, ToNode, Var, VarDecl, VarId};
+use crate::{
+    molt_grammar::{Var, VarId},
+    node::{Kind, Node, Pattern, ToNode},
+    parser::{Mode, Span, Spanned},
+};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub(crate) struct Id(InternalId);

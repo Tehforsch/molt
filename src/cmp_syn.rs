@@ -1,13 +1,6 @@
-use crate::{
-    MoltFile,
-    ctx::{AstCtx, Id, MatchCtx, MatchingMode, NodeId, NodeList, PatCtx},
-    parser::{
-        Node, Pattern, VarDecl, VarId,
-        rust_grammar::{
-            Attribute, Expr, ExprBinary, ExprLit, ExprParen, ExprUnary, Ident, Item, ItemConst,
-            ItemFn, Lit,
-        },
-    },
+use crate::ctx::{AstCtx, Id, MatchCtx, MatchingMode, NodeId, NodeList, PatCtx};
+use crate::rust_grammar::{
+    Attribute, Expr, ExprBinary, ExprLit, ExprParen, ExprUnary, Ident, Item, ItemConst, ItemFn, Lit,
 };
 
 use crate::match_pattern::Match;

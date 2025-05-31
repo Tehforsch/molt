@@ -3,10 +3,9 @@ use derive_macro::{CmpSyn, GetDependencies};
 use crate::cmp_syn::CmpSyn;
 use crate::ctx::MatchCtx;
 use crate::match_pattern::Match;
-
-use super::rust_grammar::{Attribute, Ident, Item, Lit};
-use super::{Parse, ParseStream, Spanned};
-use super::{Var, VarId};
+use crate::molt_grammar::{Var, VarId};
+use crate::parser::{Parse, ParseStream, Spanned};
+use crate::rust_grammar::{Attribute, Ident, Item, Lit};
 
 pub(crate) enum Pattern<E> {
     Exact(E),
@@ -120,7 +119,7 @@ macro_rules! define_user_kind {
         }
 
         impl Parse for UserKind {
-            fn parse(input: ParseStream) -> super::Result<Self> {
+            fn parse(input: ParseStream) -> crate::parser::Result<Self> {
                 $(
                     if input.peek(kind_kws::$variant_name) {
                         let _: kind_kws::$variant_name = input.parse()?;
@@ -132,7 +131,7 @@ macro_rules! define_user_kind {
         }
 
         impl Node {
-            pub(crate) fn parse_with_kind(parser: ParseStream, kind: UserKind) -> super::Result<Spanned<Self>> {
+            pub(crate) fn parse_with_kind(parser: ParseStream, kind: UserKind) -> crate::parser::Result<Spanned<Self>> {
                 match kind {
                     $(
                         UserKind::$variant_name => {

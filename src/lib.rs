@@ -4,17 +4,22 @@ mod ctx;
 mod error;
 mod input;
 mod match_pattern;
+pub(crate) mod molt_grammar;
+pub(crate) mod node;
 mod parser;
 mod resolve;
+pub(crate) mod rust_grammar;
 
 use codespan_reporting::{diagnostic::Label, files::Files};
 use ctx::{AstCtx, PatCtx};
 use error::emit_error;
 use match_pattern::MatchResult;
-use parser::{Command, MoltFile, RustFile, VarId, parse_molt_file, parse_rust_file};
+use molt_grammar::{Command, MoltFile};
+use parser::{parse_molt_file, parse_rust_file};
 
 pub use error::Error;
 pub use input::{Diagnostic, FileId, Input, MoltSource};
+use rust_grammar::RustFile;
 
 impl MoltFile {
     pub(crate) fn new(input: &Input) -> Result<(Self, PatCtx), Error> {
