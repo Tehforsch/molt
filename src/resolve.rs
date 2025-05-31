@@ -1,6 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::{Command, Error, MoltFile, PatCtx, VarId};
+use crate::{
+    Command, Error, MoltFile, PatCtx, VarId,
+    ctx::{Id, NodeId},
+    parser::{Pattern, ToNode},
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ResolveError {
@@ -18,12 +22,33 @@ pub(crate) struct Dependencies {
 }
 
 impl Dependencies {
-    fn new(_: crate::ctx::Id, _: &PatCtx) -> Self {
-        Self {
+    fn new(id: Id, ctx: &PatCtx) -> Self {
+        let mut deps = Self {
             vars: HashSet::default(),
+        };
+        id.get_dependencies(ctx, &mut deps);
+        deps
+    }
+}
+
+pub(crate) trait GetDependencies {
+    fn get_dependencies(&self, ctx: &PatCtx, deps: &mut Dependencies);
+}
+
+impl GetDependencies for Id {
+    fn get_dependencies(&self, ctx: &PatCtx, deps: &mut Dependencies) {
+        match ctx.get_pat_node(*self) {
+            Pattern::Exact(node) => node.get_dependencies(ctx, deps),
+            Pattern::Pattern(var_id) => {
+                deps.vars.insert(var_id);
+            }
         }
-        // TODO: traverse ast and collect vars
-        // todo!()
+    }
+}
+
+impl<T: ToNode> GetDependencies for NodeId<T> {
+    fn get_dependencies(&self, ctx: &PatCtx, deps: &mut Dependencies) {
+        self.untyped().get_dependencies(ctx, deps)
     }
 }
 

@@ -1,10 +1,12 @@
 mod parse;
 
+use derive_macro::GetDependencies;
 use syn::{Token, ext::IdentExt};
 
 use crate::{
-    ctx::NodeId,
+    ctx::{NodeId, PatCtx},
     parser::{Parse, Parser, Result},
+    resolve::{Dependencies, GetDependencies},
 };
 
 use super::{ParseStream, Var};
@@ -19,6 +21,7 @@ pub(crate) struct RustFile {
     items: Vec<Item>,
 }
 
+#[derive(GetDependencies)]
 pub enum Item {
     /// A constant item: `const MAX: u16 = 65535`.
     Const(ItemConst),
@@ -68,6 +71,7 @@ pub enum Item {
     Use(ItemUse),
 }
 
+#[derive(GetDependencies)]
 pub struct ItemConst {
     pub attrs: Vec<Attribute>,
     pub vis: Visibility,
@@ -83,6 +87,15 @@ pub struct ItemConst {
 macro_rules! impl_temp_struct {
     ($name: ident) => {
         pub type $name = syn::$name;
+
+        impl crate::resolve::GetDependencies for $name {
+            fn get_dependencies(
+                &self,
+                ctx: &crate::ctx::PatCtx,
+                deps: &mut crate::resolve::Dependencies,
+            ) {
+            }
+        }
     };
 }
 
@@ -132,4 +145,12 @@ impl Ident {
             Ok(input.add_item(Ident(syn::Ident::parse_any(input.stream)?)))
         }
     }
+}
+
+impl GetDependencies for Ident {
+    fn get_dependencies(&self, ctx: &PatCtx, deps: &mut Dependencies) {}
+}
+
+impl GetDependencies for syn::Lit {
+    fn get_dependencies(&self, ctx: &PatCtx, deps: &mut Dependencies) {}
 }

@@ -1,5 +1,7 @@
 use syn::Lit;
 
+use derive_macro::GetDependencies;
+
 use crate::ctx::MatchCtx;
 use crate::match_pattern::{CmpDirect, Match};
 
@@ -34,6 +36,7 @@ macro_rules! define_node_and_kind {
             )*
         }
 
+        #[derive(GetDependencies)]
         pub(crate) enum Node {
             $(
                 $variant_name($ty),

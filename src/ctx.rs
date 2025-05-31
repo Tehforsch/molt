@@ -201,6 +201,14 @@ impl PatCtx {
         }
     }
 
+    pub(crate) fn get_pat_node(&self, id: Id) -> Pattern<&Node> {
+        match id.0 {
+            InternalId::PatNode(idx) => Pattern::Exact(&self.ctx.nodes[idx]),
+            InternalId::Var(_) => return Pattern::Pattern(VarId::new(id)),
+            _ => unreachable!(),
+        }
+    }
+
     pub(crate) fn get_var(&self, id: VarId) -> &Var {
         match id.0.0 {
             InternalId::PatNode(_) => unreachable!(),
