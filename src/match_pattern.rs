@@ -1,14 +1,12 @@
 use std::collections::HashMap;
 
-use syn::Lit;
-
 use crate::{
     MoltFile,
     ctx::{AstCtx, Id, MatchCtx, MatchingMode, NodeId, NodeList, PatCtx},
     parser::{
         Node, Pattern, VarDecl, VarId,
         rust_grammar::{
-            Expr, ExprBinary, ExprLit, ExprParen, ExprUnary, Ident, Item, ItemConst, ItemFn,
+            Expr, ExprBinary, ExprLit, ExprParen, ExprUnary, Ident, Item, ItemConst, ItemFn, Lit,
         },
     },
 };
@@ -296,90 +294,21 @@ impl CmpDirect for Item {
     }
 }
 
-// impl CmpDirect for Lit {
-//     fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
-//         let cmp_bool = || {
-//             match self {
-//                 syn::Lit::Str(s1) => {
-//                     if let syn::Lit::Str(s2) = pat {
-//                         return s1.value() == s2.value();
-//                     }
-//                 }
-//                 syn::Lit::ByteStr(s1) => {
-//                     if let syn::Lit::ByteStr(s2) = pat {
-//                         return s1.value() == s2.value();
-//                     }
-//                 }
-//                 syn::Lit::CStr(s1) => {
-//                     if let syn::Lit::CStr(s2) = pat {
-//                         return s1.value() == s2.value();
-//                     }
-//                 }
-//                 syn::Lit::Byte(s1) => {
-//                     if let syn::Lit::Byte(s2) = pat {
-//                         return s1.value() == s2.value();
-//                     }
-//                 }
-//                 syn::Lit::Char(s1) => {
-//                     if let syn::Lit::Char(s2) = pat {
-//                         return s1.value() == s2.value();
-//                     }
-//                 }
-//                 syn::Lit::Int(s1) => {
-//                     if let syn::Lit::Int(s2) = pat {
-//                         return s1.base10_digits() == s2.base10_digits();
-//                     }
-//                 }
-//                 syn::Lit::Float(s1) => {
-//                     if let syn::Lit::Float(s2) = pat {
-//                         return s1.base10_digits() == s2.base10_digits();
-//                     }
-//                 }
-//                 syn::Lit::Bool(s1) => {
-//                     if let syn::Lit::Bool(s2) = pat {
-//                         return s1.value() == s2.value();
-//                     }
-//                 }
-//                 _ => todo!(),
-//             }
-//             false
-//         };
-//         ctx.check(cmp_bool())
-//     }
-// }
-
 impl CmpDirect for Expr {
     fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
-        match self {
-            Expr::Binary(i1) => {
-                if let Expr::Binary(i2) = pat {
-                    ctx.cmp_direct(i1, i2);
-                    return;
-                }
-            }
-            Expr::Unary(i1) => {
-                if let Expr::Unary(i2) = pat {
-                    ctx.cmp_direct(i1, i2);
-                    return;
-                }
-            }
-            Expr::Lit(i1) => {
-                if let Expr::Lit(i2) = pat {
-                    ctx.cmp_direct(i1, i2);
-                    return;
-                }
-            }
-            Expr::Paren(i1) => {
-                if let Expr::Paren(i2) = pat {
-                    ctx.cmp_direct(i1, i2);
-                    return;
-                }
-            }
+        match (self, pat) {
+            (Expr::Binary(i1), Expr::Binary(i2)) => ctx.cmp_direct(i1, i2),
+            (Expr::Unary(i1), Expr::Unary(i2)) => ctx.cmp_direct(i1, i2),
+            (Expr::Lit(i1), Expr::Lit(i2)) => ctx.cmp_direct(i1, i2),
+            (Expr::Paren(i1), Expr::Paren(i2)) => ctx.cmp_direct(i1, i2),
+            (Expr::Binary(_), _)
+            | (Expr::Unary(_), _)
+            | (Expr::Lit(_), _)
+            | (Expr::Paren(_), _) => ctx.no_match(),
             _ => {
                 todo!()
             }
         }
-        ctx.no_match()
     }
 }
 
@@ -508,15 +437,32 @@ impl CmpDirect for ItemFn {
 //     }
 // }
 
-impl CmpDirect for Lit {
+impl CmpDirect for syn::Lit {
     fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
-
-        // ctx.eq(self, pat)
+        let b = match (self, pat) {
+            (syn::Lit::Str(s1), syn::Lit::Str(s2)) => s1.value() == s2.value(),
+            (syn::Lit::ByteStr(s1), syn::Lit::ByteStr(s2)) => s1.value() == s2.value(),
+            (syn::Lit::CStr(s1), syn::Lit::CStr(s2)) => s1.value() == s2.value(),
+            (syn::Lit::Byte(s1), syn::Lit::Byte(s2)) => s1.value() == s2.value(),
+            (syn::Lit::Char(s1), syn::Lit::Char(s2)) => s1.value() == s2.value(),
+            (syn::Lit::Int(s1), syn::Lit::Int(s2)) => s1.base10_digits() == s2.base10_digits(),
+            (syn::Lit::Float(s1), syn::Lit::Float(s2)) => s1.base10_digits() == s2.base10_digits(),
+            (syn::Lit::Bool(s1), syn::Lit::Bool(s2)) => s1.value() == s2.value(),
+            (syn::Lit::Verbatim(_), syn::Lit::Verbatim(_)) => todo!(),
+            _ => false,
+        };
+        ctx.check(b)
     }
 }
 
 impl CmpDirect for Ident {
     fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
         ctx.eq(&self, &pat)
+    }
+}
+
+impl CmpDirect for Lit {
+    fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
+        ctx.cmp_direct(self.inner(), pat.inner())
     }
 }

@@ -15,7 +15,7 @@ use super::{Kind, ParseStream, UntypedVar};
 pub struct Ident(syn::Ident);
 
 #[derive(Clone)]
-pub struct Lit(syn::Ident);
+pub struct Lit(syn::Lit);
 
 pub(crate) struct RustFile {
     items: Vec<NodeId<Item>>,
@@ -160,6 +160,12 @@ impl GetDependencies for Ident {
     fn get_dependencies(&self, ctx: &PatCtx, deps: &mut Dependencies) {}
 }
 
-impl GetDependencies for syn::Lit {
+impl Lit {
+    pub fn inner(&self) -> &syn::Lit {
+        &self.0
+    }
+}
+
+impl GetDependencies for Lit {
     fn get_dependencies(&self, ctx: &PatCtx, deps: &mut Dependencies) {}
 }

@@ -1,4 +1,4 @@
-use syn::{Lit, Token};
+use syn::Token;
 
 use crate::{
     ctx::NodeId,

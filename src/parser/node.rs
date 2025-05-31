@@ -1,11 +1,9 @@
-use syn::Lit;
-
 use derive_macro::GetDependencies;
 
 use crate::ctx::MatchCtx;
 use crate::match_pattern::{CmpDirect, Match};
 
-use super::rust_grammar::{Ident, Item};
+use super::rust_grammar::{Ident, Item, Lit};
 use super::{Parse, ParseStream, Spanned};
 use super::{Var, VarId};
 
