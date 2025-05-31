@@ -1,4 +1,5 @@
 #![allow(unused)]
+mod cmp_syn;
 mod ctx;
 mod error;
 mod input;

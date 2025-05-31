@@ -1,6 +1,6 @@
 mod parse;
 
-use derive_macro::GetDependencies;
+use derive_macro::{CmpSyn, GetDependencies};
 use syn::{Token, ext::IdentExt};
 
 use crate::{
@@ -21,7 +21,7 @@ pub(crate) struct RustFile {
     items: Vec<NodeId<Item>>,
 }
 
-#[derive(GetDependencies)]
+#[derive(GetDependencies, CmpSyn)]
 pub enum Item {
     /// A constant item: `const MAX: u16 = 65535`.
     Const(ItemConst),
@@ -85,7 +85,7 @@ pub struct ItemConst {
 }
 
 macro_rules! impl_temp_struct {
-    ($name: ident) => {
+    ($name: ident, ignore) => {
         pub type $name = syn::$name;
 
         impl crate::resolve::GetDependencies for $name {
@@ -97,17 +97,35 @@ macro_rules! impl_temp_struct {
             }
         }
     };
+    ($name: ident) => {
+        pub type $name = syn::$name;
+
+        impl crate::resolve::GetDependencies for $name {
+            fn get_dependencies(
+                &self,
+                ctx: &crate::ctx::PatCtx,
+                deps: &mut crate::resolve::Dependencies,
+            ) {
+            }
+        }
+
+        impl crate::cmp_syn::CmpSyn for $name {
+            fn cmp_syn(&self, ctx: &mut crate::match_pattern::Match, pat: &Self) {
+                todo!()
+            }
+        }
+    };
 }
 
 impl_temp_struct!(Attribute);
 impl_temp_struct!(Visibility);
 impl_temp_struct!(Generics);
 impl_temp_struct!(Type);
-impl_temp_struct!(Expr);
+impl_temp_struct!(Expr, ignore);
 
 impl_temp_struct!(ItemEnum);
 impl_temp_struct!(ItemExternCrate);
-impl_temp_struct!(ItemFn);
+impl_temp_struct!(ItemFn, ignore);
 impl_temp_struct!(ItemForeignMod);
 impl_temp_struct!(ItemImpl);
 impl_temp_struct!(ItemMacro);
@@ -120,10 +138,10 @@ impl_temp_struct!(ItemType);
 impl_temp_struct!(ItemUnion);
 impl_temp_struct!(ItemUse);
 
-impl_temp_struct!(ExprLit);
-impl_temp_struct!(ExprUnary);
-impl_temp_struct!(ExprBinary);
-impl_temp_struct!(ExprParen);
+impl_temp_struct!(ExprLit, ignore);
+impl_temp_struct!(ExprUnary, ignore);
+impl_temp_struct!(ExprBinary, ignore);
+impl_temp_struct!(ExprParen, ignore);
 
 impl PartialEq for Ident {
     fn eq(&self, other: &Self) -> bool {

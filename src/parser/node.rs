@@ -1,7 +1,8 @@
-use derive_macro::GetDependencies;
+use derive_macro::{CmpSyn, GetDependencies};
 
+use crate::cmp_syn::CmpSyn;
 use crate::ctx::MatchCtx;
-use crate::match_pattern::{CmpDirect, Match};
+use crate::match_pattern::Match;
 
 use super::rust_grammar::{Ident, Item, Lit};
 use super::{Parse, ParseStream, Spanned};
@@ -30,7 +31,7 @@ macro_rules! define_node_and_kind {
             )*
         }
 
-        #[derive(GetDependencies)]
+        #[derive(GetDependencies, CmpSyn)]
         pub(crate) enum Node {
             $(
                 $variant_name($ty),
@@ -106,15 +107,6 @@ macro_rules! define_node_and_kind {
                 match self {
                     $(
                         Self::$variant_name(_) => Kind::$variant_name,
-                    )*
-                }
-            }
-
-            pub(crate) fn cmp_equal_kinds(ctx: &mut Match, ast: &Self, pat: &Self) {
-                assert_eq!(ast.kind(), pat.kind());
-                match ast {
-                    $(
-                        Node::$variant_name(s) => s.cmp_direct(ctx, <$ty>::from_node(pat).unwrap()),
                     )*
                 }
             }

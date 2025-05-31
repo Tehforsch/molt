@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     MoltFile,
+    cmp_syn::CmpSyn,
     ctx::{AstCtx, Id, MatchCtx, MatchingMode, NodeId, NodeList, PatCtx},
     parser::{
         Node, Pattern, VarDecl, VarId,
@@ -104,33 +105,6 @@ impl Match {
         }
     }
 
-    fn check(&mut self, val: bool) {
-        if !val {
-            self.valid = false;
-        }
-    }
-
-    fn eq<T: PartialEq>(&mut self, t1: T, t2: T) {
-        self.check(t1 == t2)
-    }
-
-    fn same<T>(&mut self, t1: &Option<T>, t2: &Option<T>) {
-        self.check(t1.is_some() == t2.is_some())
-    }
-
-    fn no_match(&mut self) {
-        self.check(false)
-    }
-
-    fn cmp<T: CmpDirect>(&mut self, ast: NodeId<T>, pat: NodeId<T>) {
-        self.cmps.push(Comparison::new(ast, pat));
-    }
-
-    // This exists purely to make the calls look symmetrical
-    fn cmp_direct<T: CmpDirect>(&mut self, t1: &T, t2: &T) {
-        t1.cmp_direct(self, t2)
-    }
-
     fn cmp_ids(&mut self, ctx: &MatchCtx, ast_id: Id, pat_id: Id) {
         #[cfg(feature = "debug-print")]
         {
@@ -150,19 +124,11 @@ impl Match {
             Pattern::Pattern(var) => {
                 self.add_binding(ctx, var, ast_id, true);
             }
-            Pattern::Exact(pat) => self.cmp_nodes(ctx.ast_ctx.get_node(ast_id), pat),
+            Pattern::Exact(pat) => self.cmp_syn(ctx.ast_ctx.get_node(ast_id), pat),
         }
     }
 
-    fn cmp_nodes(&mut self, ast: &Node, pat: &Node) {
-        if ast.kind() == pat.kind() {
-            Node::cmp_equal_kinds(self, ast, pat);
-        } else {
-            self.no_match()
-        }
-    }
-
-    fn cmp_lists<T: CmpDirect>(&mut self, ts1: &NodeList<T>, ts2: &NodeList<T>) {
+    fn cmp_lists<T: CmpSyn>(&mut self, ts1: &NodeList<T>, ts2: &NodeList<T>) {
         match ts2.matching_mode {
             MatchingMode::Exact => {
                 self.eq(ts1.len(), ts2.len());
@@ -226,6 +192,33 @@ impl Match {
             valid: true,
         })
     }
+
+    pub fn check(&mut self, val: bool) {
+        if !val {
+            self.valid = false;
+        }
+    }
+
+    pub fn eq<T: PartialEq>(&mut self, t1: T, t2: T) {
+        self.check(t1 == t2)
+    }
+
+    pub fn same<T>(&mut self, t1: &Option<T>, t2: &Option<T>) {
+        self.check(t1.is_some() == t2.is_some())
+    }
+
+    pub fn no_match(&mut self) {
+        self.check(false)
+    }
+
+    pub fn cmp<T: CmpSyn>(&mut self, ast: NodeId<T>, pat: NodeId<T>) {
+        self.cmps.push(Comparison::new(ast, pat));
+    }
+
+    // This exists purely to make the calls look symmetrical
+    pub fn cmp_syn<T: CmpSyn>(&mut self, t1: &T, t2: &T) {
+        t1.cmp_syn(self, t2)
+    }
 }
 
 pub(crate) struct MatchResult {
@@ -265,204 +258,5 @@ impl MoltFile {
             ctx,
             var: var.clone(),
         }
-    }
-}
-
-pub(crate) trait CmpDirect {
-    fn cmp_direct(&self, ctx: &mut Match, pat: &Self);
-}
-
-impl CmpDirect for Item {
-    fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
-        match self {
-            Item::Const(c_ast) => {
-                if let Item::Const(c_pat) = pat {
-                    ctx.cmp_direct(c_ast, c_pat);
-                } else {
-                    ctx.no_match()
-                }
-            }
-            Item::Fn(fn_ast) => {
-                if let Item::Fn(fn_pat) = pat {
-                    ctx.cmp_direct(fn_ast, fn_pat);
-                } else {
-                    ctx.no_match()
-                }
-            }
-            _ => ctx.no_match(),
-        }
-    }
-}
-
-impl CmpDirect for Expr {
-    fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
-        match (self, pat) {
-            (Expr::Binary(i1), Expr::Binary(i2)) => ctx.cmp_direct(i1, i2),
-            (Expr::Unary(i1), Expr::Unary(i2)) => ctx.cmp_direct(i1, i2),
-            (Expr::Lit(i1), Expr::Lit(i2)) => ctx.cmp_direct(i1, i2),
-            (Expr::Paren(i1), Expr::Paren(i2)) => ctx.cmp_direct(i1, i2),
-            (Expr::Binary(_), _)
-            | (Expr::Unary(_), _)
-            | (Expr::Lit(_), _)
-            | (Expr::Paren(_), _) => ctx.no_match(),
-            _ => {
-                todo!()
-            }
-        }
-    }
-}
-
-impl CmpDirect for ExprBinary {
-    fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
-        ctx.cmp_direct(&self.op, &pat.op);
-        ctx.cmp_direct(&*self.left, &*pat.left);
-        ctx.cmp_direct(&*self.right, &*pat.right);
-    }
-}
-
-impl CmpDirect for ExprUnary {
-    fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
-        ctx.cmp_direct(&self.op, &pat.op);
-        ctx.cmp_direct(&*self.expr, &*pat.expr);
-    }
-}
-
-impl CmpDirect for ExprLit {
-    fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
-        ctx.cmp_direct(&self.lit, &pat.lit);
-    }
-}
-
-impl CmpDirect for ExprParen {
-    fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
-        ctx.cmp_direct(&*self.expr, &*pat.expr);
-    }
-}
-
-impl CmpDirect for ItemConst {
-    fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
-        // self.vis.match_pattern(&item.vis)?;
-        ctx.cmp(self.ident, pat.ident);
-        // self.generics.match_pattern(&item.generics)?;
-        // self.ty.match_pattern(&item.ty)?;
-        ctx.cmp_direct(&*self.expr, &*pat.expr);
-    }
-}
-
-impl CmpDirect for syn::BinOp {
-    fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
-        let is_match = match self {
-            syn::BinOp::Add(_) => matches!(pat, syn::BinOp::Add(_)),
-            syn::BinOp::Sub(_) => matches!(pat, syn::BinOp::Sub(_)),
-            syn::BinOp::Mul(_) => matches!(pat, syn::BinOp::Mul(_)),
-            syn::BinOp::Div(_) => matches!(pat, syn::BinOp::Div(_)),
-            syn::BinOp::Rem(_) => matches!(pat, syn::BinOp::Rem(_)),
-            syn::BinOp::And(_) => matches!(pat, syn::BinOp::And(_)),
-            syn::BinOp::Or(_) => matches!(pat, syn::BinOp::Or(_)),
-            syn::BinOp::BitXor(_) => matches!(pat, syn::BinOp::BitXor(_)),
-            syn::BinOp::BitAnd(_) => matches!(pat, syn::BinOp::BitAnd(_)),
-            syn::BinOp::BitOr(_) => matches!(pat, syn::BinOp::BitOr(_)),
-            syn::BinOp::Shl(_) => matches!(pat, syn::BinOp::Shl(_)),
-            syn::BinOp::Shr(_) => matches!(pat, syn::BinOp::Shr(_)),
-            syn::BinOp::Eq(_) => matches!(pat, syn::BinOp::Eq(_)),
-            syn::BinOp::Lt(_) => matches!(pat, syn::BinOp::Lt(_)),
-            syn::BinOp::Le(_) => matches!(pat, syn::BinOp::Le(_)),
-            syn::BinOp::Ne(_) => matches!(pat, syn::BinOp::Ne(_)),
-            syn::BinOp::Ge(_) => matches!(pat, syn::BinOp::Ge(_)),
-            syn::BinOp::Gt(_) => matches!(pat, syn::BinOp::Gt(_)),
-            syn::BinOp::AddAssign(_) => matches!(pat, syn::BinOp::AddAssign(_)),
-            syn::BinOp::SubAssign(_) => matches!(pat, syn::BinOp::SubAssign(_)),
-            syn::BinOp::MulAssign(_) => matches!(pat, syn::BinOp::MulAssign(_)),
-            syn::BinOp::DivAssign(_) => matches!(pat, syn::BinOp::DivAssign(_)),
-            syn::BinOp::RemAssign(_) => matches!(pat, syn::BinOp::RemAssign(_)),
-            syn::BinOp::BitXorAssign(_) => matches!(pat, syn::BinOp::BitXorAssign(_)),
-            syn::BinOp::BitAndAssign(_) => matches!(pat, syn::BinOp::BitAndAssign(_)),
-            syn::BinOp::BitOrAssign(_) => matches!(pat, syn::BinOp::BitOrAssign(_)),
-            syn::BinOp::ShlAssign(_) => matches!(pat, syn::BinOp::ShlAssign(_)),
-            syn::BinOp::ShrAssign(_) => matches!(pat, syn::BinOp::ShrAssign(_)),
-            _ => todo!(),
-        };
-        ctx.check(is_match)
-    }
-}
-
-impl CmpDirect for syn::UnOp {
-    fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
-        let is_match = match self {
-            syn::UnOp::Deref(_) => matches!(pat, syn::UnOp::Deref(_)),
-            syn::UnOp::Not(_) => matches!(pat, syn::UnOp::Not(_)),
-            syn::UnOp::Neg(_) => matches!(pat, syn::UnOp::Neg(_)),
-            _ => todo!(),
-        };
-        ctx.check(is_match)
-    }
-}
-
-impl CmpDirect for ItemFn {
-    fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
-        todo!()
-        // ctx.cmp(self.sig, pat.sig);
-        // ctx.cmp_direct(self.expr, pat.expr);
-    }
-}
-
-// impl CmpDirect for Signature {
-//     fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
-//         ctx.same(&self.constness, &pat.constness);
-//         ctx.same(&self.asyncness, &pat.asyncness);
-//         ctx.same(&self.unsafety, &pat.unsafety);
-//         // ctx.cmp_direct(&self.abi, &pat.abi);
-//         ctx.cmp(self.ident, pat.ident);
-//         ctx.cmp_direct(&self.generics, &pat.generics);
-//         ctx.cmp_lists(&self.inputs, &pat.inputs);
-//         ctx.cmp_direct(&self.output, &pat.output);
-//     }
-// }
-
-// impl CmpDirect for syn::Generics {
-//     fn cmp_direct(&self, _: &mut Match, _: &Self) {
-//         // todo
-//     }
-// }
-
-// impl CmpDirect for syn::ReturnType {
-//     fn cmp_direct(&self, _: &mut Match, _: &Self) {
-//         // todo
-//     }
-// }
-
-// impl CmpDirect for FnArg {
-//     fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
-//         ctx.cmp(self.ident, pat.ident);
-//     }
-// }
-
-impl CmpDirect for syn::Lit {
-    fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
-        let b = match (self, pat) {
-            (syn::Lit::Str(s1), syn::Lit::Str(s2)) => s1.value() == s2.value(),
-            (syn::Lit::ByteStr(s1), syn::Lit::ByteStr(s2)) => s1.value() == s2.value(),
-            (syn::Lit::CStr(s1), syn::Lit::CStr(s2)) => s1.value() == s2.value(),
-            (syn::Lit::Byte(s1), syn::Lit::Byte(s2)) => s1.value() == s2.value(),
-            (syn::Lit::Char(s1), syn::Lit::Char(s2)) => s1.value() == s2.value(),
-            (syn::Lit::Int(s1), syn::Lit::Int(s2)) => s1.base10_digits() == s2.base10_digits(),
-            (syn::Lit::Float(s1), syn::Lit::Float(s2)) => s1.base10_digits() == s2.base10_digits(),
-            (syn::Lit::Bool(s1), syn::Lit::Bool(s2)) => s1.value() == s2.value(),
-            (syn::Lit::Verbatim(_), syn::Lit::Verbatim(_)) => todo!(),
-            _ => false,
-        };
-        ctx.check(b)
-    }
-}
-
-impl CmpDirect for Ident {
-    fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
-        ctx.eq(&self, &pat)
-    }
-}
-
-impl CmpDirect for Lit {
-    fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
-        ctx.cmp_direct(self.inner(), pat.inner())
     }
 }
