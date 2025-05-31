@@ -11,13 +11,13 @@ use std::str::FromStr;
 use std::{cell::Cell, marker::PhantomData};
 
 pub(crate) use molt_grammar::{Command, Decl, MoltFile, Todo, UntypedVar, Var, VarDecl, VarId};
-pub(crate) use node::{Kind, Node, Pattern, ToNode};
+pub(crate) use node::{Kind, Node, Pattern, ToNode, UserKind};
 pub(crate) use rust_grammar::RustFile;
 use rust_grammar::{Attribute, Ident};
 pub(crate) use span::Span;
 use syn::token::Token;
 
-use crate::ctx::{Ctx, Id, NodeId};
+use crate::ctx::{Ctx, Id, NodeId, NodeList};
 
 pub type Result<T, E = syn::Error> = std::result::Result<T, E>;
 
@@ -133,7 +133,7 @@ impl<'a> Parser<'a> {
         self.ctx.borrow_mut().add_node(node, self.mode)
     }
 
-    fn add_item<T: Parse + ToNode>(&self, t: Spanned<T>) -> NodeId<T> {
+    fn add_item<T: ToNode>(&self, t: Spanned<T>) -> NodeId<T> {
         self.ctx.borrow_mut().add(t, self.mode)
     }
 
@@ -235,17 +235,27 @@ impl<T: syn::parse::Parse> Parse for T {
     }
 }
 
+fn convert_attrs(input: ParseStream, attrs: Vec<syn::Attribute>) -> Result<NodeList<Attribute>> {
+    Ok(attrs
+        .into_iter()
+        .map(|attr| {
+            let span = <syn::Attribute as syn::spanned::Spanned>::span(&attr);
+            let spanned = Spanned {
+                span: span.into(),
+                item: Attribute::new(attr),
+            };
+            input.add_item(spanned)
+        })
+        .collect())
+}
+
 impl Attribute {
-    fn parse_inner(input: ParseStream) -> Result<Vec<Self>> {
-        syn::Attribute::parse_inner(input.stream)?;
-        // Ignore the actual attributes for now.
-        Ok(vec![])
+    fn parse_inner(input: ParseStream) -> Result<NodeList<Self>> {
+        convert_attrs(input, syn::Attribute::parse_inner(input.stream)?)
     }
 
-    fn parse_outer(input: ParseStream) -> Result<Vec<Self>> {
-        // Ignore the actual attribute for now.
-        syn::Attribute::parse_outer(input.stream)?;
-        Ok(vec![])
+    fn parse_outer(input: ParseStream) -> Result<NodeList<Self>> {
+        convert_attrs(input, syn::Attribute::parse_outer(input.stream)?)
     }
 }
 

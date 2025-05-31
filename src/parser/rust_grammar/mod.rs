@@ -10,7 +10,7 @@ use crate::{
     resolve::{Dependencies, GetDependencies},
 };
 
-use super::{Kind, ParseStream, UntypedVar};
+use super::{Kind, ParseStream, UntypedVar, UserKind};
 
 #[derive(Clone)]
 pub struct Ident(syn::Ident);
@@ -18,7 +18,7 @@ pub struct Ident(syn::Ident);
 #[derive(Clone)]
 pub struct Lit(syn::Lit);
 
-pub struct Attribute;
+pub struct Attribute(syn::Attribute);
 
 pub(crate) struct RustFile {
     items: Vec<NodeId<Item>>,
@@ -76,7 +76,7 @@ pub enum Item {
 
 #[derive(GetDependencies, CmpSyn)]
 pub struct ItemConst {
-    pub attrs: Vec<Attribute>,
+    pub attrs: NodeList<Attribute>,
     pub vis: Visibility,
     pub const_token: Token![const],
     pub ident: NodeId<Ident>,
@@ -108,7 +108,7 @@ impl std::fmt::Display for Ident {
 impl Ident {
     fn parse_any(input: ParseStream) -> Result<NodeId<Self>> {
         if input.peek(Token![$]) {
-            Ok(input.add_var_typed(input.parse::<UntypedVar>()?.to_var(Kind::Ident)))
+            Ok(input.add_var_typed(input.parse::<UntypedVar>()?.to_var(UserKind::Ident)))
         } else {
             let marker = input.span_marker();
             let ident = input.call_internal(syn::Ident::parse_any)?;
@@ -134,6 +134,12 @@ impl GetDependencies for Lit {
 
 impl GetDependencies for Attribute {
     fn get_dependencies(&self, ctx: &PatCtx, deps: &mut Dependencies) {}
+}
+
+impl Attribute {
+    pub(crate) fn new(attr: syn::Attribute) -> Self {
+        Self(attr)
+    }
 }
 
 macro_rules! impl_temp_struct {

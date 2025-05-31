@@ -70,14 +70,3 @@ impl Parse for Lit {
         Ok(Self(input.parse()?))
     }
 }
-
-// This just exists because it is required for Attr
-// to be a Node kind, but it should not really be
-// used unless we explicitly try to match on Attr.
-// To allow doing that, we probably need to introduce
-// `OuterAttr` and `InnerAttr` or sth. like that.
-impl Parse for Attribute {
-    fn parse(input: ParseStream) -> Result<Self> {
-        todo!()
-    }
-}

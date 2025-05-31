@@ -43,6 +43,15 @@ impl<T> NodeList<T> {
     }
 }
 
+impl<T: ToNode> FromIterator<NodeId<T>> for NodeList<T> {
+    fn from_iter<I: IntoIterator<Item = NodeId<T>>>(iter: I) -> Self {
+        Self {
+            items: iter.into_iter().collect(),
+            matching_mode: MatchingMode::ContainsAll,
+        }
+    }
+}
+
 pub(crate) enum MatchingMode {
     #[allow(unused)]
     Exact,

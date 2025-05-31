@@ -39,7 +39,7 @@ fn cmp_ty(field_name: &Ident, ty: &Type) -> Option<TokenStream> {
     if is_node_id(&ty) {
         Some(quote! { ctx.cmp_nodes(self. #field_name, pat. #field_name ); })
     } else if is_node_list(&ty) {
-        Some(quote! { ctx.cmp_lists(self. #field_name, pat. #field_name ); })
+        Some(quote! { ctx.cmp_lists(&self. #field_name, &pat. #field_name ); })
     } else if is_vec_attribute(ty) {
         None
     } else if is_token(&ty) {

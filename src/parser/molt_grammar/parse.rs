@@ -2,7 +2,9 @@ use syn::Token;
 
 use crate::{
     ctx::NodeId,
-    parser::{Kind, Node, Parse, ParseStream, Result, ToNode, braced, rust_grammar::Ident},
+    parser::{
+        Kind, Node, Parse, ParseStream, Result, ToNode, UserKind, braced, rust_grammar::Ident,
+    },
 };
 
 use super::{Command, Decl, MoltFile, UntypedVar, Var, VarDecl, VarId};
@@ -44,7 +46,7 @@ impl Parse for VarDecl {
         let token: Token![let] = input.parse()?;
         let var: Ident = input.parse()?;
         let _: Token![:] = input.parse()?;
-        let kind: Kind = input.parse()?;
+        let kind: UserKind = input.parse()?;
         let var: Var = Var::new(var, kind);
         let name: VarId = input.add_var(var);
         let node = if input.peek(Token![=]) {

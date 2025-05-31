@@ -46,24 +46,6 @@ macro_rules! define_node_and_kind {
             }
         )*
 
-        mod kind_kws {
-            $(
-                syn::custom_keyword!($variant_name);
-            )*
-        }
-
-        impl Parse for Kind {
-            fn parse(input: ParseStream) -> super::Result<Self> {
-                $(
-                    if input.peek(kind_kws::$variant_name) {
-                        let _: kind_kws::$variant_name = input.parse()?;
-                        return Ok(Kind::$variant_name);
-                    }
-                )*
-                Err(input.error("Invalid kind."))
-            }
-        }
-
         impl Kind {
             pub(crate) fn from_str(s: &str) -> Self {
                 $(
@@ -110,11 +92,50 @@ macro_rules! define_node_and_kind {
                     )*
                 }
             }
+        }
+    }
+}
 
-            pub(crate) fn parse_with_kind(parser: ParseStream, kind: Kind) -> super::Result<Spanned<Self>> {
+macro_rules! define_user_kind {
+    ($(($variant_name: ident, $ty: ty)),*$(,)?) => {
+        #[derive(Debug, Clone, Copy)]
+        pub enum UserKind {
+            $( $variant_name, )*
+        }
+
+        impl UserKind {
+            pub fn to_kind(self) -> Kind {
+                match self {
+                    $(
+                        Self::$variant_name => Kind::$variant_name,
+                    )*
+                }
+            }
+        }
+
+        mod kind_kws {
+            $(
+                syn::custom_keyword!($variant_name);
+            )*
+        }
+
+        impl Parse for UserKind {
+            fn parse(input: ParseStream) -> super::Result<Self> {
+                $(
+                    if input.peek(kind_kws::$variant_name) {
+                        let _: kind_kws::$variant_name = input.parse()?;
+                        return Ok(UserKind::$variant_name);
+                    }
+                )*
+                Err(input.error("Invalid kind."))
+            }
+        }
+
+        impl Node {
+            pub(crate) fn parse_with_kind(parser: ParseStream, kind: UserKind) -> super::Result<Spanned<Self>> {
                 match kind {
                     $(
-                        Kind::$variant_name => {
+                        UserKind::$variant_name => {
                             Ok(parser.parse_spanned::<$ty>()?.map(|t| Node::$variant_name(t)))
                         },
                     )*
@@ -130,9 +151,14 @@ define_node_and_kind! {
     (Item, Item),
     (Attr, Attribute),
     // (Expr, Expr),
-    // (Lit, Lit),
     // (Signature, Signature),
     // (FnArg, FnArg),
+}
+
+define_user_kind! {
+    (Ident, Ident),
+    (Lit, Lit),
+    (Item, Item),
 }
 
 impl ToNode for Node {

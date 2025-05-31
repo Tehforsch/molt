@@ -30,3 +30,9 @@ impl Span {
         self.end
     }
 }
+
+impl From<proc_macro2::Span> for Span {
+    fn from(value: proc_macro2::Span) -> Self {
+        Self::from_range(value.byte_range())
+    }
+}

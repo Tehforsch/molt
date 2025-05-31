@@ -2,7 +2,7 @@ mod parse;
 
 use crate::ctx::Id;
 
-use super::{Kind, rust_grammar::Ident};
+use super::{Kind, UserKind, rust_grammar::Ident};
 
 #[derive(Debug)]
 pub(crate) struct MoltFile {
@@ -43,8 +43,11 @@ impl VarId {
 }
 
 impl Var {
-    pub(crate) fn new(ident: Ident, kind: Kind) -> Self {
-        Self { ident, kind }
+    pub(crate) fn new(ident: Ident, user_kind: UserKind) -> Self {
+        Self {
+            ident,
+            kind: user_kind.to_kind(),
+        }
     }
 
     pub(crate) fn ident(&self) -> &Ident {
@@ -66,9 +69,9 @@ pub(crate) struct Todo;
 pub(crate) struct UntypedVar(Ident);
 
 impl UntypedVar {
-    pub(crate) fn to_var(self, kind: Kind) -> Var {
+    pub(crate) fn to_var(self, user_kind: UserKind) -> Var {
         Var {
-            kind,
+            kind: user_kind.to_kind(),
             ident: self.0,
         }
     }
