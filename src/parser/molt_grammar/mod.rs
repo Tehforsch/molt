@@ -1,8 +1,8 @@
 mod parse;
 
-use syn::Ident;
-
 use crate::ctx::Id;
+
+use super::rust_grammar::Ident;
 
 #[derive(Debug)]
 pub(crate) struct MoltFile {

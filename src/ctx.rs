@@ -129,6 +129,12 @@ impl Ctx {
         }
     }
 
+    pub(crate) fn add_var_typed<T: ToNode>(&mut self, var: Var) -> NodeId<T> {
+        // TODO: Check kind is correct once we track
+        // all the var kinds.
+        self.add_var(var).0.typed()
+    }
+
     fn add_node_internal(&mut self, node: Node) -> usize {
         self.nodes.push(node);
         self.nodes.len() - 1
@@ -237,7 +243,7 @@ impl MatchCtx {
 
     #[cfg(feature = "debug-print")]
     pub(crate) fn dump(&self) {
-        todo!()
+        // todo!()
         // use crate::grammar::CustomDebug;
         // println!("--------------------------------");
         // for idx in self.ast_ctx.ctx.iter() {

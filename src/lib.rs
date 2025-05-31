@@ -86,6 +86,7 @@ pub fn run(input: &Input) -> Result<Vec<Diagnostic>, Error> {
     for rust_file_id in input.iter_rust_src() {
         let (_, ast_ctx) = RustFile::new(&input, rust_file_id)?;
         let (mut molt_file, pat_ctx) = MoltFile::new(&input)?;
+        molt_file.sort_vars(&pat_ctx);
         let command = molt_file.get_command()?;
         match command {
             Command::Match(pat_var) => {

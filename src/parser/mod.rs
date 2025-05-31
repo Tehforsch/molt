@@ -1,6 +1,6 @@
-mod molt_grammar;
+pub(crate) mod molt_grammar;
 mod node;
-mod rust_grammar;
+pub(crate) mod rust_grammar;
 mod span;
 #[cfg(test)]
 mod tests;
@@ -13,7 +13,9 @@ use std::{cell::Cell, marker::PhantomData};
 pub(crate) use molt_grammar::{Command, Decl, MoltFile, Todo, Var, VarDecl, VarId};
 pub(crate) use node::{CustomDebug, Kind, Node, Pattern, ToNode};
 pub(crate) use rust_grammar::RustFile;
+use rust_grammar::{Attribute, Ident};
 pub(crate) use span::Span;
+use syn::token::Token;
 
 use crate::ctx::{Ctx, Id, NodeId};
 
@@ -41,7 +43,7 @@ pub enum Mode {
 }
 
 pub(crate) trait Parse: Sized {
-    fn parse<'a>(parser: &'a Parser<'a>) -> Result<Self>;
+    fn parse(input: ParseStream) -> Result<Self>;
 }
 
 pub(crate) struct Parser<'a> {
@@ -93,6 +95,10 @@ impl<'a> Parser<'a> {
         self.ctx.borrow_mut().add_var(var)
     }
 
+    fn add_var_typed<T: ToNode>(&self, var: Var) -> NodeId<T> {
+        self.ctx.borrow_mut().add_var_typed(var)
+    }
+
     fn add_node(&self, node: Node) -> Id {
         self.ctx.borrow_mut().add_node(node, self.mode)
     }
@@ -100,15 +106,51 @@ impl<'a> Parser<'a> {
     fn add_item<T: Parse + ToNode>(&self, t: T) -> NodeId<T> {
         self.ctx.borrow_mut().add(t, self.mode)
     }
+
+    fn lookahead1(&self) -> Lookahead1 {
+        Lookahead1(self.stream.lookahead1())
+    }
+
+    fn call<T>(&'a self, function: fn(ParseStream<'a>) -> Result<T>) -> Result<T> {
+        function(self)
+    }
+
+    fn span(&self) -> proc_macro2::Span {
+        self.stream.span()
+    }
 }
 
-// This function along with `MoltWrapper` and `RustWrapper` exist only to
-// construct the `syn::parse::ParseStream` that we need for everything to
-// work. The only public API that makes sense for us to get this stream from
-// is `syn::parse2`, but this needs a type that implements `syn::Parse`.
-// Therefore, we construct a type that implements `syn::Parse` but then internally
-// constructs our own `Parser` along with a `Ctx` and then uses the `crate::Parse`
-// impl to do the rest of the work.
+struct Lookahead1<'a>(syn::parse::Lookahead1<'a>);
+
+impl<'a> Lookahead1<'a> {
+    // TODO own the trait here and
+    // make all node kinds return true
+    // on peek if the encountered item is
+    // a var
+    fn peek<T: syn::parse::Peek>(&self, token: T) -> bool {
+        self.0.peek(token)
+    }
+
+    fn peek_ident(&self) -> bool {
+        self.0.peek(syn::Ident) || self.0.peek(syn::Token![$])
+    }
+
+    fn error(self) -> syn::Error {
+        self.0.error()
+    }
+}
+
+// This function along with `MoltWrapper` and `RustWrapper` exist only
+// to construct the `syn::parse::ParseStream` that we need for
+// everything to work. The only public API that makes sense for us to
+// get this stream from is `syn::parse2`, but this needs a type that
+// implements `syn::Parse`.  Therefore, we construct a type that
+// implements `syn::Parse` but then internally constructs our own
+// `Parser` along with a `Ctx` and then uses the `crate::Parse` impl
+// to do the rest of the work.
+// We can't pass any other arguments along with the `syn::parse2`
+// call, so we "pass" the parsing mode via the type, which is why both
+// `MoltWrapper` and `RustWrapper` exist.
 fn parse_shared<T: Parse>(stream: syn::parse::ParseStream, mode: Mode) -> Result<(T, Ctx)> {
     let mut p = Parser {
         ctx: Rc::new(RefCell::new(Ctx::default())),
@@ -140,6 +182,22 @@ impl<T: Parse> syn::parse::Parse for RustWrapper<T> {
 impl<T: syn::parse::Parse> Parse for T {
     fn parse(input: ParseStream) -> Result<Self> {
         input.stream.parse::<T>()
+    }
+}
+
+/// A helper trait to allow attaching functions to syn types
+trait OuterInner: Sized {
+    fn parse_inner(input: ParseStream) -> Result<Vec<Self>>;
+    fn parse_outer(input: ParseStream) -> Result<Vec<Self>>;
+}
+
+impl OuterInner for Attribute {
+    fn parse_inner(input: ParseStream) -> Result<Vec<Self>> {
+        syn::Attribute::parse_inner(input.stream)
+    }
+
+    fn parse_outer(input: ParseStream) -> Result<Vec<Self>> {
+        syn::Attribute::parse_outer(input.stream)
     }
 }
 

@@ -1,5 +1,3 @@
-use syn::Ident;
-
 use crate::{
     Error, Input, MoltFile,
     ctx::Ctx,

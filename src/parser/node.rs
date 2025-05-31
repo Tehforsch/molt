@@ -1,10 +1,11 @@
-use syn::{Ident, Lit};
+use syn::Lit;
 
 use crate::ctx::MatchCtx;
 use crate::match_pattern::{CmpDirect, Match};
 
+use super::rust_grammar::{Ident, Item};
 use super::{Parse, ParseStream};
-use super::{Todo, Var, VarId};
+use super::{Var, VarId};
 
 pub(crate) enum Pattern<E> {
     Exact(E),
@@ -54,14 +55,14 @@ macro_rules! define_node_and_kind {
         }
 
         impl Parse for Kind {
-            fn parse(parser: ParseStream) -> super::Result<Self> {
+            fn parse(input: ParseStream) -> super::Result<Self> {
                 $(
-                    if parser.peek(kind_kws::$variant_name) {
-                        let _: kind_kws::$variant_name = parser.parse()?;
+                    if input.peek(kind_kws::$variant_name) {
+                        let _: kind_kws::$variant_name = input.parse()?;
                         return Ok(Kind::$variant_name);
                     }
                 )*
-                Err(todo!())
+                Err(syn::Error::new(input.span(), format!("Invalid kind.")))
             }
         }
 
@@ -145,9 +146,9 @@ macro_rules! define_node_and_kind {
 define_node_and_kind! {
     (Ident, Ident),
     (Lit, Lit),
+    (Item, Item),
     // (Expr, Expr),
     // (Lit, Lit),
-    // (Item, Item),
     // (Signature, Signature),
     // (FnArg, FnArg),
 }
@@ -181,6 +182,12 @@ impl CustomDebug for VarId {
 }
 
 impl CustomDebug for Var {
+    fn deb(&self, ctx: &MatchCtx) -> String {
+        todo!()
+    }
+}
+
+impl CustomDebug for Item {
     fn deb(&self, ctx: &MatchCtx) -> String {
         todo!()
     }

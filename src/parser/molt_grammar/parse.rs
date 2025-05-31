@@ -42,7 +42,7 @@ impl Parse for Decl {
 impl Parse for VarDecl {
     fn parse(input: ParseStream) -> Result<Self> {
         let token: Token![let] = input.parse()?;
-        let var: Var = input.parse()?;
+        let var: Var = Var::new(input.parse()?);
         let name: VarId = input.add_var(var);
         let _: Token![:] = input.parse()?;
         let kind: Kind = input.parse()?;
@@ -71,6 +71,7 @@ impl<T: Parse + ToNode> Parse for NodeId<T> {
 
 impl Parse for Var {
     fn parse(parser: ParseStream) -> Result<Self> {
+        let _: Token![$] = parser.parse()?;
         Ok(Var::new(parser.parse()?))
     }
 }

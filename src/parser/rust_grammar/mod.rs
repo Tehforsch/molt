@@ -1,8 +1,19 @@
 mod parse;
 
-use syn::{Ident, Token};
+use syn::{Token, ext::IdentExt};
 
-use crate::parser::{Parse, Parser, Result};
+use crate::{
+    ctx::NodeId,
+    parser::{Parse, Parser, Result},
+};
+
+use super::{ParseStream, Var};
+
+#[derive(Clone)]
+pub struct Ident(syn::Ident);
+
+#[derive(Clone)]
+pub struct Lit(syn::Ident);
 
 pub(crate) struct RustFile {
     items: Vec<Item>,
@@ -61,7 +72,7 @@ pub struct ItemConst {
     pub attrs: Vec<Attribute>,
     pub vis: Visibility,
     pub const_token: Token![const],
-    pub ident: Ident,
+    pub ident: NodeId<Ident>,
     pub colon_token: Token![:],
     pub ty: Box<Type>,
     pub eq_token: Token![=],
@@ -71,13 +82,7 @@ pub struct ItemConst {
 
 macro_rules! impl_temp_struct {
     ($name: ident) => {
-        pub struct $name;
-
-        impl Parse for $name {
-            fn parse(_: &Parser) -> Result<Self> {
-                todo!()
-            }
-        }
+        pub type $name = syn::$name;
     };
 }
 
@@ -101,3 +106,30 @@ impl_temp_struct!(ItemTraitAlias);
 impl_temp_struct!(ItemType);
 impl_temp_struct!(ItemUnion);
 impl_temp_struct!(ItemUse);
+
+impl_temp_struct!(ExprLit);
+impl_temp_struct!(ExprUnary);
+impl_temp_struct!(ExprBinary);
+impl_temp_struct!(ExprParen);
+
+impl PartialEq for Ident {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.to_string() == other.0.to_string()
+    }
+}
+
+impl std::fmt::Debug for Ident {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.to_string())
+    }
+}
+
+impl Ident {
+    fn parse_any(input: ParseStream) -> Result<NodeId<Self>> {
+        if input.peek(Token![$]) {
+            Ok(input.add_var_typed(input.parse::<Var>()?))
+        } else {
+            Ok(input.add_item(Ident(syn::Ident::parse_any(input.stream)?)))
+        }
+    }
+}

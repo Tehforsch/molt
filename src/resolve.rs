@@ -19,8 +19,11 @@ pub(crate) struct Dependencies {
 
 impl Dependencies {
     fn new(_: crate::ctx::Id, _: &PatCtx) -> Self {
+        Self {
+            vars: HashSet::default(),
+        }
         // TODO: traverse ast and collect vars
-        todo!()
+        // todo!()
     }
 }
 
@@ -44,7 +47,7 @@ impl MoltFile {
         }
     }
 
-    fn sort_vars(&mut self, pat_ctx: &PatCtx) -> Result<(), ResolveError> {
+    pub(crate) fn sort_vars(&mut self, pat_ctx: &PatCtx) -> Result<(), ResolveError> {
         // Topologically sort the variable declarations according to
         // their dependencies (i.e. which variables they reference)
         let mut deps_map: HashMap<_, _> = self
