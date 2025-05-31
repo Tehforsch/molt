@@ -23,10 +23,6 @@ pub(crate) trait GetKind {
     fn get_kind() -> Kind;
 }
 
-pub(crate) trait CustomDebug {
-    fn deb(&self, ctx: &MatchCtx) -> String;
-}
-
 macro_rules! define_node_and_kind {
     ($(($variant_name: ident, $ty: ty)),*$(,)?) => {
         #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -135,16 +131,6 @@ macro_rules! define_node_and_kind {
                 }
             }
         }
-
-        impl CustomDebug for Node {
-            fn deb(&self, ctx: &MatchCtx) -> String {
-                match self {
-                    $(
-                        Self::$variant_name(s) => s.deb(ctx),
-                    )*
-                }
-            }
-        }
     }
 }
 
@@ -165,40 +151,6 @@ impl ToNode for Node {
 
     fn from_node(node: &Node) -> Option<&Self> {
         Some(node)
-    }
-}
-
-impl CustomDebug for Lit {
-    fn deb(&self, ctx: &MatchCtx) -> String {
-        todo!()
-    }
-}
-
-impl CustomDebug for Ident {
-    fn deb(&self, ctx: &MatchCtx) -> String {
-        "".to_string()
-        // todo!()
-    }
-}
-
-impl CustomDebug for VarId {
-    fn deb(&self, ctx: &MatchCtx) -> String {
-        "".to_string()
-        // todo!()
-    }
-}
-
-impl CustomDebug for Var {
-    fn deb(&self, ctx: &MatchCtx) -> String {
-        "".to_string()
-        // todo!()
-    }
-}
-
-impl CustomDebug for Item {
-    fn deb(&self, ctx: &MatchCtx) -> String {
-        "".to_string()
-        // todo!()
     }
 }
 

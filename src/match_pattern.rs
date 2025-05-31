@@ -13,9 +13,6 @@ use crate::{
     },
 };
 
-#[cfg(feature = "debug-print")]
-use crate::parser::CustomDebug;
-
 pub(crate) struct Matches {
     current: Vec<Match>,
 }
@@ -33,7 +30,7 @@ impl Matches {
         let mut matches = vec![];
         'outer: while let Some(mut match_) = self.current.pop() {
             while let Some(cmp) = match_.cmps.pop() {
-                match_.cmp_id(ctx, cmp.ast, cmp.pat);
+                match_.cmp_ids(ctx, cmp.ast, cmp.pat);
                 if !match_.valid {
                     break 'outer;
                 }
@@ -136,30 +133,34 @@ impl Match {
         t1.cmp_direct(self, t2)
     }
 
-    fn cmp_nodes(&mut self, _ctx: &MatchCtx, ast: &Node, pat: &Node) {
+    fn cmp_ids(&mut self, ctx: &MatchCtx, ast_id: Id, pat_id: Id) {
         #[cfg(feature = "debug-print")]
-        if ast.kind() == pat.kind() {
-            println!(
-                "Compare ({:?} {:?})\n\t{}\n\t{}",
-                ast.kind(),
-                pat.kind(),
-                ast.deb(_ctx),
-                pat.deb(_ctx),
-            );
+        {
+            let ast_kind = ctx.get_kind(ast_id);
+            let pat_kind = ctx.get_kind(pat_id);
+            if ast_kind == pat_kind {
+                println!(
+                    "Compare ({:?} {:?})\n\t{}\n\t{}",
+                    ast_kind,
+                    pat_kind,
+                    ctx.print(ast_id),
+                    ctx.print(pat_id),
+                );
+            }
         }
-        if ast.kind() == pat.kind() {
-            Node::cmp_equal_kinds(self, ast, pat);
-        } else {
-            self.no_match()
-        }
-    }
-
-    fn cmp_id(&mut self, ctx: &MatchCtx, ast_id: Id, pat_id: Id) {
         match ctx.get_pat_node(pat_id) {
             Pattern::Pattern(var) => {
                 self.add_binding(ctx, var, ast_id, true);
             }
-            Pattern::Exact(pat) => self.cmp_nodes(ctx, ctx.ast_ctx.get_node(ast_id), pat),
+            Pattern::Exact(pat) => self.cmp_nodes(ctx.ast_ctx.get_node(ast_id), pat),
+        }
+    }
+
+    fn cmp_nodes(&mut self, ast: &Node, pat: &Node) {
+        if ast.kind() == pat.kind() {
+            Node::cmp_equal_kinds(self, ast, pat);
+        } else {
+            self.no_match()
         }
     }
 
@@ -195,27 +196,15 @@ impl Match {
     fn add_binding(&mut self, ctx: &MatchCtx, key: VarId, ast_id: Id, debug_print: bool) {
         if debug_print {
             #[cfg(feature = "debug-print")]
-            println!(
-                "\tBind {} to {}",
-                key.deb(ctx),
-                ctx.ast_ctx.get_node(ast_id).deb(ctx)
-            );
+            println!("\tBind {} to {}", ctx.get_var(key), ctx.print(ast_id));
         }
         let binding = self.bindings.get_mut(&key).unwrap();
         if let Some(ast_id_2) = binding.ast {
-            self.cmp_nodes(
-                ctx,
-                ctx.ast_ctx.get_node(ast_id),
-                ctx.ast_ctx.get_node(ast_id_2),
-            );
+            self.cmp_ids(ctx, ast_id, ast_id_2);
         } else {
             binding.ast = Some(ast_id);
             if let Some(pat_id) = binding.pat {
-                self.cmp_nodes(
-                    ctx,
-                    ctx.ast_ctx.get_node(ast_id),
-                    ctx.pat_ctx.get_node(pat_id),
-                );
+                self.cmp_ids(ctx, ast_id, pat_id);
             }
         }
     }
@@ -253,8 +242,10 @@ impl MoltFile {
         ast_ctx: AstCtx,
         pat_ctx: PatCtx,
         var: VarId,
+        rust_src: &str,
+        molt_src: &str,
     ) -> MatchResult {
-        let ctx = MatchCtx::new(pat_ctx, ast_ctx);
+        let ctx = MatchCtx::new(pat_ctx, ast_ctx, rust_src, molt_src);
         #[cfg(feature = "debug-print")]
         ctx.dump();
         let pat_kind = ctx.get_var_kind(var);

@@ -11,7 +11,7 @@ use std::str::FromStr;
 use std::{cell::Cell, marker::PhantomData};
 
 pub(crate) use molt_grammar::{Command, Decl, MoltFile, Todo, UntypedVar, Var, VarDecl, VarId};
-pub(crate) use node::{CustomDebug, Kind, Node, Pattern, ToNode};
+pub(crate) use node::{Kind, Node, Pattern, ToNode};
 pub(crate) use rust_grammar::RustFile;
 use rust_grammar::{Attribute, Ident};
 pub(crate) use span::Span;
@@ -66,6 +66,9 @@ pub(crate) trait Parse: Sized {
 
 pub(crate) struct Parser<'a> {
     ctx: Rc<RefCell<Ctx>>,
+    // TODO make this properly private, this should never be touched
+    // from outside.  Currently, since the parsing is done in
+    // submodules of parser, this can still be accessed.
     stream: syn::parse::ParseStream<'a>,
     mode: Mode,
     // This is a really ugly field to accomodate the fact that

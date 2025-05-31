@@ -220,11 +220,18 @@ impl PatCtx {
 pub(crate) struct MatchCtx {
     pub pat_ctx: PatCtx,
     pub ast_ctx: AstCtx,
+    rust_src: String,
+    molt_src: String,
 }
 
 impl MatchCtx {
-    pub(crate) fn new(pat_ctx: PatCtx, ast_ctx: AstCtx) -> Self {
-        Self { pat_ctx, ast_ctx }
+    pub(crate) fn new(pat_ctx: PatCtx, ast_ctx: AstCtx, rust_src: &str, molt_src: &str) -> Self {
+        Self {
+            pat_ctx,
+            ast_ctx,
+            rust_src: rust_src.to_owned(),
+            molt_src: molt_src.to_owned(),
+        }
     }
 
     pub(crate) fn get_pat<T: ToNode>(&self, id: NodeId<T>) -> Pattern<&T> {
@@ -282,5 +289,15 @@ impl MatchCtx {
 
     pub(crate) fn get_var_kind(&self, var: VarId) -> Kind {
         self.get_kind(var.0)
+    }
+
+    pub(crate) fn print<'a>(&'a self, id: Id) -> String {
+        let src = match id.0 {
+            InternalId::AstNode(_) => &self.rust_src,
+            InternalId::PatNode(_) => &self.molt_src,
+            InternalId::Var(_) => return self.get_var(VarId(id)).to_string(),
+        };
+        let span = self.get_span(id);
+        src[span.range()].to_string()
     }
 }

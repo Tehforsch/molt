@@ -12,8 +12,6 @@ use error::emit_error;
 use match_pattern::MatchResult;
 use parser::{Command, MoltFile, RustFile, VarId, parse_molt_file, parse_rust_file};
 
-use crate::parser::CustomDebug;
-
 pub use error::Error;
 pub use input::{Diagnostic, FileId, Input, MoltSource};
 
@@ -53,25 +51,22 @@ impl MatchResult {
             .map(|match_| {
                 let binding = match_.get_binding(self.var);
                 let span = self.ctx.get_span(binding.ast.unwrap());
-                let var_name = |var| self.ctx.get_var(var).deb(&self.ctx);
+                let var_name = |var| self.ctx.get_var(var);
                 let mut diagnostic = Diagnostic::note().with_message("Match").with_labels(vec![
                     Label::primary(file_id, span.range()).with_message(var_name(self.var)),
                 ]);
                 let mut keys = match_.iter_vars().collect::<Vec<_>>();
-                keys.sort_by_key(|var| var_name(*var));
+                keys.sort_by_key(|var| var_name(*var).to_string());
                 for key in keys {
                     let binding = match_.get_binding(key);
                     if key == self.var {
                         continue;
                     }
-                    if let Some(node) = binding
-                        .ast
-                        .and_then(|value| self.ctx.get_pat_node(value).as_exact())
-                    {
+                    if let Some(node) = binding.ast {
                         diagnostic = diagnostic.with_note(format!(
                             "{} = {}",
                             var_name(key),
-                            node.deb(&self.ctx)
+                            self.ctx.print(node),
                         ));
                     }
                 }
@@ -90,7 +85,13 @@ pub fn run(input: &Input) -> Result<Vec<Diagnostic>, Error> {
         let command = molt_file.get_command()?;
         match command {
             Command::Match(pat_var) => {
-                let match_result = molt_file.match_pattern(ast_ctx, pat_ctx, pat_var);
+                let match_result = molt_file.match_pattern(
+                    ast_ctx,
+                    pat_ctx,
+                    pat_var,
+                    input.source(rust_file_id).unwrap(),
+                    input.source(input.molt_file_id()).unwrap(),
+                );
                 diagnostics.extend(match_result.make_diagnostics(rust_file_id));
             }
         };
