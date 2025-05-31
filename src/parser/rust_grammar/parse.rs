@@ -5,11 +5,9 @@ use crate::parser::{Parse, ParseStream, Parser};
 use super::super::Result;
 use super::{Attribute, Expr, Generics, Ident, Item, ItemConst, Lit, RustFile, Type, Visibility};
 
-use super::super::OuterInner;
-
 impl Parse for RustFile {
     fn parse(input: ParseStream) -> Result<Self> {
-        let _attrs = input.call(<Attribute as OuterInner>::parse_inner)?;
+        let _attrs = input.call(Attribute::parse_inner)?;
         Ok(RustFile {
             items: {
                 let mut items = Vec::new();
@@ -30,7 +28,7 @@ impl Parse for Item {
 
 impl Parse for ItemConst {
     fn parse(input: ParseStream) -> Result<Self> {
-        let attrs = input.call(<Attribute as OuterInner>::parse_outer)?;
+        let attrs = input.call(Attribute::parse_outer)?;
         let vis: Visibility = input.parse()?;
         let const_token: Token![const] = input.parse()?;
 
@@ -70,5 +68,16 @@ impl Parse for Ident {
 impl Parse for Lit {
     fn parse(input: ParseStream) -> Result<Self> {
         Ok(Self(input.parse()?))
+    }
+}
+
+// This just exists because it is required for Attr
+// to be a Node kind, but it should not really be
+// used unless we explicitly try to match on Attr.
+// To allow doing that, we probably need to introduce
+// `OuterAttr` and `InnerAttr` or sth. like that.
+impl Parse for Attribute {
+    fn parse(input: ParseStream) -> Result<Self> {
+        todo!()
     }
 }

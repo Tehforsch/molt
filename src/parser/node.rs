@@ -4,7 +4,7 @@ use crate::cmp_syn::CmpSyn;
 use crate::ctx::MatchCtx;
 use crate::match_pattern::Match;
 
-use super::rust_grammar::{Ident, Item, Lit};
+use super::rust_grammar::{Attribute, Ident, Item, Lit};
 use super::{Parse, ParseStream, Spanned};
 use super::{Var, VarId};
 
@@ -128,6 +128,7 @@ define_node_and_kind! {
     (Ident, Ident),
     (Lit, Lit),
     (Item, Item),
+    (Attr, Attribute),
     // (Expr, Expr),
     // (Lit, Lit),
     // (Signature, Signature),

@@ -1,6 +1,8 @@
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{Data, DeriveInput, Fields, Type, parse_macro_input};
+use syn::{Data, DeriveInput, Fields, parse_macro_input};
+
+use crate::utils::is_node_id;
 
 pub fn impl_get_dependencies(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
@@ -26,18 +28,12 @@ pub fn impl_get_dependencies(input: proc_macro::TokenStream) -> proc_macro::Toke
 fn impl_struct(data_struct: syn::DataStruct) -> TokenStream {
     let calls = data_struct.fields.iter().filter_map(|field| {
         let field_name = field.ident.as_ref().unwrap();
-        match &field.ty {
-            Type::Path(type_path) => {
-                let seg = &type_path.path.segments.last().unwrap().ident;
-                if seg == "NodeId" {
-                    Some(quote! {
-                        self. #field_name .get_dependencies(ctx, deps);
-                    })
-                } else {
-                    None
-                }
-            }
-            _ => None,
+        if is_node_id(&field.ty) {
+            Some(quote! {
+                self. #field_name .get_dependencies(ctx, deps);
+            })
+        } else {
+            None
         }
     });
     quote! {

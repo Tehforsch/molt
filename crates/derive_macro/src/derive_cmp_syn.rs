@@ -1,6 +1,8 @@
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{Data, DeriveInput, Fields, Type, parse_macro_input};
+use syn::{Data, DeriveInput, Fields, Ident, Type, parse_macro_input};
+
+use crate::utils::{is_box, is_node_id, is_node_list, is_token, is_vec_attribute};
 
 pub fn impl_cmp_syn(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
@@ -24,26 +26,29 @@ pub fn impl_cmp_syn(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 }
 
 fn impl_struct(data_struct: syn::DataStruct) -> TokenStream {
-    todo!()
-    // let calls = data_struct.fields.iter().filter_map(|field| {
-    //     let field_name = field.ident.as_ref().unwrap();
-    //     match &field.ty {
-    //         Type::Path(type_path) => {
-    //             let seg = &type_path.path.segments.last().unwrap().ident;
-    //             if seg == "NodeId" {
-    //                 Some(quote! {
-    //                     self. #field_name .get_dependencies(ctx, deps);
-    //                 })
-    //             } else {
-    //                 None
-    //             }
-    //         }
-    //         _ => None,
-    //     }
-    // });
-    // quote! {
-    //     #(#calls)*
-    // }
+    let calls = data_struct
+        .fields
+        .iter()
+        .filter_map(|field| cmp_ty(field.ident.as_ref().unwrap(), &field.ty));
+    quote! {
+        #(#calls)*
+    }
+}
+
+fn cmp_ty(field_name: &Ident, ty: &Type) -> Option<TokenStream> {
+    if is_node_id(&ty) {
+        Some(quote! { ctx.cmp_nodes(self. #field_name, pat. #field_name ); })
+    } else if is_node_list(&ty) {
+        Some(quote! { ctx.cmp_lists(self. #field_name, pat. #field_name ); })
+    } else if is_vec_attribute(ty) {
+        None
+    } else if is_token(&ty) {
+        None
+    } else if is_box(&ty) {
+        Some(quote! { ctx.cmp_syn(&*self. #field_name, &*pat. #field_name ); })
+    } else {
+        Some(quote! { ctx.cmp_syn(&self. #field_name, &pat. #field_name ); })
+    }
 }
 
 fn impl_enum(data_enum: syn::DataEnum) -> TokenStream {

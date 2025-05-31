@@ -128,31 +128,6 @@ impl Match {
         }
     }
 
-    fn cmp_lists<T: CmpSyn>(&mut self, ts1: &NodeList<T>, ts2: &NodeList<T>) {
-        match ts2.matching_mode {
-            MatchingMode::Exact => {
-                self.eq(ts1.len(), ts2.len());
-                for (item1, item2) in ts1.iter().zip(ts2.iter()) {
-                    self.cmp(*item1, *item2);
-                }
-            }
-            MatchingMode::ContainsAll => {
-                if ts2.is_empty() {
-                } else if ts2.len() == 1 {
-                    let item2 = ts2.get(0).unwrap();
-                    let fork = Fork::new(
-                        ts1.iter()
-                            .map(|item1| Comparison::new(*item1, *item2))
-                            .collect(),
-                    );
-                    self.fork(fork);
-                } else {
-                    todo!()
-                }
-            }
-        }
-    }
-
     fn fork(&mut self, fork: Fork) {
         self.forks.push(fork);
     }
@@ -173,14 +148,6 @@ impl Match {
         }
     }
 
-    pub(crate) fn iter_vars(&self) -> impl Iterator<Item = VarId> {
-        self.bindings.keys().cloned()
-    }
-
-    pub(crate) fn get_binding(&self, var: VarId) -> &Binding {
-        &self.bindings[&var]
-    }
-
     fn make_forks(mut self) -> impl Iterator<Item = Match> {
         assert!(self.cmps.is_empty());
         assert!(self.valid);
@@ -191,6 +158,39 @@ impl Match {
             cmps: vec![cmp],
             valid: true,
         })
+    }
+
+    pub fn iter_vars(&self) -> impl Iterator<Item = VarId> {
+        self.bindings.keys().cloned()
+    }
+
+    pub fn get_binding(&self, var: VarId) -> &Binding {
+        &self.bindings[&var]
+    }
+
+    pub fn cmp_lists<T: CmpSyn>(&mut self, ts1: &NodeList<T>, ts2: &NodeList<T>) {
+        match ts2.matching_mode {
+            MatchingMode::Exact => {
+                self.eq(ts1.len(), ts2.len());
+                for (item1, item2) in ts1.iter().zip(ts2.iter()) {
+                    self.cmp_nodes(*item1, *item2);
+                }
+            }
+            MatchingMode::ContainsAll => {
+                if ts2.is_empty() {
+                } else if ts2.len() == 1 {
+                    let item2 = ts2.get(0).unwrap();
+                    let fork = Fork::new(
+                        ts1.iter()
+                            .map(|item1| Comparison::new(*item1, *item2))
+                            .collect(),
+                    );
+                    self.fork(fork);
+                } else {
+                    todo!()
+                }
+            }
+        }
     }
 
     pub fn check(&mut self, val: bool) {
@@ -211,7 +211,7 @@ impl Match {
         self.check(false)
     }
 
-    pub fn cmp<T: CmpSyn>(&mut self, ast: NodeId<T>, pat: NodeId<T>) {
+    pub fn cmp_nodes<T: CmpSyn>(&mut self, ast: NodeId<T>, pat: NodeId<T>) {
         self.cmps.push(Comparison::new(ast, pat));
     }
 

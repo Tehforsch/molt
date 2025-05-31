@@ -4,7 +4,8 @@ use derive_macro::{CmpSyn, GetDependencies};
 use syn::{Token, ext::IdentExt};
 
 use crate::{
-    ctx::{NodeId, PatCtx},
+    ctx::{NodeId, NodeList, PatCtx},
+    match_pattern::Match,
     parser::{Parse, Parser, Result},
     resolve::{Dependencies, GetDependencies},
 };
@@ -16,6 +17,8 @@ pub struct Ident(syn::Ident);
 
 #[derive(Clone)]
 pub struct Lit(syn::Lit);
+
+pub struct Attribute;
 
 pub(crate) struct RustFile {
     items: Vec<NodeId<Item>>,
@@ -71,7 +74,7 @@ pub enum Item {
     Use(ItemUse),
 }
 
-#[derive(GetDependencies)]
+#[derive(GetDependencies, CmpSyn)]
 pub struct ItemConst {
     pub attrs: Vec<Attribute>,
     pub vis: Visibility,
@@ -83,65 +86,6 @@ pub struct ItemConst {
     pub expr: Box<Expr>,
     pub semi_token: Token![;],
 }
-
-macro_rules! impl_temp_struct {
-    ($name: ident, ignore) => {
-        pub type $name = syn::$name;
-
-        impl crate::resolve::GetDependencies for $name {
-            fn get_dependencies(
-                &self,
-                ctx: &crate::ctx::PatCtx,
-                deps: &mut crate::resolve::Dependencies,
-            ) {
-            }
-        }
-    };
-    ($name: ident) => {
-        pub type $name = syn::$name;
-
-        impl crate::resolve::GetDependencies for $name {
-            fn get_dependencies(
-                &self,
-                ctx: &crate::ctx::PatCtx,
-                deps: &mut crate::resolve::Dependencies,
-            ) {
-            }
-        }
-
-        impl crate::cmp_syn::CmpSyn for $name {
-            fn cmp_syn(&self, ctx: &mut crate::match_pattern::Match, pat: &Self) {
-                todo!()
-            }
-        }
-    };
-}
-
-impl_temp_struct!(Attribute);
-impl_temp_struct!(Visibility);
-impl_temp_struct!(Generics);
-impl_temp_struct!(Type);
-impl_temp_struct!(Expr, ignore);
-
-impl_temp_struct!(ItemEnum);
-impl_temp_struct!(ItemExternCrate);
-impl_temp_struct!(ItemFn, ignore);
-impl_temp_struct!(ItemForeignMod);
-impl_temp_struct!(ItemImpl);
-impl_temp_struct!(ItemMacro);
-impl_temp_struct!(ItemMod);
-impl_temp_struct!(ItemStatic);
-impl_temp_struct!(ItemStruct);
-impl_temp_struct!(ItemTrait);
-impl_temp_struct!(ItemTraitAlias);
-impl_temp_struct!(ItemType);
-impl_temp_struct!(ItemUnion);
-impl_temp_struct!(ItemUse);
-
-impl_temp_struct!(ExprLit, ignore);
-impl_temp_struct!(ExprUnary, ignore);
-impl_temp_struct!(ExprBinary, ignore);
-impl_temp_struct!(ExprParen, ignore);
 
 impl PartialEq for Ident {
     fn eq(&self, other: &Self) -> bool {
@@ -187,3 +131,65 @@ impl Lit {
 impl GetDependencies for Lit {
     fn get_dependencies(&self, ctx: &PatCtx, deps: &mut Dependencies) {}
 }
+
+impl GetDependencies for Attribute {
+    fn get_dependencies(&self, ctx: &PatCtx, deps: &mut Dependencies) {}
+}
+
+macro_rules! impl_temp_struct {
+    ($name: ident, ignore) => {
+        pub type $name = syn::$name;
+
+        impl crate::resolve::GetDependencies for $name {
+            fn get_dependencies(
+                &self,
+                ctx: &crate::ctx::PatCtx,
+                deps: &mut crate::resolve::Dependencies,
+            ) {
+            }
+        }
+    };
+    ($name: ident) => {
+        pub type $name = syn::$name;
+
+        impl crate::resolve::GetDependencies for $name {
+            fn get_dependencies(
+                &self,
+                ctx: &crate::ctx::PatCtx,
+                deps: &mut crate::resolve::Dependencies,
+            ) {
+            }
+        }
+
+        impl crate::cmp_syn::CmpSyn for $name {
+            fn cmp_syn(&self, ctx: &mut crate::match_pattern::Match, pat: &Self) {
+                todo!()
+            }
+        }
+    };
+}
+
+impl_temp_struct!(Visibility);
+impl_temp_struct!(Generics);
+impl_temp_struct!(Type);
+impl_temp_struct!(Expr, ignore);
+
+impl_temp_struct!(ItemEnum);
+impl_temp_struct!(ItemExternCrate);
+impl_temp_struct!(ItemFn, ignore);
+impl_temp_struct!(ItemForeignMod);
+impl_temp_struct!(ItemImpl);
+impl_temp_struct!(ItemMacro);
+impl_temp_struct!(ItemMod);
+impl_temp_struct!(ItemStatic);
+impl_temp_struct!(ItemStruct);
+impl_temp_struct!(ItemTrait);
+impl_temp_struct!(ItemTraitAlias);
+impl_temp_struct!(ItemType);
+impl_temp_struct!(ItemUnion);
+impl_temp_struct!(ItemUse);
+
+impl_temp_struct!(ExprLit, ignore);
+impl_temp_struct!(ExprUnary, ignore);
+impl_temp_struct!(ExprBinary, ignore);
+impl_temp_struct!(ExprParen, ignore);

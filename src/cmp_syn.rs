@@ -4,7 +4,8 @@ use crate::{
     parser::{
         Node, Pattern, VarDecl, VarId,
         rust_grammar::{
-            Expr, ExprBinary, ExprLit, ExprParen, ExprUnary, Ident, Item, ItemConst, ItemFn, Lit,
+            Attribute, Expr, ExprBinary, ExprLit, ExprParen, ExprUnary, Ident, Item, ItemConst,
+            ItemFn, Lit,
         },
     },
 };
@@ -56,16 +57,6 @@ impl CmpSyn for ExprLit {
 
 impl CmpSyn for ExprParen {
     fn cmp_syn(&self, ctx: &mut Match, pat: &Self) {
-        ctx.cmp_syn(&*self.expr, &*pat.expr);
-    }
-}
-
-impl CmpSyn for ItemConst {
-    fn cmp_syn(&self, ctx: &mut Match, pat: &Self) {
-        // self.vis.match_pattern(&item.vis)?;
-        ctx.cmp(self.ident, pat.ident);
-        // self.generics.match_pattern(&item.generics)?;
-        // self.ty.match_pattern(&item.ty)?;
         ctx.cmp_syn(&*self.expr, &*pat.expr);
     }
 }
@@ -153,4 +144,8 @@ impl CmpSyn for Lit {
     fn cmp_syn(&self, ctx: &mut Match, pat: &Self) {
         ctx.cmp_syn(self.inner(), pat.inner())
     }
+}
+
+impl CmpSyn for Attribute {
+    fn cmp_syn(&self, ctx: &mut Match, pat: &Self) {}
 }

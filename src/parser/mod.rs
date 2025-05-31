@@ -235,19 +235,17 @@ impl<T: syn::parse::Parse> Parse for T {
     }
 }
 
-/// A helper trait to allow attaching functions to syn types
-trait OuterInner: Sized {
-    fn parse_inner(input: ParseStream) -> Result<Vec<Self>>;
-    fn parse_outer(input: ParseStream) -> Result<Vec<Self>>;
-}
-
-impl OuterInner for Attribute {
+impl Attribute {
     fn parse_inner(input: ParseStream) -> Result<Vec<Self>> {
-        syn::Attribute::parse_inner(input.stream)
+        syn::Attribute::parse_inner(input.stream)?;
+        // Ignore the actual attributes for now.
+        Ok(vec![])
     }
 
     fn parse_outer(input: ParseStream) -> Result<Vec<Self>> {
-        syn::Attribute::parse_outer(input.stream)
+        // Ignore the actual attribute for now.
+        syn::Attribute::parse_outer(input.stream)?;
+        Ok(vec![])
     }
 }
 
