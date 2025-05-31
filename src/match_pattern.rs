@@ -257,12 +257,18 @@ impl MoltFile {
         let ctx = MatchCtx::new(pat_ctx, ast_ctx);
         #[cfg(feature = "debug-print")]
         ctx.dump();
+        let pat_kind = ctx.get_var_kind(var);
         let matches = ctx
             .ast_ctx
             .iter()
             .flat_map(|item| {
-                let mut matches = Matches::new(&ctx, &self.vars, var.clone(), item);
-                matches.run(&ctx)
+                let kind = ctx.get_kind(item);
+                if pat_kind != kind {
+                    vec![]
+                } else {
+                    let mut matches = Matches::new(&ctx, &self.vars, var.clone(), item);
+                    matches.run(&ctx)
+                }
             })
             .collect();
         MatchResult {
@@ -403,15 +409,13 @@ impl CmpDirect for ExprUnary {
 
 impl CmpDirect for ExprLit {
     fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
-        todo!()
-        // ctx.cmp(*self.lit, pat.lit);
+        ctx.cmp_direct(&self.lit, &pat.lit);
     }
 }
 
 impl CmpDirect for ExprParen {
     fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
-        todo!()
-        // ctx.cmp(self.expr, pat.expr);
+        ctx.cmp_direct(&*self.expr, &*pat.expr);
     }
 }
 
@@ -515,7 +519,7 @@ impl CmpDirect for ItemFn {
 
 impl CmpDirect for Lit {
     fn cmp_direct(&self, ctx: &mut Match, pat: &Self) {
-        todo!()
+
         // ctx.eq(self, pat)
     }
 }

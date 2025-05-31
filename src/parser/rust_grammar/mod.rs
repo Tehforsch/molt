@@ -9,7 +9,7 @@ use crate::{
     resolve::{Dependencies, GetDependencies},
 };
 
-use super::{ParseStream, Var};
+use super::{Kind, ParseStream, UntypedVar};
 
 #[derive(Clone)]
 pub struct Ident(syn::Ident);
@@ -18,7 +18,7 @@ pub struct Ident(syn::Ident);
 pub struct Lit(syn::Ident);
 
 pub(crate) struct RustFile {
-    items: Vec<Item>,
+    items: Vec<NodeId<Item>>,
 }
 
 #[derive(GetDependencies)]
@@ -140,9 +140,12 @@ impl std::fmt::Debug for Ident {
 impl Ident {
     fn parse_any(input: ParseStream) -> Result<NodeId<Self>> {
         if input.peek(Token![$]) {
-            Ok(input.add_var_typed(input.parse::<Var>()?))
+            Ok(input.add_var_typed(input.parse::<UntypedVar>()?.to_var(Kind::Ident)))
         } else {
-            Ok(input.add_item(Ident(syn::Ident::parse_any(input.stream)?)))
+            let marker = input.span_marker();
+            let ident = input.call_internal(syn::Ident::parse_any)?;
+            let ident = input.make_spanned(marker, ident).map(Ident);
+            Ok(input.add_item(ident))
         }
     }
 }

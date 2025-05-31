@@ -2,7 +2,7 @@ mod parse;
 
 use crate::ctx::Id;
 
-use super::rust_grammar::Ident;
+use super::{Kind, rust_grammar::Ident};
 
 #[derive(Debug)]
 pub(crate) struct MoltFile {
@@ -26,7 +26,10 @@ pub(crate) struct VarDecl {
 pub(crate) struct VarId(pub Id);
 
 #[derive(Debug)]
-pub(crate) struct Var(Ident);
+pub(crate) struct Var {
+    ident: Ident,
+    kind: Kind,
+}
 
 #[derive(Debug)]
 pub(crate) enum Command {
@@ -40,14 +43,33 @@ impl VarId {
 }
 
 impl Var {
-    pub(crate) fn new(ident: Ident) -> Self {
-        Self(ident)
+    pub(crate) fn new(ident: Ident, kind: Kind) -> Self {
+        Self { ident, kind }
     }
 
-    pub(crate) fn ident(&self) -> Ident {
-        self.0.clone()
+    pub(crate) fn ident(&self) -> &Ident {
+        &self.ident
+    }
+
+    pub(crate) fn ident_mut(&mut self) -> &mut Ident {
+        &mut self.ident
+    }
+
+    pub(crate) fn kind(&self) -> Kind {
+        self.kind
     }
 }
 
 #[derive(Debug)]
 pub(crate) struct Todo;
+
+pub(crate) struct UntypedVar(Ident);
+
+impl UntypedVar {
+    pub(crate) fn to_var(self, kind: Kind) -> Var {
+        Var {
+            kind,
+            ident: self.0,
+        }
+    }
+}

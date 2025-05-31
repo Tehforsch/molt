@@ -10,7 +10,7 @@ use std::rc::Rc;
 use std::str::FromStr;
 use std::{cell::Cell, marker::PhantomData};
 
-pub(crate) use molt_grammar::{Command, Decl, MoltFile, Todo, Var, VarDecl, VarId};
+pub(crate) use molt_grammar::{Command, Decl, MoltFile, Todo, UntypedVar, Var, VarDecl, VarId};
 pub(crate) use node::{CustomDebug, Kind, Node, Pattern, ToNode};
 pub(crate) use rust_grammar::RustFile;
 use rust_grammar::{Attribute, Ident};
@@ -42,6 +42,24 @@ pub enum Mode {
     Rust,
 }
 
+pub(crate) struct Spanned<T> {
+    pub span: Span,
+    pub item: T,
+}
+
+impl<T> Spanned<T> {
+    pub fn map<S>(self, f: impl Fn(T) -> S) -> Spanned<S> {
+        Spanned {
+            span: self.span,
+            item: f(self.item),
+        }
+    }
+}
+
+struct SpanMarker {
+    start: usize,
+}
+
 pub(crate) trait Parse: Sized {
     fn parse(input: ParseStream) -> Result<Self>;
 }
@@ -50,6 +68,12 @@ pub(crate) struct Parser<'a> {
     ctx: Rc<RefCell<Ctx>>,
     stream: syn::parse::ParseStream<'a>,
     mode: Mode,
+    // This is a really ugly field to accomodate the fact that
+    // `syn::parse::ParseStream::prev_span` is a private method
+    // but required to properly create the spans we need for
+    // parse_spanned and other methods that create a `Node` in the
+    // `ctx`.
+    prev_span: RefCell<proc_macro2::Span>,
 }
 
 impl<'a> Parser<'a> {
@@ -67,12 +91,14 @@ impl<'a> Parser<'a> {
     }
 
     fn parse<T: Parse>(&self) -> Result<T> {
+        *self.prev_span.borrow_mut() = self.stream.span();
         T::parse(self)
     }
 
-    // TODO
-    fn parse_spanned<T: Parse>(&self) -> Result<T> {
-        T::parse(self)
+    fn parse_spanned<T: Parse>(&self) -> Result<Spanned<T>> {
+        let marker = self.span_marker();
+        let t = T::parse(self)?;
+        Ok(self.make_spanned(marker, t))
     }
 
     fn is_empty(&self) -> bool {
@@ -88,6 +114,7 @@ impl<'a> Parser<'a> {
             ctx: self.ctx.clone(),
             stream: &stream,
             mode: self.mode,
+            prev_span: stream.span().into(),
         }
     }
 
@@ -99,11 +126,11 @@ impl<'a> Parser<'a> {
         self.ctx.borrow_mut().add_var_typed(var)
     }
 
-    fn add_node(&self, node: Node) -> Id {
+    fn add_node(&self, node: Spanned<Node>) -> Id {
         self.ctx.borrow_mut().add_node(node, self.mode)
     }
 
-    fn add_item<T: Parse + ToNode>(&self, t: T) -> NodeId<T> {
+    fn add_item<T: Parse + ToNode>(&self, t: Spanned<T>) -> NodeId<T> {
         self.ctx.borrow_mut().add(t, self.mode)
     }
 
@@ -115,8 +142,27 @@ impl<'a> Parser<'a> {
         function(self)
     }
 
-    fn span(&self) -> proc_macro2::Span {
-        self.stream.span()
+    fn call_internal<T>(
+        &'a self,
+        function: fn(syn::parse::ParseStream<'a>) -> Result<T>,
+    ) -> Result<T> {
+        *self.prev_span.borrow_mut() = self.stream.span();
+        function(self.stream)
+    }
+
+    fn span_marker(&self) -> SpanMarker {
+        let start = self.stream.span().byte_range().start;
+        SpanMarker { start }
+    }
+
+    fn make_spanned<T>(&self, marker: SpanMarker, item: T) -> Spanned<T> {
+        let end = self.prev_span.borrow().byte_range().end;
+        let span = Span::new(marker.start, end);
+        Spanned { span, item }
+    }
+
+    fn error(&self, s: &str) -> syn::Error {
+        syn::Error::new(self.stream.span(), s)
     }
 }
 
@@ -156,6 +202,7 @@ fn parse_shared<T: Parse>(stream: syn::parse::ParseStream, mode: Mode) -> Result
         ctx: Rc::new(RefCell::new(Ctx::default())),
         stream,
         mode,
+        prev_span: stream.span().into(),
     };
     let t = p.parse::<T>()?;
     Ok((t, p.ctx.take()))

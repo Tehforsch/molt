@@ -6,7 +6,7 @@ use crate::ctx::MatchCtx;
 use crate::match_pattern::{CmpDirect, Match};
 
 use super::rust_grammar::{Ident, Item};
-use super::{Parse, ParseStream};
+use super::{Parse, ParseStream, Spanned};
 use super::{Var, VarId};
 
 pub(crate) enum Pattern<E> {
@@ -65,7 +65,7 @@ macro_rules! define_node_and_kind {
                         return Ok(Kind::$variant_name);
                     }
                 )*
-                Err(syn::Error::new(input.span(), format!("Invalid kind.")))
+                Err(input.error("Invalid kind."))
             }
         }
 
@@ -125,10 +125,12 @@ macro_rules! define_node_and_kind {
                 }
             }
 
-            pub(crate) fn parse_with_kind(parser: ParseStream, kind: Kind) -> super::Result<Self> {
+            pub(crate) fn parse_with_kind(parser: ParseStream, kind: Kind) -> super::Result<Spanned<Self>> {
                 match kind {
                     $(
-                        Kind::$variant_name => Ok(Node::$variant_name(parser.parse::<$ty>()?)),
+                        Kind::$variant_name => {
+                            Ok(parser.parse_spanned::<$ty>()?.map(|t| Node::$variant_name(t)))
+                        },
                     )*
                 }
             }
@@ -174,25 +176,29 @@ impl CustomDebug for Lit {
 
 impl CustomDebug for Ident {
     fn deb(&self, ctx: &MatchCtx) -> String {
-        todo!()
+        "".to_string()
+        // todo!()
     }
 }
 
 impl CustomDebug for VarId {
     fn deb(&self, ctx: &MatchCtx) -> String {
-        todo!()
+        "".to_string()
+        // todo!()
     }
 }
 
 impl CustomDebug for Var {
     fn deb(&self, ctx: &MatchCtx) -> String {
-        todo!()
+        "".to_string()
+        // todo!()
     }
 }
 
 impl CustomDebug for Item {
     fn deb(&self, ctx: &MatchCtx) -> String {
-        todo!()
+        "".to_string()
+        // todo!()
     }
 }
 

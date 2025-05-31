@@ -1,11 +1,11 @@
-use syn::{Ident, Lit, Token};
+use syn::{Lit, Token};
 
 use crate::{
     ctx::NodeId,
-    parser::{Kind, Node, Parse, ParseStream, Result, ToNode, braced},
+    parser::{Kind, Node, Parse, ParseStream, Result, ToNode, braced, rust_grammar::Ident},
 };
 
-use super::{Command, Decl, MoltFile, Var, VarDecl, VarId};
+use super::{Command, Decl, MoltFile, UntypedVar, Var, VarDecl, VarId};
 
 mod kws {
     syn::custom_keyword!(transform);
@@ -42,10 +42,11 @@ impl Parse for Decl {
 impl Parse for VarDecl {
     fn parse(input: ParseStream) -> Result<Self> {
         let token: Token![let] = input.parse()?;
-        let var: Var = Var::new(input.parse()?);
-        let name: VarId = input.add_var(var);
+        let var: Ident = input.parse()?;
         let _: Token![:] = input.parse()?;
         let kind: Kind = input.parse()?;
+        let var: Var = Var::new(var, kind);
+        let name: VarId = input.add_var(var);
         let node = if input.peek(Token![=]) {
             let _: Token![=] = input.parse()?;
             let content;
@@ -69,10 +70,10 @@ impl<T: Parse + ToNode> Parse for NodeId<T> {
     }
 }
 
-impl Parse for Var {
+impl Parse for UntypedVar {
     fn parse(parser: ParseStream) -> Result<Self> {
         let _: Token![$] = parser.parse()?;
-        Ok(Var::new(parser.parse()?))
+        Ok(UntypedVar(parser.parse()?))
     }
 }
 

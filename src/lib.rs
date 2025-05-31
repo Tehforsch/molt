@@ -52,7 +52,7 @@ impl MatchResult {
             .iter()
             .map(|match_| {
                 let binding = match_.get_binding(self.var);
-                let span = self.ctx.get_span(binding.ast.unwrap()).unwrap();
+                let span = self.ctx.get_span(binding.ast.unwrap());
                 let var_name = |var| self.ctx.get_var(var).deb(&self.ctx);
                 let mut diagnostic = Diagnostic::note().with_message("Match").with_labels(vec![
                     Label::primary(file_id, span.range()).with_message(var_name(self.var)),

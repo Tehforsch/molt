@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::parser::{Mode, Node, Pattern, Span, ToNode, Var, VarDecl, VarId};
+use crate::parser::{Kind, Mode, Node, Pattern, Span, Spanned, ToNode, Var, VarDecl, VarId};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub(crate) struct Id(InternalId);
@@ -105,8 +105,10 @@ pub(crate) struct PatCtx {
 
 #[derive(Default)]
 pub(crate) struct Ctx {
-    nodes: Vec<Node>,
     vars: Vec<Var>,
+    nodes: Vec<Node>,
+    kinds: Vec<Kind>,
+    spans: Vec<Span>,
 }
 
 impl Ctx {
@@ -135,12 +137,14 @@ impl Ctx {
         self.add_var(var).0.typed()
     }
 
-    fn add_node_internal(&mut self, node: Node) -> usize {
-        self.nodes.push(node);
+    fn add_node_internal(&mut self, node: Spanned<Node>) -> usize {
+        self.spans.push(node.span);
+        self.kinds.push(node.item.kind());
+        self.nodes.push(node.item);
         self.nodes.len() - 1
     }
 
-    pub(crate) fn add_node(&mut self, node: Node, mode: Mode) -> Id {
+    pub(crate) fn add_node(&mut self, node: Spanned<Node>, mode: Mode) -> Id {
         let id = self.add_node_internal(node);
         match mode {
             Mode::Molt => Id(InternalId::PatNode(id)),
@@ -148,8 +152,8 @@ impl Ctx {
         }
     }
 
-    pub(crate) fn add<T: ToNode>(&mut self, t: T, mode: Mode) -> NodeId<T> {
-        self.add_node(t.to_node(), mode).typed()
+    pub(crate) fn add<T: ToNode>(&mut self, t: Spanned<T>, mode: Mode) -> NodeId<T> {
+        self.add_node(t.map(|item| item.to_node()), mode).typed()
     }
 
     fn iter(&self) -> impl Iterator<Item = usize> {
@@ -163,8 +167,11 @@ impl AstCtx {
         Self { ctx }
     }
 
-    pub(crate) fn add<T: ToNode>(&mut self, t: T) -> NodeId<T> {
-        Id(InternalId::AstNode(self.ctx.add_node_internal(t.to_node()))).typed()
+    pub(crate) fn add<T: ToNode>(&mut self, t: Spanned<T>) -> NodeId<T> {
+        Id(InternalId::AstNode(
+            self.ctx.add_node_internal(t.map(|item| item.to_node())),
+        ))
+        .typed()
     }
 
     pub(crate) fn get_node(&self, id: Id) -> &Node {
@@ -183,14 +190,6 @@ impl AstCtx {
 impl PatCtx {
     pub(crate) fn new(ctx: Ctx) -> Self {
         Self { ctx }
-    }
-
-    pub(crate) fn add<T: ToNode>(&mut self, t: T) -> NodeId<T> {
-        Id(InternalId::PatNode(self.ctx.add_node_internal(t.to_node()))).typed()
-    }
-
-    pub(crate) fn add_node(&mut self, node: Node) -> Id {
-        Id(InternalId::PatNode(self.ctx.add_node_internal(node)))
     }
 
     pub(crate) fn get_node(&self, id: Id) -> &Node {
@@ -241,19 +240,21 @@ impl MatchCtx {
         }
     }
 
-    pub(crate) fn get_span(&self, _: Id) -> Option<Span> {
-        todo!()
+    pub(crate) fn get_span(&self, id: Id) -> Span {
+        match id.0 {
+            InternalId::AstNode(idx) => self.ast_ctx.ctx.spans[idx],
+            InternalId::PatNode(idx) => self.pat_ctx.ctx.spans[idx],
+            InternalId::Var(_) => unreachable!(), // i hope
+        }
     }
 
-    pub(crate) fn get_var(&self, _: VarId) -> Var {
-        todo!()
+    pub(crate) fn get_var(&self, id: VarId) -> &Var {
+        self.pat_ctx.get_var(id)
     }
 
     #[cfg(feature = "debug-print")]
     pub(crate) fn dump(&self) {
-        // todo!()
-        // use crate::grammar::CustomDebug;
-        // println!("--------------------------------");
+        println!("--------------------------------");
         // for idx in self.ast_ctx.ctx.iter() {
         //     let node = self.ast_ctx.get_node(Id(InternalId::AstNode(idx)));
         //     let kind_str = format!("{}", node.kind());
@@ -265,9 +266,21 @@ impl MatchCtx {
         //     let kind_str = format!("{}", node.kind());
         //     println!("PatNode({:02}): {:13} = {}", idx, kind_str, node.deb(self));
         // }
-        // println!("--------------------------------");
-        // for (idx, var) in self.pat_ctx.vars.iter().enumerate() {
-        //     println!("PatVar({:02}): {:14} = {}", idx, "", var.name);
-        // }
+        println!("--------------------------------");
+        for (idx, var) in self.pat_ctx.ctx.vars.iter().enumerate() {
+            println!("PatVar({:02}): {:14} = {:?}", idx, "", var.ident());
+        }
+    }
+
+    pub(crate) fn get_kind(&self, id: Id) -> Kind {
+        match id.0 {
+            InternalId::AstNode(idx) => self.ast_ctx.ctx.kinds[idx],
+            InternalId::PatNode(idx) => self.pat_ctx.ctx.kinds[idx],
+            InternalId::Var(idx) => self.pat_ctx.get_var(VarId(id)).kind(),
+        }
+    }
+
+    pub(crate) fn get_var_kind(&self, var: VarId) -> Kind {
+        self.get_kind(var.0)
     }
 }
