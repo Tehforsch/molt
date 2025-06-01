@@ -17,9 +17,10 @@ use match_pattern::MatchResult;
 use molt_grammar::{Command, MoltFile};
 use parser::{parse_molt_file, parse_rust_file};
 
+use rust_grammar::RustFile;
+
 pub use error::Error;
 pub use input::{Diagnostic, FileId, Input, MoltSource};
-use rust_grammar::RustFile;
 
 impl MoltFile {
     pub(crate) fn new(input: &Input) -> Result<(Self, PatCtx), Error> {

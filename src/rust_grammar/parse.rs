@@ -1,6 +1,6 @@
 use syn::Token;
 
-use super::{Attribute, Expr, Generics, Ident, Item, ItemConst, Lit, RustFile, Type, Visibility};
+use super::{Attribute, Expr, Generics, Ident, Item, ItemConst, Lifetime, Lit, RustFile, Type, Visibility};
 use crate::parser::{Parse, ParseStream, Parser, Result};
 
 impl Parse for RustFile {
@@ -64,6 +64,12 @@ impl Parse for Ident {
 }
 
 impl Parse for Lit {
+    fn parse(input: ParseStream) -> Result<Self> {
+        Ok(Self(input.parse()?))
+    }
+}
+
+impl Parse for Lifetime {
     fn parse(input: ParseStream) -> Result<Self> {
         Ok(Self(input.parse()?))
     }

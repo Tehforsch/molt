@@ -1,6 +1,6 @@
 use crate::ctx::{AstCtx, Id, MatchCtx, MatchingMode, NodeId, NodeList, PatCtx};
 use crate::rust_grammar::{
-    Attribute, Expr, ExprBinary, ExprLit, ExprParen, ExprUnary, Ident, Item, ItemConst, ItemFn, Lit,
+    Attribute, Ident, Item, ItemConst, Lit,
 };
 
 use crate::match_pattern::Match;

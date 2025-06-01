@@ -52,7 +52,8 @@ impl Parse for VarDecl {
         let node = if input.peek(Token![=]) {
             let _: Token![=] = input.parse()?;
             let content;
-            braced!(content in input);
+            let syn_content;
+            braced!(syn_content in content in input);
             let node = Node::parse_with_kind(&content, kind)?;
             let id = input.add_node(node);
             Some(id)

@@ -3,10 +3,13 @@ mod span;
 mod tests;
 
 use std::cell::RefCell;
+use std::ops::Deref;
 use std::rc::Rc;
 use std::str::FromStr;
 use std::{cell::Cell, marker::PhantomData};
 
+use syn::parse::Peek;
+use syn::punctuated::Punctuated;
 use syn::token::Token;
 
 use crate::ctx::{Ctx, Id, NodeId, NodeList};
@@ -115,12 +118,45 @@ impl<'a> Parser<'a> {
         self.stream.peek(token)
     }
 
+    pub fn peek2<T: syn::parse::Peek>(&self, token: T) -> bool {
+        todo!()
+    }
+
+    pub fn peek3<T: syn::parse::Peek>(&self, token: T) -> bool {
+        todo!()
+    }
+
+    pub(crate) fn peek3_ident(&self) -> bool {
+        todo!()
+    }
+
+    pub fn peek_ident(&self) -> bool {
+        self.stream.peek(syn::Ident) || self.stream.peek(syn::Token![$])
+    }
+
+    pub(crate) fn peek_lit(&self) -> bool {
+        todo!()
+    }
+
+    pub(crate) fn peek_lifetime(&self) -> bool {
+        todo!()
+    }
+
     pub fn clone_with<'b>(&self, stream: &'b syn::parse::ParseBuffer<'b>) -> Parser<'b> {
         Parser {
             ctx: self.ctx.clone(),
-            stream: &stream,
+            stream: stream,
             mode: self.mode,
             prev_span: stream.span().into(),
+        }
+    }
+
+    pub fn clone(&self) -> Parser {
+        Parser {
+            ctx: self.ctx.clone(),
+            stream: self.stream,
+            mode: self.mode,
+            prev_span: self.stream.span().into(),
         }
     }
 
@@ -169,6 +205,40 @@ impl<'a> Parser<'a> {
 
     pub fn error(&self, s: &str) -> syn::Error {
         syn::Error::new(self.stream.span(), s)
+    }
+
+    pub(crate) fn advance_to(&self, ahead: &Self) {
+        todo!()
+    }
+
+    pub(crate) fn fork(&self) -> &Self {
+        todo!()
+    }
+
+    pub fn parse_terminated<T, P>(
+        &'a self,
+        parser: fn(syn::parse::ParseStream<'a>) -> Result<T>,
+        separator: P,
+    ) -> Result<Punctuated<T, P::Token>>
+    where
+        P: Peek,
+        P::Token: syn::parse::Parse,
+    {
+        self.stream.parse_terminated(parser, separator)
+    }
+
+    // no idea how to do this. can i rewrite the fn?
+    pub fn parse_terminated_internal<T, P>(
+        &'a self,
+        parser: fn(ParseStream<'a>) -> Result<T>,
+        separator: P,
+    ) -> Result<Punctuated<T, P::Token>>
+    where
+        P: Peek,
+        P::Token: syn::parse::Parse,
+    {
+        todo!()
+        // self.stream.parse_terminated(parser, separator)
     }
 }
 
@@ -263,31 +333,38 @@ impl Attribute {
 }
 
 macro_rules! parenthesized {
-    ($content:ident in $cursor:expr) => {
-        let syn_content;
-        let syn_cursor = $cursor.stream;
-        syn::parenthesized!(syn_content in syn_cursor);
-        $content = $cursor.clone_with(&syn_content);
+    ($syn_content:ident in $content:ident in $cursor:expr) => {
+        {
+            let syn_cursor = $cursor.stream;
+            let res = syn::parenthesized!($syn_content in syn_cursor);
+            $content = $cursor.clone_with(&$syn_content);
+            res
+        }
     };
 }
 
 macro_rules! braced {
-    ($content:ident in $cursor:expr) => {
-        let syn_content;
-        let syn_cursor = $cursor.stream;
-        syn::braced!(syn_content in syn_cursor);
-        $content = $cursor.clone_with(&syn_content);
+    ($syn_content:ident in $content:ident in $cursor:expr) => {
+        {
+            let syn_cursor = $cursor.stream;
+            let res = syn::braced!($syn_content in syn_cursor);
+            $content = $cursor.clone_with(&$syn_content);
+            res
+        }
     };
 }
 
 macro_rules! bracketed {
-    ($content:ident in $cursor:expr) => {
-        let syn_content;
-        let syn_cursor = $cursor.stream;
-        syn::bracketed!(syn_content in syn_cursor);
-        $content = $cursor.clone_with(&syn_content);
+    ($syn_content:ident in $content:ident in $cursor:expr) => {
+        {
+            let syn_cursor = $cursor.stream;
+            let res = syn::bracketed!($syn_content in syn_cursor);
+            $content = $cursor.clone_with(&$syn_content);
+            res
+        }
     };
 }
 
 pub(crate) use braced;
+pub(crate) use bracketed;
 pub(crate) use parenthesized;

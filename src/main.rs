@@ -46,6 +46,7 @@ fn get_cargo_source_files(path: &Path) -> Result<Vec<PathBuf>> {
         let path = entry.path();
         let is_rust_src = path.extension().map_or(false, |ext| ext == "rs");
         if is_rust_src {
+            k
             src_files.push(path.to_owned());
         }
     }

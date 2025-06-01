@@ -1,7 +1,14 @@
 mod parse;
+mod path;
+mod restriction;
+mod ty;
+
+#[macro_use]
+mod macros;
 
 use derive_macro::{CmpSyn, GetDependencies};
 use syn::{Token, ext::IdentExt};
+use ty::Type;
 
 use crate::{
     ctx::{NodeId, NodeList, PatCtx},
@@ -13,11 +20,23 @@ use crate::{
 
 use super::node::{Kind, UserKind};
 
+pub(crate) mod prelude {
+    pub(crate) use super::macros::{ast_enum, ast_enum_of_structs, ast_struct};
+    pub(crate) use crate::ctx::NodeId;
+    pub(crate) use crate::parser::{Parse, ParseStream, Result, braced, bracketed, parenthesized};
+    pub(crate) use syn::Token;
+    pub(crate) use syn::punctuated::Punctuated;
+    pub(crate) use syn::token;
+}
+
 #[derive(Clone)]
 pub struct Ident(syn::Ident);
 
 #[derive(Clone)]
 pub struct Lit(syn::Lit);
+
+#[derive(Clone)]
+pub struct Lifetime(syn::Lifetime);
 
 pub struct Attribute(syn::Attribute);
 
@@ -178,7 +197,6 @@ macro_rules! impl_temp_struct {
 
 impl_temp_struct!(Visibility);
 impl_temp_struct!(Generics);
-impl_temp_struct!(Type);
 impl_temp_struct!(Expr, ignore);
 
 impl_temp_struct!(ItemEnum);
@@ -196,7 +214,20 @@ impl_temp_struct!(ItemType);
 impl_temp_struct!(ItemUnion);
 impl_temp_struct!(ItemUse);
 
+impl_temp_struct!(LitStr);
+
 impl_temp_struct!(ExprLit, ignore);
 impl_temp_struct!(ExprUnary, ignore);
 impl_temp_struct!(ExprBinary, ignore);
 impl_temp_struct!(ExprParen, ignore);
+impl_temp_struct!(ExprPath);
+impl_temp_struct!(ExprBlock);
+
+impl_temp_struct!(AssocType);
+impl_temp_struct!(AssocConst);
+impl_temp_struct!(Constraint);
+impl_temp_struct!(TypeParamBound);
+impl_temp_struct!(ReturnType);
+impl_temp_struct!(Macro);
+impl_temp_struct!(TraitBound);
+impl_temp_struct!(TraitBoundModifier);
