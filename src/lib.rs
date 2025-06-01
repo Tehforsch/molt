@@ -8,7 +8,6 @@ pub(crate) mod molt_grammar;
 pub(crate) mod node;
 mod parser;
 mod resolve;
-pub(crate) mod rust_grammar;
 
 use codespan_reporting::{diagnostic::Label, files::Files};
 use ctx::{AstCtx, PatCtx};
@@ -17,10 +16,10 @@ use match_pattern::MatchResult;
 use molt_grammar::{Command, MoltFile};
 use parser::{parse_molt_file, parse_rust_file};
 
-use rust_grammar::RustFile;
-
 pub use error::Error;
 pub use input::{Diagnostic, FileId, Input, MoltSource};
+
+pub struct RustFile(rust_grammar::File);
 
 impl MoltFile {
     pub(crate) fn new(input: &Input) -> Result<(Self, PatCtx), Error> {
@@ -60,7 +59,7 @@ impl MatchResult {
                 let span = self.ctx.get_span(binding.ast.unwrap());
                 let var_name = |var| self.ctx.get_var(var);
                 let mut diagnostic = Diagnostic::note().with_message("Match").with_labels(vec![
-                    Label::primary(file_id, span.range()).with_message(var_name(self.var)),
+                    Label::primary(file_id, span.byte_range()).with_message(var_name(self.var)),
                 ]);
                 let mut keys = match_.iter_vars().collect::<Vec<_>>();
                 keys.sort_by_key(|var| var_name(*var).to_string());

@@ -3,8 +3,8 @@ use std::marker::PhantomData;
 use crate::{
     molt_grammar::{Var, VarId},
     node::{Kind, Node, Pattern, ToNode},
-    parser::{Mode, Span, Spanned},
 };
+use rust_grammar::{Mode, Span, Spanned};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub(crate) struct Id(InternalId);
@@ -311,6 +311,6 @@ impl MatchCtx {
             InternalId::Var(_) => return self.get_var(VarId(id)).to_string(),
         };
         let span = self.get_span(id);
-        src[span.range()].to_string()
+        src[span.byte_range()].to_string()
     }
 }

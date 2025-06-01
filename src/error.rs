@@ -5,18 +5,14 @@ use codespan_reporting::{
         termcolor::{ColorChoice, StandardStream},
     },
 };
-use proc_macro2::LexError;
+use rust_grammar::Span;
 
+use crate::input::{FileId, Input};
 use crate::resolve::ResolveError;
-use crate::{
-    input::{FileId, Input},
-    parser::Span,
-};
 
 #[derive(Debug)]
 pub enum Error {
-    Parse(syn::Error),
-    Tokenize(LexError),
+    Parse(rust_grammar::Error),
     Resolve(ResolveError),
     Misc(String),
 }
@@ -24,8 +20,7 @@ pub enum Error {
 impl Error {
     fn span(&self) -> Option<Span> {
         match self {
-            Error::Parse(error) => Some(Span::from_range(error.span().byte_range())),
-            Error::Tokenize(_) => None,
+            Error::Parse(error) => Some(error.span()),
             Error::Resolve(_) => None,
             Error::Misc(_) => None,
         }
@@ -37,7 +32,7 @@ pub(crate) fn make_error_diagnostic(file: FileId, err: &Error) -> Diagnostic<Fil
     let mut diagnostic = Diagnostic::error().with_message(&message);
     if let Some(span) = err.span() {
         diagnostic = diagnostic.with_labels(vec![
-            Label::primary(file, span.range()).with_message(&message),
+            Label::primary(file, span.byte_range()).with_message(&message),
         ]);
     }
     diagnostic
@@ -71,14 +66,12 @@ macro_rules! impl_from {
 }
 
 impl_from!(ResolveError, Resolve);
-impl_from!(syn::Error, Parse);
-impl_from!(LexError, Tokenize);
+impl_from!(rust_grammar::Error, Parse);
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Error::Parse(error) => write!(f, "{}", error),
-            Error::Tokenize(error) => write!(f, "{}", error),
             Error::Resolve(error) => write!(f, "{}", error),
             Error::Misc(s) => write!(f, "{}", s),
         }

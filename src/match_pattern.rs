@@ -2,13 +2,13 @@ use std::collections::HashMap;
 
 use crate::MoltFile;
 use crate::molt_grammar::{VarDecl, VarId};
-use crate::rust_grammar::{
-    Expr, ExprBinary, ExprLit, ExprParen, ExprUnary, Ident, Item, ItemConst, ItemFn, Lit,
-};
 use crate::{
     cmp_syn::CmpSyn,
     ctx::{AstCtx, Id, MatchCtx, MatchingMode, NodeId, NodeList, PatCtx},
     node::{Node, Pattern},
+};
+use rust_grammar::{
+    Expr, ExprBinary, ExprLit, ExprParen, ExprUnary, Ident, Item, ItemConst, ItemFn, Lit,
 };
 
 pub(crate) struct Matches {

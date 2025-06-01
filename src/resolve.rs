@@ -1,5 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
+use rust_grammar::Ident;
+
 use crate::{
     Error, PatCtx,
     ctx::{Id, NodeId},
@@ -51,6 +53,10 @@ impl<T: ToNode> GetDependencies for NodeId<T> {
     fn get_dependencies(&self, ctx: &PatCtx, deps: &mut Dependencies) {
         self.untyped().get_dependencies(ctx, deps)
     }
+}
+
+impl GetDependencies for Ident {
+    fn get_dependencies(&self, ctx: &PatCtx, deps: &mut Dependencies) {}
 }
 
 impl MoltFile {

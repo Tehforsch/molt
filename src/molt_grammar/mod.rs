@@ -3,7 +3,7 @@ mod parse;
 use crate::ctx::Id;
 use crate::node::{Kind, UserKind};
 
-use super::rust_grammar::Ident;
+use rust_grammar::Ident;
 
 #[derive(Debug)]
 pub(crate) struct MoltFile {

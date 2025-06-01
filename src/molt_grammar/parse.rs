@@ -1,16 +1,14 @@
-use syn::Token;
-
 use crate::{
     ctx::NodeId,
     node::{Node, ToNode, UserKind},
-    parser::{Parse, ParseStream, Result, braced},
-    rust_grammar::Ident,
 };
+use rust_grammar::{Ident, Token};
+use rust_grammar::{Result, braced, parse::Parse, parse::ParseStream};
 
 use super::{Command, Decl, MoltFile, UntypedVar, Var, VarDecl, VarId};
 
 mod kws {
-    syn::custom_keyword!(transform);
+    rust_grammar::custom_keyword!(transform);
 }
 
 impl Parse for MoltFile {
@@ -52,8 +50,7 @@ impl Parse for VarDecl {
         let node = if input.peek(Token![=]) {
             let _: Token![=] = input.parse()?;
             let content;
-            let syn_content;
-            braced!(syn_content in content in input);
+            braced!(content in input);
             let node = Node::parse_with_kind(&content, kind)?;
             let id = input.add_node(node);
             Some(id)

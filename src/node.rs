@@ -1,11 +1,13 @@
 use derive_macro::{CmpSyn, GetDependencies};
+use rust_grammar::{
+    Attribute, Ident, Item, Lit,
+    parse::{Parse, ParseStream},
+};
 
 use crate::cmp_syn::CmpSyn;
 use crate::ctx::MatchCtx;
 use crate::match_pattern::Match;
 use crate::molt_grammar::{Var, VarId};
-use crate::parser::{Parse, ParseStream, Spanned};
-use crate::rust_grammar::{Attribute, Ident, Item, Lit};
 
 pub(crate) enum Pattern<E> {
     Exact(E),
@@ -114,12 +116,12 @@ macro_rules! define_user_kind {
 
         mod kind_kws {
             $(
-                syn::custom_keyword!($variant_name);
+                rust_grammar::custom_keyword!($variant_name);
             )*
         }
 
         impl Parse for UserKind {
-            fn parse(input: ParseStream) -> crate::parser::Result<Self> {
+            fn parse(input: ParseStream) -> rust_grammar::Result<Self> {
                 $(
                     if input.peek(kind_kws::$variant_name) {
                         let _: kind_kws::$variant_name = input.parse()?;
@@ -131,11 +133,11 @@ macro_rules! define_user_kind {
         }
 
         impl Node {
-            pub(crate) fn parse_with_kind(parser: ParseStream, kind: UserKind) -> crate::parser::Result<Spanned<Self>> {
+            pub(crate) fn parse_with_kind(parser: rust_grammar::parse::ParseStream, kind: UserKind) -> rust_grammar::Result<Self {
                 match kind {
                     $(
                         UserKind::$variant_name => {
-                            Ok(parser.parse_spanned::<$ty>()?.map(|t| Node::$variant_name(t)))
+                            Ok(Node::$variant_name(parser.parse::<$ty>()?))
                         },
                     )*
                 }
@@ -146,9 +148,9 @@ macro_rules! define_user_kind {
 
 define_node_and_kind! {
     (Ident, Ident),
-    (Lit, Lit),
-    (Item, Item),
-    (Attr, Attribute),
+    // (Lit, Lit),
+    // (Item, Item),
+    // (Attr, Attribute),
     // (Expr, Expr),
     // (Signature, Signature),
     // (FnArg, FnArg),
@@ -156,8 +158,8 @@ define_node_and_kind! {
 
 define_user_kind! {
     (Ident, Ident),
-    (Lit, Lit),
-    (Item, Item),
+    // (Lit, Lit),
+    // (Item, Item),
 }
 
 impl ToNode for Node {
