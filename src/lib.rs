@@ -1,149 +1,165 @@
-// #![allow(unused)]
-// mod cmp_syn;
-// mod ctx;
-// mod error;
-// mod input;
-// mod match_pattern;
-// pub(crate) mod molt_grammar;
-// pub(crate) mod node;
-// mod parser;
-// mod resolve;
+mod cmp_syn;
+// mod ctx
+mod error;
+mod input;
+mod match_ctx;
+mod match_pattern;
+pub(crate) mod molt_grammar;
+mod resolve;
 
-// use codespan_reporting::{diagnostic::Label, files::Files};
-// use ctx::{AstCtx, PatCtx};
-// use error::emit_error;
-// use match_pattern::MatchResult;
-// use molt_grammar::{Command, MoltFile};
-// use parser::{parse_molt_file, parse_rust_file};
+use codespan_reporting::{diagnostic::Label, files::Files};
+use error::emit_error;
+use match_pattern::MatchResult;
+use molt_grammar::{Command, MoltFile};
 
-// pub use error::Error;
-// pub use input::{Diagnostic, FileId, Input, MoltSource};
+pub use error::Error;
+pub use input::{Diagnostic, FileId, Input, MoltSource};
+use rust_grammar::{
+    Node,
+    parse::{Parse, ParseStream},
+};
+use syntax_ctx::GetKind;
 
-// pub struct RustFile(rust_grammar::File);
+pub struct RustFile(rust_grammar::File);
 
-// impl MoltFile {
-//     pub(crate) fn new(input: &Input) -> Result<(Self, PatCtx), Error> {
-//         let file_id = input.molt_file_id();
-//         let source = input.source(file_id).unwrap();
-//         let result = parse_molt_file(source);
-//         match result {
-//             Ok((file, ctx)) => Ok((file, PatCtx::new(ctx))),
-//             Err(err) => {
-//                 emit_error(input, file_id, &err);
-//                 Err(err)
-//             }
-//         }
-//     }
-// }
+impl Parse for RustFile {
+    fn parse(input: ParseStream) -> rust_grammar::Result<Self> {
+        Ok(Self(input.parse()?))
+    }
+}
 
-// impl RustFile {
-//     pub(crate) fn new(input: &Input, file_id: FileId) -> Result<(Self, AstCtx), Error> {
-//         let source = input.source(file_id).unwrap();
-//         let result = parse_rust_file(source);
-//         match result {
-//             Ok((file, ctx)) => Ok((file, AstCtx::new(ctx))),
-//             Err(err) => {
-//                 emit_error(input, file_id, &err);
-//                 Err(err)
-//             }
-//         }
-//     }
-// }
+type Ctx = syntax_ctx::Ctx<Node>;
+pub type PatCtx = Ctx;
+pub type AstCtx = Ctx;
 
-// impl MatchResult {
-//     fn make_diagnostics(&self, file_id: FileId) -> Vec<Diagnostic> {
-//         self.matches
-//             .iter()
-//             .map(|match_| {
-//                 let binding = match_.get_binding(self.var);
-//                 let span = self.ctx.get_span(binding.ast.unwrap());
-//                 let var_name = |var| self.ctx.get_var(var);
-//                 let mut diagnostic = Diagnostic::note().with_message("Match").with_labels(vec![
-//                     Label::primary(file_id, span.byte_range()).with_message(var_name(self.var)),
-//                 ]);
-//                 let mut keys = match_.iter_vars().collect::<Vec<_>>();
-//                 keys.sort_by_key(|var| var_name(*var).to_string());
-//                 for key in keys {
-//                     let binding = match_.get_binding(key);
-//                     if key == self.var {
-//                         continue;
-//                     }
-//                     if let Some(node) = binding.ast {
-//                         diagnostic = diagnostic.with_note(format!(
-//                             "{} = {}",
-//                             var_name(key),
-//                             self.ctx.print(node),
-//                         ));
-//                     }
-//                 }
-//                 diagnostic
-//             })
-//             .collect()
-//     }
-// }
+pub fn parse_rust_file(code: &str) -> Result<(RustFile, Ctx), crate::Error> {
+    Ok(rust_grammar::parse_ctx(code)?)
+}
 
-// pub fn run(input: &Input) -> Result<Vec<Diagnostic>, Error> {
-//     let mut diagnostics = vec![];
-//     for rust_file_id in input.iter_rust_src() {
-//         let (_, ast_ctx) = RustFile::new(&input, rust_file_id)?;
-//         let (mut molt_file, pat_ctx) = MoltFile::new(&input)?;
-//         molt_file.sort_vars(&pat_ctx);
-//         let command = molt_file.get_command()?;
-//         match command {
-//             Command::Match(pat_var) => {
-//                 let match_result = molt_file.match_pattern(
-//                     ast_ctx,
-//                     pat_ctx,
-//                     pat_var,
-//                     input.source(rust_file_id).unwrap(),
-//                     input.source(input.molt_file_id()).unwrap(),
-//                 );
-//                 diagnostics.extend(match_result.make_diagnostics(rust_file_id));
-//             }
-//         };
-//     }
-//     Ok(diagnostics)
-// }
+pub fn parse_molt_file(code: &str) -> Result<(MoltFile, Ctx), crate::Error> {
+    Ok(rust_grammar::parse_ctx(code)?)
+}
 
-// #[cfg(test)]
-// mod tests {
-//     use std::path::Path;
+impl MoltFile {
+    pub(crate) fn new(input: &Input) -> Result<(Self, PatCtx), Error> {
+        let file_id = input.molt_file_id();
+        let source = input.source(file_id).unwrap();
+        let result = parse_molt_file(source);
+        result.map_err(|err| {
+            emit_error(input, file_id, &err);
+            err
+        })
+    }
+}
 
-//     use insta::assert_snapshot;
+impl RustFile {
+    pub(crate) fn new(input: &Input, file_id: FileId) -> Result<(Self, Ctx), Error> {
+        let source = input.source(file_id).unwrap();
+        let result = parse_rust_file(source);
+        match result {
+            Ok((file, ctx)) => Ok((file, ctx)),
+            Err(err) => {
+                emit_error(input, file_id, &err);
+                Err(err)
+            }
+        }
+    }
+}
 
-//     use crate::{
-//         error::emit_diagnostic_str,
-//         input::{Input, MoltSource},
-//     };
+impl MatchResult {
+    fn make_diagnostics(&self, file_id: FileId) -> Vec<Diagnostic> {
+        self.matches
+            .iter()
+            .map(|match_| {
+                let binding = match_.get_binding(self.var);
+                let span = self.ctx.get_span(binding.ast.unwrap());
+                let var_name = |var| self.ctx.get_var(var).name();
+                let mut diagnostic = Diagnostic::note().with_message("Match").with_labels(vec![
+                    Label::primary(file_id, span.byte_range()).with_message(var_name(self.var)),
+                ]);
+                let mut keys = match_.iter_vars().collect::<Vec<_>>();
+                keys.sort_by_key(|var| var_name(*var).to_string());
+                for key in keys {
+                    let binding = match_.get_binding(key);
+                    if key == self.var {
+                        continue;
+                    }
+                    if let Some(node) = binding.ast {
+                        diagnostic = diagnostic.with_note(format!(
+                            "{} = {}",
+                            var_name(key),
+                            self.ctx.print(node),
+                        ));
+                    }
+                }
+                diagnostic
+            })
+            .collect()
+    }
+}
 
-//     fn match_pattern(fname: &str) -> String {
-//         let rust_path = Path::new("test_data").join(format!("{}.rs", fname));
-//         let molt_path = Path::new("test_data").join(format!("{}.molt", fname));
-//         let input = Input::new(MoltSource::file(molt_path).unwrap())
-//             .with_rust_src_file(&rust_path)
-//             .unwrap();
-//         let diagnostics = super::run(&input).unwrap();
-//         diagnostics
-//             .into_iter()
-//             .map(|diagnostic| emit_diagnostic_str(&input, diagnostic))
-//             .collect::<Vec<_>>()
-//             .join("")
-//     }
+pub fn run(input: &Input) -> Result<Vec<Diagnostic>, Error> {
+    let mut diagnostics = vec![];
+    for rust_file_id in input.iter_rust_src() {
+        let (_, ast_ctx) = RustFile::new(&input, rust_file_id)?;
+        let (mut molt_file, pat_ctx) = MoltFile::new(&input)?;
+        molt_file.sort_vars(&pat_ctx);
+        let command = molt_file.get_command()?;
+        match command {
+            Command::Match(pat_var) => {
+                let match_result = molt_file.match_pattern(
+                    ast_ctx,
+                    pat_ctx,
+                    pat_var,
+                    input.source(rust_file_id).unwrap(),
+                    input.source(input.molt_file_id()).unwrap(),
+                );
+                diagnostics.extend(match_result.make_diagnostics(rust_file_id));
+            }
+        };
+    }
+    Ok(diagnostics)
+}
 
-//     macro_rules! test_match_pattern {
-//         ($name: ident) => {
-//             #[test]
-//             fn $name() {
-//                 assert_snapshot!(match_pattern(stringify!($name)));
-//             }
-//         };
-//     }
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
 
-//     test_match_pattern!(ident);
-//     test_match_pattern!(exprs);
-//     test_match_pattern!(multiple_vars);
-//     test_match_pattern!(function);
-//     test_match_pattern!(function2);
-//     test_match_pattern!(sum);
-//     // test_match_pattern!(indirection);
-// }
+    use insta::assert_snapshot;
+
+    use crate::{
+        error::emit_diagnostic_str,
+        input::{Input, MoltSource},
+    };
+
+    fn match_pattern(fname: &str) -> String {
+        let rust_path = Path::new("test_data").join(format!("{}.rs", fname));
+        let molt_path = Path::new("test_data").join(format!("{}.molt", fname));
+        let input = Input::new(MoltSource::file(molt_path).unwrap())
+            .with_rust_src_file(&rust_path)
+            .unwrap();
+        let diagnostics = super::run(&input).unwrap();
+        diagnostics
+            .into_iter()
+            .map(|diagnostic| emit_diagnostic_str(&input, diagnostic))
+            .collect::<Vec<_>>()
+            .join("")
+    }
+
+    macro_rules! test_match_pattern {
+        ($name: ident) => {
+            #[test]
+            fn $name() {
+                assert_snapshot!(match_pattern(stringify!($name)));
+            }
+        };
+    }
+
+    test_match_pattern!(ident);
+    test_match_pattern!(exprs);
+    test_match_pattern!(multiple_vars);
+    test_match_pattern!(function);
+    test_match_pattern!(function2);
+    test_match_pattern!(sum);
+    // test_match_pattern!(indirection);
+}

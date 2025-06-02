@@ -1,9 +1,7 @@
 mod parse;
 
-use crate::ctx::Id;
-use crate::node::{Kind, UserKind};
-
-use rust_grammar::Ident;
+use rust_grammar::{Ident, Kind, Lit, Node};
+use syntax_ctx::{Id, Var};
 
 #[derive(Debug)]
 pub(crate) struct MoltFile {
@@ -23,45 +21,11 @@ pub(crate) struct VarDecl {
     pub node: Option<Id>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub(crate) struct VarId(pub Id);
-
-#[derive(Debug)]
-pub(crate) struct Var {
-    ident: Ident,
-    kind: Kind,
-}
+pub type VarId = Id;
 
 #[derive(Debug)]
 pub(crate) enum Command {
     Match(VarId),
-}
-
-impl VarId {
-    pub(crate) fn new(id: Id) -> Self {
-        Self(id)
-    }
-}
-
-impl Var {
-    pub(crate) fn new(ident: Ident, user_kind: UserKind) -> Self {
-        Self {
-            ident,
-            kind: user_kind.to_kind(),
-        }
-    }
-
-    pub(crate) fn ident(&self) -> &Ident {
-        &self.ident
-    }
-
-    pub(crate) fn ident_mut(&mut self) -> &mut Ident {
-        &mut self.ident
-    }
-
-    pub(crate) fn kind(&self) -> Kind {
-        self.kind
-    }
 }
 
 #[derive(Debug)]
@@ -70,16 +34,61 @@ pub(crate) struct Todo;
 pub(crate) struct UntypedVar(Ident);
 
 impl UntypedVar {
-    pub(crate) fn to_var(self, user_kind: UserKind) -> Var {
+    pub(crate) fn to_var(self, user_kind: UserKind) -> Var<Node> {
         Var {
-            kind: user_kind.to_kind(),
-            ident: self.0,
+            kind: user_kind.into(),
+            name: self.0.to_string(),
         }
     }
 }
 
-impl std::fmt::Display for Var {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "${}", self.ident())
+macro_rules! define_user_kind {
+    ($(($variant_name: ident, $ty: ty)),*$(,)?) => {
+        #[derive(Debug, Clone, Copy)]
+        pub enum UserKind {
+            $( $variant_name, )*
+        }
+
+        impl From<UserKind> for Kind {
+            fn from(val: UserKind) -> Kind {
+                match val {
+                    $(
+                        UserKind::$variant_name => Kind::$variant_name,
+                    )*
+                }
+            }
+        }
+
+        mod kind_kws {
+            $(
+                rust_grammar::custom_keyword!($variant_name);
+            )*
+        }
+
+        impl rust_grammar::parse::Parse for UserKind {
+            fn parse(input:rust_grammar::parse:: ParseStream) -> rust_grammar::Result<Self> {
+                $(
+                    if input.peek(kind_kws::$variant_name) {
+                        let _: kind_kws::$variant_name = input.parse()?;
+                        return Ok(UserKind::$variant_name);
+                    }
+                )*
+                Err(input.error("Invalid kind."))
+            }
+        }
+
+        pub(crate) fn parse_node_with_kind(parser: rust_grammar::parse::ParseStream, kind: UserKind) -> rust_grammar::Result<syntax_ctx::WithSpan<Node>> {
+            match kind {
+                $(
+                    UserKind::$variant_name => {
+                        Ok(parser.parse_with_span::<$ty>()?.map(|t| Node::$variant_name(t)))
+                    },
+                )*
+            }
+        }
     }
+}
+
+define_user_kind! {
+    (Lit, Lit)
 }

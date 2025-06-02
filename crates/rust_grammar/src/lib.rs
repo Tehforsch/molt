@@ -520,10 +520,6 @@ mod scan_expr;
 
 mod span;
 
-#[cfg(all(feature = "parsing", feature = "printing"))]
-#[cfg_attr(docsrs, doc(cfg(all(feature = "parsing", feature = "printing"))))]
-pub mod spanned;
-
 #[cfg(feature = "full")]
 mod stmt;
 #[cfg(feature = "full")]
@@ -552,6 +548,7 @@ mod verbatim;
 mod whitespace;
 
 pub(crate) mod node;
+pub use node::{Kind, Node};
 
 #[cfg(feature = "fold")]
 #[cfg_attr(docsrs, doc(cfg(feature = "fold")))]
@@ -570,73 +567,16 @@ pub use crate::gen::visit_mut;
 #[path = "export.rs"]
 pub mod __private;
 
-/// Parse tokens of source code into the chosen syntax tree node.
-///
-/// This is preferred over parsing a string because tokens are able to preserve
-/// information about where in the user's code they were originally written (the
-/// "span" of the token), possibly allowing the compiler to produce better error
-/// messages.
-///
-/// This function parses a `proc_macro::TokenStream` which is the type used for
-/// interop with the compiler in a procedural macro. To parse a
-/// `proc_macro2::TokenStream`, use [`syn::parse2`] instead.
-///
-/// [`syn::parse2`]: parse2
-///
-/// This function enforces that the input is fully parsed. If there are any
-/// unparsed tokens at the end of the stream, an error is returned.
-#[cfg(all(feature = "parsing", feature = "proc-macro"))]
-#[cfg_attr(docsrs, doc(cfg(all(feature = "parsing", feature = "proc-macro"))))]
-pub fn parse<T: parse::Parse>(tokens: proc_macro::TokenStream) -> Result<T> {
-    parse::Parser::parse(T::parse, tokens)
-}
-
-/// Parse a proc-macro2 token stream into the chosen syntax tree node.
-///
-/// This function parses a `proc_macro2::TokenStream` which is commonly useful
-/// when the input comes from a node of the Syn syntax tree, for example the
-/// body tokens of a [`Macro`] node. When in a procedural macro parsing the
-/// `proc_macro::TokenStream` provided by the compiler, use [`syn::parse`]
-/// instead.
-///
-/// [`syn::parse`]: parse()
-///
-/// This function enforces that the input is fully parsed. If there are any
-/// unparsed tokens at the end of the stream, an error is returned.
-#[cfg(feature = "parsing")]
-#[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-pub fn parse2<T: parse::Parse>(tokens: proc_macro2::TokenStream) -> Result<T> {
-    parse::Parser::parse2(T::parse, tokens)
-}
-
-/// Parse a string of Rust code into the chosen syntax tree node.
-///
-/// This function enforces that the input is fully parsed. If there are any
-/// unparsed tokens at the end of the stream, an error is returned.
-///
-/// # Hygiene
-///
-/// Every span in the resulting syntax tree will be set to resolve at the macro
-/// call site.
-///
-/// # Examples
-///
-/// ```
-/// use syn::{Expr, Result};
-///
-/// fn run() -> Result<()> {
-///     let code = "assert_eq!(u8::max_value(), 255)";
-///     let expr = syn::parse_str::<Expr>(code)?;
-///     println!("{:#?}", expr);
-///     Ok(())
-/// }
-/// #
-/// # run().unwrap();
-/// ```
 #[cfg(feature = "parsing")]
 #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
 pub fn parse_str<T: parse::Parse>(s: &str) -> Result<T> {
     parse::Parser::parse_str(T::parse, s)
+}
+
+#[cfg(feature = "parsing")]
+#[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
+pub fn parse_ctx<T: parse::Parse>(s: &str) -> Result<(T, syntax_ctx::Ctx<Node>)> {
+    crate::parse::parse_ctx(T::parse, s)
 }
 
 /// Parse the content of a file of Rust code.

@@ -5,6 +5,12 @@ pub struct Span {
     pub end: usize,
 }
 
+impl Span {
+    pub fn byte_range(&self) -> std::ops::Range<usize> {
+        self.start..self.end
+    }
+}
+
 pub struct WithSpan<T> {
     pub span: Span,
     pub item: T,
@@ -24,6 +30,22 @@ pub trait ToNode<Node> {
     fn from_node(node: &Node) -> Option<&Self>;
 }
 
+impl<T> ToNode<T> for T {
+    fn to_node(self) -> T {
+        self
+    }
+
+    fn from_node(node: &T) -> Option<&Self> {
+        Some(node)
+    }
+}
+
+pub trait GetKind {
+    type Kind: Copy + std::fmt::Debug + PartialEq + Eq;
+
+    fn kind(&self) -> Self::Kind;
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Pattern<Real, Pat> {
     Real(Real),
@@ -38,6 +60,11 @@ pub struct Id(InternalId);
 pub struct NodeId<T> {
     _marker: PhantomData<T>,
     id: Id,
+}
+
+pub struct NodeList<T> {
+    pub items: Vec<NodeId<T>>,
+    pub matching_mode: MatchingMode,
 }
 
 impl<T> Clone for NodeId<T> {
@@ -74,6 +101,31 @@ impl<T> NodeId<T> {
     }
 }
 
+impl<T> NodeList<T> {
+    pub fn iter(&self) -> impl Iterator<Item = &NodeId<T>> {
+        self.items.iter()
+    }
+
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+
+    pub fn get(&self, idx: usize) -> Option<&NodeId<T>> {
+        self.items.get(idx)
+    }
+}
+
+pub enum MatchingMode {
+    #[allow(unused)]
+    Exact,
+    // ContainsAllInOrder,
+    ContainsAll,
+}
+
 impl Id {
     fn typed<T>(self) -> NodeId<T> {
         NodeId {
@@ -83,17 +135,28 @@ impl Id {
     }
 }
 
-pub struct Var {
+pub struct Var<Node: GetKind> {
     name: String,
+    kind: Node::Kind,
 }
 
-pub struct Ctx<Node> {
+impl<Node: GetKind> Var<Node> {
+    pub fn new(name: String, kind: Node::Kind) -> Self {
+        Self { name, kind }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
+pub struct Ctx<Node: GetKind> {
     nodes: Vec<Node>,
-    vars: Vec<Var>,
+    vars: Vec<Var<Node>>,
     spans: Vec<Span>,
 }
 
-impl<Node> Ctx<Node> {
+impl<Node: GetKind> Ctx<Node> {
     pub fn add_node(&mut self, node: WithSpan<Node>) -> Id {
         self.spans.push(node.span);
         self.nodes.push(node.item);
@@ -104,12 +167,38 @@ impl<Node> Ctx<Node> {
         self.add_node(t.map(|item| item.to_node())).typed()
     }
 
-    fn iter(&self) -> impl Iterator<Item = usize> {
-        0..self.nodes.len()
+    pub fn add_var(&mut self, var: Var<Node>) -> Id {
+        self.vars.push(var);
+        Id(InternalId::Pat(self.vars.len() - 1))
+    }
+
+    pub fn get<T: ToNode<Node>>(&self, id: Id) -> Pattern<&T, Id> {
+        match id.0 {
+            InternalId::Real(idx) => Pattern::Real(T::from_node(&self.nodes[idx]).unwrap()),
+            InternalId::Pat(_) => Pattern::Pat(id),
+        }
+    }
+
+    pub fn get_var(&self, id: Id) -> &Var<Node> {
+        match id.0 {
+            InternalId::Real(_) => panic!(),
+            InternalId::Pat(idx) => &self.vars[idx],
+        }
+    }
+
+    pub fn get_kind(&self, id: Id) -> Node::Kind {
+        match id.0 {
+            InternalId::Real(idx) => self.nodes[idx].kind(),
+            InternalId::Pat(idx) => self.vars[idx].kind,
+        }
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = Id> {
+        (0..self.nodes.len()).map(|id| Id(InternalId::Real(id)))
     }
 }
 
-impl<Node> Default for Ctx<Node> {
+impl<Node: GetKind> Default for Ctx<Node> {
     fn default() -> Self {
         Self {
             nodes: vec![],

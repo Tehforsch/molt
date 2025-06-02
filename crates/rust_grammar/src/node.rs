@@ -2,43 +2,34 @@ use syntax_ctx::{NodeId, ToNode};
 
 use crate::{
     parse::{Parse, ParseStream, Result},
-    Ident, Lit,
+    Lit,
 };
-
-pub struct Var {
-    ident: Ident,
-}
-
-pub enum Node {
-    Var(Var),
-    Real(AstNode),
-}
 
 macro_rules! define_node_and_kind {
     ($(($variant_name: ident, $ty: ty)),*$(,)?) => {
         #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-        pub(crate) enum Kind {
+        pub enum Kind {
             $(
                 $variant_name,
             )*
         }
 
-        pub(crate) enum AstNode {
+        pub enum Node {
             $(
                 $variant_name($ty),
             )*
         }
 
-        impl Kind {
-            pub(crate) fn from_str(s: &str) -> Self {
-                $(
-                    if s == stringify!($variant_name) {
-                        return Self::$variant_name;
-                    }
-                )*
-                panic!();
-            }
+        impl syntax_ctx::GetKind for Node {
+            type Kind = Kind;
 
+            fn kind(&self) -> Kind {
+                match self {
+                    $(
+                        Self::$variant_name(_) => Kind::$variant_name,
+                    )*
+                }
+            }
         }
 
         impl std::fmt::Display for Kind {
@@ -54,11 +45,12 @@ macro_rules! define_node_and_kind {
         $(
             impl ToNode<Node> for $ty {
                 fn to_node(self) -> Node {
-                    Node::Real(AstNode::$variant_name(self))
+                    Node::$variant_name(self)
                 }
 
                 fn from_node(node: &Node) -> Option<&Self> {
-                    if let Node::Real(AstNode::$variant_name(item)) = node {
+                    #[allow(irrefutable_let_patterns)]
+                    if let Node::$variant_name(item) = node {
                         Some(item)
                     } else {
                         None
@@ -68,23 +60,11 @@ macro_rules! define_node_and_kind {
         )*
 
         impl Node {
-            pub(crate) fn kind(&self) -> Kind {
-                match self {
-                    $(
-                        Self::Real(AstNode::$variant_name(_)) => Kind::$variant_name,
-                    )*
-                    // Should we leave this? What if we want to get the kind of a var?
-                    _ => unimplemented!(),
-                }
-            }
-        }
-
-        impl Node {
-            pub(crate) fn parse_with_kind(parser: crate::parse::ParseStream, kind: Kind) -> crate::parse::Result<Self> {
+            pub fn parse_with_kind(parser: crate::parse::ParseStream, kind: Kind) -> crate::parse::Result<Self> {
                 match kind {
                     $(
                         Kind::$variant_name => {
-                            Ok(Node::Real(AstNode::$variant_name(parser.parse::<$ty>()?)))
+                            Ok(Node::$variant_name(parser.parse::<$ty>()?))
                         },
                     )*
                 }

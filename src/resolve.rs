@@ -1,12 +1,11 @@
 use std::collections::{HashMap, HashSet};
 
-use rust_grammar::Ident;
+use rust_grammar::{Ident, Node};
+use syntax_ctx::{Ctx, Id, Pattern};
 
 use crate::{
     Error, PatCtx,
-    ctx::{Id, NodeId},
     molt_grammar::{Command, MoltFile, VarId},
-    node::{Pattern, ToNode},
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -25,12 +24,18 @@ pub(crate) struct Dependencies {
 }
 
 impl Dependencies {
-    fn new(id: Id, ctx: &PatCtx) -> Self {
+    fn new(id: Id, ctx: &Ctx<Node>) -> Self {
         let mut deps = Self {
             vars: HashSet::default(),
         };
-        id.get_dependencies(ctx, &mut deps);
-        deps
+        todo!()
+        // match ctx.get(id) {
+        //     Pattern::Real(node) => node.get_dependencies(ctx, deps),
+        //     Pattern::Pat(var_id) => {
+        //         deps.vars.insert(var_id);
+        //     }
+        // }
+        // deps
     }
 }
 
@@ -39,24 +44,11 @@ pub(crate) trait GetDependencies {
 }
 
 impl GetDependencies for Id {
-    fn get_dependencies(&self, ctx: &PatCtx, deps: &mut Dependencies) {
-        match ctx.get_pat_node(*self) {
-            Pattern::Exact(node) => node.get_dependencies(ctx, deps),
-            Pattern::Pattern(var_id) => {
-                deps.vars.insert(var_id);
-            }
-        }
-    }
-}
-
-impl<T: ToNode> GetDependencies for NodeId<T> {
-    fn get_dependencies(&self, ctx: &PatCtx, deps: &mut Dependencies) {
-        self.untyped().get_dependencies(ctx, deps)
-    }
+    fn get_dependencies(&self, _: &PatCtx, _: &mut Dependencies) {}
 }
 
 impl GetDependencies for Ident {
-    fn get_dependencies(&self, ctx: &PatCtx, deps: &mut Dependencies) {}
+    fn get_dependencies(&self, _: &PatCtx, _: &mut Dependencies) {}
 }
 
 impl MoltFile {

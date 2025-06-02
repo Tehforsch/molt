@@ -860,7 +860,7 @@ pub(crate) mod parsing {
     use crate::parse::{Parse, ParseStream, Unexpected};
     use crate::token::{self, Token};
     use proc_macro2::{Literal, Punct, Span};
-    use std::cell::{Cell};
+    use std::cell::Cell;
     use std::rc::Rc;
 
     #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]

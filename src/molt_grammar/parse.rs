@@ -1,11 +1,10 @@
-use crate::{
-    ctx::NodeId,
-    node::{Node, ToNode, UserKind},
-};
-use rust_grammar::{Ident, Token};
+use rust_grammar::{Ident, Kind, Node, Token};
 use rust_grammar::{Result, braced, parse::Parse, parse::ParseStream};
+use syntax_ctx::{NodeId, ToNode};
 
-use super::{Command, Decl, MoltFile, UntypedVar, Var, VarDecl, VarId};
+use crate::molt_grammar::parse_node_with_kind;
+
+use super::{Command, Decl, MoltFile, UntypedVar, UserKind, Var, VarDecl, VarId};
 
 mod kws {
     rust_grammar::custom_keyword!(transform);
@@ -45,13 +44,13 @@ impl Parse for VarDecl {
         let var: Ident = input.parse()?;
         let _: Token![:] = input.parse()?;
         let kind: UserKind = input.parse()?;
-        let var: Var = Var::new(var, kind);
+        let var: Var<Node> = Var::new(var.to_string(), kind.into());
         let name: VarId = input.add_var(var);
         let node = if input.peek(Token![=]) {
             let _: Token![=] = input.parse()?;
             let content;
             braced!(content in input);
-            let node = Node::parse_with_kind(&content, kind)?;
+            let node = parse_node_with_kind(&content, kind)?;
             let id = input.add_node(node);
             Some(id)
         } else {
@@ -59,14 +58,6 @@ impl Parse for VarDecl {
         };
         let _: Token![;] = input.parse()?;
         Ok(Self { id: name, node })
-    }
-}
-
-impl<T: Parse + ToNode> Parse for NodeId<T> {
-    fn parse(parser: ParseStream) -> Result<Self> {
-        let t = parser.parse_spanned()?;
-        let id = parser.add_item(t);
-        Ok(id)
     }
 }
 

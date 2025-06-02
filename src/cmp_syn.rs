@@ -1,7 +1,5 @@
 use rust_grammar::Ident;
 
-use crate::ctx::{AstCtx, Id, MatchCtx, MatchingMode, NodeId, NodeList, PatCtx};
-
 use crate::match_pattern::Match;
 
 pub(crate) trait CmpSyn {

@@ -182,7 +182,7 @@
 #[path = "discouraged.rs"]
 pub mod discouraged;
 
-use syntax_ctx::{Ctx, NodeId, ToNode, WithSpan};
+use syntax_ctx::{Ctx, NodeId, ToNode, Var, WithSpan};
 
 use crate::buffer::{Cursor, TokenBuffer};
 use crate::error;
@@ -476,16 +476,6 @@ impl<'a> ParseBuffer<'a> {
     /// parse stream past it.
     pub fn parse<T: Parse>(&self) -> Result<T> {
         T::parse(self)
-    }
-
-    pub(crate) fn parse_with_span<T: Parse>(&self) -> Result<WithSpan<T>> {
-        let start = self.cursor().span().byte_range().start;
-        let item = T::parse(self)?;
-        let end = self.cursor().prev_span().byte_range().end;
-        Ok(WithSpan {
-            item,
-            span: syntax_ctx::Span { start, end },
-        })
     }
 
     /// Calls the given parser function to parse a syntax tree node of type `T`
@@ -1188,6 +1178,24 @@ impl<'a> ParseBuffer<'a> {
     pub(crate) fn ctx(&self) -> RefMut<'_, Ctx<Node>> {
         self.ctx.borrow_mut()
     }
+
+    pub fn parse_with_span<T: Parse>(&self) -> Result<WithSpan<T>> {
+        let start = self.cursor().span().byte_range().start;
+        let item = T::parse(self)?;
+        let end = self.cursor().prev_span().byte_range().end;
+        Ok(WithSpan {
+            item,
+            span: syntax_ctx::Span { start, end },
+        })
+    }
+
+    pub fn add_var(&self, var: Var<Node>) -> syntax_ctx::Id {
+        self.ctx.borrow_mut().add_var(var)
+    }
+
+    pub fn add_node(&self, node: WithSpan<Node>) -> syntax_ctx::Id {
+        self.ctx.borrow_mut().add_node(node)
+    }
 }
 
 #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
@@ -1316,11 +1324,31 @@ pub trait Parser: Sized {
     }
 }
 
-fn tokens_to_parse_buffer(tokens: &TokenBuffer) -> ParseBuffer {
+fn tokens_to_parse_buffer(ctx: ParseCtx, tokens: &TokenBuffer) -> ParseBuffer {
     let scope = Span::call_site();
     let cursor = tokens.begin();
     let unexpected = Rc::new(Cell::new(Unexpected::None));
-    new_parse_buffer(scope, cursor, unexpected, ParseCtx::default())
+    new_parse_buffer(scope, cursor, unexpected, ctx)
+}
+
+fn parse2_impl<T>(
+    f: impl FnOnce(ParseStream) -> Result<T>,
+    tokens: TokenStream,
+) -> Result<(T, Ctx<Node>)> {
+    let buf = TokenBuffer::new2(tokens);
+    let ctx = ParseCtx::default();
+    let state = tokens_to_parse_buffer(ctx.clone(), &buf);
+    let node = f(&state)?;
+    state.check_unexpected()?;
+    if let Some((unexpected_span, delimiter)) = span_of_unexpected_ignoring_nones(state.cursor()) {
+        Err(err_unexpected_token(unexpected_span, delimiter))
+    } else {
+        Ok((node, ctx.take()))
+    }
+}
+
+pub fn parse_ctx<T>(f: impl FnOnce(ParseStream) -> Result<T>, s: &str) -> Result<(T, Ctx<Node>)> {
+    parse2_impl(f, proc_macro2::TokenStream::from_str(s)?)
 }
 
 impl<F, T> Parser for F
@@ -1330,17 +1358,7 @@ where
     type Output = T;
 
     fn parse2(self, tokens: TokenStream) -> Result<T> {
-        let buf = TokenBuffer::new2(tokens);
-        let state = tokens_to_parse_buffer(&buf);
-        let node = self(&state)?;
-        state.check_unexpected()?;
-        if let Some((unexpected_span, delimiter)) =
-            span_of_unexpected_ignoring_nones(state.cursor())
-        {
-            Err(err_unexpected_token(unexpected_span, delimiter))
-        } else {
-            Ok(node)
-        }
+        parse2_impl(self, tokens).map(|(t, _)| t)
     }
 
     fn __parse_scoped(self, scope: Span, tokens: TokenStream) -> Result<Self::Output> {
