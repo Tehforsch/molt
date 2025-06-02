@@ -1,4 +1,4 @@
-use syntax_ctx::{NodeId, ToNode};
+use molt_lib::{NodeId, ToNode};
 
 use crate::{
     parse::{Parse, ParseStream, Result},
@@ -20,7 +20,7 @@ macro_rules! define_node_and_kind {
             )*
         }
 
-        impl syntax_ctx::GetKind for Node {
+        impl molt_lib::GetKind for Node {
             type Kind = Kind;
 
             fn kind(&self) -> Kind {

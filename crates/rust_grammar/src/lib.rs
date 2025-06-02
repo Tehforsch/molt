@@ -575,7 +575,7 @@ pub fn parse_str<T: parse::Parse>(s: &str) -> Result<T> {
 
 #[cfg(feature = "parsing")]
 #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-pub fn parse_ctx<T: parse::Parse>(s: &str) -> Result<(T, syntax_ctx::Ctx<Node>)> {
+pub fn parse_ctx<T: parse::Parse>(s: &str) -> Result<(T, molt_lib::Ctx<Node>)> {
     crate::parse::parse_ctx(T::parse, s)
 }
 

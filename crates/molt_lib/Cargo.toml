@@ -1,5 +1,5 @@
 [package]
-name = "syntax_ctx"
+name = "molt_lib"
 authors = [
     "Toni Peter <mail@tonipeter.de>",
 ]

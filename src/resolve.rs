@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
+use molt_lib::{Ctx, Id};
 use rust_grammar::{Ident, Node};
-use syntax_ctx::{Ctx, Id, Pattern};
 
 use crate::{
     Error, PatCtx,

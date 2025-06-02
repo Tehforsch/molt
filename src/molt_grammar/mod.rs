@@ -1,7 +1,7 @@
 mod parse;
 
+use molt_lib::{Id, Var, VarDecl};
 use rust_grammar::{Ident, Kind, Lit, Node};
-use syntax_ctx::{Id, Var};
 
 #[derive(Debug)]
 pub(crate) struct MoltFile {
@@ -13,12 +13,6 @@ pub(crate) struct MoltFile {
 pub(crate) enum Decl {
     VarDecl(VarDecl),
     Command(Command),
-}
-
-#[derive(Debug)]
-pub(crate) struct VarDecl {
-    pub id: VarId,
-    pub node: Option<Id>,
 }
 
 pub type VarId = Id;
@@ -77,7 +71,7 @@ macro_rules! define_user_kind {
             }
         }
 
-        pub(crate) fn parse_node_with_kind(parser: rust_grammar::parse::ParseStream, kind: UserKind) -> rust_grammar::Result<syntax_ctx::WithSpan<Node>> {
+        pub(crate) fn parse_node_with_kind(parser: rust_grammar::parse::ParseStream, kind: UserKind) -> rust_grammar::Result<molt_lib::WithSpan<Node>> {
             match kind {
                 $(
                     UserKind::$variant_name => {

@@ -1,47 +1,37 @@
 use std::collections::HashMap;
-use std::marker::PhantomData;
 
-use rust_grammar::Node;
-use syntax_ctx::{GetKind, Id, MatchingMode, NodeId, NodeList, Pattern};
+use crate::{GetKind, Id, MatchingMode, NodeId, NodeList, Pattern, VarDecl};
 
 use crate::cmp_syn::CmpSyn;
 use crate::match_ctx::MatchCtx;
-use crate::molt_grammar::{VarDecl, VarId};
-use crate::{Ctx, MoltFile};
 
-pub(crate) struct Matches {
-    current: Vec<Match>,
-}
-
-impl Matches {
-    fn new<N: GetKind + CmpSyn>(ctx: &MatchCtx<N>, vars: &[VarDecl], var: VarId, ast: Id) -> Self {
-        let mut match_ = Match::new(vars);
-        match_.add_binding(ctx, var, ast, false);
-        Self {
-            current: vec![match_],
-        }
-    }
-
-    fn run<N: GetKind + CmpSyn>(&mut self, ctx: &MatchCtx<N>) -> Vec<Match> {
-        let mut matches = vec![];
-        'outer: while let Some(mut match_) = self.current.pop() {
-            while let Some(cmp) = match_.cmps.pop() {
-                // TODO: Is this patkind right?
-                match_.cmp_ids(ctx, cmp.ast, cmp.pat, PatKind::FromPat);
-                if !match_.valid {
-                    break 'outer;
-                }
-            }
-            if match_.forks.is_empty() {
-                if match_.valid {
-                    matches.push(match_);
-                }
-            } else {
-                self.current.extend(match_.make_forks());
+pub fn match_pattern<N: GetKind + CmpSyn>(
+    ctx: &MatchCtx<N>,
+    vars: &[VarDecl],
+    var: Id,
+    ast: Id,
+) -> Vec<Match> {
+    let mut match_ = Match::new(vars);
+    match_.add_binding(ctx, var, ast, false);
+    let mut current = vec![match_];
+    let mut matches = vec![];
+    'outer: while let Some(mut match_) = current.pop() {
+        while let Some(cmp) = match_.cmps.pop() {
+            // TODO: Is this patkind right?
+            match_.cmp_ids(ctx, cmp.ast, cmp.pat, PatKind::FromPat);
+            if !match_.valid {
+                break 'outer;
             }
         }
-        matches
+        if match_.forks.is_empty() {
+            if match_.valid {
+                matches.push(match_);
+            }
+        } else {
+            current.extend(match_.make_forks());
+        }
     }
+    matches
 }
 
 #[derive(Clone, Debug)]
@@ -89,8 +79,8 @@ pub enum PatKind {
 }
 
 #[derive(Debug, Default)]
-pub(crate) struct Match {
-    bindings: HashMap<VarId, Binding>,
+pub struct Match {
+    bindings: HashMap<Id, Binding>,
     cmps: Vec<Comparison>,
     forks: Vec<Fork>,
     valid: bool,
@@ -116,7 +106,6 @@ impl Match {
         pat_id: Id,
         pat_kind: PatKind,
     ) {
-        #[cfg(feature = "debug-print")]
         {
             let ast_kind = ctx.ast_ctx.get_kind(ast_id);
             let pat_kind = ctx.get_kind(pat_id, pat_kind);
@@ -125,8 +114,8 @@ impl Match {
                     "Compare ({:?} {:?})\n\t{}\n\t{}",
                     ast_kind,
                     pat_kind,
-                    ctx.print(ast_id),
-                    ctx.print(pat_id),
+                    ctx.print_ast(ast_id),
+                    ctx.print_pat(pat_id),
                 );
             }
         }
@@ -134,7 +123,7 @@ impl Match {
             Pattern::Pat(var) => {
                 self.add_binding(ctx, var, ast_id, true);
             }
-            Pattern::Real(pat) => self.cmp_syn(ctx.get_ast(ast_id), pat),
+            Pattern::Real(pat) => self.cmp_syn(ctx.ast_ctx.get(ast_id).unwrap(), pat),
         }
     }
 
@@ -145,16 +134,15 @@ impl Match {
     fn add_binding<N: GetKind + CmpSyn>(
         &mut self,
         ctx: &MatchCtx<N>,
-        key: VarId,
+        key: Id,
         ast_id: Id,
         debug_print: bool,
     ) {
         if debug_print {
-            #[cfg(feature = "debug-print")]
             println!(
                 "\tBind ${} to {}",
                 &ctx.get_var(key).name(),
-                ctx.print(ast_id)
+                ctx.print_ast(ast_id)
             );
         }
         let binding = self.bindings.get_mut(&key).unwrap();
@@ -180,11 +168,11 @@ impl Match {
         })
     }
 
-    pub fn iter_vars(&self) -> impl Iterator<Item = VarId> {
+    pub fn iter_vars(&self) -> impl Iterator<Item = Id> {
         self.bindings.keys().cloned()
     }
 
-    pub fn get_binding(&self, var: VarId) -> &Binding {
+    pub fn get_binding(&self, var: Id) -> &Binding {
         &self.bindings[&var]
     }
 
@@ -238,45 +226,5 @@ impl Match {
     // This exists purely to make the calls look symmetrical
     pub fn cmp_syn<T: CmpSyn>(&mut self, t1: &T, t2: &T) {
         t1.cmp_syn(self, t2)
-    }
-}
-
-pub(crate) struct MatchResult {
-    pub matches: Vec<Match>,
-    pub ctx: MatchCtx<Node>,
-    pub var: VarId,
-}
-
-impl MoltFile {
-    pub(crate) fn match_pattern(
-        &self,
-        ast_ctx: Ctx,
-        pat_ctx: Ctx,
-        var: VarId,
-        rust_src: &str,
-        molt_src: &str,
-    ) -> MatchResult {
-        let ctx = MatchCtx::new(pat_ctx, ast_ctx, rust_src, molt_src);
-        #[cfg(feature = "debug-print")]
-        ctx.dump();
-        let pat_kind = ctx.pat_ctx.get_kind(var);
-        let matches = ctx
-            .ast_ctx
-            .iter()
-            .flat_map(|item| {
-                let kind = ctx.ast_ctx.get_kind(item);
-                if pat_kind != kind {
-                    vec![]
-                } else {
-                    let mut matches = Matches::new(&ctx, &self.vars, var.clone(), item);
-                    matches.run(&ctx)
-                }
-            })
-            .collect();
-        MatchResult {
-            matches,
-            ctx,
-            var: var.clone(),
-        }
     }
 }

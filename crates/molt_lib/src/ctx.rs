@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 
+#[derive(Copy, Clone)]
 pub struct Span {
     pub start: usize,
     pub end: usize,
@@ -50,6 +51,15 @@ pub trait GetKind {
 pub enum Pattern<Real, Pat> {
     Real(Real),
     Pat(Pat),
+}
+
+impl<Real, Pat> Pattern<Real, Pat> {
+    pub fn unwrap(self) -> Real {
+        match self {
+            Pattern::Real(real) => real,
+            Pattern::Pat(_) => panic!("unwrap called on pattern variant."),
+        }
+    }
 }
 
 type InternalId = Pattern<usize, usize>;
@@ -133,11 +143,31 @@ impl Id {
             _marker: PhantomData,
         }
     }
+
+    pub fn unwrap_idx(self) -> usize {
+        match self.0 {
+            Pattern::Real(idx) => idx,
+            Pattern::Pat(idx) => idx,
+        }
+    }
 }
 
 pub struct Var<Node: GetKind> {
     name: String,
     kind: Node::Kind,
+}
+
+impl<Node: GetKind> PartialEq for Var<Node> {
+    fn eq(&self, other: &Self) -> bool {
+        debug_assert_eq!(self.kind, other.kind);
+        self.name.eq(&other.name)
+    }
+}
+
+#[derive(Debug)]
+pub struct VarDecl {
+    pub id: Id,
+    pub node: Option<Id>,
 }
 
 impl<Node: GetKind> Var<Node> {
@@ -167,9 +197,24 @@ impl<Node: GetKind> Ctx<Node> {
         self.add_node(t.map(|item| item.to_node())).typed()
     }
 
-    pub fn add_var(&mut self, var: Var<Node>) -> Id {
+    fn add_var_internal(&mut self, var: Var<Node>) -> Id {
         self.vars.push(var);
         Id(InternalId::Pat(self.vars.len() - 1))
+    }
+
+    pub fn add_var<T: ToNode<Node>>(&mut self, var: Var<Node>) -> NodeId<T> {
+        let id = if let Some(var) = self
+            .vars
+            .iter()
+            .enumerate()
+            .find(|(_, v)| var == **v)
+            .map(|(i, _)| Id(InternalId::Pat(i)))
+        {
+            var
+        } else {
+            self.add_var_internal(var)
+        };
+        id.typed()
     }
 
     pub fn get<T: ToNode<Node>>(&self, id: Id) -> Pattern<&T, Id> {
@@ -195,6 +240,27 @@ impl<Node: GetKind> Ctx<Node> {
 
     pub fn iter(&self) -> impl Iterator<Item = Id> {
         (0..self.nodes.len()).map(|id| Id(InternalId::Real(id)))
+    }
+
+    pub(crate) fn iter_vars(&self) -> impl Iterator<Item = &Var<Node>> {
+        self.vars.iter()
+    }
+
+    pub fn get_span(&self, id: Id) -> Span {
+        match id.0 {
+            Pattern::Real(idx) => self.spans[idx],
+            Pattern::Pat(_) => panic!(),
+        }
+    }
+
+    pub fn print<'a>(&'a self, id: Id, src: &'a str) -> &'a str {
+        match id.0 {
+            Pattern::Real(_) => {
+                let span = self.get_span(id);
+                &src[span.byte_range()]
+            }
+            Pattern::Pat(idx) => &self.vars[idx].name,
+        }
     }
 }
 

@@ -1,24 +1,19 @@
-mod cmp_syn;
-// mod ctx
 mod error;
 mod input;
-mod match_ctx;
-mod match_pattern;
 pub(crate) mod molt_grammar;
 mod resolve;
 
 use codespan_reporting::{diagnostic::Label, files::Files};
 use error::emit_error;
-use match_pattern::MatchResult;
 use molt_grammar::{Command, MoltFile};
 
 pub use error::Error;
 pub use input::{Diagnostic, FileId, Input, MoltSource};
+use molt_lib::{Id, Match, MatchCtx};
 use rust_grammar::{
     Node,
     parse::{Parse, ParseStream},
 };
-use syntax_ctx::GetKind;
 
 pub struct RustFile(rust_grammar::File);
 
@@ -28,7 +23,7 @@ impl Parse for RustFile {
     }
 }
 
-type Ctx = syntax_ctx::Ctx<Node>;
+type Ctx = molt_lib::Ctx<Node>;
 pub type PatCtx = Ctx;
 pub type AstCtx = Ctx;
 
@@ -38,6 +33,44 @@ pub fn parse_rust_file(code: &str) -> Result<(RustFile, Ctx), crate::Error> {
 
 pub fn parse_molt_file(code: &str) -> Result<(MoltFile, Ctx), crate::Error> {
     Ok(rust_grammar::parse_ctx(code)?)
+}
+
+pub(crate) struct MatchResult {
+    pub matches: Vec<Match>,
+    pub ctx: MatchCtx<Node>,
+    pub var: Id,
+}
+
+impl MoltFile {
+    pub(crate) fn match_pattern(
+        &self,
+        ast_ctx: Ctx,
+        pat_ctx: Ctx,
+        var: Id,
+        rust_src: &str,
+        molt_src: &str,
+    ) -> MatchResult {
+        let ctx = MatchCtx::new(pat_ctx, ast_ctx, rust_src, molt_src);
+        ctx.dump();
+        let pat_kind = ctx.pat_ctx.get_kind(var);
+        let matches = ctx
+            .ast_ctx
+            .iter()
+            .flat_map(|item| {
+                let kind = ctx.ast_ctx.get_kind(item);
+                if pat_kind != kind {
+                    vec![]
+                } else {
+                    molt_lib::match_pattern(&ctx, &self.vars, var.clone(), item)
+                }
+            })
+            .collect();
+        MatchResult {
+            matches,
+            ctx,
+            var: var.clone(),
+        }
+    }
 }
 
 impl MoltFile {
@@ -72,7 +105,7 @@ impl MatchResult {
             .iter()
             .map(|match_| {
                 let binding = match_.get_binding(self.var);
-                let span = self.ctx.get_span(binding.ast.unwrap());
+                let span = self.ctx.ast_ctx.get_span(binding.ast.unwrap());
                 let var_name = |var| self.ctx.get_var(var).name();
                 let mut diagnostic = Diagnostic::note().with_message("Match").with_labels(vec![
                     Label::primary(file_id, span.byte_range()).with_message(var_name(self.var)),
@@ -88,7 +121,7 @@ impl MatchResult {
                         diagnostic = diagnostic.with_note(format!(
                             "{} = {}",
                             var_name(key),
-                            self.ctx.print(node),
+                            self.ctx.print_ast(node),
                         ));
                     }
                 }

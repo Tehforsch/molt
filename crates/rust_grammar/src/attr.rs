@@ -653,9 +653,9 @@ pub(crate) mod parsing {
     use crate::parse::{Parse, ParseStream};
     use crate::path::Path;
     use crate::{mac, token};
+    use molt_lib::NodeId;
     use proc_macro2::Ident;
     use std::fmt::{self, Display};
-    use syntax_ctx::NodeId;
 
     pub(crate) fn parse_inner(input: ParseStream, attrs: &mut Vec<Attribute>) -> Result<()> {
         while input.peek(Token![#]) && input.peek2(Token![!]) {

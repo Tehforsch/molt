@@ -182,7 +182,7 @@
 #[path = "discouraged.rs"]
 pub mod discouraged;
 
-use syntax_ctx::{Ctx, NodeId, ToNode, Var, WithSpan};
+use molt_lib::{Ctx, Id, NodeId, ToNode, Var, WithSpan};
 
 use crate::buffer::{Cursor, TokenBuffer};
 use crate::error;
@@ -1185,15 +1185,15 @@ impl<'a> ParseBuffer<'a> {
         let end = self.cursor().prev_span().byte_range().end;
         Ok(WithSpan {
             item,
-            span: syntax_ctx::Span { start, end },
+            span: molt_lib::Span { start, end },
         })
     }
 
-    pub fn add_var(&self, var: Var<Node>) -> syntax_ctx::Id {
+    pub fn add_var<T: ToNode<Node>>(&self, var: Var<Node>) -> NodeId<T> {
         self.ctx.borrow_mut().add_var(var)
     }
 
-    pub fn add_node(&self, node: WithSpan<Node>) -> syntax_ctx::Id {
+    pub fn add_node(&self, node: WithSpan<Node>) -> Id {
         self.ctx.borrow_mut().add_node(node)
     }
 }
