@@ -68,7 +68,6 @@ impl MoltFile {
             .ast_ctx
             .iter()
             .flat_map(|item| {
-                dbg!(&item);
                 let kind = ctx.ast_ctx.get_kind(item);
                 if pat_kind != kind {
                     vec![]

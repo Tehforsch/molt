@@ -2,8 +2,8 @@
 use crate::lookahead;
 #[cfg(feature = "parsing")]
 use crate::parse::{Parse, Parser};
-use crate::{Error, Node, Result};
-use molt_lib::{CmpSyn, Ctx, Dependencies, GetDependencies};
+use crate::{Error, Result};
+use molt_lib::CmpSyn;
 use proc_macro2::{Ident, Literal, Span};
 #[cfg(feature = "parsing")]
 use proc_macro2::{TokenStream, TokenTree};
@@ -52,10 +52,6 @@ ast_enum_of_structs! {
         /// A raw token literal not interpreted by Syn.
         Verbatim(Literal),
     }
-}
-
-impl GetDependencies<Node> for Lit {
-    fn get_dependencies(&self, _: &Ctx<Node>, _: &mut Dependencies) {}
 }
 
 ast_struct! {

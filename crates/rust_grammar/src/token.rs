@@ -1106,6 +1106,15 @@ macro_rules! impl_zst_cmp_syn {
         impl molt_lib::CmpSyn for $ty {
             fn cmp_syn(&self, _: &mut molt_lib::Match, _: &Self) {}
         }
+
+        impl molt_lib::GetDependencies<crate::Node> for $ty {
+            fn get_dependencies(
+                &self,
+                _: &molt_lib::Ctx<crate::Node>,
+                _: &mut molt_lib::Dependencies,
+            ) {
+            }
+        }
     };
 }
 
