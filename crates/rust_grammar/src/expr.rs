@@ -1,4 +1,5 @@
 use crate::attr::Attribute;
+use crate::ctx::NodeId;
 #[cfg(all(feature = "parsing", feature = "full"))]
 use crate::error::Result;
 #[cfg(feature = "parsing")]
@@ -495,7 +496,7 @@ ast_struct! {
     #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
     pub struct ExprLit {
         pub attrs: Vec<Attribute>,
-        pub lit: Lit,
+        pub lit: NodeId<Lit>,
     }
 }
 

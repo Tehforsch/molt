@@ -1,8 +1,11 @@
 use std::{cell::RefCell, marker::PhantomData, rc::Rc};
 
-use proc_macro2::Span;
-
 use crate::node::{Node, ToNode};
+
+pub struct CustomSpan {
+    pub start: usize,
+    pub end: usize,
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Id(usize);
@@ -56,7 +59,7 @@ impl Id {
 }
 
 pub struct WithSpan<T> {
-    pub span: Span,
+    pub span: CustomSpan,
     pub item: T,
 }
 
@@ -72,7 +75,7 @@ impl<T> WithSpan<T> {
 #[derive(Default)]
 pub(crate) struct Ctx {
     nodes: Vec<Node>,
-    spans: Vec<Span>,
+    spans: Vec<CustomSpan>,
 }
 
 impl Ctx {

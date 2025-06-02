@@ -183,11 +183,11 @@
 pub mod discouraged;
 
 use crate::buffer::{Cursor, TokenBuffer};
-use crate::ctx::{Ctx, ParseCtx, WithSpan};
+use crate::ctx::{Ctx, CustomSpan, NodeId, ParseCtx, WithSpan};
 use crate::error;
 use crate::lookahead;
+use crate::node::ToNode;
 use crate::punctuated::Punctuated;
-use crate::spanned::Spanned;
 use crate::token::Token;
 use proc_macro2::{Delimiter, Group, Literal, Punct, Span, TokenStream, TokenTree};
 #[cfg(feature = "printing")]
@@ -475,10 +475,14 @@ impl<'a> ParseBuffer<'a> {
         T::parse(self)
     }
 
-    pub(crate) fn parse_with_span<T: Parse + Spanned>(&self) -> Result<WithSpan<T>> {
+    pub(crate) fn parse_with_span<T: Parse>(&self) -> Result<WithSpan<T>> {
+        let start = self.cursor().span().byte_range().start;
         let item = T::parse(self)?;
-        let span = item.span();
-        Ok(WithSpan { item, span })
+        let end = self.cursor().prev_span().byte_range().end;
+        Ok(WithSpan {
+            item,
+            span: CustomSpan { start, end },
+        })
     }
 
     /// Calls the given parser function to parse a syntax tree node of type `T`
@@ -1194,6 +1198,18 @@ impl<T: Parse> Parse for Box<T> {
 impl<T: Parse + Token> Parse for Option<T> {
     fn parse(input: ParseStream) -> Result<Self> {
         if T::peek(input.cursor()) {
+            Ok(Some(input.parse()?))
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+#[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
+impl<T: Parse + Token + ToNode> Parse for Option<NodeId<T>> {
+    fn parse(input: ParseStream) -> Result<Self> {
+        // Also match variables here.
+        if T::peek(input.cursor()) || input.peek(Token![$]) {
             Ok(Some(input.parse()?))
         } else {
             Ok(None)

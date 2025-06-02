@@ -93,6 +93,7 @@ pub(crate) use self::private::CustomToken;
 use self::private::WithSpan;
 #[cfg(feature = "parsing")]
 use crate::buffer::Cursor;
+use crate::ctx::NodeId;
 #[cfg(feature = "parsing")]
 use crate::error::Result;
 #[cfg(feature = "parsing")]
@@ -100,6 +101,7 @@ use crate::lifetime::Lifetime;
 #[cfg(feature = "parsing")]
 use crate::parse::{Parse, ParseStream};
 use crate::span::IntoSpans;
+use crate::Lit;
 use proc_macro2::extra::DelimSpan;
 use proc_macro2::Span;
 #[cfg(feature = "printing")]

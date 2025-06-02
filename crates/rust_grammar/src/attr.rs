@@ -646,6 +646,7 @@ impl From<MetaNameValue> for Meta {
 #[cfg(feature = "parsing")]
 pub(crate) mod parsing {
     use crate::attr::{AttrStyle, Attribute, Meta, MetaList, MetaNameValue};
+    use crate::ctx::NodeId;
     use crate::error::Result;
     use crate::expr::{Expr, ExprLit};
     use crate::lit::Lit;
@@ -740,7 +741,7 @@ pub(crate) mod parsing {
     fn parse_meta_name_value_after_path(path: Path, input: ParseStream) -> Result<MetaNameValue> {
         let eq_token: Token![=] = input.parse()?;
         let ahead = input.fork();
-        let lit: Option<Lit> = ahead.parse()?;
+        let lit: Option<NodeId<Lit>> = ahead.parse()?;
         let value = if let (Some(lit), true) = (lit, ahead.is_empty()) {
             input.advance_to(&ahead);
             Expr::Lit(ExprLit {

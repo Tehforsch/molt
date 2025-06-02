@@ -1,7 +1,6 @@
 use crate::{
     ctx::NodeId,
     parse::{Parse, ParseStream, Result},
-    spanned::Spanned,
     Ident, Lit,
 };
 
@@ -108,7 +107,7 @@ define_node_and_kind! {
     // (FnArg, FnArg),
 }
 
-impl<T: Parse + ToNode + Spanned> Parse for NodeId<T> {
+impl<T: Parse + ToNode> Parse for NodeId<T> {
     fn parse(parser: ParseStream) -> Result<Self> {
         let t = parser.parse_with_span()?;
         let id = parser.ctx().add(t);
