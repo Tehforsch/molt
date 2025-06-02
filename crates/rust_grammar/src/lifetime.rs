@@ -1,5 +1,6 @@
 #[cfg(feature = "parsing")]
 use crate::lookahead;
+use molt_lib::{CmpSyn, Match};
 use proc_macro2::{Ident, Span};
 use std::cmp::Ordering;
 use std::fmt::{self, Display};
@@ -152,5 +153,11 @@ mod printing {
             tokens.append(apostrophe);
             self.ident.to_tokens(tokens);
         }
+    }
+}
+
+impl CmpSyn for Lifetime {
+    fn cmp_syn(&self, ctx: &mut Match, pat: &Self) {
+        ctx.cmp_syn(&self.ident, &pat.ident);
     }
 }

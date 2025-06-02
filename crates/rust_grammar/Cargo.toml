@@ -7,7 +7,7 @@ license.workspace = true
 edition = "2021"
 
 [features]
-default = ["derive", "parsing", "clone-impls", "proc-macro", "extra-traits"]
+default = ["derive", "parsing", "clone-impls", "proc-macro", "full"]
 derive = []
 full = []
 parsing = []

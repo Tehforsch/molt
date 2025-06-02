@@ -20,6 +20,8 @@
 //!                 ~~~~^ ~~~~^ ~~~~
 //! ```
 
+use molt_lib::CmpSyn;
+
 use crate::drops::{NoDrop, TrivialDrop};
 #[cfg(feature = "parsing")]
 use crate::error::Result;
@@ -1150,6 +1152,18 @@ mod printing {
                 }
                 Pair::End(a) => a.to_tokens(tokens),
             }
+        }
+    }
+}
+
+impl<T: CmpSyn, P> CmpSyn for Punctuated<T, P> {
+    fn cmp_syn(&self, ctx: &mut molt_lib::Match, pat: &Self) {
+        // These should be replaced by NodeList wherever possible
+        // but we'll leave the ones that havent been exchanged yet
+        // exact.
+        ctx.eq(self.len(), pat.len());
+        for (s1, s2) in self.iter().zip(pat.iter()) {
+            ctx.cmp_syn(s1, s2);
         }
     }
 }

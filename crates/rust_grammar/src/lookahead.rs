@@ -330,3 +330,5 @@ impl<S> IntoSpans<S> for TokenMarker {
 impl<F: Copy + FnOnce(TokenMarker) -> T, T: Token> Sealed for F {}
 
 impl Sealed for End {}
+
+crate::token::impl_zst_cmp_syn!(End);

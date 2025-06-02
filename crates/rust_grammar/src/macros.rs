@@ -11,9 +11,11 @@ macro_rules! ast_struct {
         check_keyword_matches!(struct $struct);
 
         #[cfg(feature = "full")]
+        #[derive(derive_macro::CmpSyn)]
         $(#[$attr])* $pub $struct $name $body
 
         #[cfg(not(feature = "full"))]
+        #[derive(derive_macro::CmpSyn)]
         $(#[$attr])* $pub $struct $name {
             _noconstruct: ::std::marker::PhantomData<::proc_macro2::Span>,
         }
@@ -33,6 +35,7 @@ macro_rules! ast_struct {
         check_keyword_matches!(pub $pub);
         check_keyword_matches!(struct $struct);
 
+        #[derive(derive_macro::CmpSyn)]
         $(#[$attr])* $pub $struct $name $body
     };
 }
@@ -46,6 +49,7 @@ macro_rules! ast_enum {
         check_keyword_matches!(pub $pub);
         check_keyword_matches!(enum $enum);
 
+        #[derive(derive_macro::CmpSyn)]
         $(#[$enum_attr])* $pub $enum $name $body
     };
 }
@@ -58,7 +62,9 @@ macro_rules! ast_enum_of_structs {
         check_keyword_matches!(pub $pub);
         check_keyword_matches!(enum $enum);
 
-        $(#[$enum_attr])* $pub $enum $name $body
+        $(#[$enum_attr])*
+        #[derive(derive_macro::CmpSyn)]
+            $pub $enum $name $body
 
         ast_enum_of_structs_impl!($name $body);
 

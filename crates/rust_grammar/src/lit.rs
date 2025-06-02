@@ -3,7 +3,7 @@ use crate::lookahead;
 #[cfg(feature = "parsing")]
 use crate::parse::{Parse, Parser};
 use crate::{Error, Node, Result};
-use molt_lib::{Ctx, Dependencies, GetDependencies};
+use molt_lib::{CmpSyn, Ctx, Dependencies, GetDependencies};
 use proc_macro2::{Ident, Literal, Span};
 #[cfg(feature = "parsing")]
 use proc_macro2::{TokenStream, TokenTree};
@@ -22,7 +22,6 @@ ast_enum_of_structs! {
     ///
     /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
     #[non_exhaustive]
-    #[derive(derive_macro::CmpSyn)]
     pub enum Lit {
         /// A UTF-8 string literal: `"foo"`.
         Str(LitStr),
@@ -58,32 +57,6 @@ ast_enum_of_structs! {
 impl GetDependencies<Node> for Lit {
     fn get_dependencies(&self, _: &Ctx<Node>, _: &mut Dependencies) {}
 }
-
-macro_rules! impl_cmp_syn_with_partial_eq {
-    ($ty: ty) => {
-        impl molt_lib::CmpSyn for $ty {
-            fn cmp_syn(&self, ctx: &mut molt_lib::Match, pat: &Self) {
-                ctx.eq(self, pat)
-            }
-        }
-    };
-    ($ty: ty, $closure: expr) => {
-        impl molt_lib::CmpSyn for $ty {
-            fn cmp_syn(&self, ctx: &mut molt_lib::Match, pat: &Self) {
-                ctx.check($closure(self, pat))
-            }
-        }
-    };
-}
-
-impl_cmp_syn_with_partial_eq!(LitStr);
-impl_cmp_syn_with_partial_eq!(LitBool, |s1: &Self, s2: &Self| s1.value == s2.value);
-impl_cmp_syn_with_partial_eq!(LitFloat);
-impl_cmp_syn_with_partial_eq!(LitInt);
-impl_cmp_syn_with_partial_eq!(LitChar);
-impl_cmp_syn_with_partial_eq!(LitByte);
-impl_cmp_syn_with_partial_eq!(LitCStr);
-impl_cmp_syn_with_partial_eq!(LitByteStr);
 
 ast_struct! {
     /// A UTF-8 string literal: `"foo"`.
@@ -125,6 +98,13 @@ struct LitRepr {
     suffix: Box<str>,
 }
 
+impl CmpSyn for LitRepr {
+    fn cmp_syn(&self, ctx: &mut molt_lib::Match, pat: &Self) {
+        // TODO, suffix?
+        ctx.cmp_syn(&self.token, &pat.token);
+    }
+}
+
 ast_struct! {
     /// An integer literal: `1` or `1u16`.
     pub struct LitInt {
@@ -136,6 +116,13 @@ struct LitIntRepr {
     token: Literal,
     digits: Box<str>,
     suffix: Box<str>,
+}
+
+impl CmpSyn for LitIntRepr {
+    fn cmp_syn(&self, ctx: &mut molt_lib::Match, pat: &Self) {
+        // TODO, suffix/digits?
+        ctx.cmp_syn(&self.token, &pat.token);
+    }
 }
 
 ast_struct! {
@@ -151,6 +138,13 @@ struct LitFloatRepr {
     token: Literal,
     digits: Box<str>,
     suffix: Box<str>,
+}
+
+impl CmpSyn for LitFloatRepr {
+    fn cmp_syn(&self, ctx: &mut molt_lib::Match, pat: &Self) {
+        // TODO, suffix/digits?
+        ctx.cmp_syn(&self.token, &pat.token);
+    }
 }
 
 ast_struct! {

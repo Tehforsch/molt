@@ -211,6 +211,8 @@ macro_rules! define_keywords {
                 pub span: Span,
             }
 
+            impl_zst_cmp_syn!($name);
+
             #[doc(hidden)]
             #[allow(non_snake_case)]
             pub fn $name<S: IntoSpans<Span>>(span: S) -> $name {
@@ -338,6 +340,8 @@ macro_rules! define_punctuation_structs {
                 pub spans: [Span; $len],
             }
 
+            impl_zst_cmp_syn!($name);
+
             #[doc(hidden)]
             #[allow(non_snake_case)]
             pub fn $name<S: IntoSpans<[Span; $len]>>(spans: S) -> $name {
@@ -446,6 +450,8 @@ macro_rules! define_delimiters {
             pub struct $name {
                 pub span: DelimSpan,
             }
+
+            impl_zst_cmp_syn!($name);
 
             #[doc(hidden)]
             #[allow(non_snake_case)]
@@ -1094,3 +1100,15 @@ pub(crate) mod printing {
         tokens.append(g);
     }
 }
+
+macro_rules! impl_zst_cmp_syn {
+    ($ty: ty) => {
+        impl molt_lib::CmpSyn for $ty {
+            fn cmp_syn(&self, _: &mut molt_lib::Match, _: &Self) {}
+        }
+    };
+}
+
+pub(crate) use impl_zst_cmp_syn;
+
+impl_zst_cmp_syn!(Group);

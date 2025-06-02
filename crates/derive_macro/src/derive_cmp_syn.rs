@@ -11,7 +11,7 @@ pub fn impl_cmp_syn(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let impl_ = match input.data {
         Data::Struct(data_struct) => impl_struct(data_struct),
         Data::Enum(data_enum) => impl_enum(data_enum),
-        _ => panic!(),
+        _ => panic!("Union found"),
     };
 
     let expanded = quote! {
@@ -56,13 +56,39 @@ fn impl_enum(data_enum: syn::DataEnum) -> TokenStream {
         .variants
         .into_iter()
         .map(|variant| {
-            let Fields::Unnamed(fields) = variant.fields else {
-                panic!()
-            };
-            assert_eq!(fields.unnamed.len(), 1);
             let ident = &variant.ident;
-            quote! {
-                (Self::#ident(item1), Self::#ident(item2)) => { ctx.cmp_syn(item1, item2) },
+            match &variant.fields {
+                Fields::Named(fields) => {
+                    assert_eq!(fields.named.len(), 1);
+                    let field_name = &fields.named[0].ident;
+                    quote! {
+                        (Self::#ident { #field_name: s1 }, Self::#ident { #field_name: s2 }) => { ctx.cmp_syn(s1, s2) },
+                    }
+                }
+                Fields::Unnamed(fields) => {
+                    // Too lazy to write this for generically many arguments
+                    if fields.unnamed.len() == 1 {
+                        quote! {
+                            (Self::#ident(s1), Self::#ident(s2)) => { ctx.cmp_syn(s1, s2) },
+                        }
+                    }
+                    else if fields.unnamed.len() == 2 {
+                        quote! {
+                            (Self::#ident(s11, s12), Self::#ident(s21, s22)) => {
+                                ctx.cmp_syn(s11, s21);
+                                ctx.cmp_syn(s12, s22);
+                            },
+                        }
+                    }
+                    else {
+                        panic!("Too many items")
+                    }
+                }
+                Fields::Unit => {
+                    quote! {
+                        (Self::#ident, Self::#ident) => {},
+                    }
+                }
             }
         })
         .collect::<Vec<_>>();
