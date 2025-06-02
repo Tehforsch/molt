@@ -15,8 +15,8 @@ pub fn impl_get_dependencies(input: proc_macro::TokenStream) -> proc_macro::Toke
     };
 
     let expanded = quote! {
-        impl crate::resolve::GetDependencies for #name {
-            fn get_dependencies(&self, ctx: &crate::ctx::PatCtx, deps: &mut crate::resolve::Dependencies) {
+        impl molt_lib::GetDependencies<Node> for #name {
+            fn get_dependencies(&self, ctx: &molt_lib::Ctx<Node>, deps: &mut molt_lib::Dependencies) {
                 #impl_
             }
         }

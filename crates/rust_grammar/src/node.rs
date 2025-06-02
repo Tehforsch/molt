@@ -1,4 +1,4 @@
-use derive_macro::CmpSyn;
+use derive_macro::{CmpSyn, GetDependencies};
 use molt_lib::{NodeId, ToNode};
 
 use crate::{
@@ -15,7 +15,7 @@ macro_rules! define_node_and_kind {
             )*
         }
 
-        #[derive(CmpSyn)]
+        #[derive(CmpSyn, GetDependencies)]
         pub enum Node {
             $(
                 $variant_name($ty),

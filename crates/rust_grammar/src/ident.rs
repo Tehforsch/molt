@@ -1,7 +1,13 @@
 #[cfg(feature = "parsing")]
 use crate::lookahead;
+use crate::Node;
 
+use molt_lib::{Ctx, Dependencies, GetDependencies};
 pub use proc_macro2::Ident;
+
+impl GetDependencies<Node> for Ident {
+    fn get_dependencies(&self, _: &Ctx<Node>, _: &mut Dependencies) {}
+}
 
 #[cfg(feature = "parsing")]
 pub_if_not_doc! {

@@ -15,11 +15,12 @@ use rust_grammar::{
     parse::{Parse, ParseStream},
 };
 
-pub struct RustFile(rust_grammar::File);
+pub struct RustFile;
 
 impl Parse for RustFile {
     fn parse(input: ParseStream) -> rust_grammar::Result<Self> {
-        Ok(Self(input.parse()?))
+        let _: rust_grammar::File = input.parse()?;
+        Ok(Self)
     }
 }
 

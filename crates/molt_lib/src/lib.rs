@@ -1,5 +1,6 @@
 mod cmp_syn;
 mod ctx;
+mod dependencies;
 mod match_ctx;
 mod match_pattern;
 
@@ -8,5 +9,6 @@ pub use ctx::{
 };
 
 pub use cmp_syn::CmpSyn;
+pub use dependencies::{Dependencies, GetDependencies};
 pub use match_ctx::MatchCtx;
 pub use match_pattern::{Binding, Match, match_pattern};

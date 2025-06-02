@@ -90,11 +90,6 @@ impl Input {
         }
     }
 
-    #[cfg(test)]
-    pub(crate) fn fake_molt(code: &str) -> Self {
-        Self::new(MoltSource::FromCli(Contents::new(code.to_string())))
-    }
-
     pub fn with_rust_src_file<P: AsRef<Path>>(mut self, file: P) -> Result<Self, crate::Error> {
         self.rust_src.push(RustSourceFile::new(file)?);
         Ok(Self {
@@ -183,10 +178,6 @@ pub fn line_starts(source: &str) -> impl '_ + Iterator<Item = usize> {
 impl RustSourceFile {
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, crate::Error> {
         Ok(RustSourceFile(SourceFile::from_path(path.as_ref())?))
-    }
-
-    pub(crate) fn contents(&self) -> &str {
-        &self.0.contents.contents
     }
 }
 
