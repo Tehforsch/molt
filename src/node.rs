@@ -14,11 +14,6 @@ pub(crate) enum Pattern<E> {
     Pattern(VarId),
 }
 
-pub(crate) trait ToNode {
-    fn to_node(self) -> Node;
-    fn from_node(node: &Node) -> Option<&Self>;
-}
-
 pub(crate) trait GetKind {
     fn get_kind() -> Kind;
 }

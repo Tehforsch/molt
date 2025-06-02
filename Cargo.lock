@@ -227,6 +227,7 @@ dependencies = [
  "derive_macro",
  "insta",
  "rust_grammar",
+ "syntax_ctx",
  "thiserror",
  "walkdir",
 ]
@@ -255,6 +256,7 @@ version = "0.1.0"
 dependencies = [
  "proc-macro2",
  "quote",
+ "syntax_ctx",
  "unicode-ident",
 ]
 
@@ -336,6 +338,10 @@ dependencies = [
  "quote",
  "unicode-ident",
 ]
+
+[[package]]
+name = "syntax_ctx"
+version = "0.1.0"
 
 [[package]]
 name = "target-triple"

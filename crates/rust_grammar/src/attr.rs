@@ -646,7 +646,6 @@ impl From<MetaNameValue> for Meta {
 #[cfg(feature = "parsing")]
 pub(crate) mod parsing {
     use crate::attr::{AttrStyle, Attribute, Meta, MetaList, MetaNameValue};
-    use crate::ctx::NodeId;
     use crate::error::Result;
     use crate::expr::{Expr, ExprLit};
     use crate::lit::Lit;
@@ -655,6 +654,7 @@ pub(crate) mod parsing {
     use crate::path::Path;
     use crate::{mac, token};
     use proc_macro2::Ident;
+    use syntax_ctx::NodeId;
     use std::fmt::{self, Display};
 
     pub(crate) fn parse_inner(input: ParseStream, attrs: &mut Vec<Attribute>) -> Result<()> {

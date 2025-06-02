@@ -182,17 +182,18 @@
 #[path = "discouraged.rs"]
 pub mod discouraged;
 
+use syntax_ctx::{Ctx, NodeId, ToNode, WithSpan};
+
 use crate::buffer::{Cursor, TokenBuffer};
-use crate::ctx::{Ctx, CustomSpan, NodeId, ParseCtx, WithSpan};
 use crate::error;
 use crate::lookahead;
-use crate::node::ToNode;
+use crate::node::Node;
 use crate::punctuated::Punctuated;
 use crate::token::Token;
 use proc_macro2::{Delimiter, Group, Literal, Punct, Span, TokenStream, TokenTree};
 #[cfg(feature = "printing")]
 use quote::ToTokens;
-use std::cell::{Cell, Ref, RefCell, RefMut};
+use std::cell::{Cell, RefCell, RefMut};
 use std::fmt::{self, Debug, Display};
 #[cfg(feature = "extra-traits")]
 use std::hash::{Hash, Hasher};
@@ -202,6 +203,8 @@ use std::ops::Deref;
 use std::panic::{RefUnwindSafe, UnwindSafe};
 use std::rc::Rc;
 use std::str::FromStr;
+
+pub type ParseCtx = Rc<RefCell<Ctx<Node>>>;
 
 pub use crate::error::{Error, Result};
 pub use crate::lookahead::{End, Lookahead1, Peek};
@@ -481,7 +484,7 @@ impl<'a> ParseBuffer<'a> {
         let end = self.cursor().prev_span().byte_range().end;
         Ok(WithSpan {
             item,
-            span: CustomSpan { start, end },
+            span: syntax_ctx::Span { start, end },
         })
     }
 
@@ -1182,7 +1185,7 @@ impl<'a> ParseBuffer<'a> {
         }
     }
 
-    pub(crate) fn ctx(&self) -> RefMut<'_, Ctx> {
+    pub(crate) fn ctx(&self) -> RefMut<'_, Ctx<Node>> {
         self.ctx.borrow_mut()
     }
 }
@@ -1206,7 +1209,7 @@ impl<T: Parse + Token> Parse for Option<T> {
 }
 
 #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-impl<T: Parse + Token + ToNode> Parse for Option<NodeId<T>> {
+impl<T: Parse + Token + ToNode<Node>> Parse for Option<NodeId<T>> {
     fn parse(input: ParseStream) -> Result<Self> {
         // Also match variables here.
         if T::peek(input.cursor()) || input.peek(Token![$]) {

@@ -1,13 +1,9 @@
+use syntax_ctx::{NodeId, ToNode};
+
 use crate::{
-    ctx::NodeId,
     parse::{Parse, ParseStream, Result},
     Ident, Lit,
 };
-
-pub(crate) trait ToNode {
-    fn to_node(self) -> Node;
-    fn from_node(node: &Node) -> Option<&Self>;
-}
 
 pub struct Var {
     ident: Ident,
@@ -56,7 +52,7 @@ macro_rules! define_node_and_kind {
         }
 
         $(
-            impl ToNode for $ty {
+            impl ToNode<Node> for $ty {
                 fn to_node(self) -> Node {
                     Node::Real(AstNode::$variant_name(self))
                 }
@@ -107,7 +103,7 @@ define_node_and_kind! {
     // (FnArg, FnArg),
 }
 
-impl<T: Parse + ToNode> Parse for NodeId<T> {
+impl<T: Parse + ToNode<Node>> Parse for NodeId<T> {
     fn parse(parser: ParseStream) -> Result<Self> {
         let t = parser.parse_with_span()?;
         let id = parser.ctx().add(t);

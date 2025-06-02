@@ -1,5 +1,6 @@
+use syntax_ctx::NodeId;
+
 use crate::attr::Attribute;
-use crate::ctx::NodeId;
 #[cfg(all(feature = "parsing", feature = "full"))]
 use crate::error::Result;
 #[cfg(feature = "parsing")]

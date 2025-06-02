@@ -24,3 +24,4 @@ test = []
 proc-macro2 = { version = "1.0.91", default-features = false, features = ["span-locations"] }
 quote = { version = "1.0.35", optional = true, default-features = false }
 unicode-ident = "1"
+syntax_ctx = { path = "../syntax_ctx" }

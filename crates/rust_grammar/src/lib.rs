@@ -551,7 +551,6 @@ mod verbatim;
 #[cfg(all(feature = "parsing", feature = "full"))]
 mod whitespace;
 
-pub(crate) mod ctx;
 pub(crate) mod node;
 
 #[cfg(feature = "fold")]

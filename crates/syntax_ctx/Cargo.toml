@@ -1,0 +1,12 @@
+[package]
+name = "syntax_ctx"
+authors = [
+    "Toni Peter <mail@tonipeter.de>",
+]
+description = "The AST storage context for molt."
+repository.workspace = true
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[dependencies]
