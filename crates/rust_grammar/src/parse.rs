@@ -1193,6 +1193,10 @@ impl<'a> ParseBuffer<'a> {
         self.ctx.borrow_mut().add_var(var)
     }
 
+    pub fn add_existing_var(&self, var: &str) -> Option<Id> {
+        self.ctx.borrow_mut().add_existing_var(var)
+    }
+
     pub fn add_node(&self, node: WithSpan<Node>) -> Id {
         self.ctx.borrow_mut().add_node(node)
     }

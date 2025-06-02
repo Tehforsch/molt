@@ -10,3 +10,4 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
+proc-macro2 = { version = "1.0.91", default-features = false, features = ["span-locations"] }

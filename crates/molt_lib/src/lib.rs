@@ -7,5 +7,6 @@ pub use ctx::{
     Ctx, GetKind, Id, MatchingMode, NodeId, NodeList, Pattern, Span, ToNode, Var, VarDecl, WithSpan,
 };
 
+pub use cmp_syn::CmpSyn;
 pub use match_ctx::MatchCtx;
-pub use match_pattern::{Match, match_pattern};
+pub use match_pattern::{Binding, Match, match_pattern};

@@ -1,7 +1,7 @@
 mod parse;
 
 use molt_lib::{Id, Var, VarDecl};
-use rust_grammar::{Ident, Kind, Lit, Node};
+use rust_grammar::{Kind, Lit, Node};
 
 #[derive(Debug)]
 pub(crate) struct MoltFile {
@@ -19,21 +19,7 @@ pub type VarId = Id;
 
 #[derive(Debug)]
 pub(crate) enum Command {
-    Match(VarId),
-}
-
-#[derive(Debug)]
-pub(crate) struct Todo;
-
-pub(crate) struct UntypedVar(Ident);
-
-impl UntypedVar {
-    pub(crate) fn to_var(self, user_kind: UserKind) -> Var<Node> {
-        Var {
-            kind: user_kind.into(),
-            name: self.0.to_string(),
-        }
-    }
+    Match(Id),
 }
 
 macro_rules! define_user_kind {

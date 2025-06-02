@@ -1,12 +1,12 @@
-use molt_lib::{NodeId, ToNode, VarDecl};
-use rust_grammar::{Ident, Kind, Node, Token};
+use molt_lib::VarDecl;
+use rust_grammar::{Ident, Node, Token};
 use rust_grammar::{Result, braced, parse::Parse, parse::ParseStream};
 
 use crate::molt_grammar::parse_node_with_kind;
 
-use super::{Command, Decl, MoltFile, UntypedVar, UserKind, Var, VarId};
+use super::{Command, Decl, MoltFile, UserKind, Var, VarId};
 
-mod kws {
+mod kw {
     rust_grammar::custom_keyword!(transform);
 }
 
@@ -30,7 +30,7 @@ impl Parse for MoltFile {
 
 impl Parse for Decl {
     fn parse(parser: ParseStream) -> Result<Self> {
-        if parser.peek(Token![match]) || parser.peek(kws::transform) {
+        if parser.peek(Token![match]) || parser.peek(kw::transform) {
             Ok(Self::Command(parser.parse()?))
         } else {
             let var_decl: ParseVarDecl = parser.parse()?;
@@ -43,7 +43,7 @@ struct ParseVarDecl(VarDecl);
 
 impl Parse for ParseVarDecl {
     fn parse(input: ParseStream) -> Result<Self> {
-        let token: Token![let] = input.parse()?;
+        let _: Token![let] = input.parse()?;
         let var: Ident = input.parse()?;
         let _: Token![:] = input.parse()?;
         let kind: UserKind = input.parse()?;
@@ -64,29 +64,29 @@ impl Parse for ParseVarDecl {
     }
 }
 
-impl Parse for UntypedVar {
-    fn parse(parser: ParseStream) -> Result<Self> {
-        let _: Token![$] = parser.parse()?;
-        Ok(UntypedVar(parser.parse()?))
-    }
-}
-
 impl Parse for Command {
     fn parse(parser: ParseStream) -> Result<Self> {
-        todo!()
-        // let command = if parser.consume_if_matches(Keyword(Transform)) {
-        //     todo!("enable variant")
-        //     // let input_var: Var = parser.parse()?;
-        //     // parser.consume(Minus);
-        //     // parser.consume(Gt);
-        //     // let output_var: Var = parser.parse()?;
-        //     // Command::Transform(input_var, output_var)
-        // } else {
-        //     parser.consume(Keyword(Match))?;
-        //     let match_var: Var = parser.parse()?;
-        //     Command::Match(parser.ctx.add_var(match_var))
-        // };
-        // parser.consume(Semi)?;
-        // Ok(command)
+        let command = if parser.peek(kw::transform) {
+            todo!("enable variant")
+            // let input_var: Var = parser.parse()?;
+            // parser.consume(Minus);
+            // parser.consume(Gt);
+            // let output_var: Var = parser.parse()?;
+            // Command::Transform(input_var, output_var)
+        } else {
+            let _: Token![match] = parser.parse()?;
+            let match_var: Ident = parser.parse()?;
+            // obtain the kind by using the ctx
+            let id = parser
+                .add_existing_var(&match_var.to_string())
+                // TODO: Fix this unwrap here and replace it with a proper
+                // error message if the var does not exist. Problem: This
+                // requires Spans which I don#t have because I dont have "printing"
+                // enabled
+                .unwrap();
+            Command::Match(id)
+        };
+        let _: Token![;] = parser.parse()?;
+        Ok(command)
     }
 }

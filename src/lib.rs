@@ -27,11 +27,11 @@ type Ctx = molt_lib::Ctx<Node>;
 pub type PatCtx = Ctx;
 pub type AstCtx = Ctx;
 
-pub fn parse_rust_file(code: &str) -> Result<(RustFile, Ctx), crate::Error> {
+fn parse_rust_file(code: &str) -> Result<(RustFile, Ctx), crate::Error> {
     Ok(rust_grammar::parse_ctx(code)?)
 }
 
-pub fn parse_molt_file(code: &str) -> Result<(MoltFile, Ctx), crate::Error> {
+fn parse_molt_file(code: &str) -> Result<(MoltFile, Ctx), crate::Error> {
     Ok(rust_grammar::parse_ctx(code)?)
 }
 
@@ -42,6 +42,16 @@ pub(crate) struct MatchResult {
 }
 
 impl MoltFile {
+    pub(crate) fn new(input: &Input) -> Result<(Self, PatCtx), Error> {
+        let file_id = input.molt_file_id();
+        let source = input.source(file_id).unwrap();
+        let result = parse_molt_file(source);
+        result.map_err(|err| {
+            emit_error(input, file_id, &err);
+            err
+        })
+    }
+
     pub(crate) fn match_pattern(
         &self,
         ast_ctx: Ctx,
@@ -57,6 +67,7 @@ impl MoltFile {
             .ast_ctx
             .iter()
             .flat_map(|item| {
+                dbg!(&item);
                 let kind = ctx.ast_ctx.get_kind(item);
                 if pat_kind != kind {
                     vec![]
@@ -70,18 +81,6 @@ impl MoltFile {
             ctx,
             var: var.clone(),
         }
-    }
-}
-
-impl MoltFile {
-    pub(crate) fn new(input: &Input) -> Result<(Self, PatCtx), Error> {
-        let file_id = input.molt_file_id();
-        let source = input.source(file_id).unwrap();
-        let result = parse_molt_file(source);
-        result.map_err(|err| {
-            emit_error(input, file_id, &err);
-            err
-        })
     }
 }
 
@@ -136,7 +135,7 @@ pub fn run(input: &Input) -> Result<Vec<Diagnostic>, Error> {
     for rust_file_id in input.iter_rust_src() {
         let (_, ast_ctx) = RustFile::new(&input, rust_file_id)?;
         let (mut molt_file, pat_ctx) = MoltFile::new(&input)?;
-        molt_file.sort_vars(&pat_ctx);
+        molt_file.sort_vars(&pat_ctx)?;
         let command = molt_file.get_command()?;
         match command {
             Command::Match(pat_var) => {

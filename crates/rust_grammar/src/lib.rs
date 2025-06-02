@@ -528,9 +528,6 @@ pub use crate::stmt::{Block, Local, LocalInit, Stmt, StmtMacro};
 
 mod thread;
 
-#[cfg(all(any(feature = "full", feature = "derive"), feature = "extra-traits"))]
-mod tt;
-
 #[cfg(any(feature = "full", feature = "derive"))]
 mod ty;
 #[cfg(any(feature = "full", feature = "derive"))]

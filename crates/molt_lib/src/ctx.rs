@@ -203,18 +203,20 @@ impl<Node: GetKind> Ctx<Node> {
     }
 
     pub fn add_var<T: ToNode<Node>>(&mut self, var: Var<Node>) -> NodeId<T> {
-        let id = if let Some(var) = self
-            .vars
-            .iter()
-            .enumerate()
-            .find(|(_, v)| var == **v)
-            .map(|(i, _)| Id(InternalId::Pat(i)))
-        {
-            var
+        let id = if let Some(id) = self.add_existing_var(&var.name) {
+            id
         } else {
             self.add_var_internal(var)
         };
         id.typed()
+    }
+
+    pub fn add_existing_var(&self, var: &str) -> Option<Id> {
+        self.vars
+            .iter()
+            .enumerate()
+            .find(|(_, v)| var == v.name)
+            .map(|(i, _)| Id(InternalId::Pat(i)))
     }
 
     pub fn get<T: ToNode<Node>>(&self, id: Id) -> Pattern<&T, Id> {

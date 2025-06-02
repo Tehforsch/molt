@@ -61,7 +61,7 @@ impl Fork {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct Binding {
+pub struct Binding {
     pub pat: Option<Id>,
     pub ast: Option<Id>,
 }

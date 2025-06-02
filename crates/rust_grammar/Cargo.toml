@@ -7,7 +7,7 @@ license.workspace = true
 edition = "2021"
 
 [features]
-default = ["derive", "parsing", "clone-impls", "proc-macro"]
+default = ["derive", "parsing", "clone-impls", "proc-macro", "extra-traits"]
 derive = []
 full = []
 parsing = []
@@ -25,3 +25,4 @@ proc-macro2 = { version = "1.0.91", default-features = false, features = ["span-
 quote = { version = "1.0.35", optional = true, default-features = false }
 unicode-ident = "1"
 molt_lib = { path = "../molt_lib" }
+derive_macro = { path = "../derive_macro", default-features = false }

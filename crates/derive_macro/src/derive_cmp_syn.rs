@@ -15,8 +15,8 @@ pub fn impl_cmp_syn(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     };
 
     let expanded = quote! {
-        impl crate::cmp_syn::CmpSyn for #name {
-            fn cmp_syn(&self, ctx: &mut crate::match_pattern::Match, pat: &Self) {
+        impl molt_lib::CmpSyn for #name {
+            fn cmp_syn(&self, ctx: &mut molt_lib::Match, pat: &Self) {
                 #impl_
             }
         }

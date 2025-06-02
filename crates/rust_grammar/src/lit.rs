@@ -21,6 +21,7 @@ ast_enum_of_structs! {
     ///
     /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
     #[non_exhaustive]
+    #[derive(derive_macro::CmpSyn)]
     pub enum Lit {
         /// A UTF-8 string literal: `"foo"`.
         Str(LitStr),
@@ -52,6 +53,32 @@ ast_enum_of_structs! {
         Verbatim(Literal),
     }
 }
+
+macro_rules! impl_cmp_syn_with_partial_eq {
+    ($ty: ty) => {
+        impl molt_lib::CmpSyn for $ty {
+            fn cmp_syn(&self, ctx: &mut molt_lib::Match, pat: &Self) {
+                ctx.eq(self, pat)
+            }
+        }
+    };
+    ($ty: ty, $closure: expr) => {
+        impl molt_lib::CmpSyn for $ty {
+            fn cmp_syn(&self, ctx: &mut molt_lib::Match, pat: &Self) {
+                ctx.check($closure(self, pat))
+            }
+        }
+    };
+}
+
+impl_cmp_syn_with_partial_eq!(LitStr);
+impl_cmp_syn_with_partial_eq!(LitBool, |s1: &Self, s2: &Self| s1.value == s2.value);
+impl_cmp_syn_with_partial_eq!(LitFloat);
+impl_cmp_syn_with_partial_eq!(LitInt);
+impl_cmp_syn_with_partial_eq!(LitChar);
+impl_cmp_syn_with_partial_eq!(LitByte);
+impl_cmp_syn_with_partial_eq!(LitCStr);
+impl_cmp_syn_with_partial_eq!(LitByteStr);
 
 ast_struct! {
     /// A UTF-8 string literal: `"foo"`.
