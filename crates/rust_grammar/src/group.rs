@@ -83,9 +83,10 @@ fn parse_delimited<'a>(
     input.step(|cursor| {
         if let Some((content, span, rest)) = cursor.group(delimiter) {
             let scope = span.close();
+            let ctx = cursor.ctx.clone();
             let nested = crate::parse::advance_step_cursor(cursor, content);
             let unexpected = crate::parse::get_unexpected(input);
-            let content = crate::parse::new_parse_buffer(scope, nested, unexpected);
+            let content = crate::parse::new_parse_buffer(scope, nested, unexpected, ctx);
             Ok(((span, content), rest))
         } else {
             let message = match delimiter {

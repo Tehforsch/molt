@@ -215,7 +215,8 @@ impl<'a> AnyDelimiter for ParseBuffer<'a> {
                 let scope = span.close();
                 let nested = crate::parse::advance_step_cursor(cursor, content);
                 let unexpected = crate::parse::get_unexpected(self);
-                let content = crate::parse::new_parse_buffer(scope, nested, unexpected);
+                let content =
+                    crate::parse::new_parse_buffer(scope, nested, unexpected, self.ctx.clone());
                 Ok(((delimiter, span, content), rest))
             } else {
                 Err(cursor.error("expected any delimiter"))

@@ -851,6 +851,7 @@ pub_if_not_doc! {
 #[cfg(feature = "parsing")]
 pub(crate) mod parsing {
     use crate::buffer::Cursor;
+    use crate::ctx::Ctx;
     use crate::error::Result;
     use crate::lit::{
         value, Lit, LitBool, LitByte, LitByteStr, LitCStr, LitChar, LitFloat, LitFloatRepr, LitInt,
@@ -859,7 +860,7 @@ pub(crate) mod parsing {
     use crate::parse::{Parse, ParseStream, Unexpected};
     use crate::token::{self, Token};
     use proc_macro2::{Literal, Punct, Span};
-    use std::cell::Cell;
+    use std::cell::{Cell, RefCell};
     use std::rc::Rc;
 
     #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
@@ -1024,7 +1025,13 @@ pub(crate) mod parsing {
     fn peek_impl(cursor: Cursor, peek: fn(ParseStream) -> bool) -> bool {
         let scope = Span::call_site();
         let unexpected = Rc::new(Cell::new(Unexpected::None));
-        let buffer = crate::parse::new_parse_buffer(scope, cursor, unexpected);
+        // TODO: Creating a new Ctx here is just a hack.
+        let buffer = crate::parse::new_parse_buffer(
+            scope,
+            cursor,
+            unexpected,
+            Rc::new(RefCell::new(Ctx::default())),
+        );
         peek(&buffer)
     }
 

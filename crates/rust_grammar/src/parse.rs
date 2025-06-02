@@ -183,14 +183,16 @@
 pub mod discouraged;
 
 use crate::buffer::{Cursor, TokenBuffer};
+use crate::ctx::{Ctx, ParseCtx, WithSpan};
 use crate::error;
 use crate::lookahead;
 use crate::punctuated::Punctuated;
+use crate::spanned::Spanned;
 use crate::token::Token;
 use proc_macro2::{Delimiter, Group, Literal, Punct, Span, TokenStream, TokenTree};
 #[cfg(feature = "printing")]
 use quote::ToTokens;
-use std::cell::Cell;
+use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::fmt::{self, Debug, Display};
 #[cfg(feature = "extra-traits")]
 use std::hash::{Hash, Hasher};
@@ -259,6 +261,7 @@ pub struct ParseBuffer<'a> {
     cell: Cell<Cursor<'static>>,
     marker: PhantomData<Cursor<'a>>,
     unexpected: Cell<Option<Rc<Cell<Unexpected>>>>,
+    ctx: ParseCtx,
 }
 
 impl<'a> Drop for ParseBuffer<'a> {
@@ -345,6 +348,7 @@ pub struct StepCursor<'c, 'a> {
     // this means if ever a StepCursor<'c, 'a> exists we are guaranteed that 'c
     // outlives 'a.
     marker: PhantomData<fn(Cursor<'c>) -> Cursor<'a>>,
+    pub ctx: ParseCtx,
 }
 
 impl<'c, 'a> Deref for StepCursor<'c, 'a> {
@@ -355,11 +359,14 @@ impl<'c, 'a> Deref for StepCursor<'c, 'a> {
     }
 }
 
-impl<'c, 'a> Copy for StepCursor<'c, 'a> {}
-
 impl<'c, 'a> Clone for StepCursor<'c, 'a> {
     fn clone(&self) -> Self {
-        *self
+        Self {
+            scope: self.scope.clone(),
+            cursor: self.cursor.clone(),
+            marker: self.marker.clone(),
+            ctx: self.ctx.clone(),
+        }
     }
 }
 
@@ -386,6 +393,7 @@ pub(crate) fn new_parse_buffer(
     scope: Span,
     cursor: Cursor,
     unexpected: Rc<Cell<Unexpected>>,
+    ctx: ParseCtx,
 ) -> ParseBuffer {
     ParseBuffer {
         scope,
@@ -393,6 +401,7 @@ pub(crate) fn new_parse_buffer(
         cell: Cell::new(unsafe { mem::transmute::<Cursor, Cursor<'static>>(cursor) }),
         marker: PhantomData,
         unexpected: Cell::new(Some(unexpected)),
+        ctx,
     }
 }
 
@@ -464,6 +473,12 @@ impl<'a> ParseBuffer<'a> {
     /// parse stream past it.
     pub fn parse<T: Parse>(&self) -> Result<T> {
         T::parse(self)
+    }
+
+    pub(crate) fn parse_with_span<T: Parse + Spanned>(&self) -> Result<WithSpan<T>> {
+        let item = T::parse(self)?;
+        let span = item.span();
+        Ok(WithSpan { item, span })
     }
 
     /// Calls the given parser function to parse a syntax tree node of type `T`
@@ -971,6 +986,7 @@ impl<'a> ParseBuffer<'a> {
             // Not the parent's unexpected. Nothing cares whether the clone
             // parses all the way unless we `advance_to`.
             unexpected: Cell::new(Some(Rc::new(Cell::new(Unexpected::None)))),
+            ctx: self.ctx.clone(),
         }
     }
 
@@ -1076,6 +1092,7 @@ impl<'a> ParseBuffer<'a> {
             scope: self.scope,
             cursor: self.cell.get(),
             marker: PhantomData,
+            ctx: self.ctx.clone(),
         })?;
         self.cell.set(rest);
         Ok(node)
@@ -1159,6 +1176,10 @@ impl<'a> ParseBuffer<'a> {
             Some((span, delimiter)) => Err(err_unexpected_token(span, delimiter)),
             None => Ok(()),
         }
+    }
+
+    pub(crate) fn ctx(&self) -> RefMut<'_, Ctx> {
+        self.ctx.borrow_mut()
     }
 }
 
@@ -1280,7 +1301,7 @@ fn tokens_to_parse_buffer(tokens: &TokenBuffer) -> ParseBuffer {
     let scope = Span::call_site();
     let cursor = tokens.begin();
     let unexpected = Rc::new(Cell::new(Unexpected::None));
-    new_parse_buffer(scope, cursor, unexpected)
+    new_parse_buffer(scope, cursor, unexpected, ParseCtx::default())
 }
 
 impl<F, T> Parser for F
@@ -1307,7 +1328,8 @@ where
         let buf = TokenBuffer::new2(tokens);
         let cursor = buf.begin();
         let unexpected = Rc::new(Cell::new(Unexpected::None));
-        let state = new_parse_buffer(scope, cursor, unexpected);
+        // TODO: Figure out what to do with the ctx here.
+        let state = new_parse_buffer(scope, cursor, unexpected, ParseCtx::default());
         let node = self(&state)?;
         state.check_unexpected()?;
         if let Some((unexpected_span, delimiter)) =

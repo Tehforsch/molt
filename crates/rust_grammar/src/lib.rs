@@ -551,6 +551,9 @@ mod verbatim;
 #[cfg(all(feature = "parsing", feature = "full"))]
 mod whitespace;
 
+pub(crate) mod ctx;
+pub(crate) mod node;
+
 #[rustfmt::skip] // https://github.com/rust-lang/rustfmt/issues/6176
 mod gen {
     /// Syntax tree traversal to transform the nodes of an owned syntax tree.
@@ -1009,24 +1012,4 @@ pub fn parse_file(mut content: &str) -> Result<File> {
     let mut file: File = parse_str(content)?;
     file.shebang = shebang;
     Ok(file)
-}
-
-#[derive(Copy, Clone)]
-pub enum Mode {
-    Molt,
-    Rust,
-}
-
-pub struct Spanned<T> {
-    pub span: Span,
-    pub item: T,
-}
-
-impl<T> Spanned<T> {
-    pub fn map<S>(self, f: impl Fn(T) -> S) -> Spanned<S> {
-        Spanned {
-            span: self.span,
-            item: f(self.item),
-        }
-    }
 }
