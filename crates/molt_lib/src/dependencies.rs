@@ -28,7 +28,7 @@ pub trait GetDependencies<Node: GetKind> {
 
 impl<Node: GetKind, T: GetDependencies<Node> + ToNode<Node>> GetDependencies<Node> for NodeId<T> {
     fn get_dependencies(&self, ctx: &Ctx<Node>, deps: &mut Dependencies) {
-        match ctx.get::<T>(self.untyped()) {
+        match ctx.get::<T>(*self) {
             Pattern::Real(t) => t.get_dependencies(ctx, deps),
             Pattern::Pat(var_id) => {
                 deps.vars.insert(var_id);

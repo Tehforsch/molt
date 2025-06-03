@@ -283,9 +283,9 @@ ast_struct! {
     #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
     pub struct ExprAssign #full {
         pub attrs: Vec<Attribute>,
-        pub left: Box<Expr>,
+        pub left: NodeId<Expr>,
         pub eq_token: Token![=],
-        pub right: Box<Expr>,
+        pub right: NodeId<Expr>,
     }
 }
 
@@ -316,9 +316,9 @@ ast_struct! {
     #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
     pub struct ExprBinary {
         pub attrs: Vec<Attribute>,
-        pub left: Box<Expr>,
+        pub left: NodeId<Expr>,
         pub op: BinOp,
-        pub right: Box<Expr>,
+        pub right: NodeId<Expr>,
     }
 }
 
@@ -1214,6 +1214,7 @@ pub(crate) mod parsing {
     #[cfg(feature = "full")]
     use crate::ty::{ReturnType, Type};
     use crate::verbatim;
+    use molt_lib::NodeId;
     #[cfg(feature = "full")]
     use proc_macro2::TokenStream;
     use std::mem;
@@ -1308,7 +1309,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     fn parse_expr(
         input: ParseStream,
         mut lhs: Expr,
@@ -1341,7 +1341,7 @@ pub(crate) mod parsing {
                 let right = parse_binop_rhs(input, allow_struct, precedence)?;
                 lhs = Expr::Binary(ExprBinary {
                     attrs: Vec::new(),
-                    left: Box::new(lhs),
+                    left: lhs,
                     op,
                     right,
                 });

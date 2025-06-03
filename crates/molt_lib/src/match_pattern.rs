@@ -43,8 +43,8 @@ struct Comparison {
 impl Comparison {
     fn new<T>(ast: NodeId<T>, pat: NodeId<T>) -> Comparison {
         Comparison {
-            ast: ast.untyped(),
-            pat: pat.untyped(),
+            ast: ast.into(),
+            pat: pat.into(),
         }
     }
 }

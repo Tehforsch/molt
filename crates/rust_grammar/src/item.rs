@@ -13,6 +13,7 @@ use crate::restriction::Visibility;
 use crate::stmt::Block;
 use crate::token;
 use crate::ty::{Abi, ReturnType, Type};
+use molt_lib::NodeId;
 use proc_macro2::TokenStream;
 #[cfg(feature = "parsing")]
 use std::mem;
@@ -110,7 +111,7 @@ ast_struct! {
         pub colon_token: Token![:],
         pub ty: Box<Type>,
         pub eq_token: Token![=],
-        pub expr: Box<Expr>,
+        pub expr: NodeId<Expr>,
         pub semi_token: Token![;],
     }
 }
@@ -932,6 +933,7 @@ pub(crate) mod parsing {
     use crate::token;
     use crate::ty::{Abi, ReturnType, Type, TypePath, TypeReference};
     use crate::verbatim;
+    use molt_lib::NodeId;
     use proc_macro2::TokenStream;
 
     #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
@@ -1030,7 +1032,7 @@ pub(crate) mod parsing {
             let colon_token = input.parse()?;
             let ty = input.parse()?;
             let value = if let Some(eq_token) = input.parse::<Option<Token![=]>>()? {
-                let expr: Expr = input.parse()?;
+                let expr: NodeId<Expr> = input.parse()?;
                 Some((eq_token, expr))
             } else {
                 None
@@ -1050,7 +1052,7 @@ pub(crate) mod parsing {
                         colon_token,
                         ty,
                         eq_token,
-                        expr: Box::new(expr),
+                        expr,
                         semi_token,
                     }))
                 }
@@ -1476,7 +1478,7 @@ pub(crate) mod parsing {
             let colon_token: Token![:] = input.parse()?;
             let ty: Type = input.parse()?;
             let eq_token: Token![=] = input.parse()?;
-            let expr: Expr = input.parse()?;
+            let expr: NodeId<Expr> = input.parse()?;
             let semi_token: Token![;] = input.parse()?;
 
             Ok(ItemConst {
@@ -1488,7 +1490,7 @@ pub(crate) mod parsing {
                 colon_token,
                 ty: Box::new(ty),
                 eq_token,
-                expr: Box::new(expr),
+                expr,
                 semi_token,
             })
         }

@@ -29,6 +29,7 @@ impl<T> WithSpan<T> {
 pub trait ToNode<Node> {
     fn to_node(self) -> Node;
     fn from_node(node: &Node) -> Option<&Self>;
+    fn from_node_mut(node: &mut Node) -> Option<&mut Self>;
 }
 
 impl<T> ToNode<T> for T {
@@ -37,6 +38,10 @@ impl<T> ToNode<T> for T {
     }
 
     fn from_node(node: &T) -> Option<&Self> {
+        Some(node)
+    }
+
+    fn from_node_mut(node: &mut T) -> Option<&mut Self> {
         Some(node)
     }
 }
@@ -110,9 +115,9 @@ impl<T> std::hash::Hash for NodeId<T> {
 
 impl<T> Eq for NodeId<T> {}
 
-impl<T> NodeId<T> {
-    pub fn untyped(self) -> Id {
-        self.id
+impl<T> From<NodeId<T>> for Id {
+    fn from(value: NodeId<T>) -> Self {
+        value.id
     }
 }
 
@@ -224,10 +229,26 @@ impl<Node: GetKind> Ctx<Node> {
             .map(|(i, _)| Id(InternalId::Pat(i)))
     }
 
-    pub fn get<T: ToNode<Node>>(&self, id: Id) -> Pattern<&T, Id> {
+    pub fn get<T: ToNode<Node>>(&self, id: impl Into<Id>) -> Pattern<&T, Id> {
+        let id = id.into();
         match id.0 {
             InternalId::Real(idx) => Pattern::Real(T::from_node(&self.nodes[idx]).unwrap()),
             InternalId::Pat(_) => Pattern::Pat(id),
+        }
+    }
+
+    pub fn get_mut<T: ToNode<Node>>(&mut self, id: impl Into<Id>) -> Pattern<&mut T, Id> {
+        let id = id.into();
+        match id.0 {
+            InternalId::Real(idx) => Pattern::Real(T::from_node_mut(&mut self.nodes[idx]).unwrap()),
+            InternalId::Pat(_) => Pattern::Pat(id),
+        }
+    }
+
+    pub fn get_real<T: ToNode<Node>>(&self, id: impl Into<Id>) -> Option<&T> {
+        match self.get(id) {
+            Pattern::Real(t) => Some(t),
+            Pattern::Pat(_) => None,
         }
     }
 

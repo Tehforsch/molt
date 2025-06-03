@@ -299,17 +299,18 @@ pub(crate) mod parsing {
             let eq_token: Token![=] = eq_token;
             let expr: Expr = input.parse()?;
 
-            let diverge = if !classify::expr_trailing_brace(&expr) && input.peek(Token![else]) {
-                let else_token: Token![else] = input.parse()?;
-                let diverge = ExprBlock {
-                    attrs: Vec::new(),
-                    label: None,
-                    block: input.parse()?,
+            let diverge =
+                if !classify::expr_trailing_brace(&input, &expr) && input.peek(Token![else]) {
+                    let else_token: Token![else] = input.parse()?;
+                    let diverge = ExprBlock {
+                        attrs: Vec::new(),
+                        label: None,
+                        block: input.parse()?,
+                    };
+                    Some((else_token, Box::new(Expr::Block(diverge))))
+                } else {
+                    None
                 };
-                Some((else_token, Box::new(Expr::Block(diverge))))
-            } else {
-                None
-            };
 
             Some(LocalInit {
                 eq_token,
@@ -338,12 +339,16 @@ pub(crate) mod parsing {
     ) -> Result<Stmt> {
         let mut e = Expr::parse_with_earlier_boundary_rule(input)?;
 
-        let mut attr_target = &mut e;
+        let attr_target = &mut e;
         loop {
             attr_target = match attr_target {
-                Expr::Assign(e) => &mut e.left,
-                Expr::Binary(e) => &mut e.left,
-                Expr::Cast(e) => &mut e.expr,
+                // TODO: This will be easier once every expr is switched to nodes.
+                Expr::Assign(_) => todo!(),
+                Expr::Binary(_) => todo!(),
+                Expr::Cast(_) => todo!(),
+                // Expr::Assign(e) => &mut e.left,
+                // Expr::Binary(e) => ctx.get_mut(e.left).unwrap(),
+                // Expr::Cast(e) => &mut e.expr,
                 Expr::Array(_)
                 | Expr::Async(_)
                 | Expr::Await(_)

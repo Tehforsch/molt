@@ -2,6 +2,7 @@
 use crate::expr::Expr;
 #[cfg(any(feature = "printing", feature = "full"))]
 use crate::generics::TypeParamBound;
+use crate::parse::ParseStream;
 #[cfg(any(feature = "printing", feature = "full"))]
 use crate::path::{Path, PathArguments};
 #[cfg(any(feature = "printing", feature = "full"))]
@@ -180,8 +181,10 @@ pub(crate) fn expr_leading_label(mut expr: &Expr) -> bool {
 }
 
 /// Whether the expression's last token is `}`.
-#[cfg(feature = "full")]
-pub(crate) fn expr_trailing_brace(mut expr: &Expr) -> bool {
+pub(crate) fn expr_trailing_brace(input: ParseStream, expr: &Expr) -> bool {
+    let ctx = input.ctx();
+    // rebind to avoid lifetime problems
+    let mut expr = expr;
     loop {
         match expr {
             Expr::Async(_)
@@ -196,8 +199,24 @@ pub(crate) fn expr_trailing_brace(mut expr: &Expr) -> bool {
             | Expr::Unsafe(_)
             | Expr::While(_) => return true,
 
-            Expr::Assign(e) => expr = &e.right,
-            Expr::Binary(e) => expr = &e.right,
+            Expr::Binary(e) => {
+                // I think the correct thing to do is to always return false
+                // for variables, but I'll panic here just to make sure I think about
+                // this when I encounter it in practice.
+                match ctx.get_real(e.right) {
+                    Some(t) => expr = t,
+                    None => panic!(),
+                }
+            }
+            Expr::Assign(e) => {
+                // I think the correct thing to do is to always return false
+                // for variables, but I'll panic here just to make sure I think about
+                // this when I encounter it in practice.
+                match ctx.get_real(e.right) {
+                    Some(t) => expr = t,
+                    None => panic!(),
+                }
+            }
             Expr::Break(e) => match &e.expr {
                 Some(e) => expr = e,
                 None => return false,
