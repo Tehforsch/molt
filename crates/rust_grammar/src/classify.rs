@@ -184,7 +184,6 @@ pub(crate) fn expr_leading_label(mut expr: &Expr) -> bool {
 
 /// Whether the expression's last token is `}`.
 pub(crate) fn expr_trailing_brace(input: ParseStream, expr: &Expr) -> bool {
-    let ctx = input.ctx();
     // rebind to avoid lifetime problems
     let mut expr = expr;
     todo!()

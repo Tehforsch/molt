@@ -67,6 +67,10 @@ macro_rules! define_node_and_kind {
                         None
                     }
                 }
+
+                fn kind() -> Kind {
+                    Kind::$variant_name
+                }
             }
         )*
     }

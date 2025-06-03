@@ -182,14 +182,14 @@
 #[path = "discouraged.rs"]
 pub mod discouraged;
 
-use molt_lib::{Ctx, Id, NodeId, ToNode, Var, WithSpan};
+use molt_lib::{Ctx, GetKind, Id, NodeId, Pattern, PatternWithSpan, ToNode, Var, WithSpan};
 
 use crate::buffer::{Cursor, TokenBuffer};
-use crate::error;
 use crate::lookahead;
 use crate::node::Node;
 use crate::punctuated::Punctuated;
 use crate::token::Token;
+use crate::{error, Ident};
 use proc_macro2::{Delimiter, Group, Literal, Punct, Span, TokenStream, TokenTree};
 #[cfg(feature = "printing")]
 use quote::ToTokens;
@@ -1231,6 +1231,29 @@ impl<'a> ParseBuffer<'a> {
 
     pub fn add<T: ToNode<Node>>(&self, t: WithSpan<T>) -> NodeId<T> {
         self.ctx.borrow_mut().add(t)
+    }
+
+    pub fn parse_var<T: ToNode<Node>>(&self) -> Option<Result<PatternWithSpan<T>>> {
+        let transposed = || -> Result<Option<PatternWithSpan<T>>> {
+            if self.peek(Token![$]) {
+                let marker = self.marker();
+                let _: Token![$] = self.parse()?;
+                let ident: Ident = self.parse()?;
+                let span = self.span_from_marker(marker);
+                let id = self
+                    .add_var::<T>(Var::new(ident.to_string(), T::kind()))
+                    .into();
+                let item: PatternWithSpan<T> = WithSpan::new(Pattern::Pat(id), span);
+                Ok(Some(item))
+            } else {
+                Ok(None)
+            }
+        };
+        transposed().transpose()
+    }
+
+    pub(crate) fn add_pat<T: ToNode<Node>>(&self, item: PatternWithSpan<T>) -> NodeId<T> {
+        self.ctx().add_pat(item)
     }
 }
 

@@ -48,6 +48,8 @@ pub struct WithSpan<T> {
     item: T,
 }
 
+pub type PatternWithSpan<T> = WithSpan<Pattern<T, Id>>;
+
 impl<T> WithSpan<T> {
     pub fn new(item: T, span: Span) -> Self {
         Self { span, item }
@@ -71,6 +73,51 @@ impl<T> WithSpan<T> {
     pub fn take(self) -> T {
         self.item
     }
+
+    pub fn as_pattern(self) -> PatternWithSpan<T> {
+        self.map(|item| Pattern::Real(item))
+    }
+}
+
+impl<T> PatternWithSpan<T> {
+    pub fn is_var(&self) -> bool {
+        matches!(self.item, Pattern::Pat(_))
+    }
+
+    pub fn real(&self) -> Option<&T> {
+        match &self.item {
+            Pattern::Real(t) => Some(t),
+            Pattern::Pat(_) => None,
+        }
+    }
+
+    pub fn unwrap_real(self) -> WithSpan<T> {
+        self.map(|item| match item {
+            Pattern::Real(t) => t,
+            Pattern::Pat(_) => panic!("unwrap_real called on pat variant."),
+        })
+    }
+
+    pub fn unwrap_var(self) -> NodeId<T> {
+        match self.item {
+            Pattern::Pat(t) => t.typed(),
+            Pattern::Real(_) => panic!("unwrap_real called on real variant."),
+        }
+    }
+
+    pub fn do_if_real(&mut self, f: impl Fn(&mut T)) {
+        match &mut self.item {
+            Pattern::Real(t) => f(t),
+            Pattern::Pat(_) => {}
+        }
+    }
+
+    pub fn map_real<S>(self, f: impl Fn(T) -> S) -> PatternWithSpan<S> {
+        self.map(|item| match item {
+            Pattern::Real(t) => Pattern::Real(f(t)),
+            Pattern::Pat(id) => Pattern::Pat(id),
+        })
+    }
 }
 
 impl<T> std::ops::Deref for WithSpan<T> {
@@ -87,13 +134,14 @@ impl<T> std::ops::DerefMut for WithSpan<T> {
     }
 }
 
-pub trait ToNode<Node> {
+pub trait ToNode<Node: GetKind> {
     fn to_node(self) -> Node;
     fn from_node(node: &Node) -> Option<&Self>;
     fn from_node_mut(node: &mut Node) -> Option<&mut Self>;
+    fn kind() -> Node::Kind;
 }
 
-impl<T> ToNode<T> for T {
+impl<T: GetKind> ToNode<T> for T {
     fn to_node(self) -> T {
         self
     }
@@ -104,6 +152,10 @@ impl<T> ToNode<T> for T {
 
     fn from_node_mut(node: &mut T) -> Option<&mut Self> {
         Some(node)
+    }
+
+    fn kind() -> T::Kind {
+        panic!()
     }
 }
 
@@ -303,6 +355,13 @@ impl<Node: GetKind> Ctx<Node> {
             self.add_var_internal(var)
         };
         id.typed()
+    }
+
+    pub fn add_pat<T: ToNode<Node>>(&mut self, item: PatternWithSpan<T>) -> NodeId<T> {
+        match item.item {
+            Pattern::Real(_) => self.add(item.unwrap_real()),
+            Pattern::Pat(var) => var.typed(),
+        }
     }
 
     pub fn add_existing_var(&self, var: &str) -> Option<Id> {

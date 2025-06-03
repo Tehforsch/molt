@@ -17,8 +17,7 @@ pub fn match_pattern<N: GetKind + CmpSyn>(
     let mut matches = vec![];
     'outer: while let Some(mut match_) = current.pop() {
         while let Some(cmp) = match_.cmps.pop() {
-            // TODO: Is this patkind right?
-            match_.cmp_ids(ctx, cmp.ast, cmp.pat, PatKind::FromPat);
+            match_.cmp_ids(ctx, cmp.ast, cmp.pat, cmp.pat_type);
             if !match_.valid {
                 break 'outer;
             }
@@ -38,13 +37,15 @@ pub fn match_pattern<N: GetKind + CmpSyn>(
 struct Comparison {
     ast: Id,
     pat: Id,
+    pat_type: PatType,
 }
 
 impl Comparison {
-    fn new<T>(ast: NodeId<T>, pat: NodeId<T>) -> Comparison {
+    fn new<T>(ast: NodeId<T>, pat: NodeId<T>, pat_type: PatType) -> Comparison {
         Comparison {
             ast: ast.into(),
             pat: pat.into(),
+            pat_type: pat_type,
         }
     }
 }
@@ -72,18 +73,19 @@ impl Binding {
     }
 }
 
-#[derive(Clone, Copy)]
-pub enum PatKind {
+#[derive(Clone, Copy, Debug)]
+pub enum PatType {
     FromAst,
     FromPat,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Match {
     bindings: HashMap<Id, Binding>,
     cmps: Vec<Comparison>,
     forks: Vec<Fork>,
     valid: bool,
+    pat_type: PatType,
 }
 
 impl Match {
@@ -96,6 +98,7 @@ impl Match {
             cmps: vec![],
             forks: vec![],
             valid: true,
+            pat_type: PatType::FromPat,
         }
     }
 
@@ -104,22 +107,32 @@ impl Match {
         ctx: &MatchCtx<N>,
         ast_id: Id,
         pat_id: Id,
-        pat_kind: PatKind,
+        pat_type: PatType,
     ) {
-        {
-            let ast_kind = ctx.ast_ctx.get_kind(ast_id);
-            let pat_kind = ctx.get_kind(pat_id, pat_kind);
-            if ast_kind == pat_kind {
-                println!(
-                    "Compare ({:?} {:?})\n\t{}\n\t{}",
-                    ast_kind,
-                    pat_kind,
-                    ctx.print_ast(ast_id),
-                    ctx.print_pat(pat_id),
-                );
-            }
+        // Need to double check this logic, but
+        // the idea here is that as long as we're checking
+        // comparing things with a given pat type, this won't change for
+        // any calls further down the line (unless it explicitly changes it add_binding).
+        // The conventional thing to do here would be to pass the pat type down
+        // the line in the `cmp_*` calls, but this is quite cumbersome given that
+        // it appears absolutely everywhere, so I'm doing this.
+        self.pat_type = pat_type;
+        let ast_kind = ctx.ast_ctx.get_kind(ast_id);
+        let pat_kind = ctx.get_kind(pat_id, pat_type);
+        if ast_kind == pat_kind {
+            println!(
+                "Compare ({:?} {:?})\n\t{}\n\t{}",
+                ast_kind,
+                pat_kind,
+                ctx.print_ast(ast_id),
+                match pat_type {
+                    PatType::FromAst => ctx.print_ast(pat_id),
+                    PatType::FromPat => ctx.print_pat(pat_id),
+                }
+            );
         }
-        match ctx.get::<N>(pat_id, pat_kind) {
+
+        match ctx.get::<N>(pat_id, pat_type) {
             Pattern::Pat(var) => {
                 self.add_binding(ctx, var, ast_id, true);
             }
@@ -147,11 +160,11 @@ impl Match {
         }
         let binding = self.bindings.get_mut(&key).unwrap();
         if let Some(ast_id_2) = binding.ast {
-            self.cmp_ids(ctx, ast_id, ast_id_2, PatKind::FromAst);
+            self.cmp_ids(ctx, ast_id, ast_id_2, PatType::FromAst);
         } else {
             binding.ast = Some(ast_id);
             if let Some(pat_id) = binding.pat {
-                self.cmp_ids(ctx, ast_id, pat_id, PatKind::FromPat);
+                self.cmp_ids(ctx, ast_id, pat_id, PatType::FromPat);
             }
         }
     }
@@ -165,6 +178,7 @@ impl Match {
             forks: self.forks.clone(),
             cmps: vec![cmp],
             valid: true,
+            pat_type: self.pat_type,
         })
     }
 
@@ -192,7 +206,7 @@ impl Match {
                     let item2 = ts2.get(0).unwrap();
                     let fork = Fork::new(
                         ts1.iter()
-                            .map(|item1| Comparison::new(*item1, *item2))
+                            .map(|item1| Comparison::new(*item1, *item2, self.pat_type))
                             .collect(),
                     );
                     self.fork(fork);
@@ -222,7 +236,7 @@ impl Match {
     }
 
     pub fn cmp_nodes<T: CmpSyn>(&mut self, ast: NodeId<T>, pat: NodeId<T>) {
-        self.cmps.push(Comparison::new(ast, pat));
+        self.cmps.push(Comparison::new(ast, pat, self.pat_type));
     }
 
     // This exists purely to make the calls look symmetrical

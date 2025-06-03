@@ -1,7 +1,7 @@
 use crate::{Ctx, GetKind, ToNode, Var};
 use crate::{Id, Pattern};
 
-use crate::match_pattern::PatKind;
+use crate::match_pattern::PatType;
 
 pub struct MatchCtx<Node: GetKind> {
     pub pat_ctx: Ctx<Node>,
@@ -57,10 +57,10 @@ impl<Node: GetKind> MatchCtx<Node> {
         self.pat_ctx.print(id, &self.molt_src)
     }
 
-    pub fn get<T: ToNode<Node>>(&self, pat_id: Id, pat_kind: PatKind) -> Pattern<&T, Id> {
-        match pat_kind {
-            PatKind::FromAst => self.ast_ctx.get(pat_id),
-            PatKind::FromPat => self.pat_ctx.get(pat_id),
+    pub fn get<T: ToNode<Node>>(&self, pat_id: Id, pat_type: PatType) -> Pattern<&T, Id> {
+        match pat_type {
+            PatType::FromAst => self.ast_ctx.get(pat_id),
+            PatType::FromPat => self.pat_ctx.get(pat_id),
         }
     }
 
@@ -68,10 +68,10 @@ impl<Node: GetKind> MatchCtx<Node> {
         self.pat_ctx.get_var(var)
     }
 
-    pub fn get_kind(&self, pat_id: Id, pat_kind: PatKind) -> Node::Kind {
-        match pat_kind {
-            PatKind::FromAst => self.ast_ctx.get_kind(pat_id),
-            PatKind::FromPat => self.pat_ctx.get_kind(pat_id),
+    pub fn get_kind(&self, pat_id: Id, pat_type: PatType) -> Node::Kind {
+        match pat_type {
+            PatType::FromAst => self.ast_ctx.get_kind(pat_id),
+            PatType::FromPat => self.pat_ctx.get_kind(pat_id),
         }
     }
 }
