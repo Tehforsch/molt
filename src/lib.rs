@@ -105,7 +105,7 @@ impl MatchResult {
             .map(|match_| {
                 let binding = match_.get_binding(self.var);
                 let span = self.ctx.ast_ctx.get_span(binding.ast.unwrap());
-                let var_name = |var| self.ctx.get_var(var).name();
+                let var_name = |var| format!("${}", self.ctx.get_var(var).name());
                 let mut diagnostic = Diagnostic::note().with_message("Match").with_labels(vec![
                     Label::primary(file_id, span.byte_range()).with_message(var_name(self.var)),
                 ]);
