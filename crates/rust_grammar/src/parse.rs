@@ -1175,15 +1175,25 @@ impl<'a> ParseBuffer<'a> {
         }
     }
 
+    pub fn span_from_marker(&self, marker: PosMarker) -> molt_lib::Span {
+        let end = self.cursor().prev_span().byte_range().end;
+        molt_lib::Span::new(marker.start, end)
+    }
+
+    pub fn marker(&self) -> PosMarker {
+        let start = self.cursor().span().byte_range().start;
+        PosMarker { start }
+    }
+
     pub fn ctx(&self) -> RefMut<'_, Ctx<Node>> {
         self.ctx.borrow_mut()
     }
 
     pub fn parse_span<T: Parse>(&self) -> Result<WithSpan<T>> {
-        let start = self.cursor().span().byte_range().start;
+        let marker = self.marker();
         let item = T::parse(self)?;
-        let end = self.cursor().prev_span().byte_range().end;
-        Ok(WithSpan::new(item, molt_lib::Span::new(start, end)))
+        let span = self.span_from_marker(marker);
+        Ok(WithSpan::new(item, span))
     }
 
     pub fn parse_span_with<'b, T: Parse, S: ToNode<Node>>(
@@ -1215,9 +1225,17 @@ impl<'a> ParseBuffer<'a> {
         self.add(WithSpan::new(t, molt_lib::Span::fake()))
     }
 
+    pub fn from_marker<T>(&self, marker: PosMarker, t: T) -> WithSpan<T> {
+        WithSpan::new(t, self.span_from_marker(marker))
+    }
+
     pub fn add<T: ToNode<Node>>(&self, t: WithSpan<T>) -> NodeId<T> {
         self.ctx.borrow_mut().add(t)
     }
+}
+
+pub struct PosMarker {
+    start: usize,
 }
 
 #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]

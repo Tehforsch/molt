@@ -543,7 +543,7 @@ ast_struct! {
         pub method: Ident,
         pub turbofish: Option<AngleBracketedGenericArguments>,
         pub paren_token: token::Paren,
-        pub args: Punctuated<Expr, Token![,]>,
+        pub args: NodeList<Expr, Token![,]>,
     }
 }
 
@@ -669,7 +669,7 @@ ast_struct! {
     pub struct ExprTuple {
         pub attrs: Vec<Attribute>,
         pub paren_token: token::Paren,
-        pub elems: Punctuated<NodeId<Expr>, Token![,]>,
+        pub elems: NodeList<Expr, Token![,]>,
     }
 }
 
@@ -1534,53 +1534,59 @@ pub(crate) mod parsing {
     // box <trailer>
     #[cfg(feature = "full")]
     fn unary_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<WithSpan<Expr>> {
-        todo!()
-        // let begin = input.fork();
-        // let attrs = input.call(expr_attrs)?;
-        // if input.peek(token::Group) {
-        //     return trailer_expr(begin, attrs, input, allow_struct);
-        // }
+        let begin = input.fork();
+        let marker = input.marker();
+        let attrs = input.call(expr_attrs)?;
+        if input.peek(token::Group) {
+            return trailer_expr(begin, attrs, input, allow_struct);
+        }
 
-        // if input.peek(Token![&]) {
-        //     let and_token: Token![&] = input.parse()?;
-        //     let raw: Option<Token![raw]> = if input.peek(Token![raw])
-        //         && (input.peek2(Token![mut]) || input.peek2(Token![const]))
-        //     {
-        //         Some(input.parse()?)
-        //     } else {
-        //         None
-        //     };
-        //     let mutability: Option<Token![mut]> = input.parse()?;
-        //     let const_token: Option<Token![const]> = if raw.is_some() && mutability.is_none() {
-        //         Some(input.parse()?)
-        //     } else {
-        //         None
-        //     };
-        //     let expr = Box::new(unary_expr(input, allow_struct)?);
-        //     if let Some(raw) = raw {
-        //         Ok(Expr::RawAddr(ExprRawAddr {
-        //             attrs,
-        //             and_token,
-        //             raw,
-        //             mutability: match mutability {
-        //                 Some(mut_token) => PointerMutability::Mut(mut_token),
-        //                 None => PointerMutability::Const(const_token.unwrap()),
-        //             },
-        //             expr,
-        //         }))
-        //     } else {
-        //         Ok(Expr::Reference(ExprReference {
-        //             attrs,
-        //             and_token,
-        //             mutability,
-        //             expr,
-        //         }))
-        //     }
-        // } else if input.peek(Token![*]) || input.peek(Token![!]) || input.peek(Token![-]) {
-        //     expr_unary(input, attrs, allow_struct).map(Expr::Unary)
-        // } else {
-        //     trailer_expr(begin, attrs, input, allow_struct)
-        // }
+        if input.peek(Token![&]) {
+            let and_token: Token![&] = input.parse()?;
+            let raw: Option<Token![raw]> = if input.peek(Token![raw])
+                && (input.peek2(Token![mut]) || input.peek2(Token![const]))
+            {
+                Some(input.parse()?)
+            } else {
+                None
+            };
+            let mutability: Option<Token![mut]> = input.parse()?;
+            let const_token: Option<Token![const]> = if raw.is_some() && mutability.is_none() {
+                Some(input.parse()?)
+            } else {
+                None
+            };
+            let expr = unary_expr(input, allow_struct)?;
+            if let Some(raw) = raw {
+                Ok(input.from_marker(
+                    marker,
+                    Expr::RawAddr(ExprRawAddr {
+                        attrs,
+                        and_token,
+                        raw,
+                        mutability: match mutability {
+                            Some(mut_token) => PointerMutability::Mut(mut_token),
+                            None => PointerMutability::Const(const_token.unwrap()),
+                        },
+                        expr: input.add(expr),
+                    }),
+                ))
+            } else {
+                Ok(input.from_marker(
+                    marker,
+                    Expr::Reference(ExprReference {
+                        attrs,
+                        and_token,
+                        mutability,
+                        expr: input.add(expr),
+                    }),
+                ))
+            }
+        } else if input.peek(Token![*]) || input.peek(Token![!]) || input.peek(Token![-]) {
+            Ok(expr_unary(input, attrs, allow_struct)?.map(Expr::Unary))
+        } else {
+            trailer_expr(begin, attrs, input, allow_struct)
+        }
     }
 
     #[cfg(not(feature = "full"))]
@@ -1615,114 +1621,130 @@ pub(crate) mod parsing {
         mut attrs: Vec<Attribute>,
         input: ParseStream,
         allow_struct: AllowStruct,
-    ) -> Result<Expr> {
-        todo!()
-        // let atom = atom_expr(input, allow_struct)?;
-        // let mut e = trailer_helper(input, atom)?;
+    ) -> Result<WithSpan<Expr>> {
+        let atom = atom_expr(input, allow_struct)?;
+        let mut e = trailer_helper(input, atom)?;
 
-        // if let Expr::Verbatim(tokens) = &mut e {
-        //     *tokens = verbatim::between(&begin, input);
-        // } else {
-        //     let inner_attrs = e.replace_attrs(Vec::new());
-        //     attrs.extend(inner_attrs);
-        //     e.replace_attrs(attrs);
-        // }
+        if let Expr::Verbatim(tokens) = &mut *e {
+            *tokens = verbatim::between(&begin, input);
+        } else {
+            let inner_attrs = e.replace_attrs(Vec::new());
+            attrs.extend(inner_attrs);
+            e.replace_attrs(attrs);
+        }
 
-        // Ok(e)
+        Ok(e)
     }
 
     #[cfg(feature = "full")]
     fn trailer_helper(input: ParseStream, mut e: WithSpan<Expr>) -> Result<WithSpan<Expr>> {
-        todo!()
-        // loop {
-        //     if input.peek(token::Paren) {
-        //         let content;
-        //         e = Expr::Call(ExprCall {
-        //             attrs: Vec::new(),
-        //             func: e,
-        //             paren_token: parenthesized!(content in input),
-        //             args: content.parse_terminated(NodeId::<Expr>::parse, Token![,])?.into(),
-        //         });
-        //     } else if input.peek(Token![.])
-        //         && !input.peek(Token![..])
-        //         && match input.ctx().get_real(e) {
-        //             Some(Expr::Range(_)) => false,
-        //             _ => true,
-        //         }
-        //     {
-        //         let mut dot_token: Token![.] = input.parse()?;
+        loop {
+            let marker = input.marker();
+            let orig_span = e.span();
+            if input.peek(token::Paren) {
+                let content;
+                let e2 = Expr::Call(ExprCall {
+                    attrs: Vec::new(),
+                    func: input.add(e),
+                    paren_token: parenthesized!(content in input),
+                    args: content
+                        .parse_terminated(NodeId::<Expr>::parse, Token![,])?
+                        .into(),
+                });
+                let span = input.span_from_marker(marker).join(orig_span);
+                e = WithSpan::new(e2, span);
+            } else if input.peek(Token![.])
+                && !input.peek(Token![..])
+                && match &*e {
+                    Expr::Range(_) => false,
+                    _ => true,
+                }
+            {
+                let mut dot_token: Token![.] = input.parse()?;
 
-        //         let float_token: Option<LitFloat> = input.parse()?;
-        //         if let Some(float_token) = float_token {
-        //             if multi_index(&mut e, &mut dot_token, float_token)? {
-        //                 continue;
-        //             }
-        //         }
+                let float_token: Option<LitFloat> = input.parse()?;
+                if let Some(float_token) = float_token {
+                    if multi_index(&mut e, &mut dot_token, float_token)? {
+                        continue;
+                    }
+                }
 
-        //         let await_token: Option<Token![await]> = input.parse()?;
-        //         if let Some(await_token) = await_token {
-        //             e = Expr::Await(ExprAwait {
-        //                 attrs: Vec::new(),
-        //                 base: Box::new(e),
-        //                 dot_token,
-        //                 await_token,
-        //             });
-        //             continue;
-        //         }
+                let await_token: Option<Token![await]> = input.parse()?;
+                if let Some(await_token) = await_token {
+                    let e2 = Expr::Await(ExprAwait {
+                        attrs: Vec::new(),
+                        base: input.add(e),
+                        dot_token,
+                        await_token,
+                    });
+                    let span = input.span_from_marker(marker).join(orig_span);
+                    e = WithSpan::new(e2, span);
+                    continue;
+                }
 
-        //         let member: Member = input.parse()?;
-        //         let turbofish = if member.is_named() && input.peek(Token![::]) {
-        //             Some(AngleBracketedGenericArguments::parse_turbofish(input)?)
-        //         } else {
-        //             None
-        //         };
+                let member: Member = input.parse()?;
+                let turbofish = if member.is_named() && input.peek(Token![::]) {
+                    Some(AngleBracketedGenericArguments::parse_turbofish(input)?)
+                } else {
+                    None
+                };
 
-        //         if turbofish.is_some() || input.peek(token::Paren) {
-        //             if let Member::Named(method) = member {
-        //                 let content;
-        //                 e = Expr::MethodCall(ExprMethodCall {
-        //                     attrs: Vec::new(),
-        //                     receiver: Box::new(e),
-        //                     dot_token,
-        //                     method,
-        //                     turbofish,
-        //                     paren_token: parenthesized!(content in input),
-        //                     args: content.parse_terminated(Expr::parse, Token![,])?,
-        //                 });
-        //                 continue;
-        //             }
-        //         }
+                if turbofish.is_some() || input.peek(token::Paren) {
+                    if let Member::Named(method) = member {
+                        let content;
+                        let e2 = Expr::MethodCall(ExprMethodCall {
+                            attrs: Vec::new(),
+                            receiver: input.add(e),
+                            dot_token,
+                            method,
+                            turbofish,
+                            paren_token: parenthesized!(content in input),
+                            args: content
+                                .parse_terminated(NodeId::<Expr>::parse, Token![,])?
+                                .into(),
+                        });
+                        let span = input.span_from_marker(marker).join(orig_span);
+                        e = WithSpan::new(e2, span);
+                        continue;
+                    }
+                }
 
-        //         e = Expr::Field(ExprField {
-        //             attrs: Vec::new(),
-        //             base: Box::new(e),
-        //             dot_token,
-        //             member,
-        //         });
-        //     } else if input.peek(token::Bracket) {
-        //         let content;
-        //         e = Expr::Index(ExprIndex {
-        //             attrs: Vec::new(),
-        //             expr: Box::new(e),
-        //             bracket_token: bracketed!(content in input),
-        //             index: content.parse()?,
-        //         });
-        //     } else if input.peek(Token![?])
-        //         && match e {
-        //             Expr::Range(_) => false,
-        //             _ => true,
-        //         }
-        //     {
-        //         e = Expr::Try(ExprTry {
-        //             attrs: Vec::new(),
-        //             expr: Box::new(e),
-        //             question_token: input.parse()?,
-        //         });
-        //     } else {
-        //         break;
-        //     }
-        // }
-        // Ok(e)
+                let e2 = Expr::Field(ExprField {
+                    attrs: Vec::new(),
+                    base: input.add(e),
+                    dot_token,
+                    member,
+                });
+                let span = input.span_from_marker(marker).join(orig_span);
+                e = WithSpan::new(e2, span);
+            } else if input.peek(token::Bracket) {
+                let content;
+                let e2 = Expr::Index(ExprIndex {
+                    attrs: Vec::new(),
+                    expr: input.add(e),
+                    bracket_token: bracketed!(content in input),
+                    index: content.parse()?,
+                });
+                let span = input.span_from_marker(marker).join(orig_span);
+                e = WithSpan::new(e2, span);
+            } else if input.peek(Token![?])
+                && match &*e {
+                    Expr::Range(_) => false,
+                    _ => true,
+                }
+            {
+                let e2 = Expr::Try(ExprTry {
+                    attrs: Vec::new(),
+                    expr: input.add(e),
+                    question_token: input.parse()?,
+                });
+                let span = input.span_from_marker(marker).join(orig_span);
+                e = WithSpan::new(e2, span);
+            } else {
+                break;
+            }
+        }
+        Ok(e)
     }
 
     #[cfg(not(feature = "full"))]
@@ -1734,7 +1756,7 @@ pub(crate) mod parsing {
                 let content;
                 e = Expr::Call(ExprCall {
                     attrs: Vec::new(),
-                    func: Box::new(e),
+                    func: input.add(e),
                     paren_token: parenthesized!(content in input),
                     args: content.parse_terminated(Expr::parse, Token![,])?,
                 });
@@ -1766,7 +1788,7 @@ pub(crate) mod parsing {
                         let content;
                         e = Expr::MethodCall(ExprMethodCall {
                             attrs: Vec::new(),
-                            receiver: Box::new(e),
+                            receiver: input.add(e),
                             dot_token,
                             method,
                             turbofish,
@@ -2031,7 +2053,7 @@ pub(crate) mod parsing {
             return Ok(Expr::Tuple(ExprTuple {
                 attrs: Vec::new(),
                 paren_token,
-                elems: Punctuated::new(),
+                elems: Punctuated::new().into(),
             }));
         }
 
@@ -2058,7 +2080,7 @@ pub(crate) mod parsing {
         Ok(Expr::Tuple(ExprTuple {
             attrs: Vec::new(),
             paren_token,
-            elems,
+            elems: elems.into(),
         }))
     }
 
@@ -2447,7 +2469,7 @@ pub(crate) mod parsing {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = Vec::new();
             let allow_struct = AllowStruct(true);
-            expr_unary(input, attrs, allow_struct)
+            Ok(expr_unary(input, attrs, allow_struct)?.take())
         }
     }
 
@@ -2456,12 +2478,16 @@ pub(crate) mod parsing {
         input: ParseStream,
         attrs: Vec<Attribute>,
         allow_struct: AllowStruct,
-    ) -> Result<ExprUnary> {
-        Ok(ExprUnary {
-            attrs,
-            op: input.parse()?,
-            expr: input.add(unary_expr(input, allow_struct)?),
-        })
+    ) -> Result<WithSpan<ExprUnary>> {
+        let marker = input.marker();
+        Ok(input.from_marker(
+            marker,
+            ExprUnary {
+                attrs,
+                op: input.parse()?,
+                expr: input.add(unary_expr(input, allow_struct)?),
+            },
+        ))
     }
 
     #[cfg(feature = "full")]

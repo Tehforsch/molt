@@ -31,7 +31,7 @@ impl Span {
         }
     }
 
-    fn join(&self, span: Span) -> Span {
+    pub fn join(&self, span: Span) -> Span {
         if self.fake || span.fake {
             panic!();
         }
