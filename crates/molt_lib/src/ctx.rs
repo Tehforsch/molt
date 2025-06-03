@@ -73,8 +73,13 @@ pub struct NodeId<T> {
 }
 
 pub struct NodeList<T> {
-    pub items: Vec<NodeId<T>>,
-    pub matching_mode: MatchingMode,
+    items: Vec<NodeId<T>>,
+}
+
+impl<T> From<Vec<NodeId<T>>> for NodeList<T> {
+    fn from(items: Vec<NodeId<T>>) -> Self {
+        Self { items }
+    }
 }
 
 impl<T> Clone for NodeId<T> {

@@ -1,3 +1,5 @@
+use molt_lib::NodeList;
+
 use crate::attr::Attribute;
 use crate::item::Item;
 
@@ -79,16 +81,19 @@ ast_struct! {
     pub struct File {
         pub shebang: Option<String>,
         pub attrs: Vec<Attribute>,
-        pub items: Vec<Item>,
+        pub items: NodeList<Item>,
     }
 }
 
 #[cfg(feature = "parsing")]
 pub(crate) mod parsing {
+    use molt_lib::NodeId;
+
     use crate::attr::Attribute;
     use crate::error::Result;
     use crate::file::File;
     use crate::parse::{Parse, ParseStream};
+    use crate::Item;
 
     #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for File {
@@ -97,11 +102,11 @@ pub(crate) mod parsing {
                 shebang: None,
                 attrs: input.call(Attribute::parse_inner)?,
                 items: {
-                    let mut items = Vec::new();
+                    let mut items: Vec<NodeId<Item>> = Vec::new();
                     while !input.is_empty() {
                         items.push(input.parse()?);
                     }
-                    items
+                    items.into()
                 },
             })
         }

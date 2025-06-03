@@ -177,7 +177,9 @@ impl Match {
     }
 
     pub fn cmp_lists<T: CmpSyn>(&mut self, ts1: &NodeList<T>, ts2: &NodeList<T>) {
-        match ts2.matching_mode {
+        // TODO: get this from the var
+        let matching_mode = MatchingMode::Exact;
+        match matching_mode {
             MatchingMode::Exact => {
                 self.eq(ts1.len(), ts2.len());
                 for (item1, item2) in ts1.iter().zip(ts2.iter()) {

@@ -1,7 +1,7 @@
 mod parse;
 
 use molt_lib::{Id, Var, VarDecl};
-use rust_grammar::{Kind, Lit, Node};
+use rust_grammar::{Item, Kind, Lit, Node};
 
 #[derive(Debug)]
 pub(crate) struct MoltFile {
@@ -70,5 +70,6 @@ macro_rules! define_user_kind {
 }
 
 define_user_kind! {
-    (Lit, Lit)
+    (Lit, Lit),
+    (Item, Item)
 }
