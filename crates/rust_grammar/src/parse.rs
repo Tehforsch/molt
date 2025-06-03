@@ -1175,18 +1175,32 @@ impl<'a> ParseBuffer<'a> {
         }
     }
 
-    pub(crate) fn ctx(&self) -> RefMut<'_, Ctx<Node>> {
+    pub fn ctx(&self) -> RefMut<'_, Ctx<Node>> {
         self.ctx.borrow_mut()
     }
 
-    pub fn parse_with_span<T: Parse>(&self) -> Result<WithSpan<T>> {
+    pub fn parse_span<T: Parse>(&self) -> Result<WithSpan<T>> {
         let start = self.cursor().span().byte_range().start;
         let item = T::parse(self)?;
         let end = self.cursor().prev_span().byte_range().end;
-        Ok(WithSpan {
-            item,
-            span: molt_lib::Span { start, end },
-        })
+        Ok(WithSpan::new(item, molt_lib::Span::new(start, end)))
+    }
+
+    pub fn parse_span_with<'b, T: Parse, S: ToNode<Node>>(
+        &self,
+        f: impl Fn(T) -> S,
+    ) -> Result<WithSpan<S>> {
+        let item: WithSpan<T> = self.parse_span()?;
+        Ok(item.map(f))
+    }
+
+    pub fn parse_node<'b, T: Parse, S: ToNode<Node>>(
+        &self,
+        f: impl Fn(T) -> S,
+    ) -> Result<NodeId<S>> {
+        let item: WithSpan<T> = self.parse_span()?;
+        let entry = self.ctx().add(item.map(f));
+        Ok(entry)
     }
 
     pub fn add_var<T: ToNode<Node>>(&self, var: Var<Node>) -> NodeId<T> {
@@ -1197,8 +1211,12 @@ impl<'a> ParseBuffer<'a> {
         self.ctx.borrow_mut().add_existing_var(var)
     }
 
-    pub fn add_node(&self, node: WithSpan<Node>) -> Id {
-        self.ctx.borrow_mut().add_node(node)
+    pub fn add_fake_span<T: ToNode<Node>>(&mut self, t: T) -> NodeId<T> {
+        self.add(WithSpan::new(t, molt_lib::Span::fake()))
+    }
+
+    pub fn add<T: ToNode<Node>>(&self, t: WithSpan<T>) -> NodeId<T> {
+        self.ctx.borrow_mut().add(t)
     }
 }
 

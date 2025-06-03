@@ -93,6 +93,7 @@ pub(crate) mod parsing {
     use crate::stmt::{Block, Local, LocalInit, Stmt, StmtMacro};
     use crate::token;
     use crate::ty::Type;
+    use molt_lib::NodeId;
     use proc_macro2::TokenStream;
 
     struct AllowNoSemi(bool);
@@ -297,26 +298,27 @@ pub(crate) mod parsing {
 
         let init = if let Some(eq_token) = input.parse()? {
             let eq_token: Token![=] = eq_token;
-            let expr: Expr = input.parse()?;
+            let expr: NodeId<Expr> = input.parse()?;
 
-            let diverge =
-                if !classify::expr_trailing_brace(&input, &expr) && input.peek(Token![else]) {
-                    let else_token: Token![else] = input.parse()?;
-                    let diverge = ExprBlock {
-                        attrs: Vec::new(),
-                        label: None,
-                        block: input.parse()?,
-                    };
-                    Some((else_token, Box::new(Expr::Block(diverge))))
-                } else {
-                    None
-                };
+            todo!()
+            // let diverge =
+            //     if !classify::expr_trailing_brace(&input, &expr) && input.peek(Token![else]) {
+            //         let else_token: Token![else] = input.parse()?;
+            //         let diverge = ExprBlock {
+            //             attrs: Vec::new(),
+            //             label: None,
+            //             block: input.parse()?,
+            //         };
+            //         Some((else_token, Box::new(Expr::Block(diverge))))
+            //     } else {
+            //         None
+            //     };
 
-            Some(LocalInit {
-                eq_token,
-                expr: Box::new(expr),
-                diverge,
-            })
+            // Some(LocalInit {
+            //     eq_token,
+            //     expr: Box::new(expr),
+            //     diverge,
+            // })
         } else {
             None
         };
@@ -338,81 +340,82 @@ pub(crate) mod parsing {
         mut attrs: Vec<Attribute>,
     ) -> Result<Stmt> {
         let mut e = Expr::parse_with_earlier_boundary_rule(input)?;
+        todo!();
 
-        let attr_target = &mut e;
-        loop {
-            attr_target = match attr_target {
-                // TODO: This will be easier once every expr is switched to nodes.
-                Expr::Assign(_) => todo!(),
-                Expr::Binary(_) => todo!(),
-                Expr::Cast(_) => todo!(),
-                // Expr::Assign(e) => &mut e.left,
-                // Expr::Binary(e) => ctx.get_mut(e.left).unwrap(),
-                // Expr::Cast(e) => &mut e.expr,
-                Expr::Array(_)
-                | Expr::Async(_)
-                | Expr::Await(_)
-                | Expr::Block(_)
-                | Expr::Break(_)
-                | Expr::Call(_)
-                | Expr::Closure(_)
-                | Expr::Const(_)
-                | Expr::Continue(_)
-                | Expr::Field(_)
-                | Expr::ForLoop(_)
-                | Expr::Group(_)
-                | Expr::If(_)
-                | Expr::Index(_)
-                | Expr::Infer(_)
-                | Expr::Let(_)
-                | Expr::Lit(_)
-                | Expr::Loop(_)
-                | Expr::Macro(_)
-                | Expr::Match(_)
-                | Expr::MethodCall(_)
-                | Expr::Paren(_)
-                | Expr::Path(_)
-                | Expr::Range(_)
-                | Expr::RawAddr(_)
-                | Expr::Reference(_)
-                | Expr::Repeat(_)
-                | Expr::Return(_)
-                | Expr::Struct(_)
-                | Expr::Try(_)
-                | Expr::TryBlock(_)
-                | Expr::Tuple(_)
-                | Expr::Unary(_)
-                | Expr::Unsafe(_)
-                | Expr::While(_)
-                | Expr::Yield(_)
-                | Expr::Verbatim(_) => break,
-            };
-        }
-        attrs.extend(attr_target.replace_attrs(Vec::new()));
-        attr_target.replace_attrs(attrs);
+        // let attr_target = &mut e;
+        // loop {
+        //     attr_target = match attr_target {
+        //         // TODO: This will be easier once every expr is switched to nodes.
+        //         Expr::Assign(_) => todo!(),
+        //         Expr::Binary(_) => todo!(),
+        //         Expr::Cast(_) => todo!(),
+        //         // Expr::Assign(e) => &mut e.left,
+        //         // Expr::Binary(e) => ctx.get_mut(e.left).unwrap(),
+        //         // Expr::Cast(e) => &mut e.expr,
+        //         Expr::Array(_)
+        //         | Expr::Async(_)
+        //         | Expr::Await(_)
+        //         | Expr::Block(_)
+        //         | Expr::Break(_)
+        //         | Expr::Call(_)
+        //         | Expr::Closure(_)
+        //         | Expr::Const(_)
+        //         | Expr::Continue(_)
+        //         | Expr::Field(_)
+        //         | Expr::ForLoop(_)
+        //         | Expr::Group(_)
+        //         | Expr::If(_)
+        //         | Expr::Index(_)
+        //         | Expr::Infer(_)
+        //         | Expr::Let(_)
+        //         | Expr::Lit(_)
+        //         | Expr::Loop(_)
+        //         | Expr::Macro(_)
+        //         | Expr::Match(_)
+        //         | Expr::MethodCall(_)
+        //         | Expr::Paren(_)
+        //         | Expr::Path(_)
+        //         | Expr::Range(_)
+        //         | Expr::RawAddr(_)
+        //         | Expr::Reference(_)
+        //         | Expr::Repeat(_)
+        //         | Expr::Return(_)
+        //         | Expr::Struct(_)
+        //         | Expr::Try(_)
+        //         | Expr::TryBlock(_)
+        //         | Expr::Tuple(_)
+        //         | Expr::Unary(_)
+        //         | Expr::Unsafe(_)
+        //         | Expr::While(_)
+        //         | Expr::Yield(_)
+        //         | Expr::Verbatim(_) => break,
+        //     };
+        // }
+        // attrs.extend(attr_target.replace_attrs(Vec::new()));
+        // attr_target.replace_attrs(attrs);
 
-        let semi_token: Option<Token![;]> = input.parse()?;
+        // let semi_token: Option<Token![;]> = input.parse()?;
 
-        match e {
-            Expr::Macro(ExprMacro { attrs, mac })
-                if semi_token.is_some() || mac.delimiter.is_brace() =>
-            {
-                return Ok(Stmt::Macro(StmtMacro {
-                    attrs,
-                    mac,
-                    semi_token,
-                }));
-            }
-            _ => {}
-        }
+        // match e {
+        //     Expr::Macro(ExprMacro { attrs, mac })
+        //         if semi_token.is_some() || mac.delimiter.is_brace() =>
+        //     {
+        //         return Ok(Stmt::Macro(StmtMacro {
+        //             attrs,
+        //             mac,
+        //             semi_token,
+        //         }));
+        //     }
+        //     _ => {}
+        // }
 
-        if semi_token.is_some() {
-            Ok(Stmt::Expr(e, semi_token))
-        } else if allow_nosemi.0 || !classify::requires_semi_to_be_stmt(&e) {
-            Ok(Stmt::Expr(e, None))
-        } else {
-            Err(input.error("expected semicolon"))
-        }
+        // if semi_token.is_some() {
+        //     Ok(Stmt::Expr(e, semi_token))
+        // } else if allow_nosemi.0 || !classify::requires_semi_to_be_stmt(&e) {
+        //     Ok(Stmt::Expr(e, None))
+        // } else {
+        //     Err(input.error("expected semicolon"))
+        // }
     }
 }
 

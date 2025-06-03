@@ -2,27 +2,88 @@ use std::marker::PhantomData;
 
 #[derive(Copy, Clone)]
 pub struct Span {
-    pub start: usize,
-    pub end: usize,
+    start: usize,
+    end: usize,
+    fake: bool,
 }
 
 impl Span {
+    pub fn new(start: usize, end: usize) -> Self {
+        Self {
+            start,
+            end,
+            fake: false,
+        }
+    }
+
     pub fn byte_range(&self) -> std::ops::Range<usize> {
+        if self.fake {
+            panic!("Fake span");
+        }
         self.start..self.end
+    }
+
+    pub fn fake() -> Self {
+        Span {
+            start: 0,
+            end: 0,
+            fake: true,
+        }
+    }
+
+    fn join(&self, span: Span) -> Span {
+        if self.fake || span.fake {
+            panic!();
+        }
+        Span {
+            start: self.start.min(span.start),
+            end: self.end.max(span.end),
+            fake: false,
+        }
     }
 }
 
 pub struct WithSpan<T> {
-    pub span: Span,
-    pub item: T,
+    span: Span,
+    item: T,
 }
 
 impl<T> WithSpan<T> {
+    pub fn new(item: T, span: Span) -> Self {
+        Self { span, item }
+    }
+
     pub fn map<S>(self, f: impl Fn(T) -> S) -> WithSpan<S> {
         WithSpan {
             span: self.span,
             item: f(self.item),
         }
+    }
+
+    pub fn join<S>(&self, rhs: &WithSpan<S>) -> Span {
+        self.span.join(rhs.span)
+    }
+
+    pub fn span(&self) -> Span {
+        self.span
+    }
+
+    pub fn take(self) -> T {
+        self.item
+    }
+}
+
+impl<T> std::ops::Deref for WithSpan<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.item
+    }
+}
+
+impl<T> std::ops::DerefMut for WithSpan<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.item
     }
 }
 
@@ -77,13 +138,29 @@ pub struct NodeId<T> {
     id: Id,
 }
 
-pub struct NodeList<T> {
-    items: Vec<NodeId<T>>,
+impl<T> NodeId<T> {
+    // used instead of Expr::PLACEHOLDER in parsing.
+    pub fn placeholder() -> Self {
+        Self {
+            id: Id(InternalId::Real(usize::MAX)),
+            _marker: PhantomData,
+        }
+    }
 }
 
-impl<T> From<Vec<NodeId<T>>> for NodeList<T> {
+pub struct NoPunct;
+
+pub struct NodeList<T, P> {
+    items: Vec<NodeId<T>>,
+    _marker: PhantomData<P>,
+}
+
+impl<T> From<Vec<NodeId<T>>> for NodeList<T, NoPunct> {
     fn from(items: Vec<NodeId<T>>) -> Self {
-        Self { items }
+        Self {
+            items,
+            _marker: PhantomData,
+        }
     }
 }
 
@@ -121,7 +198,14 @@ impl<T> From<NodeId<T>> for Id {
     }
 }
 
-impl<T> NodeList<T> {
+impl<T, P> NodeList<T, P> {
+    pub fn new(iter: impl Iterator<Item = NodeId<T>>) -> Self {
+        Self {
+            items: iter.collect(),
+            _marker: PhantomData,
+        }
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = &NodeId<T>> {
         self.items.iter()
     }
@@ -197,7 +281,7 @@ pub struct Ctx<Node: GetKind> {
 }
 
 impl<Node: GetKind> Ctx<Node> {
-    pub fn add_node(&mut self, node: WithSpan<Node>) -> Id {
+    fn add_node(&mut self, node: WithSpan<Node>) -> Id {
         self.spans.push(node.span);
         self.nodes.push(node.item);
         Id(InternalId::Real(self.nodes.len() - 1))
@@ -252,6 +336,13 @@ impl<Node: GetKind> Ctx<Node> {
         }
     }
 
+    pub fn get_real_mut<T: ToNode<Node>>(&mut self, id: impl Into<Id>) -> Option<&mut T> {
+        match self.get_mut(id) {
+            Pattern::Real(t) => Some(t),
+            Pattern::Pat(_) => None,
+        }
+    }
+
     pub fn get_var(&self, id: Id) -> &Var<Node> {
         match id.0 {
             InternalId::Real(_) => panic!(),
@@ -274,8 +365,8 @@ impl<Node: GetKind> Ctx<Node> {
         self.vars.iter()
     }
 
-    pub fn get_span(&self, id: Id) -> Span {
-        match id.0 {
+    pub fn get_span(&self, id: impl Into<Id>) -> Span {
+        match id.into().0 {
             Pattern::Real(idx) => self.spans[idx],
             Pattern::Pat(_) => panic!(),
         }

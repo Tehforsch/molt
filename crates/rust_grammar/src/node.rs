@@ -69,18 +69,6 @@ macro_rules! define_node_and_kind {
                 }
             }
         )*
-
-        impl Node {
-            pub fn parse_with_kind(parser: crate::parse::ParseStream, kind: Kind) -> crate::parse::Result<Self> {
-                match kind {
-                    $(
-                        Kind::$variant_name => {
-                            Ok(Node::$variant_name(parser.parse::<$ty>()?))
-                        },
-                    )*
-                }
-            }
-        }
     }
 }
 
@@ -95,7 +83,7 @@ define_node_and_kind! {
 
 impl<T: Parse + ToNode<Node>> Parse for NodeId<T> {
     fn parse(parser: ParseStream) -> Result<Self> {
-        let t = parser.parse_with_span()?;
+        let t = parser.parse_span()?;
         let id = parser.ctx().add(t);
         Ok(id)
     }

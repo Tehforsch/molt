@@ -8,6 +8,7 @@ use crate::mac::Macro;
 use crate::path::{Path, QSelf};
 use crate::punctuated::Punctuated;
 use crate::token;
+use molt_lib::NodeId;
 use proc_macro2::TokenStream;
 
 ast_enum_of_structs! {
@@ -96,7 +97,7 @@ ast_struct! {
         pub bracket_token: token::Bracket,
         pub elem: Box<Type>,
         pub semi_token: Token![;],
-        pub len: Expr,
+        pub len: NodeId<Expr>,
     }
 }
 
@@ -280,7 +281,6 @@ pub(crate) mod parsing {
     use crate::lifetime::Lifetime;
     use crate::mac::{self, Macro};
     use crate::parse::{Parse, ParseStream};
-    use crate::path;
     use crate::path::{Path, PathArguments, QSelf};
     use crate::punctuated::Punctuated;
     use crate::token;
@@ -290,6 +290,7 @@ pub(crate) mod parsing {
         TypeReference, TypeSlice, TypeTraitObject, TypeTuple,
     };
     use crate::verbatim;
+    use crate::{path, Expr};
     use proc_macro2::Span;
 
     #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]

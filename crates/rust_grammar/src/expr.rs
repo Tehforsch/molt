@@ -1,4 +1,4 @@
-use molt_lib::NodeId;
+use molt_lib::{NodeId, NodeList};
 
 use crate::attr::Attribute;
 #[cfg(all(feature = "parsing", feature = "full"))]
@@ -274,7 +274,7 @@ ast_struct! {
     pub struct ExprArray #full {
         pub attrs: Vec<Attribute>,
         pub bracket_token: token::Bracket,
-        pub elems: Punctuated<Expr, Token![,]>,
+        pub elems: NodeList<Expr, Token![,]>,
     }
 }
 
@@ -305,7 +305,7 @@ ast_struct! {
     #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
     pub struct ExprAwait #full {
         pub attrs: Vec<Attribute>,
-        pub base: Box<Expr>,
+        pub base: NodeId<Expr>,
         pub dot_token: Token![.],
         pub await_token: Token![await],
     }
@@ -340,7 +340,7 @@ ast_struct! {
         pub attrs: Vec<Attribute>,
         pub break_token: Token![break],
         pub label: Option<Lifetime>,
-        pub expr: Option<Box<Expr>>,
+        pub expr: Option<NodeId<Expr>>,
     }
 }
 
@@ -349,9 +349,9 @@ ast_struct! {
     #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
     pub struct ExprCall {
         pub attrs: Vec<Attribute>,
-        pub func: Box<Expr>,
+        pub func: NodeId<Expr>,
         pub paren_token: token::Paren,
-        pub args: Punctuated<Expr, Token![,]>,
+        pub args: NodeList<Expr, Token![,]>,
     }
 }
 
@@ -360,7 +360,7 @@ ast_struct! {
     #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
     pub struct ExprCast {
         pub attrs: Vec<Attribute>,
-        pub expr: Box<Expr>,
+        pub expr: NodeId<Expr>,
         pub as_token: Token![as],
         pub ty: Box<Type>,
     }
@@ -380,7 +380,7 @@ ast_struct! {
         pub inputs: Punctuated<Pat, Token![,]>,
         pub or2_token: Token![|],
         pub output: ReturnType,
-        pub body: Box<Expr>,
+        pub body: NodeId<Expr>,
     }
 }
 
@@ -410,7 +410,7 @@ ast_struct! {
     #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
     pub struct ExprField {
         pub attrs: Vec<Attribute>,
-        pub base: Box<Expr>,
+        pub base: NodeId<Expr>,
         pub dot_token: Token![.],
         pub member: Member,
     }
@@ -425,7 +425,7 @@ ast_struct! {
         pub for_token: Token![for],
         pub pat: Box<Pat>,
         pub in_token: Token![in],
-        pub expr: Box<Expr>,
+        pub expr: NodeId<Expr>,
         pub body: Block,
     }
 }
@@ -440,7 +440,7 @@ ast_struct! {
     pub struct ExprGroup {
         pub attrs: Vec<Attribute>,
         pub group_token: token::Group,
-        pub expr: Box<Expr>,
+        pub expr: NodeId<Expr>,
     }
 }
 
@@ -454,9 +454,9 @@ ast_struct! {
     pub struct ExprIf #full {
         pub attrs: Vec<Attribute>,
         pub if_token: Token![if],
-        pub cond: Box<Expr>,
+        pub cond: NodeId<Expr>,
         pub then_branch: Block,
-        pub else_branch: Option<(Token![else], Box<Expr>)>,
+        pub else_branch: Option<(Token![else], NodeId<Expr>)>,
     }
 }
 
@@ -465,9 +465,9 @@ ast_struct! {
     #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
     pub struct ExprIndex {
         pub attrs: Vec<Attribute>,
-        pub expr: Box<Expr>,
+        pub expr: NodeId<Expr>,
         pub bracket_token: token::Bracket,
-        pub index: Box<Expr>,
+        pub index: NodeId<Expr>,
     }
 }
 
@@ -488,7 +488,7 @@ ast_struct! {
         pub let_token: Token![let],
         pub pat: Box<Pat>,
         pub eq_token: Token![=],
-        pub expr: Box<Expr>,
+        pub expr: NodeId<Expr>,
     }
 }
 
@@ -527,7 +527,7 @@ ast_struct! {
     pub struct ExprMatch #full {
         pub attrs: Vec<Attribute>,
         pub match_token: Token![match],
-        pub expr: Box<Expr>,
+        pub expr: NodeId<Expr>,
         pub brace_token: token::Brace,
         pub arms: Vec<Arm>,
     }
@@ -538,7 +538,7 @@ ast_struct! {
     #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
     pub struct ExprMethodCall {
         pub attrs: Vec<Attribute>,
-        pub receiver: Box<Expr>,
+        pub receiver: NodeId<Expr>,
         pub dot_token: Token![.],
         pub method: Ident,
         pub turbofish: Option<AngleBracketedGenericArguments>,
@@ -553,7 +553,7 @@ ast_struct! {
     pub struct ExprParen {
         pub attrs: Vec<Attribute>,
         pub paren_token: token::Paren,
-        pub expr: Box<Expr>,
+        pub expr: NodeId<Expr>,
     }
 }
 
@@ -575,9 +575,9 @@ ast_struct! {
     #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
     pub struct ExprRange #full {
         pub attrs: Vec<Attribute>,
-        pub start: Option<Box<Expr>>,
+        pub start: Option<NodeId<Expr>>,
         pub limits: RangeLimits,
-        pub end: Option<Box<Expr>>,
+        pub end: Option<NodeId<Expr>>,
     }
 }
 
@@ -589,7 +589,7 @@ ast_struct! {
         pub and_token: Token![&],
         pub raw: Token![raw],
         pub mutability: PointerMutability,
-        pub expr: Box<Expr>,
+        pub expr: NodeId<Expr>,
     }
 }
 
@@ -600,7 +600,7 @@ ast_struct! {
         pub attrs: Vec<Attribute>,
         pub and_token: Token![&],
         pub mutability: Option<Token![mut]>,
-        pub expr: Box<Expr>,
+        pub expr: NodeId<Expr>,
     }
 }
 
@@ -610,9 +610,9 @@ ast_struct! {
     pub struct ExprRepeat #full {
         pub attrs: Vec<Attribute>,
         pub bracket_token: token::Bracket,
-        pub expr: Box<Expr>,
+        pub expr: NodeId<Expr>,
         pub semi_token: Token![;],
-        pub len: Box<Expr>,
+        pub len: NodeId<Expr>,
     }
 }
 
@@ -622,7 +622,7 @@ ast_struct! {
     pub struct ExprReturn #full {
         pub attrs: Vec<Attribute>,
         pub return_token: Token![return],
-        pub expr: Option<Box<Expr>>,
+        pub expr: Option<NodeId<Expr>>,
     }
 }
 
@@ -639,7 +639,7 @@ ast_struct! {
         pub brace_token: token::Brace,
         pub fields: Punctuated<FieldValue, Token![,]>,
         pub dot2_token: Option<Token![..]>,
-        pub rest: Option<Box<Expr>>,
+        pub rest: Option<NodeId<Expr>>,
     }
 }
 
@@ -648,7 +648,7 @@ ast_struct! {
     #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
     pub struct ExprTry #full {
         pub attrs: Vec<Attribute>,
-        pub expr: Box<Expr>,
+        pub expr: NodeId<Expr>,
         pub question_token: Token![?],
     }
 }
@@ -669,7 +669,7 @@ ast_struct! {
     pub struct ExprTuple {
         pub attrs: Vec<Attribute>,
         pub paren_token: token::Paren,
-        pub elems: Punctuated<Expr, Token![,]>,
+        pub elems: Punctuated<NodeId<Expr>, Token![,]>,
     }
 }
 
@@ -679,7 +679,7 @@ ast_struct! {
     pub struct ExprUnary {
         pub attrs: Vec<Attribute>,
         pub op: UnOp,
-        pub expr: Box<Expr>,
+        pub expr: NodeId<Expr>,
     }
 }
 
@@ -700,7 +700,7 @@ ast_struct! {
         pub attrs: Vec<Attribute>,
         pub label: Option<Label>,
         pub while_token: Token![while],
-        pub cond: Box<Expr>,
+        pub cond: NodeId<Expr>,
         pub body: Block,
     }
 }
@@ -711,7 +711,7 @@ ast_struct! {
     pub struct ExprYield #full {
         pub attrs: Vec<Attribute>,
         pub yield_token: Token![yield],
-        pub expr: Option<Box<Expr>>,
+        pub expr: Option<NodeId<Expr>>,
     }
 }
 
@@ -827,7 +827,7 @@ impl Expr {
     /// precedence for `..` than struct init, a contradiction.
     #[cfg(all(feature = "full", feature = "parsing"))]
     #[cfg_attr(docsrs, doc(cfg(all(feature = "full", feature = "parsing"))))]
-    pub fn parse_without_eager_brace(input: ParseStream) -> Result<Expr> {
+    pub fn parse_without_eager_brace(input: ParseStream) -> Result<NodeId<Expr>> {
         parsing::ambiguous_expr(input, parsing::AllowStruct(false))
     }
 
@@ -889,7 +889,7 @@ impl Expr {
     /// [`parse_without_eager_brace`]: Self::parse_without_eager_brace
     #[cfg(all(feature = "full", feature = "parsing"))]
     #[cfg_attr(docsrs, doc(cfg(all(feature = "full", feature = "parsing"))))]
-    pub fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<Expr> {
+    pub fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<NodeId<Expr>> {
         parsing::parse_with_earlier_boundary_rule(input)
     }
 
@@ -1103,7 +1103,7 @@ ast_struct! {
         /// `Struct { x }`, there is no colon.
         pub colon_token: Option<Token![:]>,
 
-        pub expr: Expr,
+        pub expr: NodeId<Expr>,
     }
 }
 
@@ -1140,9 +1140,9 @@ ast_struct! {
     pub struct Arm {
         pub attrs: Vec<Attribute>,
         pub pat: Pat,
-        pub guard: Option<(Token![if], Box<Expr>)>,
+        pub guard: Option<(Token![if], NodeId<Expr>)>,
         pub fat_arrow_token: Token![=>],
-        pub body: Box<Expr>,
+        pub body: NodeId<Expr>,
         pub comma: Option<Token![,]>,
     }
 }
@@ -1214,7 +1214,7 @@ pub(crate) mod parsing {
     #[cfg(feature = "full")]
     use crate::ty::{ReturnType, Type};
     use crate::verbatim;
-    use molt_lib::NodeId;
+    use molt_lib::{NodeId, Span, WithSpan};
     #[cfg(feature = "full")]
     use proc_macro2::TokenStream;
     use std::mem;
@@ -1227,8 +1227,7 @@ pub(crate) mod parsing {
     #[cfg(feature = "full")]
     pub(super) struct AllowStruct(pub bool);
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-    impl Parse for Expr {
+    impl Parse for NodeId<Expr> {
         fn parse(input: ParseStream) -> Result<Self> {
             ambiguous_expr(
                 input,
@@ -1239,36 +1238,37 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    pub(super) fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<Expr> {
+    pub(super) fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<NodeId<Expr>> {
         let mut attrs = input.call(expr_attrs)?;
-        let mut expr = if input.peek(token::Group) {
+        let ctx = input.ctx();
+        let mut expr: WithSpan<Expr> = if input.peek(token::Group) {
             let allow_struct = AllowStruct(true);
             let atom = expr_group(input, allow_struct)?;
-            if continue_parsing_early(&atom) {
+            if continue_parsing_early(input, &atom) {
                 trailer_helper(input, atom)?
             } else {
                 atom
             }
         } else if input.peek(Token![if]) {
-            Expr::If(input.parse()?)
+            input.parse_span_with(Expr::If)?
         } else if input.peek(Token![while]) {
-            Expr::While(input.parse()?)
+            input.parse_span_with(Expr::While)?
         } else if input.peek(Token![for])
             && !(input.peek2(Token![<]) && (input.peek3(Lifetime) || input.peek3(Token![>])))
         {
-            Expr::ForLoop(input.parse()?)
+            input.parse_span_with(Expr::ForLoop)?
         } else if input.peek(Token![loop]) {
-            Expr::Loop(input.parse()?)
+            input.parse_span_with(Expr::Loop)?
         } else if input.peek(Token![match]) {
-            Expr::Match(input.parse()?)
+            input.parse_span_with(Expr::Match)?
         } else if input.peek(Token![try]) && input.peek2(token::Brace) {
-            Expr::TryBlock(input.parse()?)
+            input.parse_span_with(Expr::TryBlock)?
         } else if input.peek(Token![unsafe]) {
-            Expr::Unsafe(input.parse()?)
+            input.parse_span_with(Expr::Unsafe)?
         } else if input.peek(Token![const]) && input.peek2(token::Brace) {
-            Expr::Const(input.parse()?)
+            input.parse_span_with(Expr::Const)?
         } else if input.peek(token::Brace) {
-            Expr::Block(input.parse()?)
+            input.parse_span_with(Expr::Block)?
         } else if input.peek(Lifetime) {
             atom_labeled(input)?
         } else {
@@ -1276,12 +1276,13 @@ pub(crate) mod parsing {
             unary_expr(input, allow_struct)?
         };
 
-        if continue_parsing_early(&expr) {
+        if continue_parsing_early(input, &expr) {
             attrs.extend(expr.replace_attrs(Vec::new()));
             expr.replace_attrs(attrs);
 
             let allow_struct = AllowStruct(true);
-            return parse_expr(input, expr, allow_struct, Precedence::MIN);
+            return parse_expr(input, expr, allow_struct, Precedence::MIN)
+                .map(|expr| input.add(expr));
         }
 
         if input.peek(Token![.]) && !input.peek(Token![..]) || input.peek(Token![?]) {
@@ -1291,12 +1292,13 @@ pub(crate) mod parsing {
             expr.replace_attrs(attrs);
 
             let allow_struct = AllowStruct(true);
-            return parse_expr(input, expr, allow_struct, Precedence::MIN);
+            return parse_expr(input, expr, allow_struct, Precedence::MIN)
+                .map(|expr| input.add(expr));
         }
 
         attrs.extend(expr.replace_attrs(Vec::new()));
         expr.replace_attrs(attrs);
-        Ok(expr)
+        Ok(input.add(expr))
     }
 
     #[cfg(feature = "full")]
@@ -1311,13 +1313,13 @@ pub(crate) mod parsing {
 
     fn parse_expr(
         input: ParseStream,
-        mut lhs: Expr,
+        mut lhs: WithSpan<Expr>,
         allow_struct: AllowStruct,
         base: Precedence,
-    ) -> Result<Expr> {
+    ) -> Result<WithSpan<Expr>> {
         loop {
             let ahead = input.fork();
-            if let Expr::Range(_) = lhs {
+            if let Expr::Range(_) = *lhs {
                 // A range cannot be the left-hand side of another binary operator.
                 break;
             } else if let Ok(op) = ahead.parse::<BinOp>() {
@@ -1326,12 +1328,12 @@ pub(crate) mod parsing {
                     break;
                 }
                 if precedence == Precedence::Assign {
-                    if let Expr::Range(_) = lhs {
+                    if let Expr::Range(_) = *lhs {
                         break;
                     }
                 }
                 if precedence == Precedence::Compare {
-                    if let Expr::Binary(lhs) = &lhs {
+                    if let Expr::Binary(lhs) = &*lhs {
                         if Precedence::of_binop(&lhs.op) == Precedence::Compare {
                             return Err(input.error("comparison operators cannot be chained"));
                         }
@@ -1339,49 +1341,65 @@ pub(crate) mod parsing {
                 }
                 input.advance_to(&ahead);
                 let right = parse_binop_rhs(input, allow_struct, precedence)?;
-                lhs = Expr::Binary(ExprBinary {
-                    attrs: Vec::new(),
-                    left: lhs,
-                    op,
-                    right,
-                });
+                let span = lhs.join(&right);
+                lhs = WithSpan::new(
+                    Expr::Binary(ExprBinary {
+                        attrs: Vec::new(),
+                        left: input.add(lhs),
+                        op,
+                        right: input.add(right),
+                    }),
+                    span,
+                );
             } else if Precedence::Assign >= base
                 && input.peek(Token![=])
                 && !input.peek(Token![=>])
-                && match lhs {
+                && match *lhs {
                     Expr::Range(_) => false,
                     _ => true,
                 }
             {
                 let eq_token: Token![=] = input.parse()?;
                 let right = parse_binop_rhs(input, allow_struct, Precedence::Assign)?;
-                lhs = Expr::Assign(ExprAssign {
-                    attrs: Vec::new(),
-                    left: Box::new(lhs),
-                    eq_token,
-                    right,
-                });
+                let span = lhs.join(&right);
+                lhs = WithSpan::new(
+                    Expr::Assign(ExprAssign {
+                        attrs: Vec::new(),
+                        left: input.add(lhs),
+                        eq_token,
+                        right: input.add(right),
+                    }),
+                    span,
+                );
             } else if Precedence::Range >= base && input.peek(Token![..]) {
                 let limits: RangeLimits = input.parse()?;
                 let end = parse_range_end(input, &limits, allow_struct)?;
-                lhs = Expr::Range(ExprRange {
-                    attrs: Vec::new(),
-                    start: Some(Box::new(lhs)),
-                    limits,
-                    end,
-                });
+                let span = end.as_ref().map(|end| lhs.join(end)).unwrap_or(lhs.span());
+                lhs = WithSpan::new(
+                    Expr::Range(ExprRange {
+                        attrs: Vec::new(),
+                        start: Some(input.add(lhs)),
+                        limits,
+                        end: end.map(|end| input.add(end)),
+                    }),
+                    span,
+                );
             } else if Precedence::Cast >= base && input.peek(Token![as]) {
                 let as_token: Token![as] = input.parse()?;
                 let allow_plus = false;
                 let allow_group_generic = false;
                 let ty = ty::parsing::ambig_ty(input, allow_plus, allow_group_generic)?;
                 check_cast(input)?;
-                lhs = Expr::Cast(ExprCast {
-                    attrs: Vec::new(),
-                    expr: Box::new(lhs),
-                    as_token,
-                    ty: Box::new(ty),
-                });
+                let span = Span::fake(); // TODO merge lhs and type here once type is NodeId
+                lhs = WithSpan::new(
+                    Expr::Cast(ExprCast {
+                        attrs: Vec::new(),
+                        expr: input.add(lhs),
+                        as_token,
+                        ty: Box::new(ty),
+                    }),
+                    span,
+                );
             } else {
                 break;
             }
@@ -1411,7 +1429,7 @@ pub(crate) mod parsing {
                     attrs: Vec::new(),
                     left: Box::new(lhs),
                     op,
-                    right,
+                    right: input.add(right),
                 });
             } else if Precedence::Cast >= base && input.peek(Token![as]) {
                 let as_token: Token![as] = input.parse()?;
@@ -1436,7 +1454,7 @@ pub(crate) mod parsing {
         input: ParseStream,
         #[cfg(feature = "full")] allow_struct: AllowStruct,
         precedence: Precedence,
-    ) -> Result<Box<Expr>> {
+    ) -> Result<WithSpan<Expr>> {
         let mut rhs = unary_expr(
             input,
             #[cfg(feature = "full")]
@@ -1464,7 +1482,7 @@ pub(crate) mod parsing {
                 break;
             }
         }
-        Ok(Box::new(rhs))
+        Ok(rhs)
     }
 
     fn peek_precedence(input: ParseStream) -> Precedence {
@@ -1485,7 +1503,7 @@ pub(crate) mod parsing {
     pub(super) fn ambiguous_expr(
         input: ParseStream,
         #[cfg(feature = "full")] allow_struct: AllowStruct,
-    ) -> Result<Expr> {
+    ) -> Result<NodeId<Expr>> {
         let lhs = unary_expr(
             input,
             #[cfg(feature = "full")]
@@ -1498,6 +1516,7 @@ pub(crate) mod parsing {
             allow_struct,
             Precedence::MIN,
         )
+        .map(|expr| input.add(expr))
     }
 
     #[cfg(feature = "full")]
@@ -1514,53 +1533,54 @@ pub(crate) mod parsing {
     // &mut <trailer>
     // box <trailer>
     #[cfg(feature = "full")]
-    fn unary_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<Expr> {
-        let begin = input.fork();
-        let attrs = input.call(expr_attrs)?;
-        if input.peek(token::Group) {
-            return trailer_expr(begin, attrs, input, allow_struct);
-        }
+    fn unary_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<WithSpan<Expr>> {
+        todo!()
+        // let begin = input.fork();
+        // let attrs = input.call(expr_attrs)?;
+        // if input.peek(token::Group) {
+        //     return trailer_expr(begin, attrs, input, allow_struct);
+        // }
 
-        if input.peek(Token![&]) {
-            let and_token: Token![&] = input.parse()?;
-            let raw: Option<Token![raw]> = if input.peek(Token![raw])
-                && (input.peek2(Token![mut]) || input.peek2(Token![const]))
-            {
-                Some(input.parse()?)
-            } else {
-                None
-            };
-            let mutability: Option<Token![mut]> = input.parse()?;
-            let const_token: Option<Token![const]> = if raw.is_some() && mutability.is_none() {
-                Some(input.parse()?)
-            } else {
-                None
-            };
-            let expr = Box::new(unary_expr(input, allow_struct)?);
-            if let Some(raw) = raw {
-                Ok(Expr::RawAddr(ExprRawAddr {
-                    attrs,
-                    and_token,
-                    raw,
-                    mutability: match mutability {
-                        Some(mut_token) => PointerMutability::Mut(mut_token),
-                        None => PointerMutability::Const(const_token.unwrap()),
-                    },
-                    expr,
-                }))
-            } else {
-                Ok(Expr::Reference(ExprReference {
-                    attrs,
-                    and_token,
-                    mutability,
-                    expr,
-                }))
-            }
-        } else if input.peek(Token![*]) || input.peek(Token![!]) || input.peek(Token![-]) {
-            expr_unary(input, attrs, allow_struct).map(Expr::Unary)
-        } else {
-            trailer_expr(begin, attrs, input, allow_struct)
-        }
+        // if input.peek(Token![&]) {
+        //     let and_token: Token![&] = input.parse()?;
+        //     let raw: Option<Token![raw]> = if input.peek(Token![raw])
+        //         && (input.peek2(Token![mut]) || input.peek2(Token![const]))
+        //     {
+        //         Some(input.parse()?)
+        //     } else {
+        //         None
+        //     };
+        //     let mutability: Option<Token![mut]> = input.parse()?;
+        //     let const_token: Option<Token![const]> = if raw.is_some() && mutability.is_none() {
+        //         Some(input.parse()?)
+        //     } else {
+        //         None
+        //     };
+        //     let expr = Box::new(unary_expr(input, allow_struct)?);
+        //     if let Some(raw) = raw {
+        //         Ok(Expr::RawAddr(ExprRawAddr {
+        //             attrs,
+        //             and_token,
+        //             raw,
+        //             mutability: match mutability {
+        //                 Some(mut_token) => PointerMutability::Mut(mut_token),
+        //                 None => PointerMutability::Const(const_token.unwrap()),
+        //             },
+        //             expr,
+        //         }))
+        //     } else {
+        //         Ok(Expr::Reference(ExprReference {
+        //             attrs,
+        //             and_token,
+        //             mutability,
+        //             expr,
+        //         }))
+        //     }
+        // } else if input.peek(Token![*]) || input.peek(Token![!]) || input.peek(Token![-]) {
+        //     expr_unary(input, attrs, allow_struct).map(Expr::Unary)
+        // } else {
+        //     trailer_expr(begin, attrs, input, allow_struct)
+        // }
     }
 
     #[cfg(not(feature = "full"))]
@@ -1596,111 +1616,113 @@ pub(crate) mod parsing {
         input: ParseStream,
         allow_struct: AllowStruct,
     ) -> Result<Expr> {
-        let atom = atom_expr(input, allow_struct)?;
-        let mut e = trailer_helper(input, atom)?;
+        todo!()
+        // let atom = atom_expr(input, allow_struct)?;
+        // let mut e = trailer_helper(input, atom)?;
 
-        if let Expr::Verbatim(tokens) = &mut e {
-            *tokens = verbatim::between(&begin, input);
-        } else {
-            let inner_attrs = e.replace_attrs(Vec::new());
-            attrs.extend(inner_attrs);
-            e.replace_attrs(attrs);
-        }
+        // if let Expr::Verbatim(tokens) = &mut e {
+        //     *tokens = verbatim::between(&begin, input);
+        // } else {
+        //     let inner_attrs = e.replace_attrs(Vec::new());
+        //     attrs.extend(inner_attrs);
+        //     e.replace_attrs(attrs);
+        // }
 
-        Ok(e)
+        // Ok(e)
     }
 
     #[cfg(feature = "full")]
-    fn trailer_helper(input: ParseStream, mut e: Expr) -> Result<Expr> {
-        loop {
-            if input.peek(token::Paren) {
-                let content;
-                e = Expr::Call(ExprCall {
-                    attrs: Vec::new(),
-                    func: Box::new(e),
-                    paren_token: parenthesized!(content in input),
-                    args: content.parse_terminated(Expr::parse, Token![,])?,
-                });
-            } else if input.peek(Token![.])
-                && !input.peek(Token![..])
-                && match e {
-                    Expr::Range(_) => false,
-                    _ => true,
-                }
-            {
-                let mut dot_token: Token![.] = input.parse()?;
+    fn trailer_helper(input: ParseStream, mut e: WithSpan<Expr>) -> Result<WithSpan<Expr>> {
+        todo!()
+        // loop {
+        //     if input.peek(token::Paren) {
+        //         let content;
+        //         e = Expr::Call(ExprCall {
+        //             attrs: Vec::new(),
+        //             func: e,
+        //             paren_token: parenthesized!(content in input),
+        //             args: content.parse_terminated(NodeId::<Expr>::parse, Token![,])?.into(),
+        //         });
+        //     } else if input.peek(Token![.])
+        //         && !input.peek(Token![..])
+        //         && match input.ctx().get_real(e) {
+        //             Some(Expr::Range(_)) => false,
+        //             _ => true,
+        //         }
+        //     {
+        //         let mut dot_token: Token![.] = input.parse()?;
 
-                let float_token: Option<LitFloat> = input.parse()?;
-                if let Some(float_token) = float_token {
-                    if multi_index(&mut e, &mut dot_token, float_token)? {
-                        continue;
-                    }
-                }
+        //         let float_token: Option<LitFloat> = input.parse()?;
+        //         if let Some(float_token) = float_token {
+        //             if multi_index(&mut e, &mut dot_token, float_token)? {
+        //                 continue;
+        //             }
+        //         }
 
-                let await_token: Option<Token![await]> = input.parse()?;
-                if let Some(await_token) = await_token {
-                    e = Expr::Await(ExprAwait {
-                        attrs: Vec::new(),
-                        base: Box::new(e),
-                        dot_token,
-                        await_token,
-                    });
-                    continue;
-                }
+        //         let await_token: Option<Token![await]> = input.parse()?;
+        //         if let Some(await_token) = await_token {
+        //             e = Expr::Await(ExprAwait {
+        //                 attrs: Vec::new(),
+        //                 base: Box::new(e),
+        //                 dot_token,
+        //                 await_token,
+        //             });
+        //             continue;
+        //         }
 
-                let member: Member = input.parse()?;
-                let turbofish = if member.is_named() && input.peek(Token![::]) {
-                    Some(AngleBracketedGenericArguments::parse_turbofish(input)?)
-                } else {
-                    None
-                };
+        //         let member: Member = input.parse()?;
+        //         let turbofish = if member.is_named() && input.peek(Token![::]) {
+        //             Some(AngleBracketedGenericArguments::parse_turbofish(input)?)
+        //         } else {
+        //             None
+        //         };
 
-                if turbofish.is_some() || input.peek(token::Paren) {
-                    if let Member::Named(method) = member {
-                        let content;
-                        e = Expr::MethodCall(ExprMethodCall {
-                            attrs: Vec::new(),
-                            receiver: Box::new(e),
-                            dot_token,
-                            method,
-                            turbofish,
-                            paren_token: parenthesized!(content in input),
-                            args: content.parse_terminated(Expr::parse, Token![,])?,
-                        });
-                        continue;
-                    }
-                }
+        //         if turbofish.is_some() || input.peek(token::Paren) {
+        //             if let Member::Named(method) = member {
+        //                 let content;
+        //                 e = Expr::MethodCall(ExprMethodCall {
+        //                     attrs: Vec::new(),
+        //                     receiver: Box::new(e),
+        //                     dot_token,
+        //                     method,
+        //                     turbofish,
+        //                     paren_token: parenthesized!(content in input),
+        //                     args: content.parse_terminated(Expr::parse, Token![,])?,
+        //                 });
+        //                 continue;
+        //             }
+        //         }
 
-                e = Expr::Field(ExprField {
-                    attrs: Vec::new(),
-                    base: Box::new(e),
-                    dot_token,
-                    member,
-                });
-            } else if input.peek(token::Bracket) {
-                let content;
-                e = Expr::Index(ExprIndex {
-                    attrs: Vec::new(),
-                    expr: Box::new(e),
-                    bracket_token: bracketed!(content in input),
-                    index: content.parse()?,
-                });
-            } else if input.peek(Token![?])
-                && match e {
-                    Expr::Range(_) => false,
-                    _ => true,
-                }
-            {
-                e = Expr::Try(ExprTry {
-                    attrs: Vec::new(),
-                    expr: Box::new(e),
-                    question_token: input.parse()?,
-                });
-            } else {
-                break;
-            }
-        }
-        Ok(e)
+        //         e = Expr::Field(ExprField {
+        //             attrs: Vec::new(),
+        //             base: Box::new(e),
+        //             dot_token,
+        //             member,
+        //         });
+        //     } else if input.peek(token::Bracket) {
+        //         let content;
+        //         e = Expr::Index(ExprIndex {
+        //             attrs: Vec::new(),
+        //             expr: Box::new(e),
+        //             bracket_token: bracketed!(content in input),
+        //             index: content.parse()?,
+        //         });
+        //     } else if input.peek(Token![?])
+        //         && match e {
+        //             Expr::Range(_) => false,
+        //             _ => true,
+        //         }
+        //     {
+        //         e = Expr::Try(ExprTry {
+        //             attrs: Vec::new(),
+        //             expr: Box::new(e),
+        //             question_token: input.parse()?,
+        //         });
+        //     } else {
+        //         break;
+        //     }
+        // }
+        // Ok(e)
     }
 
     #[cfg(not(feature = "full"))]
@@ -1780,17 +1802,17 @@ pub(crate) mod parsing {
     // Parse all atomic expressions which don't have to worry about precedence
     // interactions, as they are fully contained.
     #[cfg(feature = "full")]
-    fn atom_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<Expr> {
+    fn atom_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<WithSpan<Expr>> {
         if input.peek(token::Group) {
             expr_group(input, allow_struct)
         } else if input.peek(Lit) {
-            input.parse().map(Expr::Lit)
+            input.parse_span_with(Expr::Lit)
         } else if input.peek(Token![async])
             && (input.peek2(token::Brace) || input.peek2(Token![move]) && input.peek3(token::Brace))
         {
-            input.parse().map(Expr::Async)
+            input.parse_span_with(Expr::Async)
         } else if input.peek(Token![try]) && input.peek2(token::Brace) {
-            input.parse().map(Expr::TryBlock)
+            input.parse_span_with(Expr::TryBlock)
         } else if input.peek(Token![|])
             || input.peek(Token![move])
             || input.peek(Token![for])
@@ -1800,10 +1822,12 @@ pub(crate) mod parsing {
             || input.peek(Token![static])
             || input.peek(Token![async]) && (input.peek2(Token![|]) || input.peek2(Token![move]))
         {
-            expr_closure(input, allow_struct).map(Expr::Closure)
+            todo!()
+            // expr_closure(input, allow_struct).map(Expr::Closure)
         } else if token::parsing::peek_keyword(input.cursor(), "builtin") && input.peek2(Token![#])
         {
-            expr_builtin(input)
+            todo!()
+            // expr_builtin(input)
         } else if input.peek(Ident)
             || input.peek(Token![::])
             || input.peek(Token![<])
@@ -1813,43 +1837,50 @@ pub(crate) mod parsing {
             || input.peek(Token![crate])
             || input.peek(Token![try]) && (input.peek2(Token![!]) || input.peek2(Token![::]))
         {
-            path_or_macro_or_struct(input, allow_struct)
+            todo!()
+            // path_or_macro_or_struct(input, allow_struct)
         } else if input.peek(token::Paren) {
-            paren_or_tuple(input)
+            todo!()
+            // paren_or_tuple(input)
         } else if input.peek(Token![break]) {
-            expr_break(input, allow_struct).map(Expr::Break)
+            todo!()
+            // expr_break(input, allow_struct).map(Expr::Break)
         } else if input.peek(Token![continue]) {
-            input.parse().map(Expr::Continue)
+            input.parse_span_with(Expr::Continue)
         } else if input.peek(Token![return]) {
-            input.parse().map(Expr::Return)
+            input.parse_span_with(Expr::Return)
         } else if input.peek(Token![become]) {
-            expr_become(input)
+            todo!()
+            // expr_become(input)
         } else if input.peek(token::Bracket) {
-            array_or_repeat(input)
+            todo!()
+            // array_or_repeat(input)
         } else if input.peek(Token![let]) {
-            expr_let(input, allow_struct).map(Expr::Let)
+            todo!()
+            // expr_let(input, allow_struct).map(Expr::Let)
         } else if input.peek(Token![if]) {
-            input.parse().map(Expr::If)
+            input.parse_span_with(Expr::If)
         } else if input.peek(Token![while]) {
-            input.parse().map(Expr::While)
+            input.parse_span_with(Expr::While)
         } else if input.peek(Token![for]) {
-            input.parse().map(Expr::ForLoop)
+            input.parse_span_with(Expr::ForLoop)
         } else if input.peek(Token![loop]) {
-            input.parse().map(Expr::Loop)
+            input.parse_span_with(Expr::Loop)
         } else if input.peek(Token![match]) {
-            input.parse().map(Expr::Match)
+            input.parse_span_with(Expr::Match)
         } else if input.peek(Token![yield]) {
-            input.parse().map(Expr::Yield)
+            input.parse_span_with(Expr::Yield)
         } else if input.peek(Token![unsafe]) {
-            input.parse().map(Expr::Unsafe)
+            input.parse_span_with(Expr::Unsafe)
         } else if input.peek(Token![const]) {
-            input.parse().map(Expr::Const)
+            input.parse_span_with(Expr::Const)
         } else if input.peek(token::Brace) {
-            input.parse().map(Expr::Block)
+            input.parse_span_with(Expr::Block)
         } else if input.peek(Token![..]) {
-            expr_range(input, allow_struct).map(Expr::Range)
+            todo!()
+            // expr_range(input, allow_struct).map(Expr::Range)
         } else if input.peek(Token![_]) {
-            input.parse().map(Expr::Infer)
+            input.parse_span_with(Expr::Infer)
         } else if input.peek(Lifetime) {
             atom_labeled(input)
         } else {
@@ -1858,27 +1889,28 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    fn atom_labeled(input: ParseStream) -> Result<Expr> {
-        let the_label: Label = input.parse()?;
-        let mut expr = if input.peek(Token![while]) {
-            Expr::While(input.parse()?)
-        } else if input.peek(Token![for]) {
-            Expr::ForLoop(input.parse()?)
-        } else if input.peek(Token![loop]) {
-            Expr::Loop(input.parse()?)
-        } else if input.peek(token::Brace) {
-            Expr::Block(input.parse()?)
-        } else {
-            return Err(input.error("expected loop or block expression"));
-        };
-        match &mut expr {
-            Expr::While(ExprWhile { label, .. })
-            | Expr::ForLoop(ExprForLoop { label, .. })
-            | Expr::Loop(ExprLoop { label, .. })
-            | Expr::Block(ExprBlock { label, .. }) => *label = Some(the_label),
-            _ => unreachable!(),
-        }
-        Ok(expr)
+    fn atom_labeled(input: ParseStream) -> Result<WithSpan<Expr>> {
+        todo!()
+        // let the_label: Label = input.parse()?;
+        // let mut expr = if input.peek(Token![while]) {
+        //     Expr::While(input.parse()?)
+        // } else if input.peek(Token![for]) {
+        //     Expr::ForLoop(input.parse()?)
+        // } else if input.peek(Token![loop]) {
+        //     Expr::Loop(input.parse()?)
+        // } else if input.peek(token::Brace) {
+        //     Expr::Block(input.parse()?)
+        // } else {
+        //     return Err(input.error("expected loop or block expression"));
+        // };
+        // match &mut expr {
+        //     Expr::While(ExprWhile { label, .. })
+        //     | Expr::ForLoop(ExprForLoop { label, .. })
+        //     | Expr::Loop(ExprLoop { label, .. })
+        //     | Expr::Block(ExprBlock { label, .. }) => *label = Some(the_label),
+        //     _ => unreachable!(),
+        // }
+        // Ok(expr)
     }
 
     #[cfg(not(feature = "full"))]
@@ -2003,12 +2035,12 @@ pub(crate) mod parsing {
             }));
         }
 
-        let first: Expr = content.parse()?;
+        let first = content.parse()?;
         if content.is_empty() {
             return Ok(Expr::Paren(ExprParen {
                 attrs: Vec::new(),
                 paren_token,
-                expr: Box::new(first),
+                expr: first,
             }));
         }
 
@@ -2038,11 +2070,11 @@ pub(crate) mod parsing {
             return Ok(Expr::Array(ExprArray {
                 attrs: Vec::new(),
                 bracket_token,
-                elems: Punctuated::new(),
+                elems: Punctuated::new().into(),
             }));
         }
 
-        let first: Expr = content.parse()?;
+        let first: NodeId<Expr> = content.parse()?;
         if content.is_empty() || content.peek(Token![,]) {
             let mut elems = Punctuated::new();
             elems.push_value(first);
@@ -2058,17 +2090,17 @@ pub(crate) mod parsing {
             Ok(Expr::Array(ExprArray {
                 attrs: Vec::new(),
                 bracket_token,
-                elems,
+                elems: elems.into(),
             }))
         } else if content.peek(Token![;]) {
             let semi_token: Token![;] = content.parse()?;
-            let len: Expr = content.parse()?;
+            let len: NodeId<Expr> = content.parse()?;
             Ok(Expr::Repeat(ExprRepeat {
                 attrs: Vec::new(),
                 bracket_token,
-                expr: Box::new(first),
+                expr: first,
                 semi_token,
-                len: Box::new(len),
+                len: len,
             }))
         } else {
             Err(content.error("expected `,` or `;`"))
@@ -2084,7 +2116,7 @@ pub(crate) mod parsing {
             let mut elems = Punctuated::new();
 
             while !content.is_empty() {
-                let first: Expr = content.parse()?;
+                let first: NodeId<Expr> = content.parse()?;
                 elems.push_value(first);
                 if content.is_empty() {
                     break;
@@ -2096,7 +2128,7 @@ pub(crate) mod parsing {
             Ok(ExprArray {
                 attrs: Vec::new(),
                 bracket_token,
-                elems,
+                elems: elems.into(),
             })
         }
     }
@@ -2117,9 +2149,16 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    fn continue_parsing_early(mut expr: &Expr) -> bool {
+    fn continue_parsing_early(input: ParseStream, expr: &Expr) -> bool {
+        let ctx = input.ctx();
+        let mut expr = expr;
         while let Expr::Group(group) = expr {
-            expr = &group.expr;
+            expr = match ctx.get_real(group.expr) {
+                Some(expr) => &expr,
+                None => {
+                    todo!("Figure out default")
+                }
+            }
         }
         match expr {
             Expr::If(_)
@@ -2148,35 +2187,36 @@ pub(crate) mod parsing {
     fn expr_group(
         input: ParseStream,
         #[cfg(feature = "full")] allow_struct: AllowStruct,
-    ) -> Result<Expr> {
-        let group = crate::group::parse_group(input)?;
-        let mut inner: Expr = group.content.parse()?;
+    ) -> Result<WithSpan<Expr>> {
+        todo!()
+        // let group = crate::group::parse_group(input)?;
+        // let mut inner: WithSpan<Expr> = group.content.parse_span()?;
 
-        match inner {
-            Expr::Path(mut expr) if expr.attrs.is_empty() => {
-                let grouped_len = expr.path.segments.len();
-                Path::parse_rest(input, &mut expr.path, true)?;
-                match rest_of_path_or_macro_or_struct(
-                    expr.qself,
-                    expr.path,
-                    input,
-                    #[cfg(feature = "full")]
-                    allow_struct,
-                )? {
-                    Expr::Path(expr) if expr.path.segments.len() == grouped_len => {
-                        inner = Expr::Path(expr);
-                    }
-                    extended => return Ok(extended),
-                }
-            }
-            _ => {}
-        }
+        // match inner {
+        //     Expr::Path(mut expr) if expr.attrs.is_empty() => {
+        //         let grouped_len = expr.path.segments.len();
+        //         Path::parse_rest(input, &mut expr.path, true)?;
+        //         match rest_of_path_or_macro_or_struct(
+        //             expr.qself,
+        //             expr.path,
+        //             input,
+        //             #[cfg(feature = "full")]
+        //             allow_struct,
+        //         )? {
+        //             Expr::Path(expr) if expr.path.segments.len() == grouped_len => {
+        //                 inner = Expr::Path(expr);
+        //             }
+        //             extended => return Ok(extended),
+        //         }
+        //     }
+        //     _ => {}
+        // }
 
-        Ok(Expr::Group(ExprGroup {
-            attrs: Vec::new(),
-            group_token: group.token,
-            expr: Box::new(inner),
-        }))
+        // Ok(Expr::Group(ExprGroup {
+        //     attrs: Vec::new(),
+        //     group_token: group.token,
+        //     expr: Box::new(inner),
+        // }))
     }
 
     #[cfg(feature = "full")]
@@ -2208,10 +2248,10 @@ pub(crate) mod parsing {
             let_token: input.parse()?,
             pat: Box::new(Pat::parse_multi_with_leading_vert(input)?),
             eq_token: input.parse()?,
-            expr: Box::new({
+            expr: {
                 let lhs = unary_expr(input, allow_struct)?;
-                parse_expr(input, lhs, allow_struct, Precedence::Compare)?
-            }),
+                input.add(parse_expr(input, lhs, allow_struct, Precedence::Compare)?)
+            },
         })
     }
 
@@ -2231,7 +2271,7 @@ pub(crate) mod parsing {
                 expr = ExprIf {
                     attrs: Vec::new(),
                     if_token,
-                    cond: Box::new(cond),
+                    cond,
                     then_branch,
                     else_branch: None,
                 };
@@ -2243,15 +2283,18 @@ pub(crate) mod parsing {
                 let else_token: Token![else] = input.parse()?;
                 let lookahead = input.lookahead1();
                 if lookahead.peek(Token![if]) {
-                    expr.else_branch = Some((else_token, Box::new(Expr::PLACEHOLDER)));
+                    expr.else_branch = Some((else_token, NodeId::placeholder()));
                     clauses.push(expr);
                 } else if lookahead.peek(token::Brace) {
+                    let block: WithSpan<Block> = input.parse_span()?;
                     expr.else_branch = Some((
                         else_token,
-                        Box::new(Expr::Block(ExprBlock {
-                            attrs: Vec::new(),
-                            label: None,
-                            block: input.parse()?,
+                        input.add(block.map(|block| {
+                            Expr::Block(ExprBlock {
+                                attrs: Vec::new(),
+                                label: None,
+                                block,
+                            })
                         })),
                     ));
                     break;
@@ -2260,8 +2303,11 @@ pub(crate) mod parsing {
                 }
             }
 
-            while let Some(mut prev) = clauses.pop() {
-                *prev.else_branch.as_mut().unwrap().1 = Expr::If(expr);
+            while let Some(prev) = clauses.pop() {
+                *input
+                    .ctx()
+                    .get_real_mut(prev.else_branch.unwrap().1)
+                    .unwrap() = Expr::If(expr);
                 expr = prev;
             }
             expr.attrs = attrs;
@@ -2291,7 +2337,7 @@ pub(crate) mod parsing {
             let pat = Pat::parse_multi_with_leading_vert(input)?;
 
             let in_token: Token![in] = input.parse()?;
-            let expr: Expr = input.call(Expr::parse_without_eager_brace)?;
+            let expr: NodeId<Expr> = input.call(Expr::parse_without_eager_brace)?;
 
             let content;
             let brace_token = braced!(content in input);
@@ -2304,7 +2350,7 @@ pub(crate) mod parsing {
                 for_token,
                 pat: Box::new(pat),
                 in_token,
-                expr: Box::new(expr),
+                expr,
                 body: Block { brace_token, stmts },
             })
         }
@@ -2349,7 +2395,7 @@ pub(crate) mod parsing {
             Ok(ExprMatch {
                 attrs,
                 match_token,
-                expr: Box::new(expr),
+                expr,
                 brace_token,
                 arms,
             })
@@ -2414,7 +2460,7 @@ pub(crate) mod parsing {
         Ok(ExprUnary {
             attrs,
             op: input.parse()?,
-            expr: Box::new(unary_expr(input, allow_struct)?),
+            expr: input.add(unary_expr(input, allow_struct)?),
         })
     }
 
@@ -2437,7 +2483,7 @@ pub(crate) mod parsing {
                 and_token: input.parse()?,
                 raw: input.parse()?,
                 mutability: input.parse()?,
-                expr: Box::new(unary_expr(input, allow_struct)?),
+                expr: input.add(unary_expr(input, allow_struct)?),
             })
         }
     }
@@ -2451,7 +2497,7 @@ pub(crate) mod parsing {
                 attrs: Vec::new(),
                 and_token: input.parse()?,
                 mutability: input.parse()?,
-                expr: Box::new(unary_expr(input, allow_struct)?),
+                expr: input.add(unary_expr(input, allow_struct)?),
             })
         }
     }
@@ -2487,7 +2533,7 @@ pub(crate) mod parsing {
     fn expr_become(input: ParseStream) -> Result<Expr> {
         let begin = input.fork();
         input.parse::<Token![become]>()?;
-        input.parse::<Expr>()?;
+        input.parse::<NodeId<Expr>>()?;
         Ok(Expr::Verbatim(verbatim::between(&begin, input)))
     }
 
@@ -2549,13 +2595,15 @@ pub(crate) mod parsing {
         let (output, body) = if input.peek(Token![->]) {
             let arrow_token: Token![->] = input.parse()?;
             let ty: Type = input.parse()?;
-            let body: Block = input.parse()?;
+            let body: WithSpan<Block> = input.parse_span()?;
             let output = ReturnType::Type(arrow_token, Box::new(ty));
-            let block = Expr::Block(ExprBlock {
-                attrs: Vec::new(),
-                label: None,
-                block: body,
-            });
+            let block = input.add(body.map(|body| {
+                Expr::Block(ExprBlock {
+                    attrs: Vec::new(),
+                    label: None,
+                    block: body,
+                })
+            }));
             (output, block)
         } else {
             let body = ambiguous_expr(input, allow_struct)?;
@@ -2573,7 +2621,7 @@ pub(crate) mod parsing {
             inputs,
             or2_token,
             output,
-            body: Box::new(body),
+            body,
         })
     }
 
@@ -2644,7 +2692,7 @@ pub(crate) mod parsing {
                 attrs,
                 label,
                 while_token,
-                cond: Box::new(cond),
+                cond,
                 body: Block { brace_token, stmts },
             })
         }
@@ -2713,7 +2761,7 @@ pub(crate) mod parsing {
         if label.is_some() && ahead.peek(Token![:]) {
             // Not allowed: `break 'label: loop {...}`
             // Parentheses are required. `break ('label: loop {...})`
-            let _: Expr = input.parse()?;
+            let _: NodeId<Expr> = input.parse()?;
             let start_span = label.unwrap().apostrophe;
             let end_span = input.cursor().prev_span();
             return Err(crate::error::new2(
@@ -2742,17 +2790,21 @@ pub(crate) mod parsing {
     impl Parse for FieldValue {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = input.call(Attribute::parse_outer)?;
-            let member: Member = input.parse()?;
+            let member: WithSpan<Member> = input.parse_span()?;
             let (colon_token, value) = if input.peek(Token![:]) || !member.is_named() {
                 let colon_token: Token![:] = input.parse()?;
-                let value: Expr = input.parse()?;
+                let value: NodeId<Expr> = input.parse()?;
                 (Some(colon_token), value)
-            } else if let Member::Named(ident) = &member {
-                let value = Expr::Path(ExprPath {
-                    attrs: Vec::new(),
-                    qself: None,
-                    path: Path::from(ident.clone()),
-                });
+            } else if let Member::Named(ident) = &*member {
+                let span = member.span();
+                let value = input.add(WithSpan::new(
+                    Expr::Path(ExprPath {
+                        attrs: Vec::new(),
+                        qself: None,
+                        path: Path::from(ident.clone()),
+                    }),
+                    span,
+                ));
                 (None, value)
             } else {
                 unreachable!()
@@ -2760,7 +2812,7 @@ pub(crate) mod parsing {
 
             Ok(FieldValue {
                 attrs,
-                member,
+                member: member.take(),
                 colon_token,
                 expr: value,
             })
@@ -2797,7 +2849,7 @@ pub(crate) mod parsing {
                     rest: if content.is_empty() {
                         None
                     } else {
-                        Some(Box::new(content.parse()?))
+                        Some(content.parse()?)
                     },
                 });
             }
@@ -2868,7 +2920,7 @@ pub(crate) mod parsing {
             attrs: Vec::new(),
             start: None,
             limits,
-            end,
+            end: end.map(|end| input.add(end)),
         })
     }
 
@@ -2877,35 +2929,36 @@ pub(crate) mod parsing {
         input: ParseStream,
         limits: &RangeLimits,
         allow_struct: AllowStruct,
-    ) -> Result<Option<Box<Expr>>> {
-        if matches!(limits, RangeLimits::HalfOpen(_))
-            && (input.is_empty()
-                || input.peek(Token![,])
-                || input.peek(Token![;])
-                || input.peek(Token![.]) && !input.peek(Token![..])
-                || input.peek(Token![?])
-                || input.peek(Token![=>])
-                || !allow_struct.0 && input.peek(token::Brace)
-                || input.peek(Token![=])
-                || input.peek(Token![+])
-                || input.peek(Token![/])
-                || input.peek(Token![%])
-                || input.peek(Token![^])
-                || input.peek(Token![>])
-                || input.peek(Token![<=])
-                || input.peek(Token![!=])
-                || input.peek(Token![-=])
-                || input.peek(Token![*=])
-                || input.peek(Token![&=])
-                || input.peek(Token![|=])
-                || input.peek(Token![<<=])
-                || input.peek(Token![as]))
-        {
-            Ok(None)
-        } else {
-            let end = parse_binop_rhs(input, allow_struct, Precedence::Range)?;
-            Ok(Some(end))
-        }
+    ) -> Result<Option<WithSpan<Expr>>> {
+        todo!()
+        // if matches!(limits, RangeLimits::HalfOpen(_))
+        //     && (input.is_empty()
+        //         || input.peek(Token![,])
+        //         || input.peek(Token![;])
+        //         || input.peek(Token![.]) && !input.peek(Token![..])
+        //         || input.peek(Token![?])
+        //         || input.peek(Token![=>])
+        //         || !allow_struct.0 && input.peek(token::Brace)
+        //         || input.peek(Token![=])
+        //         || input.peek(Token![+])
+        //         || input.peek(Token![/])
+        //         || input.peek(Token![%])
+        //         || input.peek(Token![^])
+        //         || input.peek(Token![>])
+        //         || input.peek(Token![<=])
+        //         || input.peek(Token![!=])
+        //         || input.peek(Token![-=])
+        //         || input.peek(Token![*=])
+        //         || input.peek(Token![&=])
+        //         || input.peek(Token![|=])
+        //         || input.peek(Token![<<=])
+        //         || input.peek(Token![as]))
+        // {
+        //     Ok(None)
+        // } else {
+        //     let end = parse_binop_rhs(input, allow_struct, Precedence::Range)?;
+        //     Ok(Some(end))
+        // }
     }
 
     #[cfg(feature = "full")]
@@ -2996,8 +3049,8 @@ pub(crate) mod parsing {
                 guard: {
                     if input.peek(Token![if]) {
                         let if_token: Token![if] = input.parse()?;
-                        let guard: Expr = input.parse()?;
-                        Some((if_token, Box::new(guard)))
+                        let guard: NodeId<Expr> = input.parse()?;
+                        Some((if_token, guard))
                     } else {
                         None
                     }
@@ -3006,7 +3059,7 @@ pub(crate) mod parsing {
                 body: {
                     let body = Expr::parse_with_earlier_boundary_rule(input)?;
                     requires_comma = classify::requires_comma_to_be_match_arm(&body);
-                    Box::new(body)
+                    body
                 },
                 comma: {
                     if requires_comma && !input.is_empty() {
@@ -3038,37 +3091,38 @@ pub(crate) mod parsing {
     }
 
     fn multi_index(e: &mut Expr, dot_token: &mut Token![.], float: LitFloat) -> Result<bool> {
-        let float_token = float.token();
-        let float_span = float_token.span();
-        let mut float_repr = float_token.to_string();
-        let trailing_dot = float_repr.ends_with('.');
-        if trailing_dot {
-            float_repr.truncate(float_repr.len() - 1);
-        }
+        todo!()
+        // let float_token = float.token();
+        // let float_span = float_token.span();
+        // let mut float_repr = float_token.to_string();
+        // let trailing_dot = float_repr.ends_with('.');
+        // if trailing_dot {
+        //     float_repr.truncate(float_repr.len() - 1);
+        // }
 
-        let mut offset = 0;
-        for part in float_repr.split('.') {
-            let mut index: Index =
-                crate::parse_str(part).map_err(|err| Error::new(float_span, err))?;
-            let part_end = offset + part.len();
-            index.span = float_token.subspan(offset..part_end).unwrap_or(float_span);
+        // let mut offset = 0;
+        // for part in float_repr.split('.') {
+        //     let mut index: Index =
+        //         crate::parse_str(part).map_err(|err| Error::new(float_span, err))?;
+        //     let part_end = offset + part.len();
+        //     index.span = float_token.subspan(offset..part_end).unwrap_or(float_span);
 
-            let base = mem::replace(e, Expr::PLACEHOLDER);
-            *e = Expr::Field(ExprField {
-                attrs: Vec::new(),
-                base: Box::new(base),
-                dot_token: Token![.](dot_token.span),
-                member: Member::Unnamed(index),
-            });
+        //     let base = mem::replace(e, Expr::PLACEHOLDER);
+        //     *e = Expr::Field(ExprField {
+        //         attrs: Vec::new(),
+        //         base,
+        //         dot_token: Token![.](dot_token.span),
+        //         member: Member::Unnamed(index),
+        //     });
 
-            let dot_span = float_token
-                .subspan(part_end..part_end + 1)
-                .unwrap_or(float_span);
-            *dot_token = Token![.](dot_span);
-            offset = part_end + 1;
-        }
+        //     let dot_span = float_token
+        //         .subspan(part_end..part_end + 1)
+        //         .unwrap_or(float_span);
+        //     *dot_token = Token![.](dot_span);
+        //     offset = part_end + 1;
+        // }
 
-        Ok(!trailing_dot)
+        // Ok(!trailing_dot)
     }
 
     #[cfg(feature = "full")]

@@ -1,4 +1,4 @@
-use molt_lib::NodeList;
+use molt_lib::{NoPunct, NodeList};
 
 use crate::attr::Attribute;
 use crate::item::Item;
@@ -81,7 +81,7 @@ ast_struct! {
     pub struct File {
         pub shebang: Option<String>,
         pub attrs: Vec<Attribute>,
-        pub items: NodeList<Item>,
+        pub items: NodeList<Item, NoPunct>,
     }
 }
 

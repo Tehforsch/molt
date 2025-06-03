@@ -1,3 +1,5 @@
+use molt_lib::NodeId;
+
 use crate::attr::Attribute;
 use crate::expr::{Expr, Index, Member};
 use crate::ident::Ident;
@@ -19,7 +21,7 @@ ast_struct! {
         pub fields: Fields,
 
         /// Explicit discriminant: `Variant = 1`
-        pub discriminant: Option<(Token![=], Expr)>,
+        pub discriminant: Option<(Token![=], NodeId<Expr>)>,
     }
 }
 
@@ -270,7 +272,7 @@ pub(crate) mod parsing {
             let discriminant = if input.peek(Token![=]) {
                 let eq_token: Token![=] = input.parse()?;
                 #[cfg(feature = "full")]
-                let discriminant: Expr = input.parse()?;
+                let discriminant = input.parse()?;
                 #[cfg(not(feature = "full"))]
                 let discriminant = {
                     let begin = input.fork();

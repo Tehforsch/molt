@@ -48,13 +48,12 @@ impl Parse for ParseVarDecl {
         let _: Token![:] = input.parse()?;
         let kind: UserKind = input.parse()?;
         let var: Var<Node> = Var::new(var.to_string(), kind.into());
-        let name: VarId = input.add_var::<Node>(var).untyped();
+        let name: VarId = input.add_var::<Node>(var).into();
         let node = if input.peek(Token![=]) {
             let _: Token![=] = input.parse()?;
             let content;
             braced!(content in input);
-            let node = parse_node_with_kind(&content, kind)?;
-            let id = input.add_node(node);
+            let id = parse_node_with_kind(&content, kind)?;
             Some(id)
         } else {
             None

@@ -1,7 +1,13 @@
-use crate::match_pattern::Match;
+use crate::{NodeId, match_pattern::Match};
 
 pub trait CmpSyn {
     fn cmp_syn(&self, ctx: &mut Match, pat: &Self);
+}
+
+impl<T: CmpSyn> CmpSyn for NodeId<T> {
+    fn cmp_syn(&self, ctx: &mut Match, pat: &Self) {
+        ctx.cmp_nodes(*self, *pat)
+    }
 }
 
 impl<T: CmpSyn> CmpSyn for Option<T> {

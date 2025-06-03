@@ -1,7 +1,7 @@
 mod parse;
 
-use molt_lib::{Id, Var, VarDecl};
-use rust_grammar::{Expr, Item, Kind, Lit, Node};
+use molt_lib::{Id, NodeId, Var, VarDecl};
+use rust_grammar::{Expr, Item, Kind, Lit, Node, parse::ParseStream};
 
 #[derive(Debug)]
 pub(crate) struct MoltFile {
@@ -23,7 +23,7 @@ pub(crate) enum Command {
 }
 
 macro_rules! define_user_kind {
-    ($(($variant_name: ident, $ty: ty)),*$(,)?) => {
+    ($(($variant_name: ident, $ty: ty $(, $expr: expr)?)),*$(,)?) => {
         #[derive(Debug, Clone, Copy)]
         pub enum UserKind {
             $( $variant_name, )*
@@ -57,20 +57,37 @@ macro_rules! define_user_kind {
             }
         }
 
-        pub(crate) fn parse_node_with_kind(parser: rust_grammar::parse::ParseStream, kind: UserKind) -> rust_grammar::Result<molt_lib::WithSpan<Node>> {
-            match kind {
+        pub(crate) fn parse_node_with_kind(parser: rust_grammar::parse::ParseStream, kind: UserKind) -> rust_grammar::Result<Id> {
                 $(
-                    UserKind::$variant_name => {
-                        Ok(parser.parse_with_span::<$ty>()?.map(|t| Node::$variant_name(t)))
-                    },
+                    parse_impl! {
+                        parser, kind, $variant_name, $ty $(,$expr)*
+                    }
                 )*
-            }
+                unreachable!()
         }
     }
+}
+
+macro_rules! parse_impl {
+    ($parser: ident, $kind: ident, $variant_name: ident, $ty: ty, $expr: expr) => {
+        if let UserKind::$variant_name = $kind {
+            return $expr($parser);
+        }
+    };
+    ($parser: ident, $kind: ident, $variant_name: ident, $ty: ty) => {
+        if let UserKind::$variant_name = $kind {
+            return Ok($parser
+                .add($parser.parse_span::<$ty>()?.map(|t| Node::$variant_name(t)))
+                .into());
+        }
+    };
 }
 
 define_user_kind! {
     (Lit, Lit),
     (Item, Item),
-    (Expr, Expr),
+    (Expr, Expr, |parser: ParseStream| {
+        let expr: NodeId<Expr> = parser.parse()?;
+        Ok(expr.into())
+    }),
 }

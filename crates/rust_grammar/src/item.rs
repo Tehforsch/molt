@@ -224,7 +224,7 @@ ast_struct! {
         pub colon_token: Token![:],
         pub ty: Box<Type>,
         pub eq_token: Token![=],
-        pub expr: Box<Expr>,
+        pub expr: NodeId<Expr>,
         pub semi_token: Token![;],
     }
 }
@@ -645,7 +645,7 @@ ast_struct! {
         pub generics: Generics,
         pub colon_token: Token![:],
         pub ty: Type,
-        pub default: Option<(Token![=], Expr)>,
+        pub default: Option<(Token![=], NodeId<Expr>)>,
         pub semi_token: Token![;],
     }
 }
@@ -745,7 +745,7 @@ ast_struct! {
         pub colon_token: Token![:],
         pub ty: Type,
         pub eq_token: Token![=],
-        pub expr: Expr,
+        pub expr: NodeId<Expr>,
         pub semi_token: Token![;],
     }
 }
@@ -995,7 +995,7 @@ pub(crate) mod parsing {
             let ident = input.parse()?;
             if input.peek(Token![=]) {
                 input.parse::<Token![=]>()?;
-                input.parse::<Expr>()?;
+                input.parse::<NodeId<Expr>>()?;
                 input.parse::<Token![;]>()?;
                 Ok(Item::Verbatim(verbatim::between(&begin, input)))
             } else {
@@ -1895,7 +1895,7 @@ pub(crate) mod parsing {
                 let has_value = input.peek(Token![=]);
                 if has_value {
                     input.parse::<Token![=]>()?;
-                    input.parse::<Expr>()?;
+                    input.parse::<NodeId<Expr>>()?;
                 }
                 let semi_token: Token![;] = input.parse()?;
                 if unsafety.is_some() || safe || has_value {
@@ -2354,7 +2354,7 @@ pub(crate) mod parsing {
                     let colon_token: Token![:] = input.parse()?;
                     let ty: Type = input.parse()?;
                     let default = if let Some(eq_token) = input.parse::<Option<Token![=]>>()? {
-                        let expr: Expr = input.parse()?;
+                        let expr: NodeId<Expr> = input.parse()?;
                         Some((eq_token, expr))
                     } else {
                         None
@@ -2434,7 +2434,7 @@ pub(crate) mod parsing {
             let ty: Type = input.parse()?;
             let default = if input.peek(Token![=]) {
                 let eq_token: Token![=] = input.parse()?;
-                let default: Expr = input.parse()?;
+                let default: NodeId<Expr> = input.parse()?;
                 Some((eq_token, default))
             } else {
                 None
@@ -2708,7 +2708,7 @@ pub(crate) mod parsing {
                 let colon_token: Token![:] = input.parse()?;
                 let ty: Type = input.parse()?;
                 let value = if let Some(eq_token) = input.parse::<Option<Token![=]>>()? {
-                    let expr: Expr = input.parse()?;
+                    let expr: NodeId<Expr> = input.parse()?;
                     Some((eq_token, expr))
                 } else {
                     None
@@ -2784,7 +2784,7 @@ pub(crate) mod parsing {
             let colon_token: Token![:] = input.parse()?;
             let ty: Type = input.parse()?;
             let eq_token: Token![=] = input.parse()?;
-            let expr: Expr = input.parse()?;
+            let expr: NodeId<Expr> = input.parse()?;
             let semi_token: Token![;] = input.parse()?;
 
             Ok(ImplItemConst {

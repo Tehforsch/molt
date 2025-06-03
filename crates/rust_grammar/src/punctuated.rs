@@ -20,7 +20,7 @@
 //!                 ~~~~^ ~~~~^ ~~~~
 //! ```
 
-use molt_lib::CmpSyn;
+use molt_lib::{CmpSyn, NodeId, NodeList};
 
 use crate::drops::{NoDrop, TrivialDrop};
 #[cfg(feature = "parsing")]
@@ -1165,5 +1165,11 @@ impl<T: CmpSyn, P> CmpSyn for Punctuated<T, P> {
         for (s1, s2) in self.iter().zip(pat.iter()) {
             ctx.cmp_syn(s1, s2);
         }
+    }
+}
+
+impl<T, P> From<Punctuated<NodeId<T>, P>> for NodeList<T, P> {
+    fn from(val: Punctuated<NodeId<T>, P>) -> Self {
+        NodeList::new(val.into_iter())
     }
 }

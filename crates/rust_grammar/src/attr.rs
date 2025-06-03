@@ -10,6 +10,7 @@ use crate::meta::{self, ParseNestedMeta};
 use crate::parse::{Parse, ParseStream, Parser};
 use crate::path::Path;
 use crate::token;
+use molt_lib::NodeId;
 use proc_macro2::TokenStream;
 #[cfg(feature = "printing")]
 use std::iter;
@@ -497,7 +498,7 @@ ast_struct! {
     pub struct MetaNameValue {
         pub path: Path,
         pub eq_token: Token![=],
-        pub value: Expr,
+        pub value: NodeId<Expr>,
     }
 }
 
@@ -653,7 +654,7 @@ pub(crate) mod parsing {
     use crate::parse::{Parse, ParseStream};
     use crate::path::Path;
     use crate::{mac, token};
-    use molt_lib::NodeId;
+    use molt_lib::{NodeId, WithSpan};
     use proc_macro2::Ident;
     use std::fmt::{self, Display};
 
@@ -744,10 +745,14 @@ pub(crate) mod parsing {
         let lit: Option<NodeId<Lit>> = ahead.parse()?;
         let value = if let (Some(lit), true) = (lit, ahead.is_empty()) {
             input.advance_to(&ahead);
-            Expr::Lit(ExprLit {
-                attrs: Vec::new(),
-                lit,
-            })
+            let span = input.ctx().get_span(lit);
+            input.add(WithSpan::new(
+                Expr::Lit(ExprLit {
+                    attrs: Vec::new(),
+                    lit,
+                }),
+                span,
+            ))
         } else if input.peek(Token![#]) && input.peek2(token::Bracket) {
             return Err(input.error("unexpected attribute inside of attribute"));
         } else {

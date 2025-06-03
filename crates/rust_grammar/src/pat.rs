@@ -602,42 +602,44 @@ pub(crate) mod parsing {
     }
 
     fn pat_range(input: ParseStream, qself: Option<QSelf>, path: Path) -> Result<Pat> {
-        let limits = RangeLimits::parse_obsolete(input)?;
-        let end = input.call(pat_range_bound)?;
-        if let (RangeLimits::Closed(_), None) = (&limits, &end) {
-            return Err(input.error("expected range upper bound"));
-        }
-        Ok(Pat::Range(ExprRange {
-            attrs: Vec::new(),
-            start: Some(Box::new(Expr::Path(ExprPath {
-                attrs: Vec::new(),
-                qself,
-                path,
-            }))),
-            limits,
-            end: end.map(PatRangeBound::into_expr),
-        }))
+        todo!()
+        // let limits = RangeLimits::parse_obsolete(input)?;
+        // let end = input.call(pat_range_bound)?;
+        // if let (RangeLimits::Closed(_), None) = (&limits, &end) {
+        //     return Err(input.error("expected range upper bound"));
+        // }
+        // Ok(Pat::Range(ExprRange {
+        //     attrs: Vec::new(),
+        //     start: Some(input.add_fake_span(Expr::Path(ExprPath {
+        //         attrs: Vec::new(),
+        //         qself,
+        //         path,
+        //     }))),
+        //     limits,
+        //     end: end.map(PatRangeBound::into_expr),
+        // }))
     }
 
     fn pat_range_half_open(input: ParseStream) -> Result<Pat> {
-        let limits: RangeLimits = input.parse()?;
-        let end = input.call(pat_range_bound)?;
-        if end.is_some() {
-            Ok(Pat::Range(ExprRange {
-                attrs: Vec::new(),
-                start: None,
-                limits,
-                end: end.map(PatRangeBound::into_expr),
-            }))
-        } else {
-            match limits {
-                RangeLimits::HalfOpen(dot2_token) => Ok(Pat::Rest(PatRest {
-                    attrs: Vec::new(),
-                    dot2_token,
-                })),
-                RangeLimits::Closed(_) => Err(input.error("expected range upper bound")),
-            }
-        }
+        todo!()
+        // let limits: RangeLimits = input.parse()?;
+        // let end = input.call(pat_range_bound)?;
+        // if end.is_some() {
+        //     Ok(Pat::Range(ExprRange {
+        //         attrs: Vec::new(),
+        //         start: None,
+        //         limits,
+        //         end: end.map(PatRangeBound::into_expr),
+        //     }))
+        // } else {
+        //     match limits {
+        //         RangeLimits::HalfOpen(dot2_token) => Ok(Pat::Rest(PatRest {
+        //             attrs: Vec::new(),
+        //             dot2_token,
+        //         })),
+        //         RangeLimits::Closed(_) => Err(input.error("expected range upper bound")),
+        //     }
+        // }
     }
 
     fn pat_paren_or_tuple(input: ParseStream) -> Result<Pat> {
@@ -680,22 +682,23 @@ pub(crate) mod parsing {
     }
 
     fn pat_lit_or_range(input: ParseStream) -> Result<Pat> {
-        let start = input.call(pat_range_bound)?.unwrap();
-        if input.peek(Token![..]) {
-            let limits = RangeLimits::parse_obsolete(input)?;
-            let end = input.call(pat_range_bound)?;
-            if let (RangeLimits::Closed(_), None) = (&limits, &end) {
-                return Err(input.error("expected range upper bound"));
-            }
-            Ok(Pat::Range(ExprRange {
-                attrs: Vec::new(),
-                start: Some(start.into_expr()),
-                limits,
-                end: end.map(PatRangeBound::into_expr),
-            }))
-        } else {
-            Ok(start.into_pat())
-        }
+        todo!()
+        // let start = input.call(pat_range_bound)?.unwrap();
+        // if input.peek(Token![..]) {
+        //     let limits = RangeLimits::parse_obsolete(input)?;
+        //     let end = input.call(pat_range_bound)?;
+        //     if let (RangeLimits::Closed(_), None) = (&limits, &end) {
+        //         return Err(input.error("expected range upper bound"));
+        //     }
+        //     Ok(Pat::Range(ExprRange {
+        //         attrs: Vec::new(),
+        //         start: Some(start.into_expr()),
+        //         limits,
+        //         end: end.map(PatRangeBound::into_expr),
+        //     }))
+        // } else {
+        //     Ok(start.into_pat())
+        // }
     }
 
     // Patterns that can appear on either side of a range pattern.

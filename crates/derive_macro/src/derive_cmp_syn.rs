@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Data, DeriveInput, Fields, Ident, Type, parse_macro_input};
 
-use crate::utils::{is_box, is_node_id, is_node_list, is_token, is_vec_attribute};
+use crate::utils::{is_box, is_node_list, is_token, is_vec_attribute};
 
 pub fn impl_cmp_syn(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
@@ -36,9 +36,7 @@ fn impl_struct(data_struct: syn::DataStruct) -> TokenStream {
 }
 
 fn cmp_ty(field_name: &Ident, ty: &Type) -> Option<TokenStream> {
-    if is_node_id(&ty) {
-        Some(quote! { ctx.cmp_nodes(self. #field_name, pat. #field_name ); })
-    } else if is_node_list(&ty) {
+    if is_node_list(&ty) {
         Some(quote! { ctx.cmp_lists(&self. #field_name, &pat. #field_name ); })
     } else if is_vec_attribute(ty) {
         None
