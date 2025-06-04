@@ -1,1 +1,1 @@
-let pat: Expr;
+let pat: Stmt = { let foo = 3; };

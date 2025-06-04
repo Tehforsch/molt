@@ -1251,25 +1251,25 @@ pub(crate) mod parsing {
                 atom
             }
         } else if input.peek(Token![if]) {
-            input.parse_span_with(Expr::If)?.as_pattern()
+            input.parse_span_with(Expr::If)?
         } else if input.peek(Token![while]) {
-            input.parse_span_with(Expr::While)?.as_pattern()
+            input.parse_span_with(Expr::While)?
         } else if input.peek(Token![for])
             && !(input.peek2(Token![<]) && (input.peek3(Lifetime) || input.peek3(Token![>])))
         {
-            input.parse_span_with(Expr::ForLoop)?.as_pattern()
+            input.parse_span_with(Expr::ForLoop)?
         } else if input.peek(Token![loop]) {
-            input.parse_span_with(Expr::Loop)?.as_pattern()
+            input.parse_span_with(Expr::Loop)?
         } else if input.peek(Token![match]) {
-            input.parse_span_with(Expr::Match)?.as_pattern()
+            input.parse_span_with(Expr::Match)?
         } else if input.peek(Token![try]) && input.peek2(token::Brace) {
-            input.parse_span_with(Expr::TryBlock)?.as_pattern()
+            input.parse_span_with(Expr::TryBlock)?
         } else if input.peek(Token![unsafe]) {
-            input.parse_span_with(Expr::Unsafe)?.as_pattern()
+            input.parse_span_with(Expr::Unsafe)?
         } else if input.peek(Token![const]) && input.peek2(token::Brace) {
-            input.parse_span_with(Expr::Const)?.as_pattern()
+            input.parse_span_with(Expr::Const)?
         } else if input.peek(token::Brace) {
-            input.parse_span_with(Expr::Block)?.as_pattern()
+            input.parse_span_with(Expr::Block)?
         } else if input.peek(Lifetime) {
             atom_labeled(input)?.as_pattern()
         } else {
@@ -1722,13 +1722,13 @@ pub(crate) mod parsing {
         let real: SpannedPat<Expr> = if input.peek(token::Group) {
             expr_group(input, allow_struct)?
         } else if input.peek(Lit) {
-            input.parse_span_with(Expr::Lit)?.as_pattern()
+            input.parse_span_with(Expr::Lit)?
         } else if input.peek(Token![async])
             && (input.peek2(token::Brace) || input.peek2(Token![move]) && input.peek3(token::Brace))
         {
-            input.parse_span_with(Expr::Async)?.as_pattern()
+            input.parse_span_with(Expr::Async)?
         } else if input.peek(Token![try]) && input.peek2(token::Brace) {
-            input.parse_span_with(Expr::TryBlock)?.as_pattern()
+            input.parse_span_with(Expr::TryBlock)?
         } else if input.peek(Token![|])
             || input.peek(Token![move])
             || input.peek(Token![for])
@@ -1738,9 +1738,7 @@ pub(crate) mod parsing {
             || input.peek(Token![static])
             || input.peek(Token![async]) && (input.peek2(Token![|]) || input.peek2(Token![move]))
         {
-            expr_closure(input, allow_struct)?
-                .map(Expr::Closure)
-                .as_pattern()
+            input.call_spanned(|input| expr_closure(input, allow_struct).map(Expr::Closure))?
         } else if token::parsing::peek_keyword(input.cursor(), "builtin") && input.peek2(Token![#])
         {
             unimplemented!()
@@ -1753,48 +1751,44 @@ pub(crate) mod parsing {
             || input.peek(Token![crate])
             || input.peek(Token![try]) && (input.peek2(Token![!]) || input.peek2(Token![::]))
         {
-            path_or_macro_or_struct(input, allow_struct)?.as_pattern()
+            input.call_spanned(|input| path_or_macro_or_struct(input, allow_struct))?
         } else if input.peek(token::Paren) {
-            paren_or_tuple(input)?.as_pattern()
+            input.call_spanned(paren_or_tuple)?
         } else if input.peek(Token![break]) {
-            todo!()
-            // expr_break(input, allow_struct).map(Expr::Break)
+            input.call_spanned(|input| expr_break(input, allow_struct).map(Expr::Break))?
         } else if input.peek(Token![continue]) {
-            input.parse_span_with(Expr::Continue)?.as_pattern()
+            input.parse_span_with(Expr::Continue)?
         } else if input.peek(Token![return]) {
-            input.parse_span_with(Expr::Return)?.as_pattern()
+            input.parse_span_with(Expr::Return)?
         } else if input.peek(Token![become]) {
-            todo!()
-            // expr_become(input)
+            input.call_spanned(expr_become)?
         } else if input.peek(token::Bracket) {
-            todo!()
-            // array_or_repeat(input)
+            input.call_spanned(array_or_repeat)?
         } else if input.peek(Token![let]) {
-            todo!()
-            // expr_let(input, allow_struct).map(Expr::Let)
+            input.call_spanned(|input| expr_let(input, allow_struct).map(Expr::Let))?
         } else if input.peek(Token![if]) {
-            input.parse_span_with(Expr::If)?.as_pattern()
+            input.parse_span_with(Expr::If)?
         } else if input.peek(Token![while]) {
-            input.parse_span_with(Expr::While)?.as_pattern()
+            input.parse_span_with(Expr::While)?
         } else if input.peek(Token![for]) {
-            input.parse_span_with(Expr::ForLoop)?.as_pattern()
+            input.parse_span_with(Expr::ForLoop)?
         } else if input.peek(Token![loop]) {
-            input.parse_span_with(Expr::Loop)?.as_pattern()
+            input.parse_span_with(Expr::Loop)?
         } else if input.peek(Token![match]) {
-            input.parse_span_with(Expr::Match)?.as_pattern()
+            input.parse_span_with(Expr::Match)?
         } else if input.peek(Token![yield]) {
-            input.parse_span_with(Expr::Yield)?.as_pattern()
+            input.parse_span_with(Expr::Yield)?
         } else if input.peek(Token![unsafe]) {
-            input.parse_span_with(Expr::Unsafe)?.as_pattern()
+            input.parse_span_with(Expr::Unsafe)?
         } else if input.peek(Token![const]) {
-            input.parse_span_with(Expr::Const)?.as_pattern()
+            input.parse_span_with(Expr::Const)?
         } else if input.peek(token::Brace) {
-            input.parse_span_with(Expr::Block)?.as_pattern()
+            input.parse_span_with(Expr::Block)?
         } else if input.peek(Token![..]) {
             todo!()
             // expr_range(input, allow_struct).map(Expr::Range)
         } else if input.peek(Token![_]) {
-            input.parse_span_with(Expr::Infer)?.as_pattern()
+            input.parse_span_with(Expr::Infer)?
         } else if input.peek(Lifetime) {
             atom_labeled(input)?.as_pattern()
         } else {
@@ -1865,8 +1859,7 @@ pub(crate) mod parsing {
     fn path_or_macro_or_struct(
         input: ParseStream,
         #[cfg(feature = "full")] allow_struct: AllowStruct,
-    ) -> Result<Spanned<Expr>> {
-        let marker = input.marker();
+    ) -> Result<Expr> {
         let expr_style = true;
         let (qself, path) = path::parsing::qpath(input, expr_style)?;
         Ok(rest_of_path_or_macro_or_struct(
@@ -1875,8 +1868,7 @@ pub(crate) mod parsing {
             input,
             #[cfg(feature = "full")]
             allow_struct,
-        )?
-        .with_span(input.span_from_marker(marker)))
+        )?)
     }
 
     fn rest_of_path_or_macro_or_struct(
@@ -1926,31 +1918,25 @@ pub(crate) mod parsing {
         }
     }
 
-    fn paren_or_tuple(input: ParseStream) -> Result<Spanned<Expr>> {
+    fn paren_or_tuple(input: ParseStream) -> Result<Expr> {
         let marker = input.marker();
         let content;
         let paren_token = parenthesized!(content in input);
         if content.is_empty() {
-            return Ok(input.from_marker(
-                marker,
-                Expr::Tuple(ExprTuple {
-                    attrs: Vec::new(),
-                    paren_token,
-                    elems: Punctuated::new().into(),
-                }),
-            ));
+            return Ok(Expr::Tuple(ExprTuple {
+                attrs: Vec::new(),
+                paren_token,
+                elems: Punctuated::new().into(),
+            }));
         }
 
         let first = content.parse()?;
         if content.is_empty() {
-            return Ok(input.from_marker(
-                marker,
-                Expr::Paren(ExprParen {
-                    attrs: Vec::new(),
-                    paren_token,
-                    expr: first,
-                }),
-            ));
+            return Ok(Expr::Paren(ExprParen {
+                attrs: Vec::new(),
+                paren_token,
+                expr: first,
+            }));
         }
 
         let mut elems = Punctuated::new();
@@ -1964,14 +1950,11 @@ pub(crate) mod parsing {
             let value = content.parse()?;
             elems.push_value(value);
         }
-        Ok(input.from_marker(
-            marker,
-            Expr::Tuple(ExprTuple {
-                attrs: Vec::new(),
-                paren_token,
-                elems: elems.into(),
-            }),
-        ))
+        Ok(Expr::Tuple(ExprTuple {
+            attrs: Vec::new(),
+            paren_token,
+            elems: elems.into(),
+        }))
     }
 
     #[cfg(feature = "full")]
@@ -2478,10 +2461,7 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    fn expr_closure(input: ParseStream, allow_struct: AllowStruct) -> Result<Spanned<ExprClosure>> {
-        use molt_lib::WithSpan;
-        let marker = input.marker();
-
+    fn expr_closure(input: ParseStream, allow_struct: AllowStruct) -> Result<ExprClosure> {
         let lifetimes: Option<BoundLifetimes> = input.parse()?;
         let constness: Option<Token![const]> = input.parse()?;
         let movability: Option<Token![static]> = input.parse()?;
@@ -2523,7 +2503,6 @@ pub(crate) mod parsing {
             (ReturnType::Default, body)
         };
 
-        let span = input.span_from_marker(marker);
         Ok(ExprClosure {
             attrs: Vec::new(),
             lifetimes,
@@ -2537,7 +2516,6 @@ pub(crate) mod parsing {
             output,
             body,
         })
-        .map(|e| e.with_span(span))
     }
 
     #[cfg(feature = "full")]

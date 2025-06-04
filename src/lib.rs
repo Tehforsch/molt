@@ -188,7 +188,7 @@ mod tests {
     }
 
     macro_rules! test_match_pattern {
-        ($dir_name: ident $(,$test_name: ident)* $(,)?) => {
+        ($dir_name: ident, ($($test_name: ident),* $(,)?)) => {
             mod $dir_name {
                 mod match_ {
                     $(
@@ -200,14 +200,16 @@ mod tests {
                 }
 
                 #[test]
-                fn $dir_name() {
+                fn parse() {
                     super::parse_rust(stringify!($dir_name));
                 }
             }
         };
     }
 
-    test_match_pattern!(consts, exprs);
-    test_match_pattern!(let_, let_);
-    test_match_pattern!(closure, closure);
+    test_match_pattern!(consts, (exprs));
+    test_match_pattern!(let_, (let_));
+    test_match_pattern!(closure, (closure));
+    test_match_pattern!(control_flow, ());
+    test_match_pattern!(arrays, (array));
 }

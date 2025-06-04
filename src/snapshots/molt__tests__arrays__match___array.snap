@@ -1,0 +1,9 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (arrays), stringify! (array))"
+---
+note: Match
+  ┌─ "test_data/arrays/main.rs":2:5
+  │
+2 │     [1, 2, 3, 4];
+  │     ^^^^^^^^^^^^ $x

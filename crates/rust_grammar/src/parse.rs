@@ -1207,9 +1207,9 @@ impl<'a> ParseBuffer<'a> {
     pub fn parse_span_with<'b, T: Parse, S: ToNode<Node>>(
         &self,
         f: impl Fn(T) -> S,
-    ) -> Result<Spanned<S>> {
+    ) -> Result<Spanned<Pattern<S, Id>>> {
         let item: Spanned<T> = self.parse_span()?;
-        Ok(item.map(f))
+        Ok(item.map(f).as_pattern())
     }
 
     pub fn parse_node<'b, T: Parse, S: ToNode<Node>>(
@@ -1219,6 +1219,15 @@ impl<'a> ParseBuffer<'a> {
         let item: Spanned<T> = self.parse_span()?;
         let entry = self.ctx.borrow_mut().add(item.map(f));
         Ok(entry)
+    }
+
+    pub fn call_spanned<T>(
+        &self,
+        f: impl for<'b> Fn(&'b ParseBuffer<'b>) -> Result<T>,
+    ) -> Result<Spanned<Pattern<T, Id>>> {
+        let marker = self.marker();
+        let t = f(self)?;
+        Ok(t.pattern_with_span(self.span_from_marker(marker)))
     }
 
     pub fn add_var<T: ToNode<Node>>(&self, var: Var<Node>) -> NodeId<T> {
