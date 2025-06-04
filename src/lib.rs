@@ -212,4 +212,5 @@ mod tests {
     test_match_pattern!(closure, (closure));
     test_match_pattern!(control_flow, ());
     test_match_pattern!(arrays, (array));
+    test_match_pattern!(ranges, ());
 }

@@ -1271,7 +1271,7 @@ pub(crate) mod parsing {
         } else if input.peek(token::Brace) {
             input.parse_span_with(Expr::Block)?
         } else if input.peek(Lifetime) {
-            atom_labeled(input)?.as_pattern()
+            input.call_spanned(atom_labeled)?
         } else {
             let allow_struct = AllowStruct(true);
             unary_expr(input, allow_struct)?
@@ -1382,7 +1382,7 @@ pub(crate) mod parsing {
                     attrs: Vec::new(),
                     start: Some(input.add_pat(lhs)),
                     limits,
-                    end: end.map(|end| input.add(end)),
+                    end: end.map(|end| input.add_pat(end)),
                 })
                 .pattern_with_span(span);
             } else if Precedence::Cast >= base && input.peek(Token![as]) {
@@ -1785,12 +1785,11 @@ pub(crate) mod parsing {
         } else if input.peek(token::Brace) {
             input.parse_span_with(Expr::Block)?
         } else if input.peek(Token![..]) {
-            todo!()
-            // expr_range(input, allow_struct).map(Expr::Range)
+            input.call_spanned(|input| expr_range(input, allow_struct).map(Expr::Range))?
         } else if input.peek(Token![_]) {
             input.parse_span_with(Expr::Infer)?
         } else if input.peek(Lifetime) {
-            atom_labeled(input)?.as_pattern()
+            input.call_spanned(atom_labeled)?
         } else {
             Err(input.error("expected an expression"))?
         };
@@ -1798,28 +1797,27 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    fn atom_labeled(input: ParseStream) -> Result<Spanned<Expr>> {
-        todo!()
-        // let the_label: Label = input.parse()?;
-        // let mut expr = if input.peek(Token![while]) {
-        //     Expr::While(input.parse()?)
-        // } else if input.peek(Token![for]) {
-        //     Expr::ForLoop(input.parse()?)
-        // } else if input.peek(Token![loop]) {
-        //     Expr::Loop(input.parse()?)
-        // } else if input.peek(token::Brace) {
-        //     Expr::Block(input.parse()?)
-        // } else {
-        //     return Err(input.error("expected loop or block expression"));
-        // };
-        // match &mut expr {
-        //     Expr::While(ExprWhile { label, .. })
-        //     | Expr::ForLoop(ExprForLoop { label, .. })
-        //     | Expr::Loop(ExprLoop { label, .. })
-        //     | Expr::Block(ExprBlock { label, .. }) => *label = Some(the_label),
-        //     _ => unreachable!(),
-        // }
-        // Ok(expr)
+    fn atom_labeled(input: ParseStream) -> Result<Expr> {
+        let the_label: Label = input.parse()?;
+        let mut expr = if input.peek(Token![while]) {
+            Expr::While(input.parse()?)
+        } else if input.peek(Token![for]) {
+            Expr::ForLoop(input.parse()?)
+        } else if input.peek(Token![loop]) {
+            Expr::Loop(input.parse()?)
+        } else if input.peek(token::Brace) {
+            Expr::Block(input.parse()?)
+        } else {
+            return Err(input.error("expected loop or block expression"));
+        };
+        match &mut expr {
+            Expr::While(ExprWhile { label, .. })
+            | Expr::ForLoop(ExprForLoop { label, .. })
+            | Expr::Loop(ExprLoop { label, .. })
+            | Expr::Block(ExprBlock { label, .. }) => *label = Some(the_label),
+            _ => unreachable!(),
+        }
+        Ok(expr)
     }
 
     #[cfg(not(feature = "full"))]
@@ -2337,17 +2335,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-    impl Parse for ExprUnary {
-        // TODO, why does this need to exist?
-        fn parse(input: ParseStream) -> Result<Self> {
-            let attrs = Vec::new();
-            let allow_struct = AllowStruct(true);
-            Ok(expr_unary(input, attrs, allow_struct)?.unwrap_real().take())
-        }
-    }
-
-    #[cfg(feature = "full")]
     fn expr_unary(
         input: ParseStream,
         attrs: Vec<Attribute>,
@@ -2813,7 +2800,7 @@ pub(crate) mod parsing {
             attrs: Vec::new(),
             start: None,
             limits,
-            end: end.map(|end| input.add(end)),
+            end: end.map(|end| input.add_pat(end)),
         })
     }
 
@@ -2822,36 +2809,35 @@ pub(crate) mod parsing {
         input: ParseStream,
         limits: &RangeLimits,
         allow_struct: AllowStruct,
-    ) -> Result<Option<Spanned<Expr>>> {
-        todo!()
-        // if matches!(limits, RangeLimits::HalfOpen(_))
-        //     && (input.is_empty()
-        //         || input.peek(Token![,])
-        //         || input.peek(Token![;])
-        //         || input.peek(Token![.]) && !input.peek(Token![..])
-        //         || input.peek(Token![?])
-        //         || input.peek(Token![=>])
-        //         || !allow_struct.0 && input.peek(token::Brace)
-        //         || input.peek(Token![=])
-        //         || input.peek(Token![+])
-        //         || input.peek(Token![/])
-        //         || input.peek(Token![%])
-        //         || input.peek(Token![^])
-        //         || input.peek(Token![>])
-        //         || input.peek(Token![<=])
-        //         || input.peek(Token![!=])
-        //         || input.peek(Token![-=])
-        //         || input.peek(Token![*=])
-        //         || input.peek(Token![&=])
-        //         || input.peek(Token![|=])
-        //         || input.peek(Token![<<=])
-        //         || input.peek(Token![as]))
-        // {
-        //     Ok(None)
-        // } else {
-        //     let end = parse_binop_rhs(input, allow_struct, Precedence::Range)?;
-        //     Ok(Some(end))
-        // }
+    ) -> Result<Option<SpannedPat<Expr>>> {
+        if matches!(limits, RangeLimits::HalfOpen(_))
+            && (input.is_empty()
+                || input.peek(Token![,])
+                || input.peek(Token![;])
+                || input.peek(Token![.]) && !input.peek(Token![..])
+                || input.peek(Token![?])
+                || input.peek(Token![=>])
+                || !allow_struct.0 && input.peek(token::Brace)
+                || input.peek(Token![=])
+                || input.peek(Token![+])
+                || input.peek(Token![/])
+                || input.peek(Token![%])
+                || input.peek(Token![^])
+                || input.peek(Token![>])
+                || input.peek(Token![<=])
+                || input.peek(Token![!=])
+                || input.peek(Token![-=])
+                || input.peek(Token![*=])
+                || input.peek(Token![&=])
+                || input.peek(Token![|=])
+                || input.peek(Token![<<=])
+                || input.peek(Token![as]))
+        {
+            Ok(None)
+        } else {
+            let end = parse_binop_rhs(input, allow_struct, Precedence::Range)?;
+            Ok(Some(end))
+        }
     }
 
     #[cfg(feature = "full")]
