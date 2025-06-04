@@ -1753,8 +1753,9 @@ pub(crate) mod parsing {
             || input.peek(Token![static])
             || input.peek(Token![async]) && (input.peek2(Token![|]) || input.peek2(Token![move]))
         {
-            todo!()
-            // expr_closure(input, allow_struct).map(Expr::Closure)
+            expr_closure(input, allow_struct)?
+                .map(Expr::Closure)
+                .as_pattern()
         } else if token::parsing::peek_keyword(input.cursor(), "builtin") && input.peek2(Token![#])
         {
             todo!()
@@ -2414,15 +2415,6 @@ pub(crate) mod parsing {
 
     #[cfg(feature = "full")]
     #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-    impl Parse for ExprClosure {
-        fn parse(input: ParseStream) -> Result<Self> {
-            let allow_struct = AllowStruct(true);
-            expr_closure(input, allow_struct)
-        }
-    }
-
-    #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprRawAddr {
         fn parse(input: ParseStream) -> Result<Self> {
             let allow_struct = AllowStruct(true);
@@ -2516,7 +2508,10 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    fn expr_closure(input: ParseStream, allow_struct: AllowStruct) -> Result<ExprClosure> {
+    fn expr_closure(
+        input: ParseStream,
+        allow_struct: AllowStruct,
+    ) -> Result<WithSpan<ExprClosure>> {
         let lifetimes: Option<BoundLifetimes> = input.parse()?;
         let constness: Option<Token![const]> = input.parse()?;
         let movability: Option<Token![static]> = input.parse()?;
