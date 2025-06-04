@@ -1,7 +1,7 @@
 mod parse;
 
 use molt_lib::{Id, NodeId, Var, VarDecl};
-use rust_grammar::{Expr, Item, Kind, Lit, Node, parse::ParseStream};
+use rust_grammar::{Expr, Item, Kind, Lit, Node, Stmt, parse::ParseStream};
 
 #[derive(Debug)]
 pub(crate) struct MoltFile {
@@ -89,5 +89,9 @@ define_user_kind! {
     (Expr, Expr, |parser: ParseStream| {
         let expr: NodeId<Expr> = parser.parse()?;
         Ok(expr.into())
+    }),
+    (Stmt, Stmt, |parser: ParseStream| {
+        let stmt: NodeId<Stmt> = parser.parse()?;
+        Ok(stmt.into())
     }),
 }

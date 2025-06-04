@@ -1,0 +1,9 @@
+---
+source: src/lib.rs
+expression: "match_pattern(stringify! (closure), stringify! (closure))"
+---
+note: Match
+  ┌─ "test_data/closure/main.rs":2:5
+  │
+2 │     |a, b| {};
+  │     ^^^^^^^^^^ $closure

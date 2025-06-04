@@ -206,6 +206,13 @@ pub(crate) mod parsing {
         }
     }
 
+    impl Parse for NodeId<Stmt> {
+        fn parse(input: ParseStream) -> Result<Self> {
+            let allow_nosemi = AllowNoSemi(false);
+            parse_stmt(input, allow_nosemi)
+        }
+    }
+
     fn parse_stmt(input: ParseStream, allow_nosemi: AllowNoSemi) -> Result<NodeId<Stmt>> {
         let begin = input.fork();
         let attrs = input.call(Attribute::parse_outer)?;
@@ -268,7 +275,7 @@ pub(crate) mod parsing {
             || is_item_macro
         {
             let item = item::parsing::parse_rest_of_item(begin, attrs, input)?;
-            Ok(input.add(Stmt::Item(item).with_span(molt_lib::Span::fake())))
+            Ok(input.add(Stmt::Item(item).with_span(todo!())))
         } else {
             stmt_expr(input, allow_nosemi, attrs)
         }
@@ -360,6 +367,7 @@ pub(crate) mod parsing {
         allow_nosemi: AllowNoSemi,
         mut attrs: Vec<Attribute>,
     ) -> Result<NodeId<Stmt>> {
+        let marker = input.marker();
         let mut e = Expr::parse_with_earlier_boundary_rule(input)?;
 
         let mut attr_target = e;
@@ -437,12 +445,11 @@ pub(crate) mod parsing {
             return Ok(macro_stmt_id);
         }
 
+        let span = input.span_from_marker(marker);
         if semi_token.is_some() {
-            // todo span
-            Ok(input.add(Stmt::Expr(e, semi_token).with_span(molt_lib::Span::fake())))
+            Ok(input.add(Stmt::Expr(e, semi_token).with_span(span)))
         } else if allow_nosemi.0 || !classify::requires_semi_to_be_stmt(input, e) {
-            // todo span
-            Ok(input.add(Stmt::Expr(e, None).with_span(molt_lib::Span::fake())))
+            Ok(input.add(Stmt::Expr(e, None).with_span(span)))
         } else {
             Err(input.error("expected semicolon"))
         }

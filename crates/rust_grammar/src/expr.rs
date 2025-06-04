@@ -1743,8 +1743,7 @@ pub(crate) mod parsing {
                 .as_pattern()
         } else if token::parsing::peek_keyword(input.cursor(), "builtin") && input.peek2(Token![#])
         {
-            todo!()
-            // expr_builtin(input)
+            unimplemented!()
         } else if input.peek(Ident)
             || input.peek(Token![::])
             || input.peek(Token![<])
@@ -1861,21 +1860,6 @@ pub(crate) mod parsing {
             }
             Err(input.error("unsupported expression; enable syn's features=[\"full\"]"))
         }
-    }
-
-    #[cfg(feature = "full")]
-    fn expr_builtin(input: ParseStream) -> Result<Expr> {
-        let begin = input.fork();
-
-        token::parsing::keyword(input, "builtin")?;
-        input.parse::<Token![#]>()?;
-        input.parse::<Ident>()?;
-
-        let args;
-        parenthesized!(args in input);
-        args.parse::<TokenStream>()?;
-
-        Ok(Expr::Verbatim(verbatim::between(&begin, input)))
     }
 
     fn path_or_macro_or_struct(
@@ -2496,6 +2480,7 @@ pub(crate) mod parsing {
     #[cfg(feature = "full")]
     fn expr_closure(input: ParseStream, allow_struct: AllowStruct) -> Result<Spanned<ExprClosure>> {
         use molt_lib::WithSpan;
+        let marker = input.marker();
 
         let lifetimes: Option<BoundLifetimes> = input.parse()?;
         let constness: Option<Token![const]> = input.parse()?;
@@ -2538,7 +2523,7 @@ pub(crate) mod parsing {
             (ReturnType::Default, body)
         };
 
-        let span = todo!();
+        let span = input.span_from_marker(marker);
         Ok(ExprClosure {
             attrs: Vec::new(),
             lifetimes,
