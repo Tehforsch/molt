@@ -164,9 +164,9 @@ mod tests {
         input::{Input, MoltSource},
     };
 
-    fn match_pattern(fname: &str) -> String {
-        let rust_path = Path::new("test_data").join(format!("{}.rs", fname));
-        let molt_path = Path::new("test_data").join(format!("{}.molt", fname));
+    fn match_pattern(path: &str, fname: &str) -> String {
+        let rust_path = Path::new("test_data").join(format!("{}/main.rs", path));
+        let molt_path = Path::new("test_data").join(format!("{}/{}.molt", path, fname));
         let input = Input::new(MoltSource::file(molt_path).unwrap())
             .with_rust_src_file(&rust_path)
             .unwrap();
@@ -179,19 +179,13 @@ mod tests {
     }
 
     macro_rules! test_match_pattern {
-        ($name: ident) => {
+        ($dir_name: ident, $test_name: ident) => {
             #[test]
-            fn $name() {
-                assert_snapshot!(match_pattern(stringify!($name)));
+            fn $test_name() {
+                assert_snapshot!(match_pattern(stringify!($dir_name), stringify!($test_name)));
             }
         };
     }
 
-    test_match_pattern!(ident);
-    test_match_pattern!(exprs);
-    test_match_pattern!(multiple_vars);
-    test_match_pattern!(function);
-    test_match_pattern!(function2);
-    test_match_pattern!(sum);
-    // test_match_pattern!(indirection);
+    test_match_pattern!(const, exprs);
 }

@@ -1,1 +1,2 @@
-let x: Lit = { 5 };
+let x: Lit = { 20.0 };
+let r: Lit;

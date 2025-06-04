@@ -1,0 +1,2 @@
+let e: Expr;
+let pat: Expr = { (foo, bar, baz) };
