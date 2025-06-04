@@ -157,12 +157,21 @@ pub fn run(input: &Input) -> Result<Vec<Diagnostic>, Error> {
 mod tests {
     use std::path::Path;
 
-    use insta::assert_snapshot;
-
     use crate::{
+        RustFile,
         error::emit_diagnostic_str,
-        input::{Input, MoltSource},
+        input::{Contents, Input, MoltSource},
     };
+
+    fn parse_rust(path: &str) {
+        let rust_path = Path::new("test_data").join(format!("{}/main.rs", path));
+        let input = Input::new(MoltSource::FromCli(Contents::new("".to_string())))
+            .with_rust_src_file(&rust_path)
+            .unwrap();
+        for rust_file_id in input.iter_rust_src() {
+            RustFile::new(&input, rust_file_id).unwrap();
+        }
+    }
 
     fn match_pattern(path: &str, fname: &str) -> String {
         let rust_path = Path::new("test_data").join(format!("{}/main.rs", path));
@@ -179,15 +188,26 @@ mod tests {
     }
 
     macro_rules! test_match_pattern {
-        ($dir_name: ident, $test_name: ident) => {
-            #[test]
-            fn $test_name() {
-                assert_snapshot!(match_pattern(stringify!($dir_name), stringify!($test_name)));
+        ($dir_name: ident $(,$test_name: ident)* $(,)?) => {
+            mod $dir_name {
+                mod match_ {
+                    $(
+                        #[test]
+                        fn $test_name() {
+                            insta::assert_snapshot!(super::super::match_pattern(stringify!($dir_name), stringify!($test_name)));
+                        }
+                    )*
+                }
+
+                #[test]
+                fn $dir_name() {
+                    super::parse_rust(stringify!($dir_name));
+                }
             }
         };
     }
 
-    test_match_pattern!(const, exprs);
+    test_match_pattern!(consts, exprs);
     test_match_pattern!(let_, let_);
     test_match_pattern!(closure, closure);
 }

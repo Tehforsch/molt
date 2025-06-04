@@ -143,7 +143,7 @@ impl<'a> std::fmt::Display for FilePath<'a> {
 }
 
 impl Contents {
-    fn new(contents: String) -> Self {
+    pub fn new(contents: String) -> Self {
         let line_starts = line_starts(&contents).collect();
         Self {
             contents,
