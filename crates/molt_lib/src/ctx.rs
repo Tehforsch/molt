@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Span {
     start: usize,
     end: usize,
@@ -43,6 +43,7 @@ impl Span {
     }
 }
 
+#[derive(Debug)]
 pub struct WithSpan<T> {
     span: Span,
     item: T,
@@ -85,17 +86,11 @@ impl<T> PatternWithSpan<T> {
     }
 
     pub fn real(&self) -> Option<&T> {
-        match &self.item {
-            Pattern::Real(t) => Some(t),
-            Pattern::Pat(_) => None,
-        }
+        self.item.real()
     }
 
     pub fn unwrap_real(self) -> WithSpan<T> {
-        self.map(|item| match item {
-            Pattern::Real(t) => t,
-            Pattern::Pat(_) => panic!("unwrap_real called on pat variant."),
-        })
+        self.map(|item| item.unwrap_real())
     }
 
     pub fn unwrap_var(self) -> NodeId<T> {
@@ -172,10 +167,17 @@ pub enum Pattern<Real, Pat> {
 }
 
 impl<Real, Pat> Pattern<Real, Pat> {
-    pub fn unwrap(self) -> Real {
+    pub fn unwrap_real(self) -> Real {
         match self {
             Pattern::Real(real) => real,
             Pattern::Pat(_) => panic!("unwrap called on pattern variant."),
+        }
+    }
+
+    pub fn real(&self) -> Option<&Real> {
+        match &self {
+            Pattern::Real(t) => Some(t),
+            Pattern::Pat(_) => None,
         }
     }
 }
@@ -200,8 +202,10 @@ impl<T> NodeId<T> {
     }
 }
 
+#[derive(Debug)]
 pub struct NoPunct;
 
+#[derive(Debug)]
 pub struct NodeList<T, P> {
     items: Vec<NodeId<T>>,
     _marker: PhantomData<P>,

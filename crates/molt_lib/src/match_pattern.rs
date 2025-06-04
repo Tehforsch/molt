@@ -136,7 +136,7 @@ impl Match {
             Pattern::Pat(var) => {
                 self.add_binding(ctx, var, ast_id, true);
             }
-            Pattern::Real(pat) => self.cmp_syn(ctx.ast_ctx.get(ast_id).unwrap(), pat),
+            Pattern::Real(pat) => self.cmp_syn(ctx.ast_ctx.get(ast_id).unwrap_real(), pat),
         }
     }
 

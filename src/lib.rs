@@ -188,4 +188,5 @@ mod tests {
     }
 
     test_match_pattern!(const, exprs);
+    test_match_pattern!(let_, let_);
 }

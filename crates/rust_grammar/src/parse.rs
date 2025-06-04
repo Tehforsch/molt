@@ -193,7 +193,7 @@ use crate::{error, Ident};
 use proc_macro2::{Delimiter, Group, Literal, Punct, Span, TokenStream, TokenTree};
 #[cfg(feature = "printing")]
 use quote::ToTokens;
-use std::cell::{Cell, RefCell, RefMut};
+use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::fmt::{self, Debug, Display};
 #[cfg(feature = "extra-traits")]
 use std::hash::{Hash, Hasher};
@@ -1185,7 +1185,15 @@ impl<'a> ParseBuffer<'a> {
         PosMarker { start }
     }
 
-    pub fn ctx(&self) -> RefMut<'_, Ctx<Node>> {
+    pub(crate) fn dbg<T: Debug + ToNode<Node>>(&self, t: NodeId<T>) {
+        println!("{:?}", self.ctx.borrow().get::<T>(t));
+    }
+
+    pub fn ctx(&self) -> Ref<'_, Ctx<Node>> {
+        self.ctx.borrow()
+    }
+
+    pub fn ctx_mut(&self) -> RefMut<'_, Ctx<Node>> {
         self.ctx.borrow_mut()
     }
 
@@ -1209,7 +1217,7 @@ impl<'a> ParseBuffer<'a> {
         f: impl Fn(T) -> S,
     ) -> Result<NodeId<S>> {
         let item: WithSpan<T> = self.parse_span()?;
-        let entry = self.ctx().add(item.map(f));
+        let entry = self.ctx.borrow_mut().add(item.map(f));
         Ok(entry)
     }
 
@@ -1253,7 +1261,7 @@ impl<'a> ParseBuffer<'a> {
     }
 
     pub(crate) fn add_pat<T: ToNode<Node>>(&self, item: PatternWithSpan<T>) -> NodeId<T> {
-        self.ctx().add_pat(item)
+        self.ctx.borrow_mut().add_pat(item)
     }
 }
 

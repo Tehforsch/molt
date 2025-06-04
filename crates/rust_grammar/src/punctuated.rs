@@ -46,6 +46,7 @@ use std::vec;
 /// Refer to the [module documentation] for details about punctuated sequences.
 ///
 /// [module documentation]: self
+#[derive(Debug)]
 pub struct Punctuated<T, P> {
     inner: Vec<(T, P)>,
     last: Option<Box<T>>,

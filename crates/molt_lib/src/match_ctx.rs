@@ -23,7 +23,7 @@ impl<Node: GetKind> MatchCtx<Node> {
     pub fn dump(&self) {
         println!("--------------------------------");
         for id in self.ast_ctx.iter() {
-            let node = self.ast_ctx.get::<Node>(id).unwrap();
+            let node = self.ast_ctx.get::<Node>(id).unwrap_real();
             let kind_str = format!("{:?}", node.kind());
             println!(
                 "AstNode({:02}): {:13} = {}",
@@ -34,7 +34,7 @@ impl<Node: GetKind> MatchCtx<Node> {
         }
         println!("--------------------------------");
         for id in self.pat_ctx.iter() {
-            let node = self.pat_ctx.get::<Node>(id).unwrap();
+            let node = self.pat_ctx.get::<Node>(id).unwrap_real();
             let kind_str = format!("{:?}", node.kind());
             println!(
                 "PatNode({:02}): {:13} = {}",

@@ -2246,7 +2246,7 @@ pub(crate) mod parsing {
 
             while let Some(prev) = clauses.pop() {
                 *input
-                    .ctx()
+                    .ctx_mut()
                     .get_real_mut(prev.else_branch.unwrap().1)
                     .unwrap() = Expr::If(expr);
                 expr = prev;

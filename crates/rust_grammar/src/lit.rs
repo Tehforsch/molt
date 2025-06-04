@@ -89,6 +89,7 @@ ast_struct! {
     }
 }
 
+#[derive(Debug)]
 struct LitRepr {
     token: Literal,
     suffix: Box<str>,
@@ -108,6 +109,7 @@ ast_struct! {
     }
 }
 
+#[derive(Debug)]
 struct LitIntRepr {
     token: Literal,
     digits: Box<str>,
@@ -130,6 +132,7 @@ ast_struct! {
     }
 }
 
+#[derive(Debug)]
 struct LitFloatRepr {
     token: Literal,
     digits: Box<str>,

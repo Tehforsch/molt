@@ -1,3 +1,5 @@
+use molt_lib::NodeId;
+
 use crate::attr::Attribute;
 use crate::expr::Expr;
 use crate::item::Item;
@@ -58,8 +60,8 @@ ast_struct! {
     #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
     pub struct LocalInit {
         pub eq_token: Token![=],
-        pub expr: Box<Expr>,
-        pub diverge: Option<(Token![else], Box<Expr>)>,
+        pub expr: NodeId<Expr>,
+        pub diverge: Option<(Token![else], NodeId<Expr>)>,
     }
 }
 
@@ -93,7 +95,7 @@ pub(crate) mod parsing {
     use crate::stmt::{Block, Local, LocalInit, Stmt, StmtMacro};
     use crate::token;
     use crate::ty::Type;
-    use molt_lib::NodeId;
+    use molt_lib::{NodeId, WithSpan};
     use proc_macro2::TokenStream;
 
     struct AllowNoSemi(bool);
@@ -300,25 +302,28 @@ pub(crate) mod parsing {
             let eq_token: Token![=] = eq_token;
             let expr: NodeId<Expr> = input.parse()?;
 
-            todo!()
-            // let diverge =
-            //     if !classify::expr_trailing_brace(&input, &expr) && input.peek(Token![else]) {
-            //         let else_token: Token![else] = input.parse()?;
-            //         let diverge = ExprBlock {
-            //             attrs: Vec::new(),
-            //             label: None,
-            //             block: input.parse()?,
-            //         };
-            //         Some((else_token, Box::new(Expr::Block(diverge))))
-            //     } else {
-            //         None
-            //     };
+            let diverge = {
+                if !classify::expr_trailing_brace(&input, expr) && input.peek(Token![else]) {
+                    let else_token: Token![else] = input.parse()?;
+                    let block: WithSpan<Block> = input.parse_span()?;
+                    let diverge = block.map(|block| {
+                        Expr::Block(ExprBlock {
+                            attrs: Vec::new(),
+                            label: None,
+                            block,
+                        })
+                    });
+                    Some((else_token, input.add(diverge)))
+                } else {
+                    None
+                }
+            };
 
-            // Some(LocalInit {
-            //     eq_token,
-            //     expr: Box::new(expr),
-            //     diverge,
-            // })
+            Some(LocalInit {
+                eq_token,
+                expr,
+                diverge,
+            })
         } else {
             None
         };

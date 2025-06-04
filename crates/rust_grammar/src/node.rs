@@ -88,7 +88,7 @@ define_node_and_kind! {
 impl<T: Parse + ToNode<Node>> Parse for NodeId<T> {
     fn parse(parser: ParseStream) -> Result<Self> {
         let t = parser.parse_span()?;
-        let id = parser.ctx().add(t);
+        let id = parser.add(t);
         Ok(id)
     }
 }
