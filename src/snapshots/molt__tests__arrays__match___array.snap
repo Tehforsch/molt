@@ -5,5 +5,8 @@ expression: "super :: super :: match_pattern(stringify! (arrays), stringify! (ar
 note: Match
   ┌─ "test_data/arrays/main.rs":2:5
   │
-2 │     [1, 2, 3, 4];
-  │     ^^^^^^^^^^^^ $x
+2 │     [1, 2, 3 + 4, 5];
+  │     ^^^^^^^^^^^^^^^^ $x
+  │
+  = $a = 4
+  = $e = 3

@@ -90,6 +90,10 @@ impl<T> Spanned<T> {
     pub fn as_pattern(self) -> SpannedPat<T> {
         self.map(|item| Pattern::Real(item))
     }
+
+    pub fn decompose(self) -> (Span, T) {
+        (self.span, self.item)
+    }
 }
 
 impl<T> SpannedPat<T> {

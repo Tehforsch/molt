@@ -1216,7 +1216,7 @@ pub(crate) mod parsing {
     #[cfg(feature = "full")]
     use crate::ty::{ReturnType, Type};
     use crate::verbatim;
-    use molt_lib::{NodeId, Pattern, Span, Spanned, SpannedPat, WithSpan};
+    use molt_lib::{Id, NodeId, Pattern, Span, Spanned, SpannedPat, WithSpan};
     #[cfg(feature = "full")]
     use proc_macro2::TokenStream;
     use std::mem;
@@ -1239,12 +1239,22 @@ pub(crate) mod parsing {
         }
     }
 
+    impl Parse for SpannedPat<Expr> {
+        fn parse(input: ParseStream) -> Result<Self> {
+            ambiguous_expr_pat(
+                input,
+                #[cfg(feature = "full")]
+                AllowStruct(true),
+            )
+        }
+    }
+
     #[cfg(feature = "full")]
     pub(super) fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<NodeId<Expr>> {
         let mut attrs = input.call(expr_attrs)?;
         let mut expr: SpannedPat<Expr> = if input.peek(token::Group) {
             let allow_struct = AllowStruct(true);
-            let atom = expr_group(input, allow_struct)?;
+            let atom = input.call_spanned(|input| expr_group(input, allow_struct))?;
             if continue_parsing_early(input, &atom) {
                 trailer_helper(input, atom)?
             } else {
@@ -1458,8 +1468,15 @@ pub(crate) mod parsing {
     // Parse an arbitrary expression.
     pub(super) fn ambiguous_expr(
         input: ParseStream,
-        #[cfg(feature = "full")] allow_struct: AllowStruct,
+        allow_struct: AllowStruct,
     ) -> Result<NodeId<Expr>> {
+        ambiguous_expr_pat(input, allow_struct).map(|expr| input.add_pat(expr))
+    }
+
+    fn ambiguous_expr_pat(
+        input: ParseStream,
+        allow_struct: AllowStruct,
+    ) -> Result<SpannedPat<Expr>> {
         let lhs = unary_expr(
             input,
             #[cfg(feature = "full")]
@@ -1472,7 +1489,6 @@ pub(crate) mod parsing {
             allow_struct,
             Precedence::MIN,
         )
-        .map(|expr| input.add_pat(expr))
     }
 
     #[cfg(feature = "full")]
@@ -1720,7 +1736,7 @@ pub(crate) mod parsing {
             return var;
         }
         let real: SpannedPat<Expr> = if input.peek(token::Group) {
-            expr_group(input, allow_struct)?
+            input.call_spanned(|input| expr_group(input, allow_struct))?
         } else if input.peek(Lit) {
             input.parse_span_with(Expr::Lit)?
         } else if input.peek(Token![async])
@@ -2077,39 +2093,30 @@ pub(crate) mod parsing {
         }
     }
 
-    fn expr_group(
-        input: ParseStream,
-        #[cfg(feature = "full")] allow_struct: AllowStruct,
-    ) -> Result<SpannedPat<Expr>> {
-        todo!()
-        // let group = crate::group::parse_group(input)?;
-        // let mut inner: WithSpan<Expr> = group.content.parse_span()?;
-
-        // match inner {
-        //     Expr::Path(mut expr) if expr.attrs.is_empty() => {
-        //         let grouped_len = expr.path.segments.len();
-        //         Path::parse_rest(input, &mut expr.path, true)?;
-        //         match rest_of_path_or_macro_or_struct(
-        //             expr.qself,
-        //             expr.path,
-        //             input,
-        //             #[cfg(feature = "full")]
-        //             allow_struct,
-        //         )? {
-        //             Expr::Path(expr) if expr.path.segments.len() == grouped_len => {
-        //                 inner = Expr::Path(expr);
-        //             }
-        //             extended => return Ok(extended),
-        //         }
-        //     }
-        //     _ => {}
-        // }
-
-        // Ok(Expr::Group(ExprGroup {
-        //     attrs: Vec::new(),
-        //     group_token: group.token,
-        //     expr: Box::new(inner),
-        // }))
+    fn expr_group(input: ParseStream, allow_struct: AllowStruct) -> Result<Expr> {
+        let group = crate::group::parse_group(input)?;
+        let mut inner: SpannedPat<Expr> = group.content.parse()?;
+        let (span, inner) = inner.decompose();
+        let make_group_expr = |inner: Pattern<Expr, Id>| {
+            Ok(Expr::Group(ExprGroup {
+                attrs: Vec::new(),
+                group_token: group.token,
+                expr: input.add_pat(inner.with_span(span)),
+            }))
+        };
+        match inner {
+            Pattern::Real(Expr::Path(mut expr)) if expr.attrs.is_empty() => {
+                let grouped_len = expr.path.segments.len();
+                Path::parse_rest(input, &mut expr.path, true)?;
+                match rest_of_path_or_macro_or_struct(expr.qself, expr.path, input, allow_struct)? {
+                    Expr::Path(expr) if expr.path.segments.len() == grouped_len => {
+                        make_group_expr(Pattern::Real(Expr::Path(expr)))
+                    }
+                    extended => Ok(extended),
+                }
+            }
+            inner => make_group_expr(inner),
+        }
     }
 
     #[cfg(feature = "full")]
