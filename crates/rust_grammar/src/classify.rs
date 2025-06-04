@@ -16,58 +16,59 @@ use proc_macro2::{Delimiter, TokenStream, TokenTree};
 use std::ops::ControlFlow;
 
 #[cfg(feature = "full")]
-pub(crate) fn requires_semi_to_be_stmt(expr: &Expr) -> bool {
-    todo!()
-    // match expr {
-    //     Expr::Macro(expr) => !expr.mac.delimiter.is_brace(),
-    //     _ => requires_comma_to_be_match_arm(expr),
-    // }
+pub(crate) fn requires_semi_to_be_stmt(input: ParseStream, expr: NodeId<Expr>) -> bool {
+    match input.ctx().get(expr).real() {
+        Some(Expr::Macro(expr)) => !expr.mac.delimiter.is_brace(),
+        _ => requires_comma_to_be_match_arm(input, expr),
+    }
 }
 
-pub(crate) fn requires_comma_to_be_match_arm(expr: &NodeId<Expr>) -> bool {
-    todo!()
-    // match expr {
-    //     Expr::If(_)
-    //     | Expr::Match(_)
-    //     | Expr::Block(_) | Expr::Unsafe(_) // both under ExprKind::Block in rustc
-    //     | Expr::While(_)
-    //     | Expr::Loop(_)
-    //     | Expr::ForLoop(_)
-    //     | Expr::TryBlock(_)
-    //     | Expr::Const(_) => false,
+pub(crate) fn requires_comma_to_be_match_arm(input: ParseStream, expr: NodeId<Expr>) -> bool {
+    match input.ctx().get(expr).real() {
+        Some(e) => match e {
+            Expr::If(_)
+            | Expr::Match(_)
+            | Expr::Block(_) | Expr::Unsafe(_) // both under ExprKind::Block in rustc
+            | Expr::While(_)
+            | Expr::Loop(_)
+            | Expr::ForLoop(_)
+            | Expr::TryBlock(_)
+            | Expr::Const(_) => false,
 
-    //     Expr::Array(_)
-    //     | Expr::Assign(_)
-    //     | Expr::Async(_)
-    //     | Expr::Await(_)
-    //     | Expr::Binary(_)
-    //     | Expr::Break(_)
-    //     | Expr::Call(_)
-    //     | Expr::Cast(_)
-    //     | Expr::Closure(_)
-    //     | Expr::Continue(_)
-    //     | Expr::Field(_)
-    //     | Expr::Group(_)
-    //     | Expr::Index(_)
-    //     | Expr::Infer(_)
-    //     | Expr::Let(_)
-    //     | Expr::Lit(_)
-    //     | Expr::Macro(_)
-    //     | Expr::MethodCall(_)
-    //     | Expr::Paren(_)
-    //     | Expr::Path(_)
-    //     | Expr::Range(_)
-    //     | Expr::RawAddr(_)
-    //     | Expr::Reference(_)
-    //     | Expr::Repeat(_)
-    //     | Expr::Return(_)
-    //     | Expr::Struct(_)
-    //     | Expr::Try(_)
-    //     | Expr::Tuple(_)
-    //     | Expr::Unary(_)
-    //     | Expr::Yield(_)
-    //     | Expr::Verbatim(_) => true,
-    // }
+            Expr::Array(_)
+            | Expr::Assign(_)
+            | Expr::Async(_)
+            | Expr::Await(_)
+            | Expr::Binary(_)
+            | Expr::Break(_)
+            | Expr::Call(_)
+            | Expr::Cast(_)
+            | Expr::Closure(_)
+            | Expr::Continue(_)
+            | Expr::Field(_)
+            | Expr::Group(_)
+            | Expr::Index(_)
+            | Expr::Infer(_)
+            | Expr::Let(_)
+            | Expr::Lit(_)
+            | Expr::Macro(_)
+            | Expr::MethodCall(_)
+            | Expr::Paren(_)
+            | Expr::Path(_)
+            | Expr::Range(_)
+            | Expr::RawAddr(_)
+            | Expr::Reference(_)
+            | Expr::Repeat(_)
+            | Expr::Return(_)
+            | Expr::Struct(_)
+            | Expr::Try(_)
+            | Expr::Tuple(_)
+            | Expr::Unary(_)
+            | Expr::Yield(_)
+            | Expr::Verbatim(_) => true,
+        },
+        None => todo!("Figure out default"),
+    }
 }
 
 #[cfg(feature = "printing")]

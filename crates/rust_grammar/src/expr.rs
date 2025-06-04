@@ -1754,8 +1754,7 @@ pub(crate) mod parsing {
             || input.peek(Token![crate])
             || input.peek(Token![try]) && (input.peek2(Token![!]) || input.peek2(Token![::]))
         {
-            todo!()
-            // path_or_macro_or_struct(input, allow_struct)
+            path_or_macro_or_struct(input, allow_struct)?.as_pattern()
         } else if input.peek(token::Paren) {
             paren_or_tuple(input)?.as_pattern()
         } else if input.peek(Token![break]) {
@@ -1882,16 +1881,18 @@ pub(crate) mod parsing {
     fn path_or_macro_or_struct(
         input: ParseStream,
         #[cfg(feature = "full")] allow_struct: AllowStruct,
-    ) -> Result<Expr> {
+    ) -> Result<Spanned<Expr>> {
+        let marker = input.marker();
         let expr_style = true;
         let (qself, path) = path::parsing::qpath(input, expr_style)?;
-        rest_of_path_or_macro_or_struct(
+        Ok(rest_of_path_or_macro_or_struct(
             qself,
             path,
             input,
             #[cfg(feature = "full")]
             allow_struct,
-        )
+        )?
+        .with_span(input.span_from_marker(marker)))
     }
 
     fn rest_of_path_or_macro_or_struct(
@@ -2987,7 +2988,7 @@ pub(crate) mod parsing {
                 fat_arrow_token: input.parse()?,
                 body: {
                     let body = Expr::parse_with_earlier_boundary_rule(input)?;
-                    requires_comma = classify::requires_comma_to_be_match_arm(&body);
+                    requires_comma = classify::requires_comma_to_be_match_arm(input, body);
                     body
                 },
                 comma: {

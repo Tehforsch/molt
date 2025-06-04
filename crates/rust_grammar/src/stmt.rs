@@ -1,4 +1,4 @@
-use molt_lib::NodeId;
+use molt_lib::{NodeId, NodeList};
 
 use crate::attr::Attribute;
 use crate::expr::Expr;
@@ -13,7 +13,7 @@ ast_struct! {
     pub struct Block {
         pub brace_token: token::Brace,
         /// Statements in a block
-        pub stmts: Vec<Stmt>,
+        pub stmts: NodeList<Stmt, Token![;]>,
     }
 }
 
@@ -28,7 +28,7 @@ ast_enum! {
         Item(Item),
 
         /// Expression, with or without trailing semicolon.
-        Expr(Expr, Option<Token![;]>),
+        Expr(NodeId<Expr>, Option<Token![;]>),
 
         /// A macro invocation in statement position.
         ///
@@ -95,7 +95,7 @@ pub(crate) mod parsing {
     use crate::stmt::{Block, Local, LocalInit, Stmt, StmtMacro};
     use crate::token;
     use crate::ty::Type;
-    use molt_lib::{NodeId, Spanned};
+    use molt_lib::{NodeId, NodeList, Pattern, Spanned, ToNode, WithSpan};
     use proc_macro2::TokenStream;
 
     struct AllowNoSemi(bool);
@@ -151,22 +151,38 @@ pub(crate) mod parsing {
         /// }
         /// ```
         #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-        pub fn parse_within(input: ParseStream) -> Result<Vec<Stmt>> {
+        pub fn parse_within(input: ParseStream) -> Result<NodeList<Stmt, Token![;]>> {
             let mut stmts = Vec::new();
             loop {
                 while let semi @ Some(_) = input.parse()? {
-                    stmts.push(Stmt::Expr(Expr::Verbatim(TokenStream::new()), semi));
+                    stmts.push(
+                        input.add(
+                            Stmt::Expr(
+                                input.add(
+                                    Expr::Verbatim(TokenStream::new())
+                                        .with_span(molt_lib::Span::fake()),
+                                ),
+                                semi,
+                            )
+                            .with_span(molt_lib::Span::fake()),
+                        ),
+                    );
                 }
                 if input.is_empty() {
                     break;
                 }
                 let stmt = parse_stmt(input, AllowNoSemi(true))?;
-                let requires_semicolon = match &stmt {
-                    Stmt::Expr(stmt, None) => classify::requires_semi_to_be_stmt(stmt),
-                    Stmt::Macro(stmt) => {
+                let requires_semicolon = match input.ctx().get(stmt).real() {
+                    Some(Stmt::Expr(stmt, None)) => {
+                        classify::requires_semi_to_be_stmt(input, *stmt)
+                    }
+                    Some(Stmt::Macro(stmt)) => {
                         stmt.semi_token.is_none() && !stmt.mac.delimiter.is_brace()
                     }
-                    Stmt::Local(_) | Stmt::Item(_) | Stmt::Expr(_, Some(_)) => false,
+                    Some(Stmt::Local(_)) | Some(Stmt::Item(_)) | Some(Stmt::Expr(_, Some(_))) => {
+                        false
+                    }
+                    None => todo!("Figure out default"),
                 };
                 stmts.push(stmt);
                 if input.is_empty() {
@@ -175,7 +191,7 @@ pub(crate) mod parsing {
                     return Err(input.error("unexpected token, expected `;`"));
                 }
             }
-            Ok(stmts)
+            Ok(NodeList::new(stmts.into_iter()))
         }
     }
 
@@ -190,15 +206,7 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-    impl Parse for Stmt {
-        fn parse(input: ParseStream) -> Result<Self> {
-            let allow_nosemi = AllowNoSemi(false);
-            parse_stmt(input, allow_nosemi)
-        }
-    }
-
-    fn parse_stmt(input: ParseStream, allow_nosemi: AllowNoSemi) -> Result<Stmt> {
+    fn parse_stmt(input: ParseStream, allow_nosemi: AllowNoSemi) -> Result<NodeId<Stmt>> {
         let begin = input.fork();
         let attrs = input.call(Attribute::parse_outer)?;
 
@@ -215,13 +223,13 @@ pub(crate) mod parsing {
                         || ahead.peek3(Token![?]))
                 {
                     input.advance_to(&ahead);
-                    return stmt_mac(input, attrs, path).map(Stmt::Macro);
+                    return Ok(input.add(stmt_mac(input, attrs, path)?.map(Stmt::Macro)));
                 }
             }
         }
 
         if input.peek(Token![let]) && !input.peek(token::Group) {
-            stmt_local(input, attrs).map(Stmt::Local)
+            Ok(input.add(stmt_local(input, attrs)?.map(Stmt::Local)))
         } else if input.peek(Token![pub])
             || input.peek(Token![crate]) && !input.peek2(Token![::])
             || input.peek(Token![extern])
@@ -260,13 +268,18 @@ pub(crate) mod parsing {
             || is_item_macro
         {
             let item = item::parsing::parse_rest_of_item(begin, attrs, input)?;
-            Ok(Stmt::Item(item))
+            Ok(input.add(Stmt::Item(item).with_span(molt_lib::Span::fake())))
         } else {
             stmt_expr(input, allow_nosemi, attrs)
         }
     }
 
-    fn stmt_mac(input: ParseStream, attrs: Vec<Attribute>, path: Path) -> Result<StmtMacro> {
+    fn stmt_mac(
+        input: ParseStream,
+        attrs: Vec<Attribute>,
+        path: Path,
+    ) -> Result<Spanned<StmtMacro>> {
+        let marker = input.marker();
         let bang_token: Token![!] = input.parse()?;
         let (delimiter, tokens) = mac::parse_delimiter(input)?;
         let semi_token: Option<Token![;]> = input.parse()?;
@@ -280,10 +293,12 @@ pub(crate) mod parsing {
                 tokens,
             },
             semi_token,
-        })
+        }
+        .with_span(input.span_from_marker(marker)))
     }
 
-    fn stmt_local(input: ParseStream, attrs: Vec<Attribute>) -> Result<Local> {
+    fn stmt_local(input: ParseStream, attrs: Vec<Attribute>) -> Result<Spanned<Local>> {
+        let marker = input.marker();
         let let_token: Token![let] = input.parse()?;
 
         let mut pat = Pat::parse_single(input)?;
@@ -336,91 +351,101 @@ pub(crate) mod parsing {
             pat,
             init,
             semi_token,
-        })
+        }
+        .with_span(input.span_from_marker(marker)))
     }
 
     fn stmt_expr(
         input: ParseStream,
         allow_nosemi: AllowNoSemi,
         mut attrs: Vec<Attribute>,
-    ) -> Result<Stmt> {
+    ) -> Result<NodeId<Stmt>> {
         let mut e = Expr::parse_with_earlier_boundary_rule(input)?;
-        todo!();
 
-        // let attr_target = &mut e;
-        // loop {
-        //     attr_target = match attr_target {
-        //         // TODO: This will be easier once every expr is switched to nodes.
-        //         Expr::Assign(_) => todo!(),
-        //         Expr::Binary(_) => todo!(),
-        //         Expr::Cast(_) => todo!(),
-        //         // Expr::Assign(e) => &mut e.left,
-        //         // Expr::Binary(e) => ctx.get_mut(e.left).unwrap(),
-        //         // Expr::Cast(e) => &mut e.expr,
-        //         Expr::Array(_)
-        //         | Expr::Async(_)
-        //         | Expr::Await(_)
-        //         | Expr::Block(_)
-        //         | Expr::Break(_)
-        //         | Expr::Call(_)
-        //         | Expr::Closure(_)
-        //         | Expr::Const(_)
-        //         | Expr::Continue(_)
-        //         | Expr::Field(_)
-        //         | Expr::ForLoop(_)
-        //         | Expr::Group(_)
-        //         | Expr::If(_)
-        //         | Expr::Index(_)
-        //         | Expr::Infer(_)
-        //         | Expr::Let(_)
-        //         | Expr::Lit(_)
-        //         | Expr::Loop(_)
-        //         | Expr::Macro(_)
-        //         | Expr::Match(_)
-        //         | Expr::MethodCall(_)
-        //         | Expr::Paren(_)
-        //         | Expr::Path(_)
-        //         | Expr::Range(_)
-        //         | Expr::RawAddr(_)
-        //         | Expr::Reference(_)
-        //         | Expr::Repeat(_)
-        //         | Expr::Return(_)
-        //         | Expr::Struct(_)
-        //         | Expr::Try(_)
-        //         | Expr::TryBlock(_)
-        //         | Expr::Tuple(_)
-        //         | Expr::Unary(_)
-        //         | Expr::Unsafe(_)
-        //         | Expr::While(_)
-        //         | Expr::Yield(_)
-        //         | Expr::Verbatim(_) => break,
-        //     };
-        // }
-        // attrs.extend(attr_target.replace_attrs(Vec::new()));
-        // attr_target.replace_attrs(attrs);
+        let mut attr_target = e;
+        loop {
+            let ctx = input.ctx();
+            let Pattern::Real(e) = ctx.get(attr_target) else {
+                break;
+            };
+            attr_target = match e {
+                Expr::Assign(e) => e.left,
+                Expr::Binary(e) => e.left,
+                Expr::Cast(e) => e.expr,
+                Expr::Array(_)
+                | Expr::Async(_)
+                | Expr::Await(_)
+                | Expr::Block(_)
+                | Expr::Break(_)
+                | Expr::Call(_)
+                | Expr::Closure(_)
+                | Expr::Const(_)
+                | Expr::Continue(_)
+                | Expr::Field(_)
+                | Expr::ForLoop(_)
+                | Expr::Group(_)
+                | Expr::If(_)
+                | Expr::Index(_)
+                | Expr::Infer(_)
+                | Expr::Let(_)
+                | Expr::Lit(_)
+                | Expr::Loop(_)
+                | Expr::Macro(_)
+                | Expr::Match(_)
+                | Expr::MethodCall(_)
+                | Expr::Paren(_)
+                | Expr::Path(_)
+                | Expr::Range(_)
+                | Expr::RawAddr(_)
+                | Expr::Reference(_)
+                | Expr::Repeat(_)
+                | Expr::Return(_)
+                | Expr::Struct(_)
+                | Expr::Try(_)
+                | Expr::TryBlock(_)
+                | Expr::Tuple(_)
+                | Expr::Unary(_)
+                | Expr::Unsafe(_)
+                | Expr::While(_)
+                | Expr::Yield(_)
+                | Expr::Verbatim(_) => break,
+            };
+        }
+        match input.ctx_mut().get_mut(attr_target) {
+            Pattern::Real(attr_target) => {
+                attrs.extend(attr_target.replace_attrs(Vec::new()));
+                attr_target.replace_attrs(attrs);
+            }
+            Pattern::Pat(_) => panic!("Attr on var"),
+        }
 
-        // let semi_token: Option<Token![;]> = input.parse()?;
+        let semi_token: Option<Token![;]> = input.parse()?;
 
-        // match e {
-        //     Expr::Macro(ExprMacro { attrs, mac })
-        //         if semi_token.is_some() || mac.delimiter.is_brace() =>
-        //     {
-        //         return Ok(Stmt::Macro(StmtMacro {
-        //             attrs,
-        //             mac,
-        //             semi_token,
-        //         }));
-        //     }
-        //     _ => {}
-        // }
+        if let Some(macro_stmt_id) = input.ctx_mut().change_node(e, |expr| match expr {
+            Expr::Macro(ExprMacro { attrs, mac })
+                if semi_token.is_some() || mac.delimiter.is_brace() =>
+            {
+                Stmt::Macro(StmtMacro {
+                    attrs: attrs,
+                    mac: mac,
+                    semi_token,
+                })
+                .to_node()
+            }
+            e => e.to_node(),
+        }) {
+            return Ok(macro_stmt_id);
+        }
 
-        // if semi_token.is_some() {
-        //     Ok(Stmt::Expr(e, semi_token))
-        // } else if allow_nosemi.0 || !classify::requires_semi_to_be_stmt(&e) {
-        //     Ok(Stmt::Expr(e, None))
-        // } else {
-        //     Err(input.error("expected semicolon"))
-        // }
+        if semi_token.is_some() {
+            // todo span
+            Ok(input.add(Stmt::Expr(e, semi_token).with_span(molt_lib::Span::fake())))
+        } else if allow_nosemi.0 || !classify::requires_semi_to_be_stmt(input, e) {
+            // todo span
+            Ok(input.add(Stmt::Expr(e, None).with_span(molt_lib::Span::fake())))
+        } else {
+            Err(input.error("expected semicolon"))
+        }
     }
 }
 

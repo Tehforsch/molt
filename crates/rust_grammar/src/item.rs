@@ -933,7 +933,7 @@ pub(crate) mod parsing {
     use crate::token;
     use crate::ty::{Abi, ReturnType, Type, TypePath, TypeReference};
     use crate::verbatim;
-    use molt_lib::NodeId;
+    use molt_lib::{NodeId, NodeList};
     use proc_macro2::TokenStream;
 
     #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
@@ -2469,7 +2469,7 @@ pub(crate) mod parsing {
                 (Some(brace_token), stmts, None)
             } else if lookahead.peek(Token![;]) {
                 let semi_token: Token![;] = input.parse()?;
-                (None, Vec::new(), Some(semi_token))
+                (None, NodeList::empty(), Some(semi_token))
             } else {
                 return Err(lookahead.error());
             };

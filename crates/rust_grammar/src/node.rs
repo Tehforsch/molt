@@ -3,7 +3,7 @@ use molt_lib::{NodeId, ToNode};
 
 use crate::{
     parse::{Parse, ParseStream, Result},
-    Expr, Item, Lit,
+    Expr, Item, Lit, Stmt,
 };
 
 macro_rules! define_node_and_kind {
@@ -50,7 +50,7 @@ macro_rules! define_node_and_kind {
                     Node::$variant_name(self)
                 }
 
-                fn from_node(node: &Node) -> Option<&Self> {
+                fn from_node(node: Node) -> Option<Self> {
                     #[allow(irrefutable_let_patterns)]
                     if let Node::$variant_name(item) = node {
                         Some(item)
@@ -59,7 +59,16 @@ macro_rules! define_node_and_kind {
                     }
                 }
 
-                fn from_node_mut(node: &mut Node) -> Option<&mut Self> {
+                fn from_node_ref(node: &Node) -> Option<&Self> {
+                    #[allow(irrefutable_let_patterns)]
+                    if let Node::$variant_name(item) = node {
+                        Some(item)
+                    } else {
+                        None
+                    }
+                }
+
+                fn from_node_ref_mut(node: &mut Node) -> Option<&mut Self> {
                     #[allow(irrefutable_let_patterns)]
                     if let Node::$variant_name(item) = node {
                         Some(item)
@@ -80,6 +89,7 @@ define_node_and_kind! {
     (Lit, Lit),
     (Item, Item),
     (Expr, Expr),
+    (Stmt, Stmt),
     // (Attr, Attribute),
     // (Signature, Signature),
     // (FnArg, FnArg),
