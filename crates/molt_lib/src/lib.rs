@@ -5,7 +5,7 @@ mod match_ctx;
 mod match_pattern;
 
 pub use ctx::{
-    Ctx, GetKind, Id, MatchingMode, NoPunct, NodeId, NodeList, Pattern, PatternWithSpan, Span,
+    Ctx, GetKind, Id, MatchingMode, NoPunct, NodeId, NodeList, Pattern, Span, Spanned, SpannedPat,
     ToNode, Var, VarDecl, WithSpan,
 };
 

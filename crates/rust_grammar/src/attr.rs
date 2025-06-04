@@ -654,7 +654,7 @@ pub(crate) mod parsing {
     use crate::parse::{Parse, ParseStream};
     use crate::path::Path;
     use crate::{mac, token};
-    use molt_lib::{NodeId, WithSpan};
+    use molt_lib::{NodeId, Spanned, WithSpan};
     use proc_macro2::Ident;
     use std::fmt::{self, Display};
 
@@ -746,13 +746,13 @@ pub(crate) mod parsing {
         let value = if let (Some(lit), true) = (lit, ahead.is_empty()) {
             input.advance_to(&ahead);
             let span = input.ctx().get_span(lit);
-            input.add(WithSpan::new(
+            input.add(
                 Expr::Lit(ExprLit {
                     attrs: Vec::new(),
                     lit,
-                }),
-                span,
-            ))
+                })
+                .with_span(span),
+            )
         } else if input.peek(Token![#]) && input.peek2(token::Bracket) {
             return Err(input.error("unexpected attribute inside of attribute"));
         } else {

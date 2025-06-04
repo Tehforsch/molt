@@ -9,7 +9,7 @@ use crate::path::{Path, PathArguments};
 use crate::punctuated::Punctuated;
 #[cfg(any(feature = "printing", feature = "full"))]
 use crate::ty::{ReturnType, Type};
-use molt_lib::{Id, NodeId, Pattern, PatternWithSpan};
+use molt_lib::{Id, NodeId, Pattern, SpannedPat};
 #[cfg(feature = "full")]
 use proc_macro2::{Delimiter, TokenStream, TokenTree};
 #[cfg(any(feature = "printing", feature = "full"))]

@@ -182,7 +182,7 @@
 #[path = "discouraged.rs"]
 pub mod discouraged;
 
-use molt_lib::{Ctx, GetKind, Id, NodeId, Pattern, PatternWithSpan, ToNode, Var, WithSpan};
+use molt_lib::{Ctx, GetKind, Id, NodeId, Pattern, Spanned, SpannedPat, ToNode, Var, WithSpan};
 
 use crate::buffer::{Cursor, TokenBuffer};
 use crate::lookahead;
@@ -1197,18 +1197,18 @@ impl<'a> ParseBuffer<'a> {
         self.ctx.borrow_mut()
     }
 
-    pub fn parse_span<T: Parse>(&self) -> Result<WithSpan<T>> {
+    pub fn parse_span<T: Parse>(&self) -> Result<Spanned<T>> {
         let marker = self.marker();
         let item = T::parse(self)?;
         let span = self.span_from_marker(marker);
-        Ok(WithSpan::new(item, span))
+        Ok(item.with_span(span))
     }
 
     pub fn parse_span_with<'b, T: Parse, S: ToNode<Node>>(
         &self,
         f: impl Fn(T) -> S,
-    ) -> Result<WithSpan<S>> {
-        let item: WithSpan<T> = self.parse_span()?;
+    ) -> Result<Spanned<S>> {
+        let item: Spanned<T> = self.parse_span()?;
         Ok(item.map(f))
     }
 
@@ -1216,7 +1216,7 @@ impl<'a> ParseBuffer<'a> {
         &self,
         f: impl Fn(T) -> S,
     ) -> Result<NodeId<S>> {
-        let item: WithSpan<T> = self.parse_span()?;
+        let item: Spanned<T> = self.parse_span()?;
         let entry = self.ctx.borrow_mut().add(item.map(f));
         Ok(entry)
     }
@@ -1230,19 +1230,19 @@ impl<'a> ParseBuffer<'a> {
     }
 
     pub fn add_fake_span<T: ToNode<Node>>(&mut self, t: T) -> NodeId<T> {
-        self.add(WithSpan::new(t, molt_lib::Span::fake()))
+        self.add(t.with_span(molt_lib::Span::fake()))
     }
 
-    pub fn from_marker<T>(&self, marker: PosMarker, t: T) -> WithSpan<T> {
-        WithSpan::new(t, self.span_from_marker(marker))
+    pub fn from_marker<T>(&self, marker: PosMarker, t: T) -> Spanned<T> {
+        t.with_span(self.span_from_marker(marker))
     }
 
-    pub fn add<T: ToNode<Node>>(&self, t: WithSpan<T>) -> NodeId<T> {
+    pub fn add<T: ToNode<Node>>(&self, t: Spanned<T>) -> NodeId<T> {
         self.ctx.borrow_mut().add(t)
     }
 
-    pub fn parse_var<T: ToNode<Node>>(&self) -> Option<Result<PatternWithSpan<T>>> {
-        let transposed = || -> Result<Option<PatternWithSpan<T>>> {
+    pub fn parse_var<T: ToNode<Node>>(&self) -> Option<Result<SpannedPat<T>>> {
+        let transposed = || -> Result<Option<SpannedPat<T>>> {
             if self.peek(Token![$]) {
                 let marker = self.marker();
                 let _: Token![$] = self.parse()?;
@@ -1251,7 +1251,7 @@ impl<'a> ParseBuffer<'a> {
                 let id = self
                     .add_var::<T>(Var::new(ident.to_string(), T::kind()))
                     .into();
-                let item: PatternWithSpan<T> = WithSpan::new(Pattern::Pat(id), span);
+                let item: SpannedPat<T> = Pattern::Pat(id).with_span(span);
                 Ok(Some(item))
             } else {
                 Ok(None)
@@ -1260,7 +1260,7 @@ impl<'a> ParseBuffer<'a> {
         transposed().transpose()
     }
 
-    pub(crate) fn add_pat<T: ToNode<Node>>(&self, item: PatternWithSpan<T>) -> NodeId<T> {
+    pub(crate) fn add_pat<T: ToNode<Node>>(&self, item: SpannedPat<T>) -> NodeId<T> {
         self.ctx.borrow_mut().add_pat(item)
     }
 }

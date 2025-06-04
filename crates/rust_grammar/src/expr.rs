@@ -1,4 +1,4 @@
-use molt_lib::{NodeId, NodeList};
+use molt_lib::{NodeId, NodeList, WithSpan};
 
 use crate::attr::Attribute;
 #[cfg(all(feature = "parsing", feature = "full"))]
@@ -1216,7 +1216,7 @@ pub(crate) mod parsing {
     #[cfg(feature = "full")]
     use crate::ty::{ReturnType, Type};
     use crate::verbatim;
-    use molt_lib::{NodeId, Pattern, PatternWithSpan, Span, WithSpan};
+    use molt_lib::{NodeId, Pattern, Span, Spanned, SpannedPat, WithSpan};
     #[cfg(feature = "full")]
     use proc_macro2::TokenStream;
     use std::mem;
@@ -1242,7 +1242,7 @@ pub(crate) mod parsing {
     #[cfg(feature = "full")]
     pub(super) fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<NodeId<Expr>> {
         let mut attrs = input.call(expr_attrs)?;
-        let mut expr: PatternWithSpan<Expr> = if input.peek(token::Group) {
+        let mut expr: SpannedPat<Expr> = if input.peek(token::Group) {
             let allow_struct = AllowStruct(true);
             let atom = expr_group(input, allow_struct)?;
             if continue_parsing_early(input, &atom) {
@@ -1320,10 +1320,10 @@ pub(crate) mod parsing {
 
     fn parse_expr(
         input: ParseStream,
-        mut lhs: PatternWithSpan<Expr>,
+        mut lhs: SpannedPat<Expr>,
         allow_struct: AllowStruct,
         base: Precedence,
-    ) -> Result<PatternWithSpan<Expr>> {
+    ) -> Result<SpannedPat<Expr>> {
         loop {
             let ahead = input.fork();
             if let Some(Expr::Range(_)) = lhs.real() {
@@ -1349,16 +1349,13 @@ pub(crate) mod parsing {
                 input.advance_to(&ahead);
                 let right = parse_binop_rhs(input, allow_struct, precedence)?;
                 let span = lhs.join(&right);
-                lhs = WithSpan::new(
-                    Expr::Binary(ExprBinary {
-                        attrs: Vec::new(),
-                        left: input.add_pat(lhs),
-                        op,
-                        right: input.add_pat(right),
-                    }),
-                    span,
-                )
-                .as_pattern();
+                lhs = Expr::Binary(ExprBinary {
+                    attrs: Vec::new(),
+                    left: input.add_pat(lhs),
+                    op,
+                    right: input.add_pat(right),
+                })
+                .pattern_with_span(span);
             } else if Precedence::Assign >= base
                 && input.peek(Token![=])
                 && !input.peek(Token![=>])
@@ -1370,30 +1367,24 @@ pub(crate) mod parsing {
                 let eq_token: Token![=] = input.parse()?;
                 let right = parse_binop_rhs(input, allow_struct, Precedence::Assign)?;
                 let span = lhs.join(&right);
-                lhs = WithSpan::new(
-                    Expr::Assign(ExprAssign {
-                        attrs: Vec::new(),
-                        left: input.add_pat(lhs),
-                        eq_token,
-                        right: input.add_pat(right),
-                    }),
-                    span,
-                )
-                .as_pattern();
+                lhs = Expr::Assign(ExprAssign {
+                    attrs: Vec::new(),
+                    left: input.add_pat(lhs),
+                    eq_token,
+                    right: input.add_pat(right),
+                })
+                .pattern_with_span(span);
             } else if Precedence::Range >= base && input.peek(Token![..]) {
                 let limits: RangeLimits = input.parse()?;
                 let end = parse_range_end(input, &limits, allow_struct)?;
                 let span = end.as_ref().map(|end| lhs.join(end)).unwrap_or(lhs.span());
-                lhs = WithSpan::new(
-                    Expr::Range(ExprRange {
-                        attrs: Vec::new(),
-                        start: Some(input.add_pat(lhs)),
-                        limits,
-                        end: end.map(|end| input.add(end)),
-                    }),
-                    span,
-                )
-                .as_pattern();
+                lhs = Expr::Range(ExprRange {
+                    attrs: Vec::new(),
+                    start: Some(input.add_pat(lhs)),
+                    limits,
+                    end: end.map(|end| input.add(end)),
+                })
+                .pattern_with_span(span);
             } else if Precedence::Cast >= base && input.peek(Token![as]) {
                 let as_token: Token![as] = input.parse()?;
                 let allow_plus = false;
@@ -1401,16 +1392,13 @@ pub(crate) mod parsing {
                 let ty = ty::parsing::ambig_ty(input, allow_plus, allow_group_generic)?;
                 check_cast(input)?;
                 let span = Span::fake(); // TODO merge lhs and type here once type is NodeId
-                lhs = WithSpan::new(
-                    Expr::Cast(ExprCast {
-                        attrs: Vec::new(),
-                        expr: input.add_pat(lhs),
-                        as_token,
-                        ty: Box::new(ty),
-                    }),
-                    span,
-                )
-                .as_pattern();
+                lhs = Expr::Cast(ExprCast {
+                    attrs: Vec::new(),
+                    expr: input.add_pat(lhs),
+                    as_token,
+                    ty: Box::new(ty),
+                })
+                .pattern_with_span(span);
             } else {
                 break;
             }
@@ -1422,7 +1410,7 @@ pub(crate) mod parsing {
         input: ParseStream,
         #[cfg(feature = "full")] allow_struct: AllowStruct,
         precedence: Precedence,
-    ) -> Result<PatternWithSpan<Expr>> {
+    ) -> Result<SpannedPat<Expr>> {
         let mut rhs = unary_expr(
             input,
             #[cfg(feature = "full")]
@@ -1501,7 +1489,7 @@ pub(crate) mod parsing {
     // &mut <trailer>
     // box <trailer>
     #[cfg(feature = "full")]
-    fn unary_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<PatternWithSpan<Expr>> {
+    fn unary_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedPat<Expr>> {
         let begin = input.fork();
         let marker = input.marker();
         let attrs = input.call(expr_attrs)?;
@@ -1593,7 +1581,7 @@ pub(crate) mod parsing {
         mut attrs: Vec<Attribute>,
         input: ParseStream,
         allow_struct: AllowStruct,
-    ) -> Result<PatternWithSpan<Expr>> {
+    ) -> Result<SpannedPat<Expr>> {
         let atom = atom_expr(input, allow_struct)?;
         let mut e = trailer_helper(input, atom)?;
 
@@ -1613,10 +1601,7 @@ pub(crate) mod parsing {
         Ok(e.as_pattern())
     }
 
-    fn trailer_helper(
-        input: ParseStream,
-        mut e: PatternWithSpan<Expr>,
-    ) -> Result<PatternWithSpan<Expr>> {
+    fn trailer_helper(input: ParseStream, mut e: SpannedPat<Expr>) -> Result<SpannedPat<Expr>> {
         loop {
             let marker = input.marker();
             let orig_span = e.span();
@@ -1631,7 +1616,7 @@ pub(crate) mod parsing {
                         .into(),
                 });
                 let span = input.span_from_marker(marker).join(orig_span);
-                e = WithSpan::new(e2, span).as_pattern();
+                e = e2.pattern_with_span(span);
             } else if input.peek(Token![.])
                 && !input.peek(Token![..])
                 && match e.real() {
@@ -1657,7 +1642,7 @@ pub(crate) mod parsing {
                         await_token,
                     });
                     let span = input.span_from_marker(marker).join(orig_span);
-                    e = WithSpan::new(e2, span).as_pattern();
+                    e = e2.pattern_with_span(span);
                     continue;
                 }
 
@@ -1683,7 +1668,7 @@ pub(crate) mod parsing {
                                 .into(),
                         });
                         let span = input.span_from_marker(marker).join(orig_span);
-                        e = WithSpan::new(e2, span).as_pattern();
+                        e = e2.pattern_with_span(span);
                         continue;
                     }
                 }
@@ -1695,7 +1680,7 @@ pub(crate) mod parsing {
                     member,
                 });
                 let span = input.span_from_marker(marker).join(orig_span);
-                e = WithSpan::new(e2, span).as_pattern();
+                e = e2.pattern_with_span(span);
             } else if input.peek(token::Bracket) {
                 let content;
                 let e2 = Expr::Index(ExprIndex {
@@ -1705,7 +1690,7 @@ pub(crate) mod parsing {
                     index: content.parse()?,
                 });
                 let span = input.span_from_marker(marker).join(orig_span);
-                e = WithSpan::new(e2, span).as_pattern();
+                e = e2.pattern_with_span(span);
             } else if input.peek(Token![?])
                 && match e.real() {
                     Some(Expr::Range(_)) => false,
@@ -1718,7 +1703,7 @@ pub(crate) mod parsing {
                     question_token: input.parse()?,
                 });
                 let span = input.span_from_marker(marker).join(orig_span);
-                e = WithSpan::new(e2, span).as_pattern();
+                e = e2.pattern_with_span(span);
             } else {
                 break;
             }
@@ -1728,13 +1713,13 @@ pub(crate) mod parsing {
 
     // Parse all atomic expressions which don't have to worry about precedence
     // interactions, as they are fully contained.
-    fn atom_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<PatternWithSpan<Expr>> {
-        use molt_lib::PatternWithSpan;
+    fn atom_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedPat<Expr>> {
+        use molt_lib::SpannedPat;
 
         if let Some(var) = input.parse_var() {
             return var;
         }
-        let real: PatternWithSpan<Expr> = if input.peek(token::Group) {
+        let real: SpannedPat<Expr> = if input.peek(token::Group) {
             expr_group(input, allow_struct)?
         } else if input.peek(Lit) {
             input.parse_span_with(Expr::Lit)?.as_pattern()
@@ -1821,7 +1806,7 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    fn atom_labeled(input: ParseStream) -> Result<WithSpan<Expr>> {
+    fn atom_labeled(input: ParseStream) -> Result<Spanned<Expr>> {
         todo!()
         // let the_label: Label = input.parse()?;
         // let mut expr = if input.peek(Token![while]) {
@@ -1956,7 +1941,7 @@ pub(crate) mod parsing {
         }
     }
 
-    fn paren_or_tuple(input: ParseStream) -> Result<WithSpan<Expr>> {
+    fn paren_or_tuple(input: ParseStream) -> Result<Spanned<Expr>> {
         let marker = input.marker();
         let content;
         let paren_token = parenthesized!(content in input);
@@ -2091,7 +2076,7 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    fn continue_parsing_early(input: ParseStream, expr: &PatternWithSpan<Expr>) -> bool {
+    fn continue_parsing_early(input: ParseStream, expr: &SpannedPat<Expr>) -> bool {
         let ctx = input.ctx();
         let mut expr: Option<&Expr> = expr.real();
         while let Some(Expr::Group(group)) = expr {
@@ -2129,7 +2114,7 @@ pub(crate) mod parsing {
     fn expr_group(
         input: ParseStream,
         #[cfg(feature = "full")] allow_struct: AllowStruct,
-    ) -> Result<PatternWithSpan<Expr>> {
+    ) -> Result<SpannedPat<Expr>> {
         todo!()
         // let group = crate::group::parse_group(input)?;
         // let mut inner: WithSpan<Expr> = group.content.parse_span()?;
@@ -2228,7 +2213,7 @@ pub(crate) mod parsing {
                     expr.else_branch = Some((else_token, NodeId::placeholder()));
                     clauses.push(expr);
                 } else if lookahead.peek(token::Brace) {
-                    let block: WithSpan<Block> = input.parse_span()?;
+                    let block: Spanned<Block> = input.parse_span()?;
                     expr.else_branch = Some((
                         else_token,
                         input.add(block.map(|block| {
@@ -2399,7 +2384,7 @@ pub(crate) mod parsing {
         input: ParseStream,
         attrs: Vec<Attribute>,
         allow_struct: AllowStruct,
-    ) -> Result<PatternWithSpan<ExprUnary>> {
+    ) -> Result<SpannedPat<ExprUnary>> {
         let marker = input.marker();
         Ok(input
             .from_marker(
@@ -2508,10 +2493,9 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    fn expr_closure(
-        input: ParseStream,
-        allow_struct: AllowStruct,
-    ) -> Result<WithSpan<ExprClosure>> {
+    fn expr_closure(input: ParseStream, allow_struct: AllowStruct) -> Result<Spanned<ExprClosure>> {
+        use molt_lib::WithSpan;
+
         let lifetimes: Option<BoundLifetimes> = input.parse()?;
         let constness: Option<Token![const]> = input.parse()?;
         let movability: Option<Token![static]> = input.parse()?;
@@ -2538,7 +2522,7 @@ pub(crate) mod parsing {
         let (output, body) = if input.peek(Token![->]) {
             let arrow_token: Token![->] = input.parse()?;
             let ty: Type = input.parse()?;
-            let body: WithSpan<Block> = input.parse_span()?;
+            let body: Spanned<Block> = input.parse_span()?;
             let output = ReturnType::Type(arrow_token, Box::new(ty));
             let block = input.add(body.map(|body| {
                 Expr::Block(ExprBlock {
@@ -2553,6 +2537,7 @@ pub(crate) mod parsing {
             (ReturnType::Default, body)
         };
 
+        let span = todo!();
         Ok(ExprClosure {
             attrs: Vec::new(),
             lifetimes,
@@ -2566,6 +2551,7 @@ pub(crate) mod parsing {
             output,
             body,
         })
+        .map(|e| e.with_span(span))
     }
 
     #[cfg(feature = "full")]
@@ -2733,21 +2719,21 @@ pub(crate) mod parsing {
     impl Parse for FieldValue {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = input.call(Attribute::parse_outer)?;
-            let member: WithSpan<Member> = input.parse_span()?;
+            let member: Spanned<Member> = input.parse_span()?;
             let (colon_token, value) = if input.peek(Token![:]) || !member.is_named() {
                 let colon_token: Token![:] = input.parse()?;
                 let value: NodeId<Expr> = input.parse()?;
                 (Some(colon_token), value)
             } else if let Member::Named(ident) = &*member {
                 let span = member.span();
-                let value = input.add(WithSpan::new(
+                let value = input.add(
                     Expr::Path(ExprPath {
                         attrs: Vec::new(),
                         qself: None,
                         path: Path::from(ident.clone()),
-                    }),
-                    span,
-                ));
+                    })
+                    .with_span(span),
+                );
                 (None, value)
             } else {
                 unreachable!()
@@ -2872,7 +2858,7 @@ pub(crate) mod parsing {
         input: ParseStream,
         limits: &RangeLimits,
         allow_struct: AllowStruct,
-    ) -> Result<Option<WithSpan<Expr>>> {
+    ) -> Result<Option<Spanned<Expr>>> {
         todo!()
         // if matches!(limits, RangeLimits::HalfOpen(_))
         //     && (input.is_empty()
@@ -3035,7 +3021,7 @@ pub(crate) mod parsing {
 
     // TODO not even the signature makes sense probably. Just changed it for convenience.
     fn multi_index(
-        e: &mut PatternWithSpan<Expr>,
+        e: &mut SpannedPat<Expr>,
         dot_token: &mut Token![.],
         float: LitFloat,
     ) -> Result<bool> {

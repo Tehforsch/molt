@@ -43,27 +43,39 @@ impl Span {
     }
 }
 
+pub trait WithSpan: Sized {
+    fn with_span(self, span: Span) -> Spanned<Self> {
+        Spanned::new(self, span)
+    }
+
+    fn pattern_with_span(self, span: Span) -> Spanned<Pattern<Self, Id>> {
+        Spanned::new(self, span).as_pattern()
+    }
+}
+
+impl<T: Sized> WithSpan for T {}
+
 #[derive(Debug)]
-pub struct WithSpan<T> {
+pub struct Spanned<T> {
     span: Span,
     item: T,
 }
 
-pub type PatternWithSpan<T> = WithSpan<Pattern<T, Id>>;
+pub type SpannedPat<T> = Spanned<Pattern<T, Id>>;
 
-impl<T> WithSpan<T> {
-    pub fn new(item: T, span: Span) -> Self {
+impl<T> Spanned<T> {
+    fn new(item: T, span: Span) -> Self {
         Self { span, item }
     }
 
-    pub fn map<S>(self, f: impl Fn(T) -> S) -> WithSpan<S> {
-        WithSpan {
+    pub fn map<S>(self, f: impl Fn(T) -> S) -> Spanned<S> {
+        Spanned {
             span: self.span,
             item: f(self.item),
         }
     }
 
-    pub fn join<S>(&self, rhs: &WithSpan<S>) -> Span {
+    pub fn join<S>(&self, rhs: &Spanned<S>) -> Span {
         self.span.join(rhs.span)
     }
 
@@ -75,12 +87,12 @@ impl<T> WithSpan<T> {
         self.item
     }
 
-    pub fn as_pattern(self) -> PatternWithSpan<T> {
+    pub fn as_pattern(self) -> SpannedPat<T> {
         self.map(|item| Pattern::Real(item))
     }
 }
 
-impl<T> PatternWithSpan<T> {
+impl<T> SpannedPat<T> {
     pub fn is_var(&self) -> bool {
         matches!(self.item, Pattern::Pat(_))
     }
@@ -89,7 +101,7 @@ impl<T> PatternWithSpan<T> {
         self.item.real()
     }
 
-    pub fn unwrap_real(self) -> WithSpan<T> {
+    pub fn unwrap_real(self) -> Spanned<T> {
         self.map(|item| item.unwrap_real())
     }
 
@@ -107,7 +119,7 @@ impl<T> PatternWithSpan<T> {
         }
     }
 
-    pub fn map_real<S>(self, f: impl Fn(T) -> S) -> PatternWithSpan<S> {
+    pub fn map_real<S>(self, f: impl Fn(T) -> S) -> SpannedPat<S> {
         self.map(|item| match item {
             Pattern::Real(t) => Pattern::Real(f(t)),
             Pattern::Pat(id) => Pattern::Pat(id),
@@ -115,7 +127,7 @@ impl<T> PatternWithSpan<T> {
     }
 }
 
-impl<T> std::ops::Deref for WithSpan<T> {
+impl<T> std::ops::Deref for Spanned<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -123,7 +135,7 @@ impl<T> std::ops::Deref for WithSpan<T> {
     }
 }
 
-impl<T> std::ops::DerefMut for WithSpan<T> {
+impl<T> std::ops::DerefMut for Spanned<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.item
     }
@@ -337,13 +349,13 @@ pub struct Ctx<Node: GetKind> {
 }
 
 impl<Node: GetKind> Ctx<Node> {
-    fn add_node(&mut self, node: WithSpan<Node>) -> Id {
+    fn add_node(&mut self, node: Spanned<Node>) -> Id {
         self.spans.push(node.span);
         self.nodes.push(node.item);
         Id(InternalId::Real(self.nodes.len() - 1))
     }
 
-    pub fn add<T: ToNode<Node>>(&mut self, t: WithSpan<T>) -> NodeId<T> {
+    pub fn add<T: ToNode<Node>>(&mut self, t: Spanned<T>) -> NodeId<T> {
         self.add_node(t.map(|item| item.to_node())).typed()
     }
 
@@ -361,7 +373,7 @@ impl<Node: GetKind> Ctx<Node> {
         id.typed()
     }
 
-    pub fn add_pat<T: ToNode<Node>>(&mut self, item: PatternWithSpan<T>) -> NodeId<T> {
+    pub fn add_pat<T: ToNode<Node>>(&mut self, item: SpannedPat<T>) -> NodeId<T> {
         match item.item {
             Pattern::Real(_) => self.add(item.unwrap_real()),
             Pattern::Pat(var) => var.typed(),
