@@ -1,8 +1,6 @@
 #[cfg(feature = "parsing")]
 use crate::lookahead;
-use crate::Node;
 
-use molt_lib::Ctx;
 pub use proc_macro2::Ident;
 
 #[cfg(feature = "parsing")]

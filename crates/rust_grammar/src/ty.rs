@@ -281,6 +281,7 @@ pub(crate) mod parsing {
     use crate::lifetime::Lifetime;
     use crate::mac::{self, Macro};
     use crate::parse::{Parse, ParseStream};
+    use crate::path;
     use crate::path::{Path, PathArguments, QSelf};
     use crate::punctuated::Punctuated;
     use crate::token;
@@ -290,7 +291,6 @@ pub(crate) mod parsing {
         TypeReference, TypeSlice, TypeTraitObject, TypeTuple,
     };
     use crate::verbatim;
-    use crate::{path, Expr};
     use proc_macro2::Span;
 
     #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]

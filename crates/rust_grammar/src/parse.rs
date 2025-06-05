@@ -183,7 +183,7 @@
 pub mod discouraged;
 
 use discouraged::Speculative;
-use molt_lib::{Ctx, GetKind, Id, NodeId, Pattern, Spanned, SpannedPat, ToNode, Var, WithSpan};
+use molt_lib::{Ctx, Id, NodeId, Pattern, Spanned, SpannedPat, ToNode, Var, WithSpan};
 
 use crate::buffer::{Cursor, TokenBuffer};
 use crate::lookahead;
@@ -1184,10 +1184,6 @@ impl<'a> ParseBuffer<'a> {
     pub fn marker(&self) -> PosMarker {
         let start = self.cursor().span().byte_range().start;
         PosMarker { start }
-    }
-
-    pub(crate) fn dbg<T: Debug + ToNode<Node>>(&self, t: NodeId<T>) {
-        println!("{:?}", self.ctx.borrow().get::<T>(t));
     }
 
     pub fn ctx(&self) -> Ref<'_, Ctx<Node>> {

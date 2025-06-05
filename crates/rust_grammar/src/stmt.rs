@@ -82,6 +82,7 @@ ast_struct! {
 #[cfg(feature = "parsing")]
 pub(crate) mod parsing {
     use crate::attr::Attribute;
+    use crate::classify;
     use crate::error::Result;
     use crate::expr::{Expr, ExprBlock, ExprMacro};
     use crate::ident::Ident;
@@ -94,8 +95,7 @@ pub(crate) mod parsing {
     use crate::stmt::{Block, Local, LocalInit, Stmt, StmtMacro};
     use crate::token;
     use crate::ty::Type;
-    use crate::{classify, Node};
-    use molt_lib::{NodeId, NodeList, Pattern, Spanned, ToNode, Var, WithSpan};
+    use molt_lib::{NodeId, NodeList, Pattern, Spanned, ToNode, WithSpan};
     use proc_macro2::TokenStream;
 
     struct AllowNoSemi(bool);
@@ -373,7 +373,7 @@ pub(crate) mod parsing {
         mut attrs: Vec<Attribute>,
     ) -> Result<NodeId<Stmt>> {
         let marker = input.marker();
-        let mut e = Expr::parse_with_earlier_boundary_rule(input)?;
+        let e = Expr::parse_with_earlier_boundary_rule(input)?;
 
         let mut attr_target = e;
         loop {

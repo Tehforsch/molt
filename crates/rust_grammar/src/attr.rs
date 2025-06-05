@@ -654,7 +654,7 @@ pub(crate) mod parsing {
     use crate::parse::{Parse, ParseStream};
     use crate::path::Path;
     use crate::{mac, token};
-    use molt_lib::{NodeId, Spanned, WithSpan};
+    use molt_lib::{NodeId, WithSpan};
     use proc_macro2::Ident;
     use std::fmt::{self, Display};
 

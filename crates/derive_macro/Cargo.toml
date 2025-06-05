@@ -16,6 +16,3 @@ proc-macro2 = { version = "1.0.95" }
 
 [lib]
 proc-macro = true
-
-[dev-dependencies]
-trybuild = "1.0"

@@ -1,4 +1,4 @@
-use molt_lib::{NodeId, NodeList, WithSpan};
+use molt_lib::{NodeId, NodeList};
 
 use crate::attr::Attribute;
 #[cfg(all(feature = "parsing", feature = "full"))]
@@ -1217,8 +1217,6 @@ pub(crate) mod parsing {
     use crate::ty::{ReturnType, Type};
     use crate::verbatim;
     use molt_lib::{Id, NodeId, Pattern, Span, Spanned, SpannedPat, WithSpan};
-    #[cfg(feature = "full")]
-    use proc_macro2::TokenStream;
     use std::mem;
 
     // When we're parsing expressions which occur before blocks, like in an if
@@ -1599,7 +1597,7 @@ pub(crate) mod parsing {
         allow_struct: AllowStruct,
     ) -> Result<SpannedPat<Expr>> {
         let atom = atom_expr(input, allow_struct)?;
-        let mut e = trailer_helper(input, atom)?;
+        let e = trailer_helper(input, atom)?;
 
         if e.is_var() {
             return Ok(e);
@@ -1732,7 +1730,7 @@ pub(crate) mod parsing {
     fn atom_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedPat<Expr>> {
         use molt_lib::SpannedPat;
 
-        if let Some(var) = input.parse_var::<Expr>() {
+        if let Some(var) = input.parse_var() {
             return var;
         }
         let real: SpannedPat<Expr> = if input.peek(token::Group) {
@@ -1933,7 +1931,6 @@ pub(crate) mod parsing {
     }
 
     fn paren_or_tuple(input: ParseStream) -> Result<Expr> {
-        let marker = input.marker();
         let content;
         let paren_token = parenthesized!(content in input);
         if content.is_empty() {
@@ -2098,7 +2095,7 @@ pub(crate) mod parsing {
 
     fn expr_group(input: ParseStream, allow_struct: AllowStruct) -> Result<Expr> {
         let group = crate::group::parse_group(input)?;
-        let mut inner: SpannedPat<Expr> = group.content.parse()?;
+        let inner: SpannedPat<Expr> = group.content.parse()?;
         let (span, inner) = inner.decompose();
         let make_group_expr = |inner: Pattern<Expr, Id>| {
             Ok(Expr::Group(ExprGroup {

@@ -243,7 +243,6 @@ pub(crate) mod parsing {
     use crate::attr::Attribute;
     use crate::data::{Field, Fields, FieldsNamed, FieldsUnnamed, Variant};
     use crate::error::Result;
-    use crate::expr::Expr;
     use crate::ext::IdentExt as _;
     use crate::ident::Ident;
     #[cfg(not(feature = "full"))]
