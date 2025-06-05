@@ -362,7 +362,7 @@ ast_struct! {
         pub attrs: Vec<Attribute>,
         pub expr: NodeId<Expr>,
         pub as_token: Token![as],
-        pub ty: Box<Type>,
+        pub ty: NodeId<Type>,
     }
 }
 
@@ -1214,9 +1214,9 @@ pub(crate) mod parsing {
     use crate::token;
     use crate::ty;
     #[cfg(feature = "full")]
-    use crate::ty::{ReturnType, Type};
+    use crate::ty::ReturnType;
     use crate::verbatim;
-    use molt_lib::{Id, NodeId, Pattern, Span, Spanned, SpannedPat, WithSpan};
+    use molt_lib::{Id, NodeId, NodeList, Pattern, Span, Spanned, SpannedPat, WithSpan};
     use std::mem;
 
     // When we're parsing expressions which occur before blocks, like in an if
@@ -1397,14 +1397,14 @@ pub(crate) mod parsing {
                 let as_token: Token![as] = input.parse()?;
                 let allow_plus = false;
                 let allow_group_generic = false;
-                let ty = ty::parsing::ambig_ty(input, allow_plus, allow_group_generic)?;
+                let ty = ty::parsing::ambig_ty_id(input, allow_plus, allow_group_generic)?;
                 check_cast(input)?;
                 let span = Span::fake(); // TODO merge lhs and type here once type is NodeId
                 lhs = Expr::Cast(ExprCast {
                     attrs: Vec::new(),
                     expr: input.add_pat(lhs),
                     as_token,
-                    ty: Box::new(ty),
+                    ty,
                 })
                 .pattern_with_span(span);
             } else {
@@ -1627,7 +1627,8 @@ pub(crate) mod parsing {
                     paren_token: parenthesized!(content in input),
                     args: content
                         .parse_terminated(NodeId::<Expr>::parse, Token![,])?
-                        .into(),
+                        .into_iter()
+                        .collect(),
                 });
                 let span = input.span_from_marker(marker).join(orig_span);
                 e = e2.pattern_with_span(span);
@@ -1679,7 +1680,8 @@ pub(crate) mod parsing {
                             paren_token: parenthesized!(content in input),
                             args: content
                                 .parse_terminated(NodeId::<Expr>::parse, Token![,])?
-                                .into(),
+                                .into_iter()
+                                .collect(),
                         });
                         let span = input.span_from_marker(marker).join(orig_span);
                         e = e2.pattern_with_span(span);
@@ -1937,7 +1939,7 @@ pub(crate) mod parsing {
             return Ok(Expr::Tuple(ExprTuple {
                 attrs: Vec::new(),
                 paren_token,
-                elems: Punctuated::new().into(),
+                elems: NodeList::empty(),
             }));
         }
 
@@ -1970,13 +1972,15 @@ pub(crate) mod parsing {
 
     #[cfg(feature = "full")]
     fn array_or_repeat(input: ParseStream) -> Result<Expr> {
+        use molt_lib::NodeList;
+
         let content;
         let bracket_token = bracketed!(content in input);
         if content.is_empty() {
             return Ok(Expr::Array(ExprArray {
                 attrs: Vec::new(),
                 bracket_token,
-                elems: Punctuated::new().into(),
+                elems: NodeList::empty(),
             }));
         }
 
@@ -2481,9 +2485,9 @@ pub(crate) mod parsing {
 
         let (output, body) = if input.peek(Token![->]) {
             let arrow_token: Token![->] = input.parse()?;
-            let ty: Type = input.parse()?;
+            let ty = input.parse()?;
             let body: Spanned<Block> = input.parse_span()?;
-            let output = ReturnType::Type(arrow_token, Box::new(ty));
+            let output = ReturnType::Type(arrow_token, ty);
             let block = input.add(body.map(|body| {
                 Expr::Block(ExprBlock {
                     attrs: Vec::new(),

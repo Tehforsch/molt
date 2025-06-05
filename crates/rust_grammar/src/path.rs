@@ -1,3 +1,5 @@
+use molt_lib::NodeId;
+
 #[cfg(feature = "parsing")]
 use crate::error::Result;
 use crate::expr::Expr;
@@ -273,7 +275,7 @@ ast_struct! {
     #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
     pub struct QSelf {
         pub lt_token: Token![<],
-        pub ty: Box<Type>,
+        pub ty: NodeId<Type>,
         pub position: usize,
         pub as_token: Option<Token![as]>,
         pub gt_token: Token![>],
@@ -646,7 +648,7 @@ pub(crate) mod parsing {
     pub(crate) fn qpath(input: ParseStream, expr_style: bool) -> Result<(Option<QSelf>, Path)> {
         if input.peek(Token![<]) {
             let lt_token: Token![<] = input.parse()?;
-            let this: Type = input.parse()?;
+            let this = input.parse()?;
             let path = if input.peek(Token![as]) {
                 let as_token: Token![as] = input.parse()?;
                 let path: Path = input.parse()?;
@@ -683,7 +685,7 @@ pub(crate) mod parsing {
             };
             let qself = QSelf {
                 lt_token,
-                ty: Box::new(this),
+                ty: this,
                 position,
                 as_token,
                 gt_token,

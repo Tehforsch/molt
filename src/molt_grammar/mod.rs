@@ -1,7 +1,7 @@
 mod parse;
 
 use molt_lib::{Id, NodeId, VarDecl};
-use rust_grammar::{Expr, Item, Kind, Lit, Node, Stmt, TokenStream, parse::ParseStream};
+use rust_grammar::{Expr, Item, Kind, Lit, Node, Stmt, TokenStream, Type, parse::ParseStream};
 
 pub(crate) struct UnresolvedMoltFile {
     pub vars: Vec<UnresolvedVarDecl>,
@@ -102,6 +102,7 @@ macro_rules! parse_impl {
 define_user_kind! {
     (Lit, Lit),
     (Item, Item),
+    (Type, Type),
     (Expr, Expr, |parser: ParseStream| {
         let expr: NodeId<Expr> = parser.parse()?;
         Ok(expr.into())

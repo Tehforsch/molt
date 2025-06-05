@@ -9,7 +9,7 @@ use crate::path::{Path, PathArguments};
 use crate::punctuated::Punctuated;
 #[cfg(any(feature = "printing", feature = "full"))]
 use crate::ty::{ReturnType, Type};
-use molt_lib::{NodeId, Pattern};
+use molt_lib::{Id, NodeId, Pattern};
 #[cfg(feature = "full")]
 use proc_macro2::{Delimiter, TokenStream, TokenTree};
 #[cfg(any(feature = "printing", feature = "full"))]
@@ -215,7 +215,7 @@ pub(crate) fn expr_trailing_brace(input: ParseStream, mut expr: NodeId<Expr>) ->
                     Some(e) => expr = e,
                     None => return false,
                 },
-                Expr::Cast(e) => return type_trailing_brace(&e.ty),
+                Expr::Cast(e) => return type_trailing_brace(input, e.ty),
                 Expr::Closure(e) => expr = e.body,
                 Expr::Let(e) => expr = e.expr,
                 Expr::Macro(e) => return e.mac.delimiter.is_brace(),
@@ -255,54 +255,59 @@ pub(crate) fn expr_trailing_brace(input: ParseStream, mut expr: NodeId<Expr>) ->
         }
     }
 
-    fn type_trailing_brace(mut ty: &Type) -> bool {
+    fn type_trailing_brace(input: ParseStream, mut ty: NodeId<Type>) -> bool {
         loop {
-            match ty {
-                Type::BareFn(t) => match &t.output {
-                    ReturnType::Default => return false,
-                    ReturnType::Type(_, ret) => ty = ret,
-                },
-                Type::ImplTrait(t) => match last_type_in_bounds(&t.bounds) {
-                    ControlFlow::Break(trailing_brace) => return trailing_brace,
-                    ControlFlow::Continue(t) => ty = t,
-                },
-                Type::Macro(t) => return t.mac.delimiter.is_brace(),
-                Type::Path(t) => match last_type_in_path(&t.path) {
-                    Some(t) => ty = t,
-                    None => return false,
-                },
-                Type::Ptr(t) => ty = &t.elem,
-                Type::Reference(t) => ty = &t.elem,
-                Type::TraitObject(t) => match last_type_in_bounds(&t.bounds) {
-                    ControlFlow::Break(trailing_brace) => return trailing_brace,
-                    ControlFlow::Continue(t) => ty = t,
-                },
-                Type::Verbatim(t) => return tokens_trailing_brace(t),
+            match input.ctx().get(ty) {
+                Pattern::Pat(_) => {
+                    todo!("figure out default")
+                }
+                Pattern::Real(t) => match t {
+                    Type::BareFn(t) => match &t.output {
+                        ReturnType::Default => return false,
+                        ReturnType::Type(_, ret) => ty = *ret,
+                    },
+                    Type::ImplTrait(t) => match last_type_in_bounds(&t.bounds) {
+                        ControlFlow::Break(trailing_brace) => return trailing_brace,
+                        ControlFlow::Continue(t) => ty = t,
+                    },
+                    Type::Macro(t) => return t.mac.delimiter.is_brace(),
+                    Type::Path(t) => match last_type_in_path(&t.path) {
+                        Some(t) => ty = t,
+                        None => return false,
+                    },
+                    Type::Ptr(t) => ty = t.elem,
+                    Type::Reference(t) => ty = t.elem,
+                    Type::TraitObject(t) => match last_type_in_bounds(&t.bounds) {
+                        ControlFlow::Break(trailing_brace) => return trailing_brace,
+                        ControlFlow::Continue(t) => ty = t,
+                    },
+                    Type::Verbatim(t) => return tokens_trailing_brace(t),
 
-                Type::Array(_)
-                | Type::Group(_)
-                | Type::Infer(_)
-                | Type::Never(_)
-                | Type::Paren(_)
-                | Type::Slice(_)
-                | Type::Tuple(_) => return false,
+                    Type::Array(_)
+                    | Type::Group(_)
+                    | Type::Infer(_)
+                    | Type::Never(_)
+                    | Type::Paren(_)
+                    | Type::Slice(_)
+                    | Type::Tuple(_) => return false,
+                },
             }
         }
     }
 
-    fn last_type_in_path(path: &Path) -> Option<&Type> {
+    fn last_type_in_path(path: &Path) -> Option<NodeId<Type>> {
         match &path.segments.last().unwrap().arguments {
             PathArguments::None | PathArguments::AngleBracketed(_) => None,
             PathArguments::Parenthesized(arg) => match &arg.output {
                 ReturnType::Default => None,
-                ReturnType::Type(_, ret) => Some(ret),
+                ReturnType::Type(_, ret) => Some(*ret),
             },
         }
     }
 
     fn last_type_in_bounds(
         bounds: &Punctuated<TypeParamBound, Token![+]>,
-    ) -> ControlFlow<bool, &Type> {
+    ) -> ControlFlow<bool, NodeId<Type>> {
         match bounds.last().unwrap() {
             TypeParamBound::Trait(t) => match last_type_in_path(&t.path) {
                 Some(t) => ControlFlow::Continue(t),

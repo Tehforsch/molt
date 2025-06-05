@@ -192,7 +192,7 @@ pub(crate) mod parsing {
                     return Err(input.error("unexpected token, expected `;`"));
                 }
             }
-            Ok(NodeList::new(stmts.into_iter()))
+            Ok(stmts.into_iter().collect())
         }
     }
 
@@ -316,12 +316,12 @@ pub(crate) mod parsing {
         let mut pat = Pat::parse_single(input)?;
         if input.peek(Token![:]) {
             let colon_token: Token![:] = input.parse()?;
-            let ty: Type = input.parse()?;
+            let ty = input.parse()?;
             pat = Pat::Type(PatType {
                 attrs: Vec::new(),
                 pat: Box::new(pat),
                 colon_token,
-                ty: Box::new(ty),
+                ty,
             });
         }
 

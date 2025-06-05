@@ -3,7 +3,7 @@ use molt_lib::{NodeId, ToNode};
 
 use crate::{
     parse::{Parse, ParseStream, Result},
-    Expr, Item, Lit, Stmt,
+    Expr, Item, Lit, Stmt, Type,
 };
 
 macro_rules! define_node_and_kind {
@@ -90,6 +90,7 @@ define_node_and_kind! {
     (Item, Item),
     (Expr, Expr),
     (Stmt, Stmt),
+    (Type, Type),
     // (Attr, Attribute),
     // (Signature, Signature),
     // (FnArg, FnArg),

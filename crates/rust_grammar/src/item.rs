@@ -109,7 +109,7 @@ ast_struct! {
         pub ident: Ident,
         pub generics: Generics,
         pub colon_token: Token![:],
-        pub ty: Box<Type>,
+        pub ty: NodeId<Type>,
         pub eq_token: Token![=],
         pub expr: NodeId<Expr>,
         pub semi_token: Token![;],
@@ -180,7 +180,7 @@ ast_struct! {
         /// Trait this impl implements.
         pub trait_: Option<(Option<Token![!]>, Path, Token![for])>,
         /// The Self type of the impl.
-        pub self_ty: Box<Type>,
+        pub self_ty: NodeId<Type>,
         pub brace_token: token::Brace,
         pub items: Vec<ImplItem>,
     }
@@ -222,7 +222,7 @@ ast_struct! {
         pub mutability: StaticMutability,
         pub ident: Ident,
         pub colon_token: Token![:],
-        pub ty: Box<Type>,
+        pub ty: NodeId<Type>,
         pub eq_token: Token![=],
         pub expr: NodeId<Expr>,
         pub semi_token: Token![;],
@@ -287,7 +287,7 @@ ast_struct! {
         pub ident: Ident,
         pub generics: Generics,
         pub eq_token: Token![=],
-        pub ty: Box<Type>,
+        pub ty: NodeId<Type>,
         pub semi_token: Token![;],
     }
 }
@@ -561,7 +561,7 @@ ast_struct! {
         pub mutability: StaticMutability,
         pub ident: Ident,
         pub colon_token: Token![:],
-        pub ty: Box<Type>,
+        pub ty: NodeId<Type>,
         pub semi_token: Token![;],
     }
 }
@@ -671,7 +671,7 @@ ast_struct! {
         pub generics: Generics,
         pub colon_token: Option<Token![:]>,
         pub bounds: Punctuated<TypeParamBound, Token![+]>,
-        pub default: Option<(Token![=], Type)>,
+        pub default: Option<(Token![=], NodeId<Type>)>,
         pub semi_token: Token![;],
     }
 }
@@ -773,7 +773,7 @@ ast_struct! {
         pub ident: Ident,
         pub generics: Generics,
         pub eq_token: Token![=],
-        pub ty: Type,
+        pub ty: NodeId<Type>,
         pub semi_token: Token![;],
     }
 }
@@ -845,7 +845,7 @@ ast_struct! {
         pub mutability: Option<Token![mut]>,
         pub self_token: Token![self],
         pub colon_token: Option<Token![:]>,
-        pub ty: Box<Type>,
+        pub ty: NodeId<Type>,
     }
 }
 
@@ -931,7 +931,7 @@ pub(crate) mod parsing {
     use crate::restriction::Visibility;
     use crate::stmt::Block;
     use crate::token;
-    use crate::ty::{Abi, ReturnType, Type, TypePath, TypeReference};
+    use crate::ty::{Abi, ReturnType, Type, TypePath};
     use crate::verbatim;
     use molt_lib::{NodeId, NodeList};
     use proc_macro2::TokenStream;
@@ -1130,7 +1130,7 @@ pub(crate) mod parsing {
         generics: Generics,
         colon_token: Option<Token![:]>,
         bounds: Punctuated<TypeParamBound, Token![+]>,
-        ty: Option<(Token![=], Type)>,
+        ty: Option<(Token![=], NodeId<Type>)>,
         semi_token: Token![;],
     }
 
@@ -1227,10 +1227,12 @@ pub(crate) mod parsing {
             Ok((colon_token, bounds))
         }
 
-        fn parse_optional_definition(input: ParseStream) -> Result<Option<(Token![=], Type)>> {
+        fn parse_optional_definition(
+            input: ParseStream,
+        ) -> Result<Option<(Token![=], NodeId<Type>)>> {
             let eq_token: Option<Token![=]> = input.parse()?;
             if let Some(eq_token) = eq_token {
-                let definition: Type = input.parse()?;
+                let definition = input.parse()?;
                 Ok(Some((eq_token, definition)))
             } else {
                 Ok(None)
@@ -1476,7 +1478,7 @@ pub(crate) mod parsing {
             };
 
             let colon_token: Token![:] = input.parse()?;
-            let ty: Type = input.parse()?;
+            let ty = input.parse()?;
             let eq_token: Token![=] = input.parse()?;
             let expr: NodeId<Expr> = input.parse()?;
             let semi_token: Token![;] = input.parse()?;
@@ -1488,7 +1490,7 @@ pub(crate) mod parsing {
                 ident,
                 generics: Generics::default(),
                 colon_token,
-                ty: Box::new(ty),
+                ty,
                 eq_token,
                 expr,
                 semi_token,
@@ -1656,45 +1658,46 @@ pub(crate) mod parsing {
     #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for Receiver {
         fn parse(input: ParseStream) -> Result<Self> {
-            let reference = if input.peek(Token![&]) {
-                let ampersand: Token![&] = input.parse()?;
-                let lifetime: Option<Lifetime> = input.parse()?;
-                Some((ampersand, lifetime))
-            } else {
-                None
-            };
-            let mutability: Option<Token![mut]> = input.parse()?;
-            let self_token: Token![self] = input.parse()?;
-            let colon_token: Option<Token![:]> = if reference.is_some() {
-                None
-            } else {
-                input.parse()?
-            };
-            let ty: Type = if colon_token.is_some() {
-                input.parse()?
-            } else {
-                let mut ty = Type::Path(TypePath {
-                    qself: None,
-                    path: Path::from(Ident::new("Self", self_token.span)),
-                });
-                if let Some((ampersand, lifetime)) = reference.as_ref() {
-                    ty = Type::Reference(TypeReference {
-                        and_token: Token![&](ampersand.span),
-                        lifetime: lifetime.clone(),
-                        mutability: mutability.as_ref().map(|m| Token![mut](m.span)),
-                        elem: Box::new(ty),
-                    });
-                }
-                ty
-            };
-            Ok(Receiver {
-                attrs: Vec::new(),
-                reference,
-                mutability,
-                self_token,
-                colon_token,
-                ty: Box::new(ty),
-            })
+            todo!()
+            // let reference = if input.peek(Token![&]) {
+            //     let ampersand: Token![&] = input.parse()?;
+            //     let lifetime: Option<Lifetime> = input.parse()?;
+            //     Some((ampersand, lifetime))
+            // } else {
+            //     None
+            // };
+            // let mutability: Option<Token![mut]> = input.parse()?;
+            // let self_token: Token![self] = input.parse()?;
+            // let colon_token: Option<Token![:]> = if reference.is_some() {
+            //     None
+            // } else {
+            //     input.parse()?
+            // };
+            // let ty: Type = if colon_token.is_some() {
+            //     input.parse()?
+            // } else {
+            //     let mut ty = Type::Path(TypePath {
+            //         qself: None,
+            //         path: Path::from(Ident::new("Self", self_token.span)),
+            //     });
+            //     if let Some((ampersand, lifetime)) = reference.as_ref() {
+            //         ty = Type::Reference(TypeReference {
+            //             and_token: Token![&](ampersand.span),
+            //             lifetime: lifetime.clone(),
+            //             mutability: mutability.as_ref().map(|m| Token![mut](m.span)),
+            //             elem: ty,
+            //         });
+            //     }
+            //     ty
+            // };
+            // Ok(Receiver {
+            //     attrs: Vec::new(),
+            //     reference,
+            //     mutability,
+            //     self_token,
+            //     colon_token,
+            //     ty,
+            // })
         }
     }
 
@@ -2088,7 +2091,7 @@ pub(crate) mod parsing {
             ident,
             generics,
             eq_token,
-            ty: Box::new(ty),
+            ty,
             semi_token,
         }))
     }
@@ -2602,72 +2605,74 @@ pub(crate) mod parsing {
             None
         };
 
-        #[cfg(not(feature = "printing"))]
-        let first_ty_span = input.span();
-        let mut first_ty: Type = input.parse()?;
-        let self_ty: Type;
-        let trait_;
+        todo!()
 
-        let is_impl_for = input.peek(Token![for]);
-        if is_impl_for {
-            let for_token: Token![for] = input.parse()?;
-            let mut first_ty_ref = &first_ty;
-            while let Type::Group(ty) = first_ty_ref {
-                first_ty_ref = &ty.elem;
-            }
-            if let Type::Path(TypePath { qself: None, .. }) = first_ty_ref {
-                while let Type::Group(ty) = first_ty {
-                    first_ty = *ty.elem;
-                }
-                if let Type::Path(TypePath { qself: None, path }) = first_ty {
-                    trait_ = Some((polarity, path, for_token));
-                } else {
-                    unreachable!();
-                }
-            } else if !allow_verbatim_impl {
-                #[cfg(feature = "printing")]
-                return Err(Error::new_spanned(first_ty_ref, "expected trait path"));
-                #[cfg(not(feature = "printing"))]
-                return Err(Error::new(first_ty_span, "expected trait path"));
-            } else {
-                trait_ = None;
-            }
-            self_ty = input.parse()?;
-        } else {
-            trait_ = None;
-            self_ty = if polarity.is_none() {
-                first_ty
-            } else {
-                Type::Verbatim(verbatim::between(&begin, input))
-            };
-        }
+        // #[cfg(not(feature = "printing"))]
+        // let first_ty_span = input.span();
+        // let mut first_ty: Type = input.parse()?;
+        // let self_ty: Type;
+        // let trait_;
 
-        generics.where_clause = input.parse()?;
+        // let is_impl_for = input.peek(Token![for]);
+        // if is_impl_for {
+        //     let for_token: Token![for] = input.parse()?;
+        //     let mut first_ty_ref = &first_ty;
+        //     while let Type::Group(ty) = first_ty_ref {
+        //         first_ty_ref = &ty.elem;
+        //     }
+        //     if let Type::Path(TypePath { qself: None, .. }) = first_ty_ref {
+        //         while let Type::Group(ty) = first_ty {
+        //             first_ty = *ty.elem;
+        //         }
+        //         if let Type::Path(TypePath { qself: None, path }) = first_ty {
+        //             trait_ = Some((polarity, path, for_token));
+        //         } else {
+        //             unreachable!();
+        //         }
+        //     } else if !allow_verbatim_impl {
+        //         #[cfg(feature = "printing")]
+        //         return Err(Error::new_spanned(first_ty_ref, "expected trait path"));
+        //         #[cfg(not(feature = "printing"))]
+        //         return Err(Error::new(first_ty_span, "expected trait path"));
+        //     } else {
+        //         trait_ = None;
+        //     }
+        //     self_ty = input.parse()?;
+        // } else {
+        //     trait_ = None;
+        //     self_ty = if polarity.is_none() {
+        //         first_ty
+        //     } else {
+        //         Type::Verbatim(verbatim::between(&begin, input))
+        //     };
+        // }
 
-        let content;
-        let brace_token = braced!(content in input);
-        attr::parsing::parse_inner(&content, &mut attrs)?;
+        // generics.where_clause = input.parse()?;
 
-        let mut items = Vec::new();
-        while !content.is_empty() {
-            items.push(content.parse()?);
-        }
+        // let content;
+        // let brace_token = braced!(content in input);
+        // attr::parsing::parse_inner(&content, &mut attrs)?;
 
-        if has_visibility || is_const_impl || is_impl_for && trait_.is_none() {
-            Ok(None)
-        } else {
-            Ok(Some(ItemImpl {
-                attrs,
-                defaultness,
-                unsafety,
-                impl_token,
-                generics,
-                trait_,
-                self_ty: Box::new(self_ty),
-                brace_token,
-                items,
-            }))
-        }
+        // let mut items = Vec::new();
+        // while !content.is_empty() {
+        //     items.push(content.parse()?);
+        // }
+
+        // if has_visibility || is_const_impl || is_impl_for && trait_.is_none() {
+        //     Ok(None)
+        // } else {
+        //     Ok(Some(ItemImpl {
+        //         attrs,
+        //         defaultness,
+        //         unsafety,
+        //         impl_token,
+        //         generics,
+        //         trait_,
+        //         self_ty: Box::new(self_ty),
+        //         brace_token,
+        //         items,
+        //     }))
+        // }
     }
 
     #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
@@ -2854,7 +2859,7 @@ pub(crate) mod parsing {
             let ident: Ident = input.parse()?;
             let mut generics: Generics = input.parse()?;
             let eq_token: Token![=] = input.parse()?;
-            let ty: Type = input.parse()?;
+            let ty = input.parse()?;
             generics.where_clause = input.parse()?;
             let semi_token: Token![;] = input.parse()?;
             Ok(ImplItemType {

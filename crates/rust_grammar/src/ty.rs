@@ -8,7 +8,7 @@ use crate::mac::Macro;
 use crate::path::{Path, QSelf};
 use crate::punctuated::Punctuated;
 use crate::token;
-use molt_lib::NodeId;
+use molt_lib::{NodeId, NodeList};
 use proc_macro2::TokenStream;
 
 ast_enum_of_structs! {
@@ -95,7 +95,7 @@ ast_struct! {
     #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
     pub struct TypeArray {
         pub bracket_token: token::Bracket,
-        pub elem: Box<Type>,
+        pub elem: NodeId<Type>,
         pub semi_token: Token![;],
         pub len: NodeId<Expr>,
     }
@@ -121,7 +121,7 @@ ast_struct! {
     #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
     pub struct TypeGroup {
         pub group_token: token::Group,
-        pub elem: Box<Type>,
+        pub elem: NodeId<Type>,
     }
 }
 
@@ -164,7 +164,7 @@ ast_struct! {
     #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
     pub struct TypeParen {
         pub paren_token: token::Paren,
-        pub elem: Box<Type>,
+        pub elem: NodeId<Type>,
     }
 }
 
@@ -185,7 +185,7 @@ ast_struct! {
         pub star_token: Token![*],
         pub const_token: Option<Token![const]>,
         pub mutability: Option<Token![mut]>,
-        pub elem: Box<Type>,
+        pub elem: NodeId<Type>,
     }
 }
 
@@ -196,7 +196,7 @@ ast_struct! {
         pub and_token: Token![&],
         pub lifetime: Option<Lifetime>,
         pub mutability: Option<Token![mut]>,
-        pub elem: Box<Type>,
+        pub elem: NodeId<Type>,
     }
 }
 
@@ -205,7 +205,7 @@ ast_struct! {
     #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
     pub struct TypeSlice {
         pub bracket_token: token::Bracket,
-        pub elem: Box<Type>,
+        pub elem: NodeId<Type>,
     }
 }
 
@@ -224,7 +224,7 @@ ast_struct! {
     #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
     pub struct TypeTuple {
         pub paren_token: token::Paren,
-        pub elems: Punctuated<Type, Token![,]>,
+        pub elems: NodeList<Type, Token![,]>,
     }
 }
 
@@ -267,7 +267,7 @@ ast_enum! {
         /// Functions default to `()` and closures default to type inference.
         Default,
         /// A particular type is returned.
-        Type(Token![->], Box<Type>),
+        Type(Token![->], NodeId<Type>),
     }
 }
 
@@ -291,6 +291,7 @@ pub(crate) mod parsing {
         TypeReference, TypeSlice, TypeTraitObject, TypeTuple,
     };
     use crate::verbatim;
+    use molt_lib::{NodeId, NodeList, Pattern, SpannedPat, WithSpan};
     use proc_macro2::Span;
 
     #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
@@ -316,6 +317,14 @@ pub(crate) mod parsing {
         }
     }
 
+    pub(crate) fn ambig_ty_id(
+        input: ParseStream,
+        allow_plus: bool,
+        allow_group_generic: bool,
+    ) -> Result<NodeId<Type>> {
+        Ok(input.call_add(|input| ambig_ty(input, allow_plus, allow_group_generic))?)
+    }
+
     pub(crate) fn ambig_ty(
         input: ParseStream,
         allow_plus: bool,
@@ -324,38 +333,39 @@ pub(crate) mod parsing {
         let begin = input.fork();
 
         if input.peek(token::Group) {
-            let mut group: TypeGroup = input.parse()?;
-            if input.peek(Token![::]) && input.peek3(Ident::peek_any) {
-                if let Type::Path(mut ty) = *group.elem {
-                    Path::parse_rest(input, &mut ty.path, false)?;
-                    return Ok(Type::Path(ty));
-                } else {
-                    return Ok(Type::Path(TypePath {
-                        qself: Some(QSelf {
-                            lt_token: Token![<](group.group_token.span),
-                            position: 0,
-                            as_token: None,
-                            gt_token: Token![>](group.group_token.span),
-                            ty: group.elem,
-                        }),
-                        path: Path::parse_helper(input, false)?,
-                    }));
-                }
-            } else if input.peek(Token![<]) && allow_group_generic
-                || input.peek(Token![::]) && input.peek3(Token![<])
-            {
-                if let Type::Path(mut ty) = *group.elem {
-                    let arguments = &mut ty.path.segments.last_mut().unwrap().arguments;
-                    if arguments.is_none() {
-                        *arguments = PathArguments::AngleBracketed(input.parse()?);
-                        Path::parse_rest(input, &mut ty.path, false)?;
-                        return Ok(Type::Path(ty));
-                    } else {
-                        group.elem = Box::new(Type::Path(ty));
-                    }
-                }
-            }
-            return Ok(Type::Group(group));
+            todo!()
+            // let mut group: TypeGroup = input.parse()?;
+            // if input.peek(Token![::]) && input.peek3(Ident::peek_any) {
+            //     if let Type::Path(mut ty) = *group.elem {
+            //         Path::parse_rest(input, &mut ty.path, false)?;
+            //         return Ok(Type::Path(ty));
+            //     } else {
+            //         return Ok(Type::Path(TypePath {
+            //             qself: Some(QSelf {
+            //                 lt_token: Token![<](group.group_token.span),
+            //                 position: 0,
+            //                 as_token: None,
+            //                 gt_token: Token![>](group.group_token.span),
+            //                 ty: group.elem,
+            //             }),
+            //             path: Path::parse_helper(input, false)?,
+            //         }));
+            //     }
+            // } else if input.peek(Token![<]) && allow_group_generic
+            //     || input.peek(Token![::]) && input.peek3(Token![<])
+            // {
+            //     if let Type::Path(mut ty) = *group.elem {
+            //         let arguments = &mut ty.path.segments.last_mut().unwrap().arguments;
+            //         if arguments.is_none() {
+            //             *arguments = PathArguments::AngleBracketed(input.parse()?);
+            //             Path::parse_rest(input, &mut ty.path, false)?;
+            //             return Ok(Type::Path(ty));
+            //         } else {
+            //             group.elem = Box::new(Type::Path(ty));
+            //         }
+            //     }
+            // }
+            // return Ok(Type::Group(group));
         }
 
         let mut lifetimes = None::<BoundLifetimes>;
@@ -379,17 +389,18 @@ pub(crate) mod parsing {
 
         if lookahead.peek(token::Paren) {
             let content;
+            let marker = input.marker();
             let paren_token = parenthesized!(content in input);
             if content.is_empty() {
                 return Ok(Type::Tuple(TypeTuple {
                     paren_token,
-                    elems: Punctuated::new(),
+                    elems: NodeList::empty(),
                 }));
             }
             if content.peek(Lifetime) {
                 return Ok(Type::Paren(TypeParen {
                     paren_token,
-                    elem: Box::new(Type::TraitObject(content.parse()?)),
+                    elem: input.add_with_marker(marker, Type::TraitObject(content.parse()?)),
                 }));
             }
             if content.peek(Token![?]) {
@@ -417,29 +428,30 @@ pub(crate) mod parsing {
                     },
                 }));
             }
-            let mut first: Type = content.parse()?;
+            let first = content.call_spanned(Type::parse)?;
             if content.peek(Token![,]) {
                 return Ok(Type::Tuple(TypeTuple {
                     paren_token,
                     elems: {
-                        let mut elems = Punctuated::new();
+                        let mut elems: Punctuated<_, Token![,]> = Punctuated::new();
                         elems.push_value(first);
                         elems.push_punct(content.parse()?);
                         while !content.is_empty() {
-                            elems.push_value(content.parse()?);
+                            elems.push_value(content.call_spanned(Type::parse)?);
                             if content.is_empty() {
                                 break;
                             }
                             elems.push_punct(content.parse()?);
                         }
-                        elems
+                        elems.into_iter().map(|ty| input.add_pat(ty)).collect()
                     },
                 }));
             }
+            let (span, mut first) = first.decompose();
             if allow_plus && input.peek(Token![+]) {
                 loop {
                     let first = match first {
-                        Type::Path(TypePath { qself: None, path }) => {
+                        Pattern::Real(Type::Path(TypePath { qself: None, path })) => {
                             TypeParamBound::Trait(TraitBound {
                                 paren_token: Some(paren_token),
                                 modifier: TraitBoundModifier::None,
@@ -447,15 +459,15 @@ pub(crate) mod parsing {
                                 path,
                             })
                         }
-                        Type::TraitObject(TypeTraitObject {
+                        Pattern::Real(Type::TraitObject(TypeTraitObject {
                             dyn_token: None,
                             bounds,
-                        }) => {
+                        })) => {
                             if bounds.len() > 1 || bounds.trailing_punct() {
-                                first = Type::TraitObject(TypeTraitObject {
+                                first = Pattern::Real(Type::TraitObject(TypeTraitObject {
                                     dyn_token: None,
                                     bounds,
-                                });
+                                }));
                                 break;
                             }
                             match bounds.into_iter().next().unwrap() {
@@ -496,7 +508,7 @@ pub(crate) mod parsing {
             }
             Ok(Type::Paren(TypeParen {
                 paren_token,
-                elem: Box::new(first),
+                elem: input.add_pat(first.with_span(span)),
             }))
         } else if lookahead.peek(Token![fn])
             || lookahead.peek(Token![unsafe])
@@ -584,18 +596,18 @@ pub(crate) mod parsing {
         } else if lookahead.peek(token::Bracket) {
             let content;
             let bracket_token = bracketed!(content in input);
-            let elem: Type = content.parse()?;
+            let elem: NodeId<Type> = content.parse()?;
             if content.peek(Token![;]) {
                 Ok(Type::Array(TypeArray {
                     bracket_token,
-                    elem: Box::new(elem),
+                    elem,
                     semi_token: content.parse()?,
                     len: content.parse()?,
                 }))
             } else {
                 Ok(Type::Slice(TypeSlice {
                     bracket_token,
-                    elem: Box::new(elem),
+                    elem,
                 }))
             }
         } else if lookahead.peek(Token![*]) {
@@ -657,7 +669,7 @@ pub(crate) mod parsing {
                 star_token,
                 const_token,
                 mutability,
-                elem: Box::new(input.call(Type::without_plus)?),
+                elem: input.call_add(Type::without_plus)?,
             })
         }
     }
@@ -670,7 +682,7 @@ pub(crate) mod parsing {
                 lifetime: input.parse()?,
                 mutability: input.parse()?,
                 // & binds tighter than +, so we don't allow + here.
-                elem: Box::new(input.call(Type::without_plus)?),
+                elem: input.call_add(Type::without_plus)?,
             })
         }
     }
@@ -749,11 +761,11 @@ pub(crate) mod parsing {
             if content.is_empty() {
                 return Ok(TypeTuple {
                     paren_token,
-                    elems: Punctuated::new(),
+                    elems: NodeList::empty(),
                 });
             }
 
-            let first: Type = content.parse()?;
+            let first: NodeId<Type> = content.parse()?;
             Ok(TypeTuple {
                 paren_token,
                 elems: {
@@ -767,7 +779,7 @@ pub(crate) mod parsing {
                         }
                         elems.push_punct(content.parse()?);
                     }
-                    elems
+                    elems.into()
                 },
             })
         }
@@ -802,8 +814,8 @@ pub(crate) mod parsing {
             if input.peek(Token![->]) {
                 let arrow = input.parse()?;
                 let allow_group_generic = true;
-                let ty = ambig_ty(input, allow_plus, allow_group_generic)?;
-                Ok(ReturnType::Type(arrow, Box::new(ty)))
+                let ty = ambig_ty_id(input, allow_plus, allow_group_generic)?;
+                Ok(ReturnType::Type(arrow, ty))
             } else {
                 Ok(ReturnType::Default)
             }
@@ -972,10 +984,10 @@ pub(crate) mod parsing {
             let content;
             Ok(TypeParen {
                 paren_token: parenthesized!(content in input),
-                elem: Box::new({
+                elem: {
                     let allow_group_generic = true;
-                    ambig_ty(&content, allow_plus, allow_group_generic)?
-                }),
+                    ambig_ty_id(&content, allow_plus, allow_group_generic)?
+                },
             })
         }
     }

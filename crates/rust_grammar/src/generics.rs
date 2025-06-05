@@ -6,6 +6,7 @@ use crate::path::Path;
 use crate::punctuated::{Iter, IterMut, Punctuated};
 use crate::token;
 use crate::ty::Type;
+use molt_lib::NodeId;
 use proc_macro2::TokenStream;
 #[cfg(all(feature = "printing", feature = "extra-traits"))]
 use std::fmt::{self, Debug};
@@ -73,7 +74,7 @@ ast_struct! {
         pub colon_token: Option<Token![:]>,
         pub bounds: Punctuated<TypeParamBound, Token![+]>,
         pub eq_token: Option<Token![=]>,
-        pub default: Option<Type>,
+        pub default: Option<NodeId<Type>>,
     }
 }
 
@@ -732,7 +733,7 @@ pub(crate) mod parsing {
 
             let eq_token: Option<Token![=]> = input.parse()?;
             let default = if eq_token.is_some() {
-                Some(input.parse::<Type>()?)
+                Some(input.parse()?)
             } else {
                 None
             };

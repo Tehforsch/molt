@@ -5,6 +5,7 @@ use crate::path::{Path, QSelf};
 use crate::punctuated::Punctuated;
 use crate::token;
 use crate::ty::Type;
+use molt_lib::NodeId;
 use proc_macro2::TokenStream;
 
 pub use crate::expr::{
@@ -208,7 +209,7 @@ ast_struct! {
         pub attrs: Vec<Attribute>,
         pub pat: Box<Pat>,
         pub colon_token: Token![:],
-        pub ty: Box<Type>,
+        pub ty: NodeId<Type>,
     }
 }
 

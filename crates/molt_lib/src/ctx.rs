@@ -326,13 +326,6 @@ impl<T, P> NodeList<T, P> {
         }
     }
 
-    pub fn new(iter: impl Iterator<Item = NodeId<T>>) -> Self {
-        Self {
-            items: iter.collect(),
-            _marker: PhantomData,
-        }
-    }
-
     pub fn iter(&self) -> impl Iterator<Item = &NodeId<T>> {
         self.items.iter()
     }
@@ -347,6 +340,15 @@ impl<T, P> NodeList<T, P> {
 
     pub fn get(&self, idx: usize) -> Option<&NodeId<T>> {
         self.items.get(idx)
+    }
+}
+
+impl<T, P> FromIterator<NodeId<T>> for NodeList<T, P> {
+    fn from_iter<I: IntoIterator<Item = NodeId<T>>>(iter: I) -> Self {
+        Self {
+            items: iter.into_iter().collect(),
+            _marker: PhantomData,
+        }
     }
 }
 
