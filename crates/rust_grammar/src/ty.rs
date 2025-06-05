@@ -243,7 +243,7 @@ ast_struct! {
     pub struct BareFnArg {
         pub attrs: Vec<Attribute>,
         pub name: Option<(Ident, Token![:])>,
-        pub ty: Type,
+        pub ty: NodeId<Type>,
     }
 }
 
@@ -280,9 +280,8 @@ pub(crate) mod parsing {
     use crate::ident::Ident;
     use crate::lifetime::Lifetime;
     use crate::mac::{self, Macro};
-    use crate::parse::{Parse, ParseStream};
+    use crate::parse::{Parse, ParsePat, ParseStream};
     use crate::path;
-    use crate::path::{Path, PathArguments, QSelf};
     use crate::punctuated::Punctuated;
     use crate::token;
     use crate::ty::{
@@ -294,38 +293,52 @@ pub(crate) mod parsing {
     use molt_lib::{NodeId, NodeList, Pattern, SpannedPat, WithSpan};
     use proc_macro2::Span;
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-    impl Parse for Type {
-        fn parse(input: ParseStream) -> Result<Self> {
+    impl ParsePat for Type {
+        type Target = Self;
+
+        fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
             let allow_plus = true;
             let allow_group_generic = true;
-            ambig_ty(input, allow_plus, allow_group_generic)
+            Ok(ambig_ty(input, allow_plus, allow_group_generic)?)
         }
     }
 
-    impl Type {
-        /// In some positions, types may not contain the `+` character, to
-        /// disambiguate them. For example in the expression `1 as T`, T may not
-        /// contain a `+` character.
-        ///
-        /// This parser does not allow a `+`, while the default parser does.
-        #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-        pub fn without_plus(input: ParseStream) -> Result<Self> {
+    struct NoPlusGeneric;
+
+    impl ParsePat for (Type, NoPlusGeneric) {
+        type Target = Type;
+
+        fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
             let allow_plus = false;
             let allow_group_generic = true;
-            ambig_ty(input, allow_plus, allow_group_generic)
+            Ok(ambig_ty(input, allow_plus, allow_group_generic)?)
         }
     }
 
-    pub(crate) fn ambig_ty_id(
-        input: ParseStream,
-        allow_plus: bool,
-        allow_group_generic: bool,
-    ) -> Result<NodeId<Type>> {
-        Ok(input.call_add(|input| ambig_ty(input, allow_plus, allow_group_generic))?)
+    pub struct NoPlusNoGeneric;
+
+    impl ParsePat for (Type, NoPlusNoGeneric) {
+        type Target = Type;
+
+        fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
+            let allow_plus = false;
+            let allow_group_generic = false;
+            Ok(ambig_ty(input, allow_plus, allow_group_generic)?)
+        }
     }
 
     pub(crate) fn ambig_ty(
+        input: ParseStream,
+        allow_plus: bool,
+        allow_group_generic: bool,
+    ) -> Result<SpannedPat<Type>> {
+        if let Some(var) = input.parse_var() {
+            return var;
+        }
+        input.call_spanned(|input| ambig_ty_inner(input, allow_plus, allow_group_generic))
+    }
+
+    fn ambig_ty_inner(
         input: ParseStream,
         allow_plus: bool,
         allow_group_generic: bool,
@@ -428,7 +441,9 @@ pub(crate) mod parsing {
                     },
                 }));
             }
-            let first = content.call_spanned(Type::parse)?;
+
+            let first = content.parse_pat::<Type>()?;
+
             if content.peek(Token![,]) {
                 return Ok(Type::Tuple(TypeTuple {
                     paren_token,
@@ -437,7 +452,7 @@ pub(crate) mod parsing {
                         elems.push_value(first);
                         elems.push_punct(content.parse()?);
                         while !content.is_empty() {
-                            elems.push_value(content.call_spanned(Type::parse)?);
+                            elems.push_value(content.parse_pat::<Type>()?);
                             if content.is_empty() {
                                 break;
                             }
@@ -669,7 +684,7 @@ pub(crate) mod parsing {
                 star_token,
                 const_token,
                 mutability,
-                elem: input.call_add(Type::without_plus)?,
+                elem: input.parse_id::<(Type, NoPlusGeneric)>()?,
             })
         }
     }
@@ -682,7 +697,7 @@ pub(crate) mod parsing {
                 lifetime: input.parse()?,
                 mutability: input.parse()?,
                 // & binds tighter than +, so we don't allow + here.
-                elem: input.call_add(Type::without_plus)?,
+                elem: input.parse_id::<(Type, NoPlusGeneric)>()?,
             })
         }
     }
@@ -814,7 +829,7 @@ pub(crate) mod parsing {
             if input.peek(Token![->]) {
                 let arrow = input.parse()?;
                 let allow_group_generic = true;
-                let ty = ambig_ty_id(input, allow_plus, allow_group_generic)?;
+                let ty = input.add_pat(ambig_ty(input, allow_plus, allow_group_generic)?);
                 Ok(ReturnType::Type(arrow, ty))
             } else {
                 Ok(ReturnType::Default)
@@ -974,20 +989,10 @@ pub(crate) mod parsing {
     #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for TypeParen {
         fn parse(input: ParseStream) -> Result<Self> {
-            let allow_plus = false;
-            Self::parse(input, allow_plus)
-        }
-    }
-
-    impl TypeParen {
-        fn parse(input: ParseStream, allow_plus: bool) -> Result<Self> {
             let content;
             Ok(TypeParen {
                 paren_token: parenthesized!(content in input),
-                elem: {
-                    let allow_group_generic = true;
-                    ambig_ty_id(&content, allow_plus, allow_group_generic)?
-                },
+                elem: { input.parse_id::<(Type, NoPlusNoGeneric)>()? },
             })
         }
     }
@@ -1034,14 +1039,17 @@ pub(crate) mod parsing {
             input.parse::<Token![self]>()?;
             None
         } else {
-            Some(input.parse()?)
+            Some(input.parse_id::<Type>()?)
         };
 
         let ty = match ty {
             Some(ty) if !has_mut_self => ty,
             _ => {
                 name = None;
-                Type::Verbatim(verbatim::between(&begin, input))
+                input.add_pat(
+                    Type::Verbatim(verbatim::between(&begin, input))
+                        .pattern_with_span(molt_lib::Span::fake()),
+                )
             }
         };
 

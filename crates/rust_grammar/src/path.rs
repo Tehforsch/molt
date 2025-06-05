@@ -1,4 +1,4 @@
-use molt_lib::NodeId;
+use molt_lib::{NodeId, NodeList};
 
 #[cfg(feature = "parsing")]
 use crate::error::Result;
@@ -215,7 +215,7 @@ ast_struct! {
         pub ident: Ident,
         pub generics: Option<AngleBracketedGenericArguments>,
         pub eq_token: Token![=],
-        pub ty: Type,
+        pub ty: NodeId<Type>,
     }
 }
 
@@ -249,7 +249,7 @@ ast_struct! {
     pub struct ParenthesizedGenericArguments {
         pub paren_token: token::Paren,
         /// `(A, B)`
-        pub inputs: Punctuated<Type, Token![,]>,
+        pub inputs: NodeList<Type, Token![,]>,
         /// `C`
         pub output: ReturnType,
     }
@@ -284,6 +284,8 @@ ast_struct! {
 
 #[cfg(feature = "parsing")]
 pub(crate) mod parsing {
+    use molt_lib::NodeId;
+
     use crate::error::Result;
     #[cfg(feature = "full")]
     use crate::expr::ExprBlock;
@@ -325,86 +327,87 @@ pub(crate) mod parsing {
                 return const_argument(input).map(GenericArgument::Const);
             }
 
-            let mut argument: Type = input.parse()?;
+            let mut argument: NodeId<Type> = input.parse()?;
 
-            match argument {
-                Type::Path(mut ty)
-                    if ty.qself.is_none()
-                        && ty.path.leading_colon.is_none()
-                        && ty.path.segments.len() == 1
-                        && match &ty.path.segments[0].arguments {
-                            PathArguments::None | PathArguments::AngleBracketed(_) => true,
-                            PathArguments::Parenthesized(_) => false,
-                        } =>
-                {
-                    if let Some(eq_token) = input.parse::<Option<Token![=]>>()? {
-                        let segment = ty.path.segments.pop().unwrap().into_value();
-                        let ident = segment.ident;
-                        let generics = match segment.arguments {
-                            PathArguments::None => None,
-                            PathArguments::AngleBracketed(arguments) => Some(arguments),
-                            PathArguments::Parenthesized(_) => unreachable!(),
-                        };
-                        return if input.peek(Lit) || input.peek(token::Brace) {
-                            Ok(GenericArgument::AssocConst(AssocConst {
-                                ident,
-                                generics,
-                                eq_token,
-                                value: const_argument(input)?,
-                            }))
-                        } else {
-                            Ok(GenericArgument::AssocType(AssocType {
-                                ident,
-                                generics,
-                                eq_token,
-                                ty: input.parse()?,
-                            }))
-                        };
-                    }
+            todo!()
+            // match argument {
+            //     Type::Path(mut ty)
+            //         if ty.qself.is_none()
+            //             && ty.path.leading_colon.is_none()
+            //             && ty.path.segments.len() == 1
+            //             && match &ty.path.segments[0].arguments {
+            //                 PathArguments::None | PathArguments::AngleBracketed(_) => true,
+            //                 PathArguments::Parenthesized(_) => false,
+            //             } =>
+            //     {
+            //         if let Some(eq_token) = input.parse::<Option<Token![=]>>()? {
+            //             let segment = ty.path.segments.pop().unwrap().into_value();
+            //             let ident = segment.ident;
+            //             let generics = match segment.arguments {
+            //                 PathArguments::None => None,
+            //                 PathArguments::AngleBracketed(arguments) => Some(arguments),
+            //                 PathArguments::Parenthesized(_) => unreachable!(),
+            //             };
+            //             return if input.peek(Lit) || input.peek(token::Brace) {
+            //                 Ok(GenericArgument::AssocConst(AssocConst {
+            //                     ident,
+            //                     generics,
+            //                     eq_token,
+            //                     value: const_argument(input)?,
+            //                 }))
+            //             } else {
+            //                 Ok(GenericArgument::AssocType(AssocType {
+            //                     ident,
+            //                     generics,
+            //                     eq_token,
+            //                     ty: input.parse()?,
+            //                 }))
+            //             };
+            //         }
 
-                    #[cfg(feature = "full")]
-                    if let Some(colon_token) = input.parse::<Option<Token![:]>>()? {
-                        let segment = ty.path.segments.pop().unwrap().into_value();
-                        return Ok(GenericArgument::Constraint(Constraint {
-                            ident: segment.ident,
-                            generics: match segment.arguments {
-                                PathArguments::None => None,
-                                PathArguments::AngleBracketed(arguments) => Some(arguments),
-                                PathArguments::Parenthesized(_) => unreachable!(),
-                            },
-                            colon_token,
-                            bounds: {
-                                let mut bounds = Punctuated::new();
-                                loop {
-                                    if input.peek(Token![,]) || input.peek(Token![>]) {
-                                        break;
-                                    }
-                                    bounds.push_value({
-                                        let allow_precise_capture = false;
-                                        let allow_tilde_const = true;
-                                        TypeParamBound::parse_single(
-                                            input,
-                                            allow_precise_capture,
-                                            allow_tilde_const,
-                                        )?
-                                    });
-                                    if !input.peek(Token![+]) {
-                                        break;
-                                    }
-                                    let punct: Token![+] = input.parse()?;
-                                    bounds.push_punct(punct);
-                                }
-                                bounds
-                            },
-                        }));
-                    }
+            //         #[cfg(feature = "full")]
+            //         if let Some(colon_token) = input.parse::<Option<Token![:]>>()? {
+            //             let segment = ty.path.segments.pop().unwrap().into_value();
+            //             return Ok(GenericArgument::Constraint(Constraint {
+            //                 ident: segment.ident,
+            //                 generics: match segment.arguments {
+            //                     PathArguments::None => None,
+            //                     PathArguments::AngleBracketed(arguments) => Some(arguments),
+            //                     PathArguments::Parenthesized(_) => unreachable!(),
+            //                 },
+            //                 colon_token,
+            //                 bounds: {
+            //                     let mut bounds = Punctuated::new();
+            //                     loop {
+            //                         if input.peek(Token![,]) || input.peek(Token![>]) {
+            //                             break;
+            //                         }
+            //                         bounds.push_value({
+            //                             let allow_precise_capture = false;
+            //                             let allow_tilde_const = true;
+            //                             TypeParamBound::parse_single(
+            //                                 input,
+            //                                 allow_precise_capture,
+            //                                 allow_tilde_const,
+            //                             )?
+            //                         });
+            //                         if !input.peek(Token![+]) {
+            //                             break;
+            //                         }
+            //                         let punct: Token![+] = input.parse()?;
+            //                         bounds.push_punct(punct);
+            //                     }
+            //                     bounds
+            //                 },
+            //             }));
+            //         }
 
-                    argument = Type::Path(ty);
-                }
-                _ => {}
-            }
+            //         argument = Type::Path(ty);
+            //     }
+            //     _ => {}
+            // }
 
-            Ok(GenericArgument::Type(argument))
+            // Ok(GenericArgument::Type(argument))
         }
     }
 
@@ -500,7 +503,7 @@ pub(crate) mod parsing {
             let content;
             Ok(ParenthesizedGenericArguments {
                 paren_token: parenthesized!(content in input),
-                inputs: content.parse_terminated(Type::parse, Token![,])?,
+                inputs: content.parse_terminated_pat::<Type, _>(Token![,])?,
                 output: input.call(ReturnType::without_plus)?,
             })
         }

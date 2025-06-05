@@ -1211,11 +1211,11 @@ pub(crate) mod parsing {
     use crate::punctuated::Punctuated;
     #[cfg(feature = "full")]
     use crate::stmt::Block;
-    use crate::token;
-    use crate::ty;
+    use crate::ty::parsing::NoPlusNoGeneric;
     #[cfg(feature = "full")]
     use crate::ty::ReturnType;
     use crate::verbatim;
+    use crate::{token, Type};
     use molt_lib::{Id, NodeId, NodeList, Pattern, Span, Spanned, SpannedPat, WithSpan};
     use std::mem;
 
@@ -1397,7 +1397,7 @@ pub(crate) mod parsing {
                 let as_token: Token![as] = input.parse()?;
                 let allow_plus = false;
                 let allow_group_generic = false;
-                let ty = ty::parsing::ambig_ty_id(input, allow_plus, allow_group_generic)?;
+                let ty = input.parse_id::<(Type, NoPlusNoGeneric)>()?;
                 check_cast(input)?;
                 let span = Span::fake(); // TODO merge lhs and type here once type is NodeId
                 lhs = Expr::Cast(ExprCast {
@@ -2191,7 +2191,7 @@ pub(crate) mod parsing {
                     expr.else_branch = Some((else_token, NodeId::placeholder()));
                     clauses.push(expr);
                 } else if lookahead.peek(token::Brace) {
-                    let block: Spanned<Block> = input.parse_span()?;
+                    let block: Spanned<Block> = input.parse_spanned()?;
                     expr.else_branch = Some((
                         else_token,
                         input.add(block.map(|block| {
@@ -2486,7 +2486,7 @@ pub(crate) mod parsing {
         let (output, body) = if input.peek(Token![->]) {
             let arrow_token: Token![->] = input.parse()?;
             let ty = input.parse()?;
-            let body: Spanned<Block> = input.parse_span()?;
+            let body: Spanned<Block> = input.parse_spanned()?;
             let output = ReturnType::Type(arrow_token, ty);
             let block = input.add(body.map(|body| {
                 Expr::Block(ExprBlock {
@@ -2681,7 +2681,7 @@ pub(crate) mod parsing {
     impl Parse for FieldValue {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = input.call(Attribute::parse_outer)?;
-            let member: Spanned<Member> = input.parse_span()?;
+            let member: Spanned<Member> = input.parse_spanned()?;
             let (colon_token, value) = if input.peek(Token![:]) || !member.is_named() {
                 let colon_token: Token![:] = input.parse()?;
                 let value: NodeId<Expr> = input.parse()?;

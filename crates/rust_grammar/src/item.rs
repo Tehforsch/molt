@@ -644,7 +644,7 @@ ast_struct! {
         pub ident: Ident,
         pub generics: Generics,
         pub colon_token: Token![:],
-        pub ty: Type,
+        pub ty: NodeId<Type>,
         pub default: Option<(Token![=], NodeId<Expr>)>,
         pub semi_token: Token![;],
     }
@@ -743,7 +743,7 @@ ast_struct! {
         pub ident: Ident,
         pub generics: Generics,
         pub colon_token: Token![:],
-        pub ty: Type,
+        pub ty: NodeId<Type>,
         pub eq_token: Token![=],
         pub expr: NodeId<Expr>,
         pub semi_token: Token![;],
@@ -931,7 +931,7 @@ pub(crate) mod parsing {
     use crate::restriction::Visibility;
     use crate::stmt::Block;
     use crate::token;
-    use crate::ty::{Abi, ReturnType, Type, TypePath};
+    use crate::ty::{Abi, ReturnType, Type};
     use crate::verbatim;
     use molt_lib::{NodeId, NodeList};
     use proc_macro2::TokenStream;
@@ -1673,7 +1673,7 @@ pub(crate) mod parsing {
             // } else {
             //     input.parse()?
             // };
-            // let ty: Type = if colon_token.is_some() {
+            // let ty: NodeId<Type> = if colon_token.is_some() {
             //     input.parse()?
             // } else {
             //     let mut ty = Type::Path(TypePath {
@@ -2355,7 +2355,7 @@ pub(crate) mod parsing {
                     let ident = input.call(Ident::parse_any)?;
                     let mut generics: Generics = input.parse()?;
                     let colon_token: Token![:] = input.parse()?;
-                    let ty: Type = input.parse()?;
+                    let ty: NodeId<Type> = input.parse()?;
                     let default = if let Some(eq_token) = input.parse::<Option<Token![=]>>()? {
                         let expr: NodeId<Expr> = input.parse()?;
                         Some((eq_token, expr))
@@ -2434,7 +2434,7 @@ pub(crate) mod parsing {
             };
 
             let colon_token: Token![:] = input.parse()?;
-            let ty: Type = input.parse()?;
+            let ty: NodeId<Type> = input.parse()?;
             let default = if input.peek(Token![=]) {
                 let eq_token: Token![=] = input.parse()?;
                 let default: NodeId<Expr> = input.parse()?;
@@ -2711,7 +2711,7 @@ pub(crate) mod parsing {
                 };
                 let mut generics: Generics = input.parse()?;
                 let colon_token: Token![:] = input.parse()?;
-                let ty: Type = input.parse()?;
+                let ty: NodeId<Type> = input.parse()?;
                 let value = if let Some(eq_token) = input.parse::<Option<Token![=]>>()? {
                     let expr: NodeId<Expr> = input.parse()?;
                     Some((eq_token, expr))
@@ -2787,7 +2787,7 @@ pub(crate) mod parsing {
             };
 
             let colon_token: Token![:] = input.parse()?;
-            let ty: Type = input.parse()?;
+            let ty: NodeId<Type> = input.parse()?;
             let eq_token: Token![=] = input.parse()?;
             let expr: NodeId<Expr> = input.parse()?;
             let semi_token: Token![;] = input.parse()?;

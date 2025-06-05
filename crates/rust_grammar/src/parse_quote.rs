@@ -192,7 +192,7 @@ impl ParseQuote for Field {
             colon_token = None;
         }
 
-        let ty: Type = input.parse()?;
+        let ty: NodeId<Type> = input.parse()?;
 
         Ok(Field {
             attrs,

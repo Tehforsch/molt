@@ -86,7 +86,7 @@ ast_struct! {
         pub const_token: Token![const],
         pub ident: Ident,
         pub colon_token: Token![:],
-        pub ty: Type,
+        pub ty: NodeId<Type>,
         pub eq_token: Option<Token![=]>,
         pub default: Option<Expr>,
     }
@@ -505,7 +505,7 @@ ast_struct! {
         /// Any lifetimes from a `for` binding
         pub lifetimes: Option<BoundLifetimes>,
         /// The type being bounded
-        pub bounded_ty: Type,
+        pub bounded_ty: NodeId<Type>,
         pub colon_token: Token![:],
         /// Trait and lifetime bounds (`Clone+Send+'static`)
         pub bounds: Punctuated<TypeParamBound, Token![+]>,
@@ -530,7 +530,6 @@ pub(crate) mod parsing {
     use crate::path::{self, ParenthesizedGenericArguments, Path, PathArguments};
     use crate::punctuated::Punctuated;
     use crate::token;
-    use crate::ty::Type;
     use crate::verbatim;
 
     #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]

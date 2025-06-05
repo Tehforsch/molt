@@ -1,10 +1,7 @@
 use derive_macro::CmpSyn;
-use molt_lib::{NodeId, ToNode};
+use molt_lib::ToNode;
 
-use crate::{
-    parse::{Parse, ParseStream, Result},
-    Expr, Item, Lit, Stmt, Type,
-};
+use crate::{parse::Result, Expr, Item, Lit, Stmt, Type};
 
 macro_rules! define_node_and_kind {
     ($(($variant_name: ident, $ty: ty)),*$(,)?) => {
@@ -96,10 +93,10 @@ define_node_and_kind! {
     // (FnArg, FnArg),
 }
 
-impl<T: Parse + ToNode<Node>> Parse for NodeId<T> {
-    fn parse(parser: ParseStream) -> Result<Self> {
-        let t = parser.parse_span()?;
-        let id = parser.add(t);
-        Ok(id)
-    }
-}
+// impl<T: Parse + ToNode<Node>> Parse for NodeId<T> {
+//     fn parse(parser: ParseStream) -> Result<Self> {
+//         let t = parser.parse_span()?;
+//         let id = parser.add(t);
+//         Ok(id)
+//     }
+// }

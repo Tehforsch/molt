@@ -94,7 +94,6 @@ pub(crate) mod parsing {
     use crate::path::Path;
     use crate::stmt::{Block, Local, LocalInit, Stmt, StmtMacro};
     use crate::token;
-    use crate::ty::Type;
     use molt_lib::{NodeId, NodeList, Pattern, Spanned, ToNode, WithSpan};
     use proc_macro2::TokenStream;
 
@@ -332,7 +331,7 @@ pub(crate) mod parsing {
             let diverge = {
                 if !classify::expr_trailing_brace(&input, expr) && input.peek(Token![else]) {
                     let else_token: Token![else] = input.parse()?;
-                    let block: Spanned<Block> = input.parse_span()?;
+                    let block: Spanned<Block> = input.parse_spanned()?;
                     let diverge = block.map(|block| {
                         Expr::Block(ExprBlock {
                             attrs: Vec::new(),

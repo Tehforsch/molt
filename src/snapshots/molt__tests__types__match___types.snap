@@ -1,0 +1,27 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (types), stringify! (types))"
+---
+note: Match
+  ┌─ "test_data/types/main.rs":2:15
+  │
+2 │ pub const x: (Foo, Bar, Baz) = bar;
+  │               ^^^ $x
+
+note: Match
+  ┌─ "test_data/types/main.rs":2:20
+  │
+2 │ pub const x: (Foo, Bar, Baz) = bar;
+  │                    ^^^ $x
+
+note: Match
+  ┌─ "test_data/types/main.rs":2:25
+  │
+2 │ pub const x: (Foo, Bar, Baz) = bar;
+  │                         ^^^ $x
+
+note: Match
+  ┌─ "test_data/types/main.rs":2:14
+  │
+2 │ pub const x: (Foo, Bar, Baz) = bar;
+  │              ^^^^^^^^^^^^^^^ $x

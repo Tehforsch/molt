@@ -183,7 +183,7 @@
 pub mod discouraged;
 
 use discouraged::Speculative;
-use molt_lib::{Ctx, Id, NodeId, Pattern, Spanned, SpannedPat, ToNode, Var, WithSpan};
+use molt_lib::{Ctx, Id, NodeId, NodeList, Pattern, Spanned, SpannedPat, ToNode, Var, WithSpan};
 
 use crate::buffer::{Cursor, TokenBuffer};
 use crate::lookahead;
@@ -219,6 +219,34 @@ pub use crate::lookahead::{End, Lookahead1, Peek};
 /// [module documentation]: self
 pub trait Parse: Sized {
     fn parse(input: ParseStream) -> Result<Self>;
+}
+
+pub trait ParsePat {
+    type Target: ToNode<Node>;
+
+    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>>;
+
+    fn parse_id(input: ParseStream) -> Result<NodeId<Self::Target>> {
+        let p = Self::parse_pat(input)?;
+        Ok(input.add_pat(p))
+    }
+}
+
+impl<T: ToNode<Node> + ParsePat<Target = T>> Parse for NodeId<T> {
+    fn parse(input: ParseStream) -> Result<NodeId<T>> {
+        T::parse_id(input)
+    }
+}
+
+// todo!(): Remove this, probably. Types that can also be patterns
+// shouldn't really be parsed normally, since that means we cant
+// match them with a variable in that particular place.
+impl<T: Parse + ToNode<Node>> ParsePat for T {
+    type Target = T;
+
+    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
+        input.call_spanned(T::parse)
+    }
 }
 
 /// Input to a Syn parser function.
@@ -757,6 +785,19 @@ impl<'a> ParseBuffer<'a> {
         Punctuated::parse_terminated_with(self, parser)
     }
 
+    pub fn parse_terminated_pat<T: ParsePat, P>(
+        &'a self,
+        separator: P,
+    ) -> Result<NodeList<T::Target, P::Token>>
+    where
+        P: Peek,
+        P::Token: Parse,
+    {
+        let _ = separator;
+        let p = Punctuated::parse_terminated_with(self, T::parse_id)?;
+        Ok(p.into())
+    }
+
     /// Returns whether there are no more tokens remaining to be parsed from
     /// this stream.
     ///
@@ -1199,7 +1240,15 @@ impl<'a> ParseBuffer<'a> {
         self.ctx.borrow_mut()
     }
 
-    pub fn parse_span<T: Parse>(&self) -> Result<Spanned<T>> {
+    pub fn parse_pat<T: ParsePat>(&self) -> Result<SpannedPat<T::Target>> {
+        T::parse_pat(self)
+    }
+
+    pub fn parse_id<T: ParsePat>(&self) -> Result<NodeId<T::Target>> {
+        T::parse_id(self)
+    }
+
+    pub fn parse_spanned<T: Parse>(&self) -> Result<Spanned<T>> {
         let marker = self.marker();
         let item = T::parse(self)?;
         let span = self.span_from_marker(marker);
@@ -1210,17 +1259,8 @@ impl<'a> ParseBuffer<'a> {
         &self,
         f: impl Fn(T) -> S,
     ) -> Result<Spanned<Pattern<S, Id>>> {
-        let item: Spanned<T> = self.parse_span()?;
+        let item: Spanned<T> = self.parse_spanned()?;
         Ok(item.map(f).as_pattern())
-    }
-
-    pub fn parse_node<'b, T: Parse, S: ToNode<Node>>(
-        &self,
-        f: impl Fn(T) -> S,
-    ) -> Result<NodeId<S>> {
-        let item: Spanned<T> = self.parse_span()?;
-        let entry = self.ctx.borrow_mut().add(item.map(f));
-        Ok(entry)
     }
 
     pub fn call_spanned<T>(
@@ -1318,7 +1358,11 @@ impl<T: Parse + Token> Parse for Option<T> {
 }
 
 #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-impl<T: Parse + Token + ToNode<Node>> Parse for Option<NodeId<T>> {
+impl<T> Parse for Option<NodeId<T>>
+where
+    NodeId<T>: Parse,
+    T: Token,
+{
     fn parse(input: ParseStream) -> Result<Self> {
         // Also match variables here.
         if T::peek(input.cursor()) || input.peek(Token![$]) {

@@ -93,7 +93,11 @@ macro_rules! parse_impl {
     ($parser: ident, $kind: ident, $variant_name: ident, $ty: ty) => {
         if let UserKind::$variant_name = $kind {
             return Ok($parser
-                .add($parser.parse_span::<$ty>()?.map(|t| Node::$variant_name(t)))
+                .add(
+                    $parser
+                        .parse_spanned::<$ty>()?
+                        .map(|t| Node::$variant_name(t)),
+                )
                 .into());
         }
     };
@@ -102,7 +106,10 @@ macro_rules! parse_impl {
 define_user_kind! {
     (Lit, Lit),
     (Item, Item),
-    (Type, Type),
+    (Type, Type, |parser: ParseStream| {
+        let type_: NodeId<Type> = parser.parse()?;
+        Ok(type_.into())
+    }),
     (Expr, Expr, |parser: ParseStream| {
         let expr: NodeId<Expr> = parser.parse()?;
         Ok(expr.into())

@@ -197,7 +197,7 @@ ast_struct! {
 
         pub colon_token: Option<Token![:]>,
 
-        pub ty: Type,
+        pub ty: NodeId<Type>,
     }
 }
 
@@ -240,6 +240,8 @@ impl<'a> Clone for Members<'a> {
 
 #[cfg(feature = "parsing")]
 pub(crate) mod parsing {
+    use molt_lib::{NodeId, WithSpan};
+
     use crate::attr::Attribute;
     use crate::data::{Field, Fields, FieldsNamed, FieldsUnnamed, Variant};
     use crate::error::Result;
@@ -335,14 +337,17 @@ pub(crate) mod parsing {
 
             let colon_token: Token![:] = input.parse()?;
 
-            let ty: Type = if unnamed_field
+            let ty: NodeId<Type> = if unnamed_field
                 && (input.peek(Token![struct])
                     || input.peek(Token![union]) && input.peek2(token::Brace))
             {
                 let begin = input.fork();
                 input.call(Ident::parse_any)?;
                 input.parse::<FieldsNamed>()?;
-                Type::Verbatim(verbatim::between(&begin, input))
+                input.add(
+                    Type::Verbatim(verbatim::between(&begin, input))
+                        .with_span(molt_lib::Span::fake()),
+                )
             } else {
                 input.parse()?
             };
