@@ -187,10 +187,11 @@ pub(crate) fn expr_leading_label(mut expr: &Expr) -> bool {
 
 /// Whether the expression's last token is `}`.
 pub(crate) fn expr_trailing_brace(input: ParseStream, mut expr: NodeId<Expr>) -> bool {
-    // rebind to avoid lifetime problems
     loop {
         match input.ctx().get(expr) {
-            Pattern::Pat(_) => todo!("figure out default"),
+            // We count a variable as an atomic expression,
+            // so it doesn't have trailing braces.
+            Pattern::Pat(_) => return false,
             Pattern::Real(e) => match e {
                 Expr::Async(_)
                 | Expr::Block(_)

@@ -424,7 +424,11 @@ pub(crate) mod parsing {
                 attrs.extend(attr_target.replace_attrs(Vec::new()));
                 attr_target.replace_attrs(attrs);
             }
-            Pattern::Pat(_) => panic!("Attr on var"),
+            Pattern::Pat(_) => {
+                if !attrs.is_empty() {
+                    panic!("Attr on var")
+                }
+            }
         }
 
         let semi_token: Option<Token![;]> = input.parse()?;

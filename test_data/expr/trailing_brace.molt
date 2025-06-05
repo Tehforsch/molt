@@ -1,0 +1,6 @@
+let e: Expr;
+let x: Expr = {
+    {
+        let Some(_) = $e else { };
+    }
+};
