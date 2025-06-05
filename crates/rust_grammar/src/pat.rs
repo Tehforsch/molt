@@ -636,25 +636,24 @@ pub(crate) mod parsing {
     }
 
     fn pat_range_half_open(input: ParseStream) -> Result<Pat> {
-        todo!()
-        // let limits: RangeLimits = input.parse()?;
-        // let end = input.call_spanned(pat_range_bound)?;
-        // if end.is_some() {
-        //     Ok(Pat::Range(ExprRange {
-        //         attrs: Vec::new(),
-        //         start: None,
-        //         limits,
-        //         end: end.map(PatRangeBound::into_expr),
-        //     }))
-        // } else {
-        //     match limits {
-        //         RangeLimits::HalfOpen(dot2_token) => Ok(Pat::Rest(PatRest {
-        //             attrs: Vec::new(),
-        //             dot2_token,
-        //         })),
-        //         RangeLimits::Closed(_) => Err(input.error("expected range upper bound")),
-        //     }
-        // }
+        let limits: RangeLimits = input.parse()?;
+        let end = input.call_spanned(pat_range_bound)?.transpose();
+        if end.is_some() {
+            Ok(Pat::Range(ExprRange {
+                attrs: Vec::new(),
+                start: None,
+                limits,
+                end: end.map(|end| input.add_pat(end.map_real(PatRangeBound::into_expr))),
+            }))
+        } else {
+            match limits {
+                RangeLimits::HalfOpen(dot2_token) => Ok(Pat::Rest(PatRest {
+                    attrs: Vec::new(),
+                    dot2_token,
+                })),
+                RangeLimits::Closed(_) => Err(input.error("expected range upper bound")),
+            }
+        }
     }
 
     fn pat_paren_or_tuple(input: ParseStream) -> Result<Pat> {

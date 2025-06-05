@@ -4,5 +4,7 @@ fn foo() {
     foo.0.0.0.0.0;
     match x {
         foo..bar => {},
+        ..bar => {},
+        .. => {},
     }
 }
