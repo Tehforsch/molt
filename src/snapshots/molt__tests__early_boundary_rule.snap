@@ -1,0 +1,9 @@
+---
+source: src/lib.rs
+expression: "emit_diagnostic_str(& input, make_error_diagnostic(& err))"
+---
+error: expected `,`
+   ┌─ "test_data/molt_grammar/early_boundary_rule.molt":18:19
+   │
+18 │         bar => $a {},
+   │                   ^ expected `,`

@@ -1,2 +1,0 @@
-let x: Lit = { 20.0 };
-let r: Lit;

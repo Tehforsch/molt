@@ -141,7 +141,7 @@ mod tests {
     use std::path::Path;
 
     use crate::{
-        RustFile,
+        Error, MoltFile, RustFile,
         error::{emit_diagnostic_str, make_error_diagnostic},
         input::{Contents, Input, MoltSource},
     };
@@ -154,6 +154,12 @@ mod tests {
         for rust_file_id in input.iter_rust_src() {
             RustFile::new(&input, rust_file_id).unwrap();
         }
+    }
+
+    fn parse_molt(path: &str) -> (Input, Result<MoltFile, Error>) {
+        let input = Input::new(MoltSource::file(path).unwrap());
+        let map = MoltFile::new(&input).map(|(file, _)| file);
+        (input, map)
     }
 
     fn match_pattern(path: &str, fname: &str) -> String {
@@ -193,22 +199,59 @@ mod tests {
         };
     }
 
+    macro_rules! molt_test_err {
+        ($dir_name: ident, ($($test_name: ident),* $(,)?)) => {
+            $(
+                #[test]
+                fn $test_name() {
+                    let path = format!(
+                        "test_data/{}/{}.molt",
+                        stringify!($dir_name),
+                        stringify!($test_name)
+                    );
+                    let (input, result) = parse_molt(&path);
+                    let err = match result {
+                        Err(e) => e,
+                        Ok(_) => panic!("No error during parsing when one was expected"),
+                    };
+                    insta::assert_snapshot!(emit_diagnostic_str(&input, make_error_diagnostic(&err)));
+                }
+            )*
+        };
+    }
+
+    macro_rules! molt_test_ok {
+        ($dir_name: ident, ($($test_name: ident),* $(,)?)) => {
+            $(
+                #[test]
+                fn $test_name() {
+                    let path = format!(
+                        "test_data/{}/{}.molt",
+                        stringify!($dir_name),
+                        stringify!($test_name)
+                    );
+                    let (_, result) = parse_molt(&path);
+                    match result {
+                        Err(e) => panic!("Error during parsing when none was expected {}", e),
+                        Ok(_) => {},
+                    }
+                }
+            )*
+        };
+    }
+
     test_match_pattern!(consts, (exprs));
     test_match_pattern!(let_, (let_));
     test_match_pattern!(closure, (closure));
     test_match_pattern!(control_flow, ());
     test_match_pattern!(arrays, (array));
     test_match_pattern!(ranges, ());
-    test_match_pattern!(
-        expr,
-        (
-            expr,
-            early_boundary_rule,
-            function_chain,
-            trailing_brace,
-            stmts,
-            nested_stmt,
-            undefined_var,
-        )
+    test_match_pattern!(expr, (expr, function_chain, stmts, nested_stmt,));
+
+    molt_test_err!(
+        molt_grammar,
+        (undefined_var, non_inferable_command, early_boundary_rule,)
     );
+
+    molt_test_ok!(molt_grammar, (trailing_brace));
 }

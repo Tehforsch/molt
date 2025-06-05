@@ -1,5 +1,0 @@
-const x: usize = 5;
-
-fn foo(bar: usize) {
-    println!("hello world");
-}
