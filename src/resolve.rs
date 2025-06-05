@@ -1,11 +1,15 @@
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use molt_lib::Dependencies;
+use molt_lib::{Id, Var, VarDecl};
+use rust_grammar::{Node, TokenStream, TokenTree};
 
 use crate::{
-    Error, PatCtx,
-    molt_grammar::{Command, MoltFile},
+    Command, Error, FileId, MoltFile, PatCtx,
+    molt_grammar::{UnresolvedMoltFile, UnresolvedVarDecl, parse_node_with_kind},
 };
+
+type ResolvedCommand = Command<Id>;
+type UnresolvedCommand = Command<String>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ResolveError {
@@ -15,63 +19,134 @@ pub enum ResolveError {
     NoCommandGiven,
     #[error("Unresolvable pattern.")]
     Unresolvable,
+    #[error("Reference to undefined variable.")]
+    UndefinedVar,
+    #[error("No command given and there was no candidate for the inferred match variable.")]
+    NoUnreferencedVariables,
+    #[error("No command given and there were multiple candidates for the inferred match variable.")]
+    MultipleUnreferencedVariables,
 }
 
-impl MoltFile {
-    pub(crate) fn get_command(&mut self) -> Result<Command, Error> {
-        assert!(self.sorted);
-        if self.commands.is_empty() {
-            // Topological sorting ensures that this
-            // variable contains no other variables,
-            // so it is most likely the variable
-            // we want to match for.
-            if let Some(var) = self.vars.last() {
-                Ok(Command::Match(var.id))
-            } else {
-                Err(ResolveError::NoCommandGiven.into())
+fn get_vars_in_token_stream(deps: &mut Vec<String>, tokens: TokenStream) {
+    let mut token_iter = tokens.into_iter();
+    while let Some(token) = token_iter.next() {
+        match token {
+            TokenTree::Group(group) => {
+                get_vars_in_token_stream(deps, group.stream());
             }
-        } else if self.commands.len() > 1 {
-            return Err(ResolveError::MultipleCommandGiven.into());
-        } else {
-            Ok(self.commands.remove(0))
+            TokenTree::Punct(punct) => {
+                if punct.as_char() == '$' {
+                    if let Some(TokenTree::Ident(ident)) = token_iter.next() {
+                        deps.push(ident.to_string());
+                    } else {
+                        // This is most likely invalid syntax, but
+                        // we can defer reporting the error to the
+                        // actual parsing.
+                    }
+                }
+            }
+            _ => {}
         }
     }
+}
 
-    pub(crate) fn sort_vars(&mut self, pat_ctx: &PatCtx) -> Result<(), ResolveError> {
-        // Topologically sort the variable declarations according to
-        // their dependencies (i.e. which variables they reference)
-        let mut deps_map: HashMap<_, _> = self
-            .vars
-            .iter()
+impl UnresolvedMoltFile {
+    pub fn resolve(self, file_id: FileId) -> Result<(MoltFile, PatCtx), Error> {
+        let vars = self.vars;
+        let mut map = HashMap::default();
+        for var in vars.iter() {
+            let mut deps = vec![];
+            if let Some(ref tokens) = var.tokens {
+                get_vars_in_token_stream(&mut deps, tokens.clone());
+            }
+            map.insert(&var.name, deps);
+        }
+        // Check every referenced var exists
+        for deps in map.values() {
+            if deps.iter().any(|referenced| !map.contains_key(referenced)) {
+                return Err(ResolveError::UndefinedVar.into());
+            }
+        }
+        let command = get_command(self.commands, &vars, &map)?;
+        // TODO: Warn unused
+        // Populate the context with all variables.
+        let mut pat_ctx = PatCtx::default();
+        let vars: Vec<_> = vars
+            .into_iter()
             .map(|var| {
                 (
-                    var.id,
-                    match var.node {
-                        Some(node) => Dependencies::new(node, pat_ctx),
-                        None => Dependencies::default(),
-                    },
+                    pat_ctx
+                        .add_var::<Node>(Var::new(var.name, var.kind.into()))
+                        .into(),
+                    var.kind,
+                    var.tokens,
                 )
             })
             .collect();
-        let mut unsorted: Vec<_> = self.vars.drain(..).collect();
-        let mut sorted = vec![];
-        while !unsorted.is_empty() {
-            let solvable = unsorted
-                .iter()
-                .enumerate()
-                .find(|(_, var)| deps_map[&var.id].vars.is_empty());
-            if let Some((index, _)) = solvable {
-                let var = unsorted.remove(index);
-                for deps in deps_map.values_mut() {
-                    deps.vars.remove(&var.id);
-                }
-                sorted.push(var);
-            } else {
-                return Err(ResolveError::Unresolvable);
-            }
+        // Translate the command to use the newly
+        // assigned ids by a lookup.
+        let command = command.map(|name| pat_ctx.get_id_by_name(&name));
+        // Now that we know that the referenced variables
+        // exist, we can safely parse the TokenStream and
+        // assume that we can resolve every variable in the
+        // ctx.
+        let pat_ctx = Rc::new(RefCell::new(pat_ctx));
+        let vars: Result<Vec<_>, Error> = vars
+            .into_iter()
+            .map(|(id, kind, tokens)| {
+                let node = tokens
+                    .map(|tokens| {
+                        rust_grammar::parse_with_ctx(
+                            pat_ctx.clone(),
+                            |stream| parse_node_with_kind(stream, kind),
+                            tokens,
+                        )
+                    })
+                    .transpose()
+                    .map_err(|e| Error::parse(e, file_id))?;
+                Ok(VarDecl { id, node })
+            })
+            .collect();
+        Ok((
+            MoltFile {
+                vars: vars?,
+                command,
+            },
+            pat_ctx.take(),
+        ))
+    }
+}
+
+fn get_command(
+    mut commands: Vec<UnresolvedCommand>,
+    vars: &[UnresolvedVarDecl],
+    map: &HashMap<&String, Vec<String>>,
+) -> Result<UnresolvedCommand, Error> {
+    if commands.is_empty() {
+        // infer the command
+        let unreferenced_vars: Vec<_> = vars
+            .iter()
+            .filter(|var| {
+                !map.iter()
+                    .any(|(_, deps)| deps.iter().any(|v| *v == var.name))
+            })
+            .collect();
+        if unreferenced_vars.is_empty() {
+            Err(ResolveError::NoUnreferencedVariables.into())
+        } else if unreferenced_vars.len() > 1 {
+            Err(ResolveError::MultipleUnreferencedVariables.into())
+        } else {
+            Ok(Command::Match(unreferenced_vars[0].name.clone()))
         }
-        self.vars = sorted;
-        self.sorted = true;
-        Ok(())
+    } else if commands.len() > 1 {
+        Err(ResolveError::MultipleCommandGiven.into())
+    } else {
+        Ok(commands.remove(0))
+    }
+}
+
+impl MoltFile {
+    pub(crate) fn command(&mut self) -> &ResolvedCommand {
+        &self.command
     }
 }

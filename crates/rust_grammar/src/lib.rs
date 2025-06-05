@@ -327,6 +327,8 @@ pub mod token;
 
 #[cfg(any(feature = "full", feature = "derive"))]
 mod attr;
+use molt_lib::Ctx;
+use parse::{ParseBuffer, ParseStream};
 pub use proc_macro2::Span;
 
 #[cfg(any(feature = "full", feature = "derive"))]
@@ -577,6 +579,18 @@ pub fn parse_ctx<T: parse::Parse>(s: &str) -> Result<(T, molt_lib::Ctx<Node>)> {
     crate::parse::parse_ctx(T::parse, s)
 }
 
+#[cfg(feature = "parsing")]
+#[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
+pub fn parse_with_ctx<T>(
+    ctx: ParseCtx,
+    f: impl FnOnce(ParseStream) -> Result<T>,
+    tokens: TokenStream,
+) -> Result<T> {
+    use parse::parse2_impl;
+
+    parse2_impl(ctx, f, tokens)
+}
+
 /// Parse the content of a file of Rust code.
 ///
 /// This is different from `syn::parse_str::<File>(content)` in two ways:
@@ -633,3 +647,7 @@ pub fn parse_file(mut content: &str) -> Result<File> {
     file.shebang = shebang;
     Ok(file)
 }
+
+pub use parse::ParseCtx;
+pub use proc_macro2::TokenStream;
+pub use proc_macro2::TokenTree;

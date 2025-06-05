@@ -1,0 +1,5 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (expr), stringify! (undefined_var))"
+---
+error: Reference to undefined variable.

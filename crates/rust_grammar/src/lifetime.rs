@@ -16,7 +16,7 @@ use std::hash::{Hash, Hasher};
 ///   the XID_Start property.
 /// - All following characters must be Unicode code points with the XID_Continue
 ///   property.
-#[derive(derive_macro::GetDependencies, Debug)]
+#[derive(Debug)]
 pub struct Lifetime {
     pub apostrophe: Span,
     pub ident: Ident,

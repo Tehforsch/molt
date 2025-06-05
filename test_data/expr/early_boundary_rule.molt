@@ -1,3 +1,18 @@
+// The early_boundary_rule parsing mode for expressions is a special case
+// for the ambiguity in the rust grammar:
+//
+// `match foo { bar => if cond { f } else { g } () => false }`
+// vs
+// `let _ = [if cond { f } else { g } () ];`
+//
+// where in one case the `()` is parsed as part of the next expression (a
+// match arm in this case) and in one case, it is parsed as part of the
+// next expression (a function call).
+//
+// This test makes sure we run into this branch of the parser
+// and that a variable is treated as an atomic expression.
+
+let a: Expr;
 let x: Expr = {
     match foo {
         bar => $a {},

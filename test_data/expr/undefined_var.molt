@@ -1,0 +1,4 @@
+// test that we find undefined vars in
+// patterns and return an error before
+// running into issues further down the line
+let foo: Expr = { 1 + $bar };

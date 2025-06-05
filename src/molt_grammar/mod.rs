@@ -1,25 +1,41 @@
 mod parse;
 
-use molt_lib::{Id, NodeId, Var, VarDecl};
-use rust_grammar::{Expr, Item, Kind, Lit, Node, Stmt, parse::ParseStream};
+use molt_lib::{Id, NodeId, VarDecl};
+use rust_grammar::{Expr, Item, Kind, Lit, Node, Stmt, TokenStream, parse::ParseStream};
+
+pub(crate) struct UnresolvedMoltFile {
+    pub vars: Vec<UnresolvedVarDecl>,
+    pub commands: Vec<Command<String>>,
+}
+
+pub struct UnresolvedVarDecl {
+    pub name: String,
+    pub kind: UserKind,
+    pub tokens: Option<TokenStream>,
+}
+
+pub(crate) enum Decl {
+    VarDecl(UnresolvedVarDecl),
+    Command(Command<String>),
+}
 
 #[derive(Debug)]
 pub(crate) struct MoltFile {
     pub vars: Vec<VarDecl>,
-    pub commands: Vec<Command>,
-    pub sorted: bool,
+    pub command: Command<Id>,
 }
-
-pub(crate) enum Decl {
-    VarDecl(VarDecl),
-    Command(Command),
-}
-
-pub type VarId = Id;
 
 #[derive(Debug)]
-pub(crate) enum Command {
-    Match(Id),
+pub(crate) enum Command<T> {
+    Match(T),
+}
+
+impl<T> Command<T> {
+    pub fn map<S>(self, f: impl Fn(T) -> S) -> Command<S> {
+        match self {
+            Command::Match(t) => Command::Match(f(t)),
+        }
+    }
 }
 
 macro_rules! define_user_kind {

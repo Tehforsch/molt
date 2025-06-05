@@ -11,7 +11,7 @@ macro_rules! ast_struct {
         check_keyword_matches!(struct $struct);
 
         #[cfg(feature = "full")]
-        #[derive(derive_macro::CmpSyn, derive_macro::GetDependencies, Debug)]
+        #[derive(derive_macro::CmpSyn, Debug)]
         $(#[$attr])* $pub $struct $name $body
 
         #[cfg(all(not(feature = "full"), feature = "printing"))]
@@ -29,7 +29,7 @@ macro_rules! ast_struct {
         check_keyword_matches!(pub $pub);
         check_keyword_matches!(struct $struct);
 
-        #[derive(derive_macro::CmpSyn, derive_macro::GetDependencies, Debug)]
+        #[derive(derive_macro::CmpSyn, Debug)]
         $(#[$attr])* $pub $struct $name $body
     };
 }
@@ -43,7 +43,7 @@ macro_rules! ast_enum {
         check_keyword_matches!(pub $pub);
         check_keyword_matches!(enum $enum);
 
-        #[derive(derive_macro::CmpSyn, derive_macro::GetDependencies, Debug)]
+        #[derive(derive_macro::CmpSyn, Debug)]
         $(#[$enum_attr])* $pub $enum $name $body
     };
 }
@@ -57,7 +57,7 @@ macro_rules! ast_enum_of_structs {
         check_keyword_matches!(enum $enum);
 
         $(#[$enum_attr])*
-        #[derive(derive_macro::CmpSyn, derive_macro::GetDependencies, Debug)]
+        #[derive(derive_macro::CmpSyn, Debug)]
             $pub $enum $name $body
 
         ast_enum_of_structs_impl!($name $body);

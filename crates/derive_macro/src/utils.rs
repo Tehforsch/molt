@@ -27,10 +27,6 @@ fn is_nested_type(ty: &Type, outer: &str, inner: &str) -> bool {
     false
 }
 
-pub(crate) fn is_node_id(ty: &Type) -> bool {
-    type_path_matches(ty, "NodeId")
-}
-
 pub(crate) fn is_node_list(ty: &Type) -> bool {
     type_path_matches(ty, "NodeList")
 }

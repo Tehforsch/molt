@@ -512,17 +512,26 @@ impl<Node: GetKind> Ctx<Node> {
         }
     }
 
-    pub fn get_kind_by_name(&self, name: &str) -> Node::Kind {
+    fn get_var_by_name(&self, name: &str) -> (Id, &Var<Node>) {
         self.vars
             .iter()
-            .find(|var| var.name == name)
-            .map(|var| var.kind)
+            .enumerate()
+            .find(|(_, var)| var.name == name)
+            .map(|(i, var)| (Id(InternalId::Pat(i)), var))
             // Var resolution should take care of
             // any undefined variables in any molt
             // expression, so we will always find
             // a matching variable for any identifier
             // we encounter.
             .unwrap()
+    }
+
+    pub fn get_kind_by_name(&self, name: &str) -> Node::Kind {
+        self.get_var_by_name(name).1.kind
+    }
+
+    pub fn get_id_by_name(&self, name: &str) -> Id {
+        self.get_var_by_name(name).0
     }
 
     pub fn iter(&self) -> impl Iterator<Item = Id> {

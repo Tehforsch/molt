@@ -8,7 +8,7 @@ pub use error::emit_error;
 pub use input::{Diagnostic, FileId, Input, MoltSource};
 
 use codespan_reporting::{diagnostic::Label, files::Files};
-use molt_grammar::{Command, MoltFile};
+use molt_grammar::{Command, MoltFile, UnresolvedMoltFile};
 
 use molt_lib::{Id, Match, MatchCtx};
 use rust_grammar::{
@@ -39,7 +39,9 @@ impl MoltFile {
     pub(crate) fn new(input: &Input) -> Result<(Self, PatCtx), Error> {
         let file_id = input.molt_file_id();
         let source = input.source(file_id).unwrap();
-        rust_grammar::parse_ctx(source).map_err(|e| Error::parse(e, file_id))
+        let unresolved: UnresolvedMoltFile =
+            rust_grammar::parse_str(source).map_err(|e| Error::parse(e, file_id))?;
+        unresolved.resolve(file_id)
     }
 
     pub(crate) fn match_pattern(
@@ -117,10 +119,9 @@ pub fn run(input: &Input) -> Result<Vec<Diagnostic>, Error> {
     for rust_file_id in input.iter_rust_src() {
         let (_, ast_ctx) = RustFile::new(&input, rust_file_id)?;
         let (mut molt_file, pat_ctx) = MoltFile::new(&input)?;
-        molt_file.sort_vars(&pat_ctx)?;
-        let command = molt_file.get_command()?;
-        match command {
+        match molt_file.command() {
             Command::Match(pat_var) => {
+                let pat_var = *pat_var;
                 let match_result = molt_file.match_pattern(
                     ast_ctx,
                     pat_ctx,
@@ -206,7 +207,8 @@ mod tests {
             function_chain,
             trailing_brace,
             stmts,
-            nested_stmt
+            nested_stmt,
+            undefined_var,
         )
     );
 }
