@@ -512,6 +512,19 @@ impl<Node: GetKind> Ctx<Node> {
         }
     }
 
+    pub fn get_kind_by_name(&self, name: &str) -> Node::Kind {
+        self.vars
+            .iter()
+            .find(|var| var.name == name)
+            .map(|var| var.kind)
+            // Var resolution should take care of
+            // any undefined variables in any molt
+            // expression, so we will always find
+            // a matching variable for any identifier
+            // we encounter.
+            .unwrap()
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = Id> {
         (0..self.nodes.len()).map(|id| Id(InternalId::Real(id)))
     }

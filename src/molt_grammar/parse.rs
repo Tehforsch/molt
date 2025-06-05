@@ -1,4 +1,5 @@
 use molt_lib::VarDecl;
+use rust_grammar::ext::IdentExt;
 use rust_grammar::{Ident, Node, Token};
 use rust_grammar::{Result, braced, parse::Parse, parse::ParseStream};
 
@@ -44,7 +45,7 @@ struct ParseVarDecl(VarDecl);
 impl Parse for ParseVarDecl {
     fn parse(input: ParseStream) -> Result<Self> {
         let _: Token![let] = input.parse()?;
-        let var: Ident = input.parse()?;
+        let var: Ident = input.call(Ident::parse_any)?;
         let _: Token![:] = input.parse()?;
         let kind: UserKind = input.parse()?;
         let var: Var<Node> = Var::new(var.to_string(), kind.into());

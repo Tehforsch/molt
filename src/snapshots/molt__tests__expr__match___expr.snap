@@ -174,3 +174,15 @@ note: Match
    │
 12 │     let foo = bar.baz().bla().qux();
    │               ^^^^^^^^^^^^^^^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":15:9
+   │
+15 │         foo();
+   │         ^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":15:9
+   │
+15 │         foo();
+   │         ^^^^^ $x

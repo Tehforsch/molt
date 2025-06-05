@@ -1732,7 +1732,7 @@ pub(crate) mod parsing {
     fn atom_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedPat<Expr>> {
         use molt_lib::SpannedPat;
 
-        if let Some(var) = input.parse_var() {
+        if let Some(var) = input.parse_var::<Expr>() {
             return var;
         }
         let real: SpannedPat<Expr> = if input.peek(token::Group) {

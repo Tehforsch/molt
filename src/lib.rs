@@ -200,6 +200,13 @@ mod tests {
     test_match_pattern!(ranges, ());
     test_match_pattern!(
         expr,
-        (expr, early_boundary_rule, function_chain, trailing_brace)
+        (
+            expr,
+            early_boundary_rule,
+            function_chain,
+            trailing_brace,
+            stmts,
+            nested_stmt
+        )
     );
 }

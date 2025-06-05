@@ -10,4 +10,8 @@ fn foo() {
     }
 
     let foo = bar.baz().bla().qux();
+
+    fn inner() {
+        foo();
+    }
 }

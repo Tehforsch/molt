@@ -1,0 +1,5 @@
+---
+source: src/lib.rs
+expression: "super :: super ::\nmatch_pattern(stringify! (expr), stringify! (trailing_brace))"
+---
+

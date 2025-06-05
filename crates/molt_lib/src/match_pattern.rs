@@ -109,13 +109,14 @@ impl Match {
         pat_id: Id,
         pat_type: PatType,
     ) {
-        // Need to double check this logic, but
-        // the idea here is that as long as we're checking
-        // comparing things with a given pat type, this won't change for
-        // any calls further down the line (unless it explicitly changes it add_binding).
-        // The conventional thing to do here would be to pass the pat type down
-        // the line in the `cmp_*` calls, but this is quite cumbersome given that
-        // it appears absolutely everywhere, so I'm doing this.
+        // Need to double check this logic, but the idea here is that
+        // as long as we're comparing things with a given pat type,
+        // this won't change for any calls further down the line
+        // (unless it explicitly changes it via add_binding).  The
+        // conventional thing to do here would be to pass the pat type
+        // down the line in the `cmp_*` calls, but this is quite
+        // cumbersome given that it appears absolutely everywhere, so
+        // I'm doing this.
         self.pat_type = pat_type;
         let ast_kind = ctx.ast_ctx.get_kind(ast_id);
         let pat_kind = ctx.get_kind(pat_id, pat_type);
@@ -124,10 +125,10 @@ impl Match {
                 "Compare ({:?} {:?})\n\t{}\n\t{}",
                 ast_kind,
                 pat_kind,
-                ctx.print_ast(ast_id),
+                ctx.print_ast(ast_id).replace("\n", " "),
                 match pat_type {
-                    PatType::FromAst => ctx.print_ast(pat_id),
-                    PatType::FromPat => ctx.print_pat(pat_id),
+                    PatType::FromAst => ctx.print_ast(pat_id).replace("\n", " "),
+                    PatType::FromPat => ctx.print_pat(pat_id).replace("\n", " "),
                 }
             );
         }

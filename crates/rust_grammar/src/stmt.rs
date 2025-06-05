@@ -82,7 +82,6 @@ ast_struct! {
 #[cfg(feature = "parsing")]
 pub(crate) mod parsing {
     use crate::attr::Attribute;
-    use crate::classify;
     use crate::error::Result;
     use crate::expr::{Expr, ExprBlock, ExprMacro};
     use crate::ident::Ident;
@@ -95,7 +94,8 @@ pub(crate) mod parsing {
     use crate::stmt::{Block, Local, LocalInit, Stmt, StmtMacro};
     use crate::token;
     use crate::ty::Type;
-    use molt_lib::{NodeId, NodeList, Pattern, Spanned, ToNode, WithSpan};
+    use crate::{classify, Node};
+    use molt_lib::{NodeId, NodeList, Pattern, Spanned, ToNode, Var, WithSpan};
     use proc_macro2::TokenStream;
 
     struct AllowNoSemi(bool);
@@ -182,7 +182,8 @@ pub(crate) mod parsing {
                     Some(Stmt::Local(_)) | Some(Stmt::Item(_)) | Some(Stmt::Expr(_, Some(_))) => {
                         false
                     }
-                    None => todo!("Figure out default"),
+                    // A pattern variable statement has an implicit semicolon
+                    None => false,
                 };
                 stmts.push(stmt);
                 if input.is_empty() {
@@ -214,6 +215,10 @@ pub(crate) mod parsing {
     }
 
     fn parse_stmt(input: ParseStream, allow_nosemi: AllowNoSemi) -> Result<NodeId<Stmt>> {
+        if let Some(var) = input.parse_var::<Stmt>() {
+            return Ok(var?.unwrap_var());
+        }
+        let marker = input.marker();
         let begin = input.fork();
         let attrs = input.call(Attribute::parse_outer)?;
 
@@ -275,7 +280,7 @@ pub(crate) mod parsing {
             || is_item_macro
         {
             let item = item::parsing::parse_rest_of_item(begin, attrs, input)?;
-            Ok(input.add(Stmt::Item(item).with_span(todo!())))
+            Ok(input.add(Stmt::Item(item).with_span(input.span_from_marker(marker))))
         } else {
             stmt_expr(input, allow_nosemi, attrs)
         }

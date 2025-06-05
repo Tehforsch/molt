@@ -182,6 +182,7 @@
 #[path = "discouraged.rs"]
 pub mod discouraged;
 
+use discouraged::Speculative;
 use molt_lib::{Ctx, GetKind, Id, NodeId, Pattern, Spanned, SpannedPat, ToNode, Var, WithSpan};
 
 use crate::buffer::{Cursor, TokenBuffer};
@@ -1246,12 +1247,21 @@ impl<'a> ParseBuffer<'a> {
         self.ctx.borrow_mut().add(t)
     }
 
+    fn kind_matches(&self, ident: &Ident, kind: crate::Kind) -> bool {
+        self.ctx().get_kind_by_name(&ident.to_string()) == kind
+    }
+
     pub fn parse_var<T: ToNode<Node>>(&self) -> Option<Result<SpannedPat<T>>> {
         let transposed = || -> Result<Option<SpannedPat<T>>> {
-            if self.peek(Token![$]) {
-                let marker = self.marker();
-                let _: Token![$] = self.parse()?;
-                let ident: Ident = self.parse()?;
+            let ahead = self.fork();
+            if ahead.peek(Token![$]) {
+                let marker = ahead.marker();
+                let _: Token![$] = ahead.parse()?;
+                let ident: Ident = ahead.parse()?;
+                if !ahead.kind_matches(&ident, T::kind()) {
+                    return Ok(None);
+                }
+                self.advance_to(&ahead);
                 let span = self.span_from_marker(marker);
                 let id = self
                     .add_var::<T>(Var::new(ident.to_string(), T::kind()))

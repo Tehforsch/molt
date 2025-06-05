@@ -1,0 +1,52 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (expr), stringify! (stmts))"
+---
+note: Match
+  ┌─ "test_data/expr/main.rs":2:5
+  │
+2 │     (x+1);
+  │     ^^^^^^ $x
+
+note: Match
+  ┌─ "test_data/expr/main.rs":3:5
+  │
+3 │     foo.0.0.0.0;
+  │     ^^^^^^^^^^^^ $x
+
+note: Match
+  ┌─ "test_data/expr/main.rs":4:5
+  │
+4 │     foo.0.0.0.0.0;
+  │     ^^^^^^^^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":5:5
+   │  
+ 5 │ ╭     match x {
+ 6 │ │         foo..bar => {},
+ 7 │ │         ..bar => {},
+ 8 │ │         .. => {},
+ 9 │ │         'a' => {},
+10 │ │     }
+   │ ╰─────^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":12:5
+   │
+12 │     let foo = bar.baz().bla().qux();
+   │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":15:9
+   │
+15 │         foo();
+   │         ^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":14:5
+   │  
+14 │ ╭     fn inner() {
+15 │ │         foo();
+16 │ │     }
+   │ ╰─────^ $x
