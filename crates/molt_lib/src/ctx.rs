@@ -489,11 +489,11 @@ impl<Node: GetKind> Ctx<Node> {
         let t = T::from_node(node).unwrap();
         let new_node = f(t);
         let id = if new_node.kind() == S::kind() {
+            assert_eq!(S::kind(), new_node.kind());
             Some(id.typed())
         } else {
             None
         };
-        assert_eq!(T::kind(), new_node.kind());
         self.nodes.insert(idx, new_node);
         id
     }

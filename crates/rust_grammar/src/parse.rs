@@ -1186,6 +1186,11 @@ impl<'a> ParseBuffer<'a> {
         PosMarker { start }
     }
 
+    #[allow(unused)]
+    pub(crate) fn dbg<T: Debug + ToNode<Node>>(&self, t: NodeId<T>) {
+        println!("{:?}", self.ctx.borrow().get::<T>(t));
+    }
+
     pub fn ctx(&self) -> Ref<'_, Ctx<Node>> {
         self.ctx.borrow()
     }

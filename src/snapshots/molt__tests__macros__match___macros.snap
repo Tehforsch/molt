@@ -1,0 +1,5 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (macros), stringify! (macros))"
+---
+

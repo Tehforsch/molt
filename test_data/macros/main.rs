@@ -1,7 +1,3 @@
 fn foo() {
-    macro_call! {
-        foo;
-        bar;
-        baz;
-    }
+    macro_call!(foo = 3);
 }
