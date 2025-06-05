@@ -31,13 +31,24 @@ impl Span {
         }
     }
 
-    pub fn join(&self, span: Span) -> Span {
+    pub fn join(&self, span: impl Into<Span>) -> Span {
+        let span = span.into();
         if self.fake || span.fake {
             panic!();
         }
         Span {
             start: self.start.min(span.start),
             end: self.end.max(span.end),
+            fake: false,
+        }
+    }
+}
+
+impl From<std::ops::Range<usize>> for Span {
+    fn from(value: std::ops::Range<usize>) -> Self {
+        Self {
+            start: value.start,
+            end: value.end,
             fake: false,
         }
     }

@@ -1,0 +1,93 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (expr), stringify! (expr))"
+---
+note: Match
+  ┌─ "test_data/expr/main.rs":2:6
+  │
+2 │     (x+1);
+  │      ^ $x
+
+note: Match
+  ┌─ "test_data/expr/main.rs":2:8
+  │
+2 │     (x+1);
+  │        ^ $x
+
+note: Match
+  ┌─ "test_data/expr/main.rs":2:6
+  │
+2 │     (x+1);
+  │      ^^^ $x
+
+note: Match
+  ┌─ "test_data/expr/main.rs":2:5
+  │
+2 │     (x+1);
+  │     ^^^^^ $x
+
+note: Match
+  ┌─ "test_data/expr/main.rs":3:5
+  │
+3 │     foo.0.0.0.0;
+  │     ^^^ $x
+
+note: Match
+  ┌─ "test_data/expr/main.rs":3:5
+  │
+3 │     foo.0.0.0.0;
+  │     ^^^^^ $x
+
+note: Match
+  ┌─ "test_data/expr/main.rs":3:5
+  │
+3 │     foo.0.0.0.0;
+  │     ^^^^^^^ $x
+
+note: Match
+  ┌─ "test_data/expr/main.rs":3:5
+  │
+3 │     foo.0.0.0.0;
+  │     ^^^^^^^^^ $x
+
+note: Match
+  ┌─ "test_data/expr/main.rs":3:5
+  │
+3 │     foo.0.0.0.0;
+  │     ^^^^^^^^^^^ $x
+
+note: Match
+  ┌─ "test_data/expr/main.rs":4:5
+  │
+4 │     foo.0.0.0.0.0;
+  │     ^^^ $x
+
+note: Match
+  ┌─ "test_data/expr/main.rs":4:5
+  │
+4 │     foo.0.0.0.0.0;
+  │     ^^^^^ $x
+
+note: Match
+  ┌─ "test_data/expr/main.rs":4:5
+  │
+4 │     foo.0.0.0.0.0;
+  │     ^^^^^^^ $x
+
+note: Match
+  ┌─ "test_data/expr/main.rs":4:5
+  │
+4 │     foo.0.0.0.0.0;
+  │     ^^^^^^^^^ $x
+
+note: Match
+  ┌─ "test_data/expr/main.rs":4:5
+  │
+4 │     foo.0.0.0.0.0;
+  │     ^^^^^^^^^^^ $x
+
+note: Match
+  ┌─ "test_data/expr/main.rs":4:5
+  │
+4 │     foo.0.0.0.0.0;
+  │     ^^^^^^^^^^^^^ $x

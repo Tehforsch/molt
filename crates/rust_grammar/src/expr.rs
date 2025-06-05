@@ -1644,7 +1644,7 @@ pub(crate) mod parsing {
 
                 let float_token: Option<LitFloat> = input.parse()?;
                 if let Some(float_token) = float_token {
-                    if multi_index(&mut e, &mut dot_token, float_token)? {
+                    if multi_index(input, &mut e, &mut dot_token, float_token)? {
                         continue;
                     }
                 }
@@ -2976,44 +2976,48 @@ pub(crate) mod parsing {
         }
     }
 
-    // TODO not even the signature makes sense probably. Just changed it for convenience.
     fn multi_index(
+        input: ParseStream,
         e: &mut SpannedPat<Expr>,
         dot_token: &mut Token![.],
         float: LitFloat,
     ) -> Result<bool> {
-        todo!()
-        // let float_token = float.token();
-        // let float_span = float_token.span();
-        // let mut float_repr = float_token.to_string();
-        // let trailing_dot = float_repr.ends_with('.');
-        // if trailing_dot {
-        //     float_repr.truncate(float_repr.len() - 1);
-        // }
+        let float_token = float.token();
+        let float_span = float_token.span();
+        let mut float_repr = float_token.to_string();
+        let trailing_dot = float_repr.ends_with('.');
+        if trailing_dot {
+            float_repr.truncate(float_repr.len() - 1);
+        }
 
-        // let mut offset = 0;
-        // for part in float_repr.split('.') {
-        //     let mut index: Index =
-        //         crate::parse_str(part).map_err(|err| Error::new(float_span, err))?;
-        //     let part_end = offset + part.len();
-        //     index.span = float_token.subspan(offset..part_end).unwrap_or(float_span);
+        let mut offset = 0;
+        for part in float_repr.split('.') {
+            let mut index: Index =
+                crate::parse_str(part).map_err(|err| Error::new(float_span, err))?;
+            let part_end = offset + part.len();
+            index.span = float_token.subspan(offset..part_end).unwrap_or(float_span);
 
-        //     let base = mem::replace(e, Expr::PLACEHOLDER);
-        //     *e = Expr::Field(ExprField {
-        //         attrs: Vec::new(),
-        //         base,
-        //         dot_token: Token![.](dot_token.span),
-        //         member: Member::Unnamed(index),
-        //     });
+            let base = mem::replace(
+                e,
+                Expr::PLACEHOLDER.pattern_with_span(molt_lib::Span::fake()),
+            );
+            let span = base.span().join(index.span.byte_range());
+            *e = Expr::Field(ExprField {
+                attrs: Vec::new(),
+                base: input.add_pat(base),
+                dot_token: Token![.](dot_token.span),
+                member: Member::Unnamed(index),
+            })
+            .pattern_with_span(span);
 
-        //     let dot_span = float_token
-        //         .subspan(part_end..part_end + 1)
-        //         .unwrap_or(float_span);
-        //     *dot_token = Token![.](dot_span);
-        //     offset = part_end + 1;
-        // }
+            let dot_span = float_token
+                .subspan(part_end..part_end + 1)
+                .unwrap_or(float_span);
+            *dot_token = Token![.](dot_span);
+            offset = part_end + 1;
+        }
 
-        // Ok(!trailing_dot)
+        Ok(!trailing_dot)
     }
 
     #[cfg(feature = "full")]
