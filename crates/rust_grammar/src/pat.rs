@@ -696,23 +696,22 @@ pub(crate) mod parsing {
     }
 
     fn pat_lit_or_range(input: ParseStream) -> Result<Pat> {
-        todo!()
-        // let start = input.call(pat_range_bound)?.unwrap();
-        // if input.peek(Token![..]) {
-        //     let limits = RangeLimits::parse_obsolete(input)?;
-        //     let end = input.call(pat_range_bound)?;
-        //     if let (RangeLimits::Closed(_), None) = (&limits, &end) {
-        //         return Err(input.error("expected range upper bound"));
-        //     }
-        //     Ok(Pat::Range(ExprRange {
-        //         attrs: Vec::new(),
-        //         start: Some(start.into_expr()),
-        //         limits,
-        //         end: end.map(PatRangeBound::into_expr),
-        //     }))
-        // } else {
-        //     Ok(start.into_pat())
-        // }
+        let start = input.call_spanned(pat_range_bound)?.transpose().unwrap();
+        if input.peek(Token![..]) {
+            let limits = RangeLimits::parse_obsolete(input)?;
+            let end = input.call_spanned(pat_range_bound)?.transpose();
+            if let (RangeLimits::Closed(_), None) = (&limits, &end) {
+                return Err(input.error("expected range upper bound"));
+            }
+            Ok(Pat::Range(ExprRange {
+                attrs: Vec::new(),
+                start: Some(input.add_pat(start.map_real(|start| start.into_expr()))),
+                limits,
+                end: end.map(|end| input.add_pat(end.map_real(|end| end.into_expr()))),
+            }))
+        } else {
+            Ok(start.take().unwrap_real().into_pat())
+        }
     }
 
     // Patterns that can appear on either side of a range pattern.

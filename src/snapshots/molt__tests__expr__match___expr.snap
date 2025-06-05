@@ -117,9 +117,36 @@ note: Match
   │                     ^^ $x
 
 note: Match
-  ┌─ "test_data/expr/main.rs":5:5
-  │  
-5 │ ╭     match x {
-6 │ │         foo..bar => {},
-7 │ │     }
-  │ ╰─────^ $x
+  ┌─ "test_data/expr/main.rs":7:11
+  │
+7 │         ..bar => {},
+  │           ^^^ $x
+
+note: Match
+  ┌─ "test_data/expr/main.rs":7:18
+  │
+7 │         ..bar => {},
+  │                  ^^ $x
+
+note: Match
+  ┌─ "test_data/expr/main.rs":8:15
+  │
+8 │         .. => {},
+  │               ^^ $x
+
+note: Match
+  ┌─ "test_data/expr/main.rs":9:16
+  │
+9 │         'a' => {},
+  │                ^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":5:5
+   │  
+ 5 │ ╭     match x {
+ 6 │ │         foo..bar => {},
+ 7 │ │         ..bar => {},
+ 8 │ │         .. => {},
+ 9 │ │         'a' => {},
+10 │ │     }
+   │ ╰─────^ $x
