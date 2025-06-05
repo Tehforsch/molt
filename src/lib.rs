@@ -3,12 +3,13 @@ mod input;
 pub(crate) mod molt_grammar;
 mod resolve;
 
+pub use error::Error;
+pub use error::emit_error;
+pub use input::{Diagnostic, FileId, Input, MoltSource};
+
 use codespan_reporting::{diagnostic::Label, files::Files};
-use error::emit_error;
 use molt_grammar::{Command, MoltFile};
 
-pub use error::Error;
-pub use input::{Diagnostic, FileId, Input, MoltSource};
 use molt_lib::{Id, Match, MatchCtx};
 use rust_grammar::{
     Node,
@@ -28,14 +29,6 @@ type Ctx = molt_lib::Ctx<Node>;
 pub type PatCtx = Ctx;
 pub type AstCtx = Ctx;
 
-fn parse_rust_file(code: &str) -> Result<(RustFile, Ctx), crate::Error> {
-    Ok(rust_grammar::parse_ctx(code)?)
-}
-
-fn parse_molt_file(code: &str) -> Result<(MoltFile, Ctx), crate::Error> {
-    Ok(rust_grammar::parse_ctx(code)?)
-}
-
 pub(crate) struct MatchResult {
     pub matches: Vec<Match>,
     pub ctx: MatchCtx<Node>,
@@ -46,11 +39,7 @@ impl MoltFile {
     pub(crate) fn new(input: &Input) -> Result<(Self, PatCtx), Error> {
         let file_id = input.molt_file_id();
         let source = input.source(file_id).unwrap();
-        let result = parse_molt_file(source);
-        result.map_err(|err| {
-            emit_error(input, file_id, &err);
-            err
-        })
+        rust_grammar::parse_ctx(source).map_err(|e| Error::parse(e, file_id))
     }
 
     pub(crate) fn match_pattern(
@@ -87,14 +76,7 @@ impl MoltFile {
 impl RustFile {
     pub(crate) fn new(input: &Input, file_id: FileId) -> Result<(Self, Ctx), Error> {
         let source = input.source(file_id).unwrap();
-        let result = parse_rust_file(source);
-        match result {
-            Ok((file, ctx)) => Ok((file, ctx)),
-            Err(err) => {
-                emit_error(input, file_id, &err);
-                Err(err)
-            }
-        }
+        rust_grammar::parse_ctx(source).map_err(|e| Error::parse(e, file_id))
     }
 }
 
@@ -159,7 +141,7 @@ mod tests {
 
     use crate::{
         RustFile,
-        error::emit_diagnostic_str,
+        error::{emit_diagnostic_str, make_error_diagnostic},
         input::{Contents, Input, MoltSource},
     };
 
@@ -179,12 +161,15 @@ mod tests {
         let input = Input::new(MoltSource::file(molt_path).unwrap())
             .with_rust_src_file(&rust_path)
             .unwrap();
-        let diagnostics = super::run(&input).unwrap();
-        diagnostics
-            .into_iter()
-            .map(|diagnostic| emit_diagnostic_str(&input, diagnostic))
-            .collect::<Vec<_>>()
-            .join("")
+        let diagnostics = super::run(&input);
+        match diagnostics {
+            Ok(diagnostics) => diagnostics
+                .into_iter()
+                .map(|diagnostic| emit_diagnostic_str(&input, diagnostic))
+                .collect::<Vec<_>>()
+                .join(""),
+            Err(err) => emit_diagnostic_str(&input, make_error_diagnostic(&err)),
+        }
     }
 
     macro_rules! test_match_pattern {
@@ -213,5 +198,5 @@ mod tests {
     test_match_pattern!(control_flow, ());
     test_match_pattern!(arrays, (array));
     test_match_pattern!(ranges, ());
-    test_match_pattern!(expr, (expr));
+    test_match_pattern!(expr, (expr, early_boundary_rule));
 }

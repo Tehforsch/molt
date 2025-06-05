@@ -12,25 +12,25 @@ use crate::resolve::ResolveError;
 
 #[derive(Debug)]
 pub enum Error {
-    Parse(rust_grammar::Error),
+    Parse(rust_grammar::Error, FileId),
     Resolve(ResolveError),
     Misc(String),
 }
 
 impl Error {
-    fn span(&self) -> Option<Span> {
+    fn span_and_file_id(&self) -> Option<(Span, FileId)> {
         match self {
-            Error::Parse(error) => Some(error.span()),
+            Error::Parse(error, file_id) => Some((error.span(), *file_id)),
             Error::Resolve(_) => None,
             Error::Misc(_) => None,
         }
     }
 }
 
-pub(crate) fn make_error_diagnostic(file: FileId, err: &Error) -> Diagnostic<FileId> {
+pub(crate) fn make_error_diagnostic(err: &Error) -> Diagnostic<FileId> {
     let message = format!("{}", err);
     let mut diagnostic = Diagnostic::error().with_message(&message);
-    if let Some(span) = err.span() {
+    if let Some((span, file)) = err.span_and_file_id() {
         diagnostic = diagnostic.with_labels(vec![
             Label::primary(file, span.byte_range()).with_message(&message),
         ]);
@@ -38,11 +38,17 @@ pub(crate) fn make_error_diagnostic(file: FileId, err: &Error) -> Diagnostic<Fil
     diagnostic
 }
 
-pub(crate) fn emit_error(input: &Input, file: FileId, err: &Error) {
-    let writer = StandardStream::stderr(ColorChoice::Always);
-    let config = codespan_reporting::term::Config::default();
-    let diagnostic = make_error_diagnostic(file, err);
-    term::emit(&mut writer.lock(), &config, input, &diagnostic).unwrap();
+pub fn emit_error<T>(input: &Input, err: Result<T, Error>) -> Result<T, Error> {
+    match err {
+        Ok(t) => Ok(t),
+        Err(e) => {
+            let writer = StandardStream::stderr(ColorChoice::Always);
+            let config = codespan_reporting::term::Config::default();
+            let diagnostic = make_error_diagnostic(&e);
+            term::emit(&mut writer.lock(), &config, input, &diagnostic).unwrap();
+            Err(e)
+        }
+    }
 }
 
 #[cfg(test)]
@@ -55,23 +61,22 @@ pub(crate) fn emit_diagnostic_str(input: &Input, diagnostic: Diagnostic<FileId>)
     String::from_utf8(writer.into_inner()).unwrap()
 }
 
-macro_rules! impl_from {
-    ($ty: ty, $ident: ident) => {
-        impl From<$ty> for Error {
-            fn from(t: $ty) -> Self {
-                Self::$ident(t)
-            }
-        }
-    };
+impl From<ResolveError> for Error {
+    fn from(t: ResolveError) -> Self {
+        Self::Resolve(t)
+    }
 }
 
-impl_from!(ResolveError, Resolve);
-impl_from!(rust_grammar::Error, Parse);
+impl Error {
+    pub fn parse(t: rust_grammar::Error, file_id: FileId) -> Self {
+        Self::Parse(t, file_id)
+    }
+}
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::Parse(error) => write!(f, "{}", error),
+            Error::Parse(error, _) => write!(f, "{}", error),
             Error::Resolve(error) => write!(f, "{}", error),
             Error::Misc(s) => write!(f, "{}", s),
         }

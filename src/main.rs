@@ -6,7 +6,7 @@ use codespan_reporting::term::{
     self, Config,
     termcolor::{ColorChoice, StandardStream},
 };
-use molt::{Input, MoltSource, run};
+use molt::{Input, MoltSource, emit_error, run};
 use std::io;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
@@ -62,7 +62,7 @@ fn main() -> Result<()> {
     let input = Input::new(MoltSource::file(&args.transform_file).unwrap())
         .with_rust_src_files(source_files.iter())
         .unwrap();
-    let diagnostics = run(&input)?;
+    let diagnostics = emit_error(&input, run(&input))?;
     let writer = StandardStream::stderr(ColorChoice::Always);
     let config = Config::default();
     for diagnostic in diagnostics {

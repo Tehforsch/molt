@@ -2069,7 +2069,6 @@ pub(crate) mod parsing {
             };
         }
         match expr {
-            None => todo!("Figure out default"),
             Some(Expr::If(_))
             | Some(Expr::While(_))
             | Some(Expr::ForLoop(_))
@@ -2079,6 +2078,10 @@ pub(crate) mod parsing {
             | Some(Expr::Unsafe(_))
             | Some(Expr::Const(_))
             | Some(Expr::Block(_)) => false,
+            // A variable is an atom-like expression,
+            // so we return the same default as for
+            // atomic expressions.
+            None => true,
             _ => true,
         }
     }

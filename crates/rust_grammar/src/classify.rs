@@ -67,7 +67,9 @@ pub(crate) fn requires_comma_to_be_match_arm(input: ParseStream, expr: NodeId<Ex
             | Expr::Yield(_)
             | Expr::Verbatim(_) => true,
         },
-        None => todo!("Figure out default"),
+        // A variable is like an atomic expression,
+        // so we require a comma.
+        None => true,
     }
 }
 

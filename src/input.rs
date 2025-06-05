@@ -11,7 +11,7 @@ pub struct Input {
     molt_src: MoltSource,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum FileId {
     Rust(usize),
     Molt,
