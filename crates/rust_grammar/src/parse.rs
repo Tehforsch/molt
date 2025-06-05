@@ -1238,10 +1238,6 @@ impl<'a> ParseBuffer<'a> {
         self.ctx.borrow_mut().add_existing_var(var)
     }
 
-    pub fn add_fake_span<T: ToNode<Node>>(&mut self, t: T) -> NodeId<T> {
-        self.add(t.with_span(molt_lib::Span::fake()))
-    }
-
     pub fn from_marker<T>(&self, marker: PosMarker, t: T) -> Spanned<T> {
         t.with_span(self.span_from_marker(marker))
     }

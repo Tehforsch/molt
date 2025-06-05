@@ -246,7 +246,7 @@ pub(crate) mod parsing {
     use crate::ident::Ident;
     use crate::lit::Lit;
     use crate::mac::{self, Macro};
-    use crate::parse::{Parse, ParseBuffer, ParseStream};
+    use crate::parse::{Parse, ParseBuffer, ParseStream, PosMarker};
     use crate::pat::{
         FieldPat, Pat, PatIdent, PatOr, PatParen, PatReference, PatRest, PatSlice, PatStruct,
         PatTuple, PatTupleStruct, PatType, PatWild,
@@ -256,6 +256,7 @@ pub(crate) mod parsing {
     use crate::stmt::Block;
     use crate::token;
     use crate::verbatim;
+    use molt_lib::{Pattern, WithSpan};
     use proc_macro2::TokenStream;
 
     #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
@@ -417,6 +418,7 @@ pub(crate) mod parsing {
     }
 
     fn pat_path_or_macro_or_struct_or_range(input: ParseStream) -> Result<Pat> {
+        let marker = input.marker();
         let expr_style = true;
         let (qself, path) = path::parsing::qpath(input, expr_style)?;
 
@@ -443,7 +445,7 @@ pub(crate) mod parsing {
         } else if input.peek(token::Paren) {
             pat_tuple_struct(input, qself, path).map(Pat::TupleStruct)
         } else if input.peek(Token![..]) {
-            pat_range(input, qself, path)
+            pat_range(input, marker, qself, path)
         } else {
             Ok(Pat::Path(ExprPath {
                 attrs: Vec::new(),
@@ -601,29 +603,42 @@ pub(crate) mod parsing {
         })
     }
 
-    fn pat_range(input: ParseStream, qself: Option<QSelf>, path: Path) -> Result<Pat> {
-        todo!()
-        // let limits = RangeLimits::parse_obsolete(input)?;
-        // let end = input.call(pat_range_bound)?;
-        // if let (RangeLimits::Closed(_), None) = (&limits, &end) {
-        //     return Err(input.error("expected range upper bound"));
-        // }
-        // Ok(Pat::Range(ExprRange {
-        //     attrs: Vec::new(),
-        //     start: Some(input.add_fake_span(Expr::Path(ExprPath {
-        //         attrs: Vec::new(),
-        //         qself,
-        //         path,
-        //     }))),
-        //     limits,
-        //     end: end.map(PatRangeBound::into_expr),
-        // }))
+    fn pat_range(
+        input: ParseStream,
+        marker: PosMarker,
+        qself: Option<QSelf>,
+        path: Path,
+    ) -> Result<Pat> {
+        let start_span = input.span_from_marker(marker);
+        let limits = RangeLimits::parse_obsolete(input)?;
+        let end = input.call_spanned(pat_range_bound)?;
+        if let (RangeLimits::Closed(_), Pattern::Real(None)) = (&limits, &*end) {
+            return Err(input.error("expected range upper bound"));
+        }
+        let end = end
+            .map_real(|end| end.map(PatRangeBound::into_expr))
+            .transpose();
+        Ok(Pat::Range(ExprRange {
+            attrs: Vec::new(),
+            start: Some(
+                input.add(
+                    Expr::Path(ExprPath {
+                        attrs: Vec::new(),
+                        qself,
+                        path,
+                    })
+                    .with_span(start_span),
+                ),
+            ),
+            limits,
+            end: end.map(|end| input.add_pat(end)),
+        }))
     }
 
     fn pat_range_half_open(input: ParseStream) -> Result<Pat> {
         todo!()
         // let limits: RangeLimits = input.parse()?;
-        // let end = input.call(pat_range_bound)?;
+        // let end = input.call_spanned(pat_range_bound)?;
         // if end.is_some() {
         //     Ok(Pat::Range(ExprRange {
         //         attrs: Vec::new(),
@@ -709,12 +724,12 @@ pub(crate) mod parsing {
     }
 
     impl PatRangeBound {
-        fn into_expr(self) -> Box<Expr> {
-            Box::new(match self {
+        fn into_expr(self) -> Expr {
+            match self {
                 PatRangeBound::Const(pat) => Expr::Const(pat),
                 PatRangeBound::Lit(pat) => Expr::Lit(pat),
                 PatRangeBound::Path(pat) => Expr::Path(pat),
-            })
+            }
         }
 
         fn into_pat(self) -> Pat {

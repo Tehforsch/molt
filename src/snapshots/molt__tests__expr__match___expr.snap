@@ -91,3 +91,35 @@ note: Match
   │
 4 │     foo.0.0.0.0.0;
   │     ^^^^^^^^^^^^^ $x
+
+note: Match
+  ┌─ "test_data/expr/main.rs":5:11
+  │
+5 │     match x {
+  │           ^ $x
+
+note: Match
+  ┌─ "test_data/expr/main.rs":6:9
+  │
+6 │         foo..bar => {},
+  │         ^^^ $x
+
+note: Match
+  ┌─ "test_data/expr/main.rs":6:14
+  │
+6 │         foo..bar => {},
+  │              ^^^ $x
+
+note: Match
+  ┌─ "test_data/expr/main.rs":6:21
+  │
+6 │         foo..bar => {},
+  │                     ^^ $x
+
+note: Match
+  ┌─ "test_data/expr/main.rs":5:5
+  │  
+5 │ ╭     match x {
+6 │ │         foo..bar => {},
+7 │ │     }
+  │ ╰─────^ $x

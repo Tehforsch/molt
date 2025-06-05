@@ -2874,6 +2874,7 @@ pub(crate) mod parsing {
             let dot_dot_dot = dot_dot && input.peek(Token![...]);
             if dot_dot_eq {
                 input.parse().map(RangeLimits::Closed)
+            // deprecated in rust 1.26, removed in  1.53
             } else if dot_dot_dot {
                 let dot3: Token![...] = input.parse()?;
                 Ok(RangeLimits::Closed(Token![..=](dot3.spans)))

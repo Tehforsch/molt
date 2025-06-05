@@ -142,6 +142,18 @@ impl<T> SpannedPat<T> {
     }
 }
 
+impl<T> SpannedPat<Option<T>> {
+    pub fn transpose(self) -> Option<SpannedPat<T>> {
+        match self.item.transpose() {
+            Some(pat) => Some(Spanned {
+                span: self.span,
+                item: pat,
+            }),
+            None => None,
+        }
+    }
+}
+
 impl<T> std::ops::Deref for Spanned<T> {
     type Target = T;
 
@@ -210,6 +222,22 @@ impl<Real, Pat> Pattern<Real, Pat> {
         match &self {
             Pattern::Real(t) => Some(t),
             Pattern::Pat(_) => None,
+        }
+    }
+
+    pub fn map_real<S>(self, f: impl Fn(Real) -> S) -> Pattern<S, Pat> {
+        match self {
+            Pattern::Real(t) => Pattern::Real(f(t)),
+            Pattern::Pat(id) => Pattern::Pat(id),
+        }
+    }
+}
+
+impl<Real, Pat> Pattern<Option<Real>, Pat> {
+    pub fn transpose(self) -> Option<Pattern<Real, Pat>> {
+        match self {
+            Pattern::Real(opt) => opt.map(Pattern::Real),
+            Pattern::Pat(var) => Some(Pattern::Pat(var)),
         }
     }
 }
