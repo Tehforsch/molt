@@ -1,0 +1,2 @@
+let e: Expr;
+let x: Expr = { $e.bla().qux() };

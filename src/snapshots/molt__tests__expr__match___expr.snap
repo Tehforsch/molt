@@ -150,3 +150,27 @@ note: Match
  9 │ │         'a' => {},
 10 │ │     }
    │ ╰─────^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":12:15
+   │
+12 │     let foo = bar.baz().bla().qux();
+   │               ^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":12:15
+   │
+12 │     let foo = bar.baz().bla().qux();
+   │               ^^^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":12:15
+   │
+12 │     let foo = bar.baz().bla().qux();
+   │               ^^^^^^^^^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":12:15
+   │
+12 │     let foo = bar.baz().bla().qux();
+   │               ^^^^^^^^^^^^^^^^^^^^^ $x

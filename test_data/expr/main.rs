@@ -8,4 +8,6 @@ fn foo() {
         .. => {},
         'a' => {},
     }
+
+    let foo = bar.baz().bla().qux();
 }
