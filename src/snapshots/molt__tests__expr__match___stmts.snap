@@ -50,3 +50,45 @@ note: Match
 15 │ │         foo();
 16 │ │     }
    │ ╰─────^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":19:9
+   │
+19 │         expr1
+   │         ^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":21:9
+   │
+21 │         expr2
+   │         ^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":23:9
+   │
+23 │         expr3
+   │         ^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":25:9
+   │
+25 │         expr4
+   │         ^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":27:9
+   │
+27 │         expr5
+   │         ^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":18:5
+   │  
+18 │ ╭     if cond1 {
+19 │ │         expr1
+20 │ │     } else if cond2 {
+21 │ │         expr2
+   · │
+27 │ │         expr5
+28 │ │     }
+   │ ╰─────^ $x

@@ -1281,6 +1281,7 @@ impl<'a> ParseBuffer<'a> {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct PosMarker {
     start: usize,
 }

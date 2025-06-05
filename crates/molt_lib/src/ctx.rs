@@ -105,6 +105,10 @@ impl<T> Spanned<T> {
     pub fn decompose(self) -> (Span, T) {
         (self.span, self.item)
     }
+
+    pub fn set_span(&mut self, span: Span) {
+        self.span = span
+    }
 }
 
 impl<T> SpannedPat<T> {

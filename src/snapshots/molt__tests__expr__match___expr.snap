@@ -186,3 +186,115 @@ note: Match
    │
 15 │         foo();
    │         ^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":18:8
+   │
+18 │     if cond1 {
+   │        ^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":19:9
+   │
+19 │         expr1
+   │         ^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":20:15
+   │
+20 │     } else if cond2 {
+   │               ^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":21:9
+   │
+21 │         expr2
+   │         ^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":22:15
+   │
+22 │     } else if cond3 {
+   │               ^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":23:9
+   │
+23 │         expr3
+   │         ^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":24:15
+   │
+24 │     } else if cond4 {
+   │               ^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":25:9
+   │
+25 │         expr4
+   │         ^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":27:9
+   │
+27 │         expr5
+   │         ^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":26:12
+   │  
+26 │       } else {
+   │ ╭────────────^
+27 │ │         expr5
+28 │ │     }
+   │ ╰─────^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":24:12
+   │  
+24 │       } else if cond4 {
+   │ ╭────────────^
+25 │ │         expr4
+26 │ │     } else {
+27 │ │         expr5
+28 │ │     }
+   │ ╰─────^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":22:12
+   │  
+22 │       } else if cond3 {
+   │ ╭────────────^
+23 │ │         expr3
+24 │ │     } else if cond4 {
+25 │ │         expr4
+26 │ │     } else {
+27 │ │         expr5
+28 │ │     }
+   │ ╰─────^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":20:12
+   │  
+20 │       } else if cond2 {
+   │ ╭────────────^
+21 │ │         expr2
+22 │ │     } else if cond3 {
+23 │ │         expr3
+   · │
+27 │ │         expr5
+28 │ │     }
+   │ ╰─────^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":18:5
+   │  
+18 │ ╭     if cond1 {
+19 │ │         expr1
+20 │ │     } else if cond2 {
+21 │ │         expr2
+   · │
+27 │ │         expr5
+28 │ │     }
+   │ ╰─────^ $x

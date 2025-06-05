@@ -14,4 +14,16 @@ fn foo() {
     fn inner() {
         foo();
     }
+
+    if cond1 {
+        expr1
+    } else if cond2 {
+        expr2
+    } else if cond3 {
+        expr3
+    } else if cond4 {
+        expr4
+    } else {
+        expr5
+    }
 }

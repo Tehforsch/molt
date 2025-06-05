@@ -2159,11 +2159,12 @@ pub(crate) mod parsing {
     #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprIf {
         fn parse(input: ParseStream) -> Result<Self> {
+            let mut markers = vec![];
             let attrs = input.call(Attribute::parse_outer)?;
-
             let mut clauses = Vec::new();
             let mut expr;
             loop {
+                markers.push(input.marker());
                 let if_token: Token![if] = input.parse()?;
                 let cond = input.call(Expr::parse_without_eager_brace)?;
                 let then_branch: Block = input.parse()?;
@@ -2204,10 +2205,9 @@ pub(crate) mod parsing {
             }
 
             while let Some(prev) = clauses.pop() {
-                *input
-                    .ctx_mut()
-                    .get_real_mut(prev.else_branch.unwrap().1)
-                    .unwrap() = Expr::If(expr);
+                let marker = markers.pop().unwrap();
+                prev.else_branch.unwrap().1 =
+                    input.add(Expr::If(expr).with_span(input.span_from_marker(marker)));
                 expr = prev;
             }
             expr.attrs = attrs;
