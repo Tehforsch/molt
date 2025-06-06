@@ -10,4 +10,6 @@ impl<'a, const x: usize, T> Foo<'a, T> {
 }
 
 fn foo<T>(x: T) where for<'a> &'a Foo: Trait {
+    let closure = |x: usize, y: Foo<Bar>| {
+    };
 }

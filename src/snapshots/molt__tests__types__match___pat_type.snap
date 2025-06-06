@@ -1,0 +1,13 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (types), stringify! (pat_type))"
+---
+note: Match
+   ┌─ "test_data/types/main.rs":13:5
+   │  
+13 │ ╭     let closure = |x: usize, y: Foo<Bar>| {
+14 │ │     };
+   │ ╰──────^ $x
+   │  
+   = $ty1 = usize
+   = $ty2 = Foo<Bar>

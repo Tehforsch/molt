@@ -1,0 +1,7 @@
+let ty1: Type;
+let ty2: Type;
+
+let x: Stmt = {
+    let closure = |x: $ty1, y: $ty2| {
+    };
+};

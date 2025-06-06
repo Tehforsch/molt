@@ -97,3 +97,21 @@ note: Match
    │
 12 │ fn foo<T>(x: T) where for<'a> &'a Foo: Trait {
    │                               ^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/types/main.rs":13:23
+   │
+13 │     let closure = |x: usize, y: Foo<Bar>| {
+   │                       ^^^^^ $x
+
+note: Match
+   ┌─ "test_data/types/main.rs":13:37
+   │
+13 │     let closure = |x: usize, y: Foo<Bar>| {
+   │                                     ^^^ $x
+
+note: Match
+   ┌─ "test_data/types/main.rs":13:33
+   │
+13 │     let closure = |x: usize, y: Foo<Bar>| {
+   │                                 ^^^^^^^^ $x

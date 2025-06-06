@@ -258,7 +258,8 @@ mod tests {
             field_type,
             generic_default,
             const_param,
-            predicate
+            predicate,
+            pat_type,
         )
     );
     test_match_pattern!(fields, (fields, field_var));

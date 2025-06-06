@@ -1,5 +1,7 @@
 let ty: Type;
+let x: Stmt;
 let item: Item = {
     fn foo<T>(x: T) where for<'a> $ty: Trait {
+        $x
     }
 };
