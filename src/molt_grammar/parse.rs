@@ -14,7 +14,7 @@ impl Parse for UnresolvedMoltFile {
         let mut vars = vec![];
         while !parser.is_empty() {
             match parser.parse()? {
-                Decl::VarDecl(var) => vars.push(var),
+                Decl::VarDecl(new_vars) => vars.extend(new_vars.0.into_iter()),
                 Decl::Command(command) => commands.push(command),
             }
         }
@@ -32,10 +32,17 @@ impl Parse for Decl {
     }
 }
 
-impl Parse for UnresolvedVarDecl {
+pub struct UnresolvedVarDecls(Vec<UnresolvedVarDecl>);
+
+impl Parse for UnresolvedVarDecls {
     fn parse(input: ParseStream) -> Result<Self> {
         let _: Token![let] = input.parse()?;
         let var: Ident = input.call(Ident::parse_any)?;
+        let mut vars = vec![var];
+        while input.peek(Token![,]) {
+            let _: Token![,] = input.parse()?;
+            vars.push(input.call(Ident::parse_any)?);
+        }
         let _: Token![:] = input.parse()?;
         let kind: UserKind = input.parse()?;
         let tokens = if input.peek(Token![=]) {
@@ -48,11 +55,15 @@ impl Parse for UnresolvedVarDecl {
             None
         };
         let _: Token![;] = input.parse()?;
-        Ok(Self {
-            name: var.to_string(),
-            kind: kind.into(),
-            tokens,
-        })
+        Ok(Self(
+            vars.into_iter()
+                .map(|var| UnresolvedVarDecl {
+                    name: var.to_string(),
+                    kind: kind.into(),
+                    tokens: tokens.clone(),
+                })
+                .collect(),
+        ))
     }
 }
 

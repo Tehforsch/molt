@@ -1,6 +1,7 @@
 mod parse;
 
 use molt_lib::{Id, NodeId, VarDecl};
+use parse::UnresolvedVarDecls;
 use rust_grammar::{
     Expr, FieldNamed, FieldUnnamed, Item, Kind, Lit, Node, Stmt, TokenStream, Type,
     parse::{ParseStream, discouraged::Speculative},
@@ -18,7 +19,7 @@ pub struct UnresolvedVarDecl {
 }
 
 pub(crate) enum Decl {
-    VarDecl(UnresolvedVarDecl),
+    VarDecl(UnresolvedVarDecls),
     Command(Command<String>),
 }
 
