@@ -3,37 +3,49 @@ source: src/lib.rs
 expression: "super :: super :: match_pattern(stringify! (types), stringify! (types))"
 ---
 note: Match
-  ┌─ "test_data/types/main.rs":2:15
+  ┌─ "test_data/types/main.rs":2:14
   │
-2 │ pub const x: (Foo, Bar, Baz) = bar;
+2 │     bar: Bar<Baz>,
+  │              ^^^ $x
+
+note: Match
+  ┌─ "test_data/types/main.rs":2:10
+  │
+2 │     bar: Bar<Baz>,
+  │          ^^^^^^^^ $x
+
+note: Match
+  ┌─ "test_data/types/main.rs":5:15
+  │
+5 │ pub const x: (Foo, Bar, Baz) = bar;
   │               ^^^ $x
 
 note: Match
-  ┌─ "test_data/types/main.rs":2:20
+  ┌─ "test_data/types/main.rs":5:20
   │
-2 │ pub const x: (Foo, Bar, Baz) = bar;
+5 │ pub const x: (Foo, Bar, Baz) = bar;
   │                    ^^^ $x
 
 note: Match
-  ┌─ "test_data/types/main.rs":2:25
+  ┌─ "test_data/types/main.rs":5:25
   │
-2 │ pub const x: (Foo, Bar, Baz) = bar;
+5 │ pub const x: (Foo, Bar, Baz) = bar;
   │                         ^^^ $x
 
 note: Match
-  ┌─ "test_data/types/main.rs":2:14
+  ┌─ "test_data/types/main.rs":5:14
   │
-2 │ pub const x: (Foo, Bar, Baz) = bar;
+5 │ pub const x: (Foo, Bar, Baz) = bar;
   │              ^^^^^^^^^^^^^^^ $x
 
 note: Match
-  ┌─ "test_data/types/main.rs":4:21
+  ┌─ "test_data/types/main.rs":7:21
   │
-4 │ impl<'a, T> Foo<'a, T> {
+7 │ impl<'a, T> Foo<'a, T> {
   │                     ^ $x
 
 note: Match
-  ┌─ "test_data/types/main.rs":4:13
+  ┌─ "test_data/types/main.rs":7:13
   │
-4 │ impl<'a, T> Foo<'a, T> {
+7 │ impl<'a, T> Foo<'a, T> {
   │             ^^^^^^^^^^ $x

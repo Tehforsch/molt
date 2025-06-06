@@ -1,0 +1,6 @@
+let ty: Type;
+let x: Item = {
+    struct Foo {
+        bar: $ty,
+    }
+};
