@@ -1,0 +1,11 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (types), stringify! (as_trait))"
+---
+note: Match
+   ┌─ "test_data/types/main.rs":36:23
+   │
+36 │ fn foo<T>(t: T) where <T as Trait>::Item: Trait2 {
+   │                       ^^^^^^^^^^^^^^^^^^ $item
+   │
+   = $ty = T

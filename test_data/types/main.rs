@@ -32,3 +32,6 @@ fn foo(self: Box<Self>) {
 }
 
 const X: [usize; 3] = [1, 2, 3];
+
+fn foo<T>(t: T) where <T as Trait>::Item: Trait2 {
+}

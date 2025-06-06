@@ -175,3 +175,21 @@ note: Match
    │
 34 │ const X: [usize; 3] = [1, 2, 3];
    │          ^^^^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/types/main.rs":36:14
+   │
+36 │ fn foo<T>(t: T) where <T as Trait>::Item: Trait2 {
+   │              ^ $x
+
+note: Match
+   ┌─ "test_data/types/main.rs":36:24
+   │
+36 │ fn foo<T>(t: T) where <T as Trait>::Item: Trait2 {
+   │                        ^ $x
+
+note: Match
+   ┌─ "test_data/types/main.rs":36:23
+   │
+36 │ fn foo<T>(t: T) where <T as Trait>::Item: Trait2 {
+   │                       ^^^^^^^^^^^^^^^^^^ $x
