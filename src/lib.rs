@@ -252,7 +252,14 @@ mod tests {
     test_match_pattern!(macros, (macros));
     test_match_pattern!(
         types,
-        (types, nested_type, field_type, generic_default, const_param)
+        (
+            types,
+            nested_type,
+            field_type,
+            generic_default,
+            const_param,
+            predicate
+        )
     );
     test_match_pattern!(fields, (fields, field_var));
 

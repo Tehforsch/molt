@@ -8,3 +8,6 @@ pub const x: (Foo, Bar, Baz) = bar;
 
 impl<'a, const x: usize, T> Foo<'a, T> {
 }
+
+fn foo<T>(x: T) where for<'a> &'a Foo: Trait {
+}

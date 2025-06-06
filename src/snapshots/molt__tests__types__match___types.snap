@@ -79,3 +79,21 @@ note: Match
   │
 9 │ impl<'a, const x: usize, T> Foo<'a, T> {
   │                             ^^^^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/types/main.rs":12:14
+   │
+12 │ fn foo<T>(x: T) where for<'a> &'a Foo: Trait {
+   │              ^ $x
+
+note: Match
+   ┌─ "test_data/types/main.rs":12:35
+   │
+12 │ fn foo<T>(x: T) where for<'a> &'a Foo: Trait {
+   │                                   ^^^ $x
+
+note: Match
+   ┌─ "test_data/types/main.rs":12:31
+   │
+12 │ fn foo<T>(x: T) where for<'a> &'a Foo: Trait {
+   │                               ^^^^^^^ $x

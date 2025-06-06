@@ -1,0 +1,12 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (types), stringify! (predicate))"
+---
+note: Match
+   ┌─ "test_data/types/main.rs":12:1
+   │  
+12 │ ╭ fn foo<T>(x: T) where for<'a> &'a Foo: Trait {
+13 │ │ }
+   │ ╰─^ $item
+   │  
+   = $ty = &'a Foo
