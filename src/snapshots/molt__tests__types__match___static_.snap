@@ -1,0 +1,11 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (types), stringify! (static_))"
+---
+note: Match
+   ┌─ "test_data/types/main.rs":20:1
+   │
+20 │ static FOO: Baz = 50;
+   │ ^^^^^^^^^^^^^^^^^^^^^ $item
+   │
+   = $ty = Baz

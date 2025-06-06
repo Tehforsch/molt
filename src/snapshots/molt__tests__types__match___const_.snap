@@ -5,7 +5,7 @@ expression: "super :: super :: match_pattern(stringify! (types), stringify! (con
 note: Match
   ┌─ "test_data/types/main.rs":7:1
   │
-7 │ pub const x: (Foo, Bar, Baz) = bar;
+7 │ pub const X: (Foo, Bar, Baz) = bar;
   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $t
   │
   = $ty = (Foo, Bar, Baz)

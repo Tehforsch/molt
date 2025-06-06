@@ -1,0 +1,2 @@
+let ty: Type;
+let item: Item = { static FOO: $ty = 50; };

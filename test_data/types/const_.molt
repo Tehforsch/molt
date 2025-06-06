@@ -1,4 +1,4 @@
 let ty: Type;
 let t: Item = {
-    pub const x: $ty = bar;
+    pub const X: $ty = bar;
 };
