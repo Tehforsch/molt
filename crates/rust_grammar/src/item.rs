@@ -845,7 +845,7 @@ ast_struct! {
         pub mutability: Option<Token![mut]>,
         pub self_token: Token![self],
         pub colon_token: Option<Token![:]>,
-        pub ty: NodeId<Type>,
+        pub ty: Option<NodeId<Type>>,
     }
 }
 
@@ -906,7 +906,6 @@ ast_enum! {
 #[cfg(feature = "parsing")]
 pub(crate) mod parsing {
     use crate::attr::{self, Attribute};
-    use crate::derive;
     use crate::error::{Error, Result};
     use crate::expr::Expr;
     use crate::ext::IdentExt as _;
@@ -930,10 +929,11 @@ pub(crate) mod parsing {
     use crate::punctuated::Punctuated;
     use crate::restriction::Visibility;
     use crate::stmt::Block;
-    use crate::token;
     use crate::ty::{Abi, ReturnType, Type};
     use crate::verbatim;
-    use molt_lib::{NodeId, NodeList};
+    use crate::{derive, TypePath};
+    use crate::{token, TypeReference};
+    use molt_lib::{NodeId, NodeList, Pattern, SpannedPat, WithSpan};
     use proc_macro2::TokenStream;
 
     #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
@@ -1658,46 +1658,37 @@ pub(crate) mod parsing {
     #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for Receiver {
         fn parse(input: ParseStream) -> Result<Self> {
-            todo!()
-            // let reference = if input.peek(Token![&]) {
-            //     let ampersand: Token![&] = input.parse()?;
-            //     let lifetime: Option<Lifetime> = input.parse()?;
-            //     Some((ampersand, lifetime))
-            // } else {
-            //     None
-            // };
-            // let mutability: Option<Token![mut]> = input.parse()?;
-            // let self_token: Token![self] = input.parse()?;
-            // let colon_token: Option<Token![:]> = if reference.is_some() {
-            //     None
-            // } else {
-            //     input.parse()?
-            // };
-            // let ty: NodeId<Type> = if colon_token.is_some() {
-            //     input.parse()?
-            // } else {
-            //     let mut ty = Type::Path(TypePath {
-            //         qself: None,
-            //         path: Path::from(Ident::new("Self", self_token.span)),
-            //     });
-            //     if let Some((ampersand, lifetime)) = reference.as_ref() {
-            //         ty = Type::Reference(TypeReference {
-            //             and_token: Token![&](ampersand.span),
-            //             lifetime: lifetime.clone(),
-            //             mutability: mutability.as_ref().map(|m| Token![mut](m.span)),
-            //             elem: ty,
-            //         });
-            //     }
-            //     ty
-            // };
-            // Ok(Receiver {
-            //     attrs: Vec::new(),
-            //     reference,
-            //     mutability,
-            //     self_token,
-            //     colon_token,
-            //     ty,
-            // })
+            let reference = if input.peek(Token![&]) {
+                let ampersand: Token![&] = input.parse()?;
+                let lifetime: Option<Lifetime> = input.parse()?;
+                Some((ampersand, lifetime))
+            } else {
+                None
+            };
+            let mutability: Option<Token![mut]> = input.parse()?;
+            let self_token: Token![self] = input.parse()?;
+            let colon_token: Option<Token![:]> = if reference.is_some() {
+                None
+            } else {
+                input.parse()?
+            };
+            let ty: Option<NodeId<Type>> = if colon_token.is_some() {
+                Some(input.parse()?)
+            } else {
+                // This differs from the syn impl which adds
+                // an "artificial" Self/&Self type. Here, we
+                // make the type optional and simply don't set it
+                // for normal `self`/`&self`/`&mut self` receivers.
+                None
+            };
+            Ok(Receiver {
+                attrs: Vec::new(),
+                reference,
+                mutability,
+                self_token,
+                colon_token,
+                ty,
+            })
         }
     }
 
@@ -2605,74 +2596,81 @@ pub(crate) mod parsing {
             None
         };
 
-        todo!()
+        #[cfg(not(feature = "printing"))]
+        let first_ty_span = input.span();
+        let (span, mut first_ty) = input.parse_pat::<Type>()?.decompose();
+        let self_ty: NodeId<Type>;
+        let trait_;
 
-        // #[cfg(not(feature = "printing"))]
-        // let first_ty_span = input.span();
-        // let mut first_ty: Type = input.parse()?;
-        // let self_ty: Type;
-        // let trait_;
+        let is_impl_for = input.peek(Token![for]);
+        if is_impl_for {
+            {
+                let ctx = input.ctx();
+                let for_token: Token![for] = input.parse()?;
+                let mut first_ty_ref = first_ty.as_ref();
+                while let Pattern::Real(Type::Group(ty)) = first_ty_ref {
+                    first_ty_ref = ctx.get(ty.elem);
+                }
+                if let Pattern::Real(Type::Path(TypePath { qself: None, .. })) = first_ty_ref {
+                    while let Pattern::Real(Type::Group(ty)) = first_ty {
+                        // This is related to none-delimited types.
+                        // These may occur in the result from macro expansion,
+                        // which we currently do not treat anyways.
+                        unimplemented!("Parsing macro output not supported")
+                    }
+                    if let Pattern::Real(Type::Path(TypePath { qself: None, path })) = first_ty {
+                        trait_ = Some((polarity, path, for_token));
+                    } else {
+                        unreachable!();
+                    }
+                } else if !allow_verbatim_impl {
+                    #[cfg(feature = "printing")]
+                    return Err(Error::new_spanned(first_ty_ref, "expected trait path"));
+                    #[cfg(not(feature = "printing"))]
+                    return Err(Error::new(first_ty_span, "expected trait path"));
+                } else {
+                    trait_ = None;
+                }
+            }
+            self_ty = input.parse()?;
+        } else {
+            trait_ = None;
+            self_ty = if polarity.is_none() {
+                input.add_pat(first_ty.with_span(span))
+            } else {
+                input.add(
+                    Type::Verbatim(verbatim::between(&begin, input))
+                        .with_span(molt_lib::Span::fake()),
+                )
+            };
+        }
 
-        // let is_impl_for = input.peek(Token![for]);
-        // if is_impl_for {
-        //     let for_token: Token![for] = input.parse()?;
-        //     let mut first_ty_ref = &first_ty;
-        //     while let Type::Group(ty) = first_ty_ref {
-        //         first_ty_ref = &ty.elem;
-        //     }
-        //     if let Type::Path(TypePath { qself: None, .. }) = first_ty_ref {
-        //         while let Type::Group(ty) = first_ty {
-        //             first_ty = *ty.elem;
-        //         }
-        //         if let Type::Path(TypePath { qself: None, path }) = first_ty {
-        //             trait_ = Some((polarity, path, for_token));
-        //         } else {
-        //             unreachable!();
-        //         }
-        //     } else if !allow_verbatim_impl {
-        //         #[cfg(feature = "printing")]
-        //         return Err(Error::new_spanned(first_ty_ref, "expected trait path"));
-        //         #[cfg(not(feature = "printing"))]
-        //         return Err(Error::new(first_ty_span, "expected trait path"));
-        //     } else {
-        //         trait_ = None;
-        //     }
-        //     self_ty = input.parse()?;
-        // } else {
-        //     trait_ = None;
-        //     self_ty = if polarity.is_none() {
-        //         first_ty
-        //     } else {
-        //         Type::Verbatim(verbatim::between(&begin, input))
-        //     };
-        // }
+        generics.where_clause = input.parse()?;
 
-        // generics.where_clause = input.parse()?;
+        let content;
+        let brace_token = braced!(content in input);
+        attr::parsing::parse_inner(&content, &mut attrs)?;
 
-        // let content;
-        // let brace_token = braced!(content in input);
-        // attr::parsing::parse_inner(&content, &mut attrs)?;
+        let mut items = Vec::new();
+        while !content.is_empty() {
+            items.push(content.parse()?);
+        }
 
-        // let mut items = Vec::new();
-        // while !content.is_empty() {
-        //     items.push(content.parse()?);
-        // }
-
-        // if has_visibility || is_const_impl || is_impl_for && trait_.is_none() {
-        //     Ok(None)
-        // } else {
-        //     Ok(Some(ItemImpl {
-        //         attrs,
-        //         defaultness,
-        //         unsafety,
-        //         impl_token,
-        //         generics,
-        //         trait_,
-        //         self_ty: Box::new(self_ty),
-        //         brace_token,
-        //         items,
-        //     }))
-        // }
+        if has_visibility || is_const_impl || is_impl_for && trait_.is_none() {
+            Ok(None)
+        } else {
+            Ok(Some(ItemImpl {
+                attrs,
+                defaultness,
+                unsafety,
+                impl_token,
+                generics,
+                trait_,
+                self_ty,
+                brace_token,
+                items,
+            }))
+        }
     }
 
     #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]

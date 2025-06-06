@@ -258,9 +258,7 @@ pub(crate) fn expr_trailing_brace(input: ParseStream, mut expr: NodeId<Expr>) ->
     fn type_trailing_brace(input: ParseStream, mut ty: NodeId<Type>) -> bool {
         loop {
             match input.ctx().get(ty) {
-                Pattern::Pat(_) => {
-                    todo!("figure out default")
-                }
+                Pattern::Pat(_) => return false,
                 Pattern::Real(t) => match t {
                     Type::BareFn(t) => match &t.output {
                         ReturnType::Default => return false,

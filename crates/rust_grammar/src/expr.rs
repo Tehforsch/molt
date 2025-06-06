@@ -1399,7 +1399,7 @@ pub(crate) mod parsing {
                 let allow_group_generic = false;
                 let ty = input.parse_id::<(Type, NoPlusNoGeneric)>()?;
                 check_cast(input)?;
-                let span = Span::fake(); // TODO merge lhs and type here once type is NodeId
+                let span = lhs.span().join(input.ctx().get_span(ty));
                 lhs = Expr::Cast(ExprCast {
                     attrs: Vec::new(),
                     expr: input.add_pat(lhs),

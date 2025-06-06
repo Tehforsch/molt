@@ -346,39 +346,10 @@ pub(crate) mod parsing {
         let begin = input.fork();
 
         if input.peek(token::Group) {
-            todo!()
-            // let mut group: TypeGroup = input.parse()?;
-            // if input.peek(Token![::]) && input.peek3(Ident::peek_any) {
-            //     if let Type::Path(mut ty) = *group.elem {
-            //         Path::parse_rest(input, &mut ty.path, false)?;
-            //         return Ok(Type::Path(ty));
-            //     } else {
-            //         return Ok(Type::Path(TypePath {
-            //             qself: Some(QSelf {
-            //                 lt_token: Token![<](group.group_token.span),
-            //                 position: 0,
-            //                 as_token: None,
-            //                 gt_token: Token![>](group.group_token.span),
-            //                 ty: group.elem,
-            //             }),
-            //             path: Path::parse_helper(input, false)?,
-            //         }));
-            //     }
-            // } else if input.peek(Token![<]) && allow_group_generic
-            //     || input.peek(Token![::]) && input.peek3(Token![<])
-            // {
-            //     if let Type::Path(mut ty) = *group.elem {
-            //         let arguments = &mut ty.path.segments.last_mut().unwrap().arguments;
-            //         if arguments.is_none() {
-            //             *arguments = PathArguments::AngleBracketed(input.parse()?);
-            //             Path::parse_rest(input, &mut ty.path, false)?;
-            //             return Ok(Type::Path(ty));
-            //         } else {
-            //             group.elem = Box::new(Type::Path(ty));
-            //         }
-            //     }
-            // }
-            // return Ok(Type::Group(group));
+            // This is related to none-delimited types.
+            // These may occur in the result from macro expansion,
+            // which we currently do not treat anyways.
+            unimplemented!("Parsing macro output not supported")
         }
 
         let mut lifetimes = None::<BoundLifetimes>;

@@ -25,3 +25,15 @@ note: Match
   │
 2 │ pub const x: (Foo, Bar, Baz) = bar;
   │              ^^^^^^^^^^^^^^^ $x
+
+note: Match
+  ┌─ "test_data/types/main.rs":4:21
+  │
+4 │ impl<'a, T> Foo<'a, T> {
+  │                     ^ $x
+
+note: Match
+  ┌─ "test_data/types/main.rs":4:13
+  │
+4 │ impl<'a, T> Foo<'a, T> {
+  │             ^^^^^^^^^^ $x
