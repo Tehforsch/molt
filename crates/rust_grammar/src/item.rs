@@ -2638,10 +2638,8 @@ pub(crate) mod parsing {
             self_ty = if polarity.is_none() {
                 input.add_pat(first_ty.with_span(span))
             } else {
-                input.add(
-                    Type::Verbatim(verbatim::between(&begin, input))
-                        .with_span(molt_lib::Span::fake()),
-                )
+                let span = input.span_from_marker(begin.marker());
+                input.add(Type::Verbatim(verbatim::between(&begin, input)).with_span(span))
             };
         }
 
