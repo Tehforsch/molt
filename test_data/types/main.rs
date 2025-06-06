@@ -37,3 +37,6 @@ fn foo<T>(t: T) where <T as Trait>::Item: Trait2 {
 }
 
 const SLICE: [usize] = [1, 2, 3];
+
+fn foo(x: fn(usize) -> String) {
+}

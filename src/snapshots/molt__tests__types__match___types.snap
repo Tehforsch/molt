@@ -205,3 +205,21 @@ note: Match
    │
 39 │ const SLICE: [usize] = [1, 2, 3];
    │              ^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/types/main.rs":41:14
+   │
+41 │ fn foo(x: fn(usize) -> String) {
+   │              ^^^^^ $x
+
+note: Match
+   ┌─ "test_data/types/main.rs":41:24
+   │
+41 │ fn foo(x: fn(usize) -> String) {
+   │                        ^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/types/main.rs":41:11
+   │
+41 │ fn foo(x: fn(usize) -> String) {
+   │           ^^^^^^^^^^^^^^^^^^^ $x

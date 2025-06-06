@@ -271,6 +271,7 @@ mod tests {
             type_array,
             as_trait,
             type_slice,
+            type_bare_fn,
         )
     );
     test_match_pattern!(fields, (fields, field_var));

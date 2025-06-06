@@ -1,0 +1,4 @@
+let ty: Type;
+let item: Type = {
+    fn($ty) -> String
+};
