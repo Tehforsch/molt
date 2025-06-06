@@ -30,9 +30,6 @@ impl<'a, Node: GetKind> MatchCtx<'a, Node> {
     }
 
     pub fn dump(&self) {
-        if !self.config.debug_print {
-            return;
-        }
         println!("--------------------------------");
         for id in self.ast_ctx.iter() {
             let node = self.ast_ctx.get::<Node>(id).unwrap_real();
@@ -66,7 +63,11 @@ impl<'a, Node: GetKind> MatchCtx<'a, Node> {
     }
 
     pub fn print_pat(&self, id: Id) -> &str {
-        self.pat_ctx.print(id, &self.molt_src)
+        if id.is_pat() {
+            self.pat_ctx.get_var(id).name()
+        } else {
+            self.pat_ctx.print(id, &self.molt_src)
+        }
     }
 
     pub fn get<T: ToNode<Node>>(&self, pat_id: Id, pat_type: PatType) -> Pattern<&T, Id> {

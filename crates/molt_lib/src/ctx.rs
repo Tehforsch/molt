@@ -260,6 +260,15 @@ type InternalId = Pattern<usize, usize>;
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Id(InternalId);
 
+impl Id {
+    pub fn is_pat(&self) -> bool {
+        match self.0 {
+            Pattern::Real(_) => false,
+            Pattern::Pat(_) => true,
+        }
+    }
+}
+
 pub struct NodeId<T> {
     _marker: PhantomData<T>,
     id: Id,
@@ -565,13 +574,8 @@ impl<Node: GetKind> Ctx<Node> {
     }
 
     pub fn print<'a>(&'a self, id: Id, src: &'a str) -> &'a str {
-        match id.0 {
-            Pattern::Real(_) => {
-                let span = self.get_span(id);
-                &src[span.byte_range()]
-            }
-            Pattern::Pat(idx) => &self.vars[idx].name,
-        }
+        let span = self.get_span(id);
+        &src[span.byte_range()]
     }
 }
 

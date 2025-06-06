@@ -22,7 +22,12 @@ struct Transformation {
 }
 impl Transformation {
     fn apply(&self, code: &mut String) {
-        code.replace_range(self.span.byte_range(), &self.new_code);
+        let range = self.span.byte_range();
+        println!("-------- ORIGINAL --------");
+        println!("{}", &code[range.clone()]);
+        println!("--------   NEW    --------");
+        println!("{}", &self.new_code);
+        code.replace_range(range, &self.new_code);
     }
 }
 
@@ -59,12 +64,6 @@ fn write_to_file(input: &Input, rust_file_id: FileId, code: String) -> Result<()
 
 fn check_overlap(transformations: &[Transformation]) -> Result<(), Error> {
     let mut last_byte = None;
-    dbg!(
-        transformations
-            .iter()
-            .map(|x| x.span.byte_range())
-            .collect::<Vec<_>>()
-    );
     for tf in transformations.iter() {
         if let Some(last_byte) = last_byte {
             if tf.span.byte_range().start <= last_byte {
@@ -82,6 +81,7 @@ fn make_transformation(
     input: Id,
     output: Id,
 ) -> Transformation {
+    ctx.dump();
     let ast = match_.get_binding(input).ast.unwrap();
     let ast_span = ctx.ast_ctx.get_span(ast);
     Transformation {
@@ -95,7 +95,12 @@ fn get_transformed_code(ctx: &MatchCtx<Node>, match_: &Match, output: Id) -> Str
     let mut code = if let Some(ast_binding) = binding.ast {
         ctx.print_ast(ast_binding).to_string()
     } else {
-        ctx.print_pat(binding.pat.unwrap()).to_string()
+        let pat_id = binding.pat.unwrap();
+        if pat_id.is_pat() {
+            get_transformed_code(ctx, match_, pat_id)
+        } else {
+            ctx.print_pat(binding.pat.unwrap()).to_string()
+        }
     };
     loop {
         let variables = contained_variables(&code);
@@ -114,8 +119,8 @@ fn replace_first_variable(
     mut vars: Vec<TokenVar>,
 ) {
     if let Some(var) = vars.pop() {
-        let id = ctx.pat_ctx.get_id_by_name(&var.name);
-        let new_code = get_transformed_code(ctx, match_, id);
+        let var_id = ctx.pat_ctx.get_id_by_name(&var.name);
+        let new_code = get_transformed_code(ctx, match_, var_id);
         sc.replace_range(var.span.byte_range(), &new_code);
     }
 }

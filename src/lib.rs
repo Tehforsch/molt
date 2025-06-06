@@ -55,8 +55,11 @@ impl MoltFile {
         molt_src: &'a str,
         config: Config,
     ) -> MatchResult<'a> {
+        let debug_print = config.debug_print;
         let ctx = MatchCtx::new(&pat_ctx, &ast_ctx, rust_src, molt_src, config);
-        ctx.dump();
+        if debug_print {
+            ctx.dump();
+        }
         let pat_kind = ctx.pat_ctx.get_kind(var);
         let matches = ctx
             .ast_ctx
