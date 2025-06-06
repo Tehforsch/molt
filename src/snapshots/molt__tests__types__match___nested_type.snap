@@ -3,9 +3,9 @@ source: src/lib.rs
 expression: "super :: super :: match_pattern(stringify! (types), stringify! (nested_type))"
 ---
 note: Match
-  ┌─ "test_data/types/main.rs":5:14
+  ┌─ "test_data/types/main.rs":7:14
   │
-5 │ pub const x: (Foo, Bar, Baz) = bar;
+7 │ pub const x: (Foo, Bar, Baz) = bar;
   │              ^^^^^^^^^^^^^^^ $type
   │
   = $t = Baz
