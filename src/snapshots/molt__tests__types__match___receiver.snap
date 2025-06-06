@@ -1,0 +1,12 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (types), stringify! (receiver))"
+---
+note: Match
+   ┌─ "test_data/types/main.rs":31:1
+   │  
+31 │ ╭ fn foo(self: Box<Self>) {
+32 │ │ }
+   │ ╰─^ $item
+   │  
+   = $ty = Box<Self>

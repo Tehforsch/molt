@@ -27,3 +27,6 @@ impl Foo {
     const CONST: usize = 5;
     type Result = Baz;
 }
+
+fn foo(self: Box<Self>) {
+}

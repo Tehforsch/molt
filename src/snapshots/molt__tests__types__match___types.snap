@@ -151,3 +151,15 @@ note: Match
    │
 28 │     type Result = Baz;
    │                   ^^^ $x
+
+note: Match
+   ┌─ "test_data/types/main.rs":31:18
+   │
+31 │ fn foo(self: Box<Self>) {
+   │                  ^^^^ $x
+
+note: Match
+   ┌─ "test_data/types/main.rs":31:14
+   │
+31 │ fn foo(self: Box<Self>) {
+   │              ^^^^^^^^^ $x

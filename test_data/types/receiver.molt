@@ -1,0 +1,5 @@
+let ty: Type;
+let item: Item = {
+    fn foo(self: $ty) {
+    }
+};
