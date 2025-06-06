@@ -1,0 +1,11 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (types), stringify! (const_))"
+---
+note: Match
+  ┌─ "test_data/types/main.rs":7:1
+  │
+7 │ pub const x: (Foo, Bar, Baz) = bar;
+  │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $t
+  │
+  = $ty = (Foo, Bar, Baz)

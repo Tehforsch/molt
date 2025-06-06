@@ -260,6 +260,7 @@ mod tests {
             const_param,
             predicate,
             pat_type,
+            const_,
         )
     );
     test_match_pattern!(fields, (fields, field_var));
