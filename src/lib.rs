@@ -264,6 +264,7 @@ mod tests {
             impl_,
             static_,
             type_alias,
+            trait_const,
         )
     );
     test_match_pattern!(fields, (fields, field_var));

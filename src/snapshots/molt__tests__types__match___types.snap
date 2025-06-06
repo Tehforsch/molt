@@ -127,3 +127,9 @@ note: Match
    │
 20 │ static FOO: Baz = 50;
    │             ^^^ $x
+
+note: Match
+   ┌─ "test_data/types/main.rs":23:18
+   │
+23 │     const CONST: usize = 5;
+   │                  ^^^^^ $x

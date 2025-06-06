@@ -1,0 +1,13 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (types), stringify! (trait_const))"
+---
+note: Match
+   ┌─ "test_data/types/main.rs":22:1
+   │  
+22 │ ╭ trait Foo {
+23 │ │     const CONST: usize = 5;
+24 │ │ }
+   │ ╰─^ $item
+   │  
+   = $ty = usize

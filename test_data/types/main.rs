@@ -18,3 +18,7 @@ impl Foo for Bar {
 }
 
 static FOO: Baz = 50;
+
+trait Foo {
+    const CONST: usize = 5;
+}
