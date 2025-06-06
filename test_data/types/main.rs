@@ -30,3 +30,5 @@ impl Foo {
 
 fn foo(self: Box<Self>) {
 }
+
+const X: [usize; 3] = [1, 2, 3];

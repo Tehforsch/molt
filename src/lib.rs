@@ -268,6 +268,7 @@ mod tests {
             impl_const,
             impl_type,
             receiver,
+            type_array,
         )
     );
     test_match_pattern!(fields, (fields, field_var));
