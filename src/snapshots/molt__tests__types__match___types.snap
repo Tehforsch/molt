@@ -115,3 +115,9 @@ note: Match
    │
 13 │     let closure = |x: usize, y: Foo<Bar>| {
    │                                 ^^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/types/main.rs":17:14
+   │
+17 │ impl Foo for Bar {
+   │              ^^^ $x

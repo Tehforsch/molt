@@ -1,0 +1,12 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (types), stringify! (impl_))"
+---
+note: Match
+   ┌─ "test_data/types/main.rs":17:1
+   │  
+17 │ ╭ impl Foo for Bar {
+18 │ │ }
+   │ ╰─^ $t
+   │  
+   = $ty = Bar
