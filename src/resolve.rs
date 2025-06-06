@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use molt_lib::{Id, Var, VarDecl};
+use molt_lib::{Id, Span, Var, VarDecl};
 use rust_grammar::{Node, TokenStream, TokenTree};
 
 use crate::{
@@ -27,7 +27,12 @@ pub enum ResolveError {
     MultipleUnreferencedVariables,
 }
 
-fn get_vars_in_token_stream(deps: &mut Vec<String>, tokens: TokenStream) {
+pub(crate) struct TokenVar {
+    pub span: Span,
+    pub name: String,
+}
+
+pub fn get_vars_in_token_stream(deps: &mut Vec<TokenVar>, tokens: TokenStream) {
     let mut token_iter = tokens.into_iter();
     while let Some(token) = token_iter.next() {
         match token {
@@ -37,7 +42,13 @@ fn get_vars_in_token_stream(deps: &mut Vec<String>, tokens: TokenStream) {
             TokenTree::Punct(punct) => {
                 if punct.as_char() == '$' {
                     if let Some(TokenTree::Ident(ident)) = token_iter.next() {
-                        deps.push(ident.to_string());
+                        let dollar_span: Span = punct.span().byte_range().into();
+                        let ident_span: Span = ident.span().byte_range().into();
+                        let span = dollar_span.join(ident_span);
+                        deps.push(TokenVar {
+                            span,
+                            name: ident.to_string(),
+                        });
                     } else {
                         // This is most likely invalid syntax, but
                         // we can defer reporting the error to the
@@ -63,7 +74,10 @@ impl UnresolvedMoltFile {
         }
         // Check every referenced var exists
         for deps in map.values() {
-            if deps.iter().any(|referenced| !map.contains_key(referenced)) {
+            if deps
+                .iter()
+                .any(|referenced| !map.contains_key(&referenced.name))
+            {
                 return Err(ResolveError::UndefinedVar.into());
             }
         }
@@ -120,7 +134,7 @@ impl UnresolvedMoltFile {
 fn get_command(
     mut commands: Vec<UnresolvedCommand>,
     vars: &[UnresolvedVarDecl],
-    map: &HashMap<&String, Vec<String>>,
+    map: &HashMap<&String, Vec<TokenVar>>,
 ) -> Result<UnresolvedCommand, Error> {
     if commands.is_empty() {
         // infer the command
@@ -128,7 +142,7 @@ fn get_command(
             .iter()
             .filter(|var| {
                 !map.iter()
-                    .any(|(_, deps)| deps.iter().any(|v| *v == var.name))
+                    .any(|(_, deps)| deps.iter().any(|v| v.name == var.name))
             })
             .collect();
         if unreferenced_vars.is_empty() {

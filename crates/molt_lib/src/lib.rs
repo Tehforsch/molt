@@ -10,4 +10,4 @@ pub use ctx::{
 
 pub use cmp_syn::CmpSyn;
 pub use match_ctx::MatchCtx;
-pub use match_pattern::{Binding, Match, match_pattern};
+pub use match_pattern::{Binding, Match, PatType, match_pattern};

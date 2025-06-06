@@ -31,12 +31,14 @@ pub(crate) struct MoltFile {
 #[derive(Debug)]
 pub(crate) enum Command<T> {
     Match(T),
+    Transform(T, T),
 }
 
 impl<T> Command<T> {
     pub fn map<S>(self, f: impl Fn(T) -> S) -> Command<S> {
         match self {
             Command::Match(t) => Command::Match(f(t)),
+            Command::Transform(a, b) => Command::Transform(f(a), f(b)),
         }
     }
 }

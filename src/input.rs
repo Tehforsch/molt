@@ -22,6 +22,15 @@ pub enum FilePath<'a> {
     FromCli,
 }
 
+impl<'a> FilePath<'a> {
+    pub fn unwrap_path(self) -> &'a Path {
+        match self {
+            FilePath::Path(path) => path,
+            FilePath::FromCli => panic!("unwrap_path called on FromCli variant."),
+        }
+    }
+}
+
 pub struct Contents {
     contents: String,
     /// The starting byte indices in the source code.

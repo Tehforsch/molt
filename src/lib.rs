@@ -2,6 +2,7 @@ mod error;
 mod input;
 pub(crate) mod molt_grammar;
 mod resolve;
+mod transform;
 
 pub use error::Error;
 pub use error::emit_error;
@@ -132,6 +133,20 @@ pub fn run(input: &Input, debug_print: bool) -> Result<Vec<Diagnostic>, Error> {
                     debug_print,
                 );
                 diagnostics.extend(match_result.make_diagnostics(rust_file_id));
+            }
+            Command::Transform(input_var, output_var) => {
+                let input_var = *input_var;
+                let output_var = *output_var;
+                let match_result = molt_file.match_pattern(
+                    ast_ctx,
+                    pat_ctx,
+                    input_var,
+                    input.source(rust_file_id).unwrap(),
+                    input.source(input.molt_file_id()).unwrap(),
+                    debug_print,
+                );
+                transform::transform(input, rust_file_id, match_result, input_var, output_var)?;
+                // diagnostics.extend(match_result.make_diagnostics(rust_file_id));
             }
         };
     }

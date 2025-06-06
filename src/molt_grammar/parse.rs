@@ -59,12 +59,11 @@ impl Parse for UnresolvedVarDecl {
 impl Parse for Command<String> {
     fn parse(parser: ParseStream) -> Result<Self> {
         let command = if parser.peek(kw::transform) {
-            todo!("enable variant")
-            // let input_var: Var = parser.parse()?;
-            // parser.consume(Minus);
-            // parser.consume(Gt);
-            // let output_var: Var = parser.parse()?;
-            // Command::Transform(input_var, output_var)
+            let _: kw::transform = parser.parse()?;
+            let input: Ident = parser.parse()?;
+            let _: Token![->] = parser.parse()?;
+            let output: Ident = parser.parse()?;
+            Command::Transform(input.to_string(), output.to_string())
         } else {
             let _: Token![match] = parser.parse()?;
             let match_var: Ident = parser.parse()?;

@@ -1,3 +1,5 @@
+use std::io;
+
 use codespan_reporting::{
     diagnostic::{Diagnostic, Label},
     term::{
@@ -7,14 +9,19 @@ use codespan_reporting::{
 };
 use rust_grammar::Span;
 
-use crate::input::{FileId, Input};
 use crate::resolve::ResolveError;
+use crate::{
+    input::{FileId, Input},
+    transform::TransformError,
+};
 
 #[derive(Debug)]
 pub enum Error {
     Parse(rust_grammar::Error, FileId),
     Resolve(ResolveError),
     Misc(String),
+    Transform(TransformError),
+    Io(io::Error),
 }
 
 impl Error {
@@ -23,6 +30,8 @@ impl Error {
             Error::Parse(error, file_id) => Some((error.span(), *file_id)),
             Error::Resolve(_) => None,
             Error::Misc(_) => None,
+            Error::Transform(_) => None,
+            Error::Io(_) => None,
         }
     }
 }
@@ -67,6 +76,18 @@ impl From<ResolveError> for Error {
     }
 }
 
+impl From<TransformError> for Error {
+    fn from(t: TransformError) -> Self {
+        Self::Transform(t)
+    }
+}
+
+impl From<io::Error> for Error {
+    fn from(t: io::Error) -> Self {
+        Self::Io(t)
+    }
+}
+
 impl Error {
     pub fn parse(t: rust_grammar::Error, file_id: FileId) -> Self {
         Self::Parse(t, file_id)
@@ -79,6 +100,8 @@ impl std::fmt::Display for Error {
             Error::Parse(error, _) => write!(f, "{}", error),
             Error::Resolve(error) => write!(f, "{}", error),
             Error::Misc(s) => write!(f, "{}", s),
+            Error::Transform(s) => write!(f, "{}", s),
+            Error::Io(s) => write!(f, "{}", s),
         }
     }
 }
