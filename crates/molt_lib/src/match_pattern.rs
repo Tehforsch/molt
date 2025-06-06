@@ -12,7 +12,7 @@ pub fn match_pattern<N: GetKind + CmpSyn>(
     ast: Id,
 ) -> Vec<Match> {
     let mut match_ = Match::new(vars);
-    match_.add_binding(ctx, var, ast, false);
+    match_.add_binding(ctx, var, ast);
     let mut current = vec![match_];
     let mut matches = vec![];
     'outer: while let Some(mut match_) = current.pop() {
@@ -120,7 +120,7 @@ impl Match {
         self.pat_type = pat_type;
         let ast_kind = ctx.ast_ctx.get_kind(ast_id);
         let pat_kind = ctx.get_kind(pat_id, pat_type);
-        if ast_kind == pat_kind {
+        if ctx.debug_print && ast_kind == pat_kind {
             println!(
                 "Compare ({:?} {:?})\n\t{}\n\t{}",
                 ast_kind,
@@ -135,7 +135,7 @@ impl Match {
 
         match ctx.get::<N>(pat_id, pat_type) {
             Pattern::Pat(var) => {
-                self.add_binding(ctx, var, ast_id, true);
+                self.add_binding(ctx, var, ast_id);
             }
             Pattern::Real(pat) => self.cmp_syn(ctx.ast_ctx.get(ast_id).unwrap_real(), pat),
         }
@@ -145,14 +145,8 @@ impl Match {
         self.forks.push(fork);
     }
 
-    fn add_binding<N: GetKind + CmpSyn>(
-        &mut self,
-        ctx: &MatchCtx<N>,
-        key: Id,
-        ast_id: Id,
-        debug_print: bool,
-    ) {
-        if debug_print {
+    fn add_binding<N: GetKind + CmpSyn>(&mut self, ctx: &MatchCtx<N>, key: Id, ast_id: Id) {
+        if ctx.debug_print {
             println!(
                 "\tBind ${} to {}",
                 &ctx.get_var(key).name(),

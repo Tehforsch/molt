@@ -51,8 +51,9 @@ impl MoltFile {
         var: Id,
         rust_src: &str,
         molt_src: &str,
+        debug_print: bool,
     ) -> MatchResult {
-        let ctx = MatchCtx::new(pat_ctx, ast_ctx, rust_src, molt_src);
+        let ctx = MatchCtx::new(pat_ctx, ast_ctx, rust_src, molt_src, debug_print);
         ctx.dump();
         let pat_kind = ctx.pat_ctx.get_kind(var);
         let matches = ctx
@@ -114,7 +115,7 @@ impl MatchResult {
     }
 }
 
-pub fn run(input: &Input) -> Result<Vec<Diagnostic>, Error> {
+pub fn run(input: &Input, debug_print: bool) -> Result<Vec<Diagnostic>, Error> {
     let mut diagnostics = vec![];
     for rust_file_id in input.iter_rust_src() {
         let (_, ast_ctx) = RustFile::new(&input, rust_file_id)?;
@@ -128,6 +129,7 @@ pub fn run(input: &Input) -> Result<Vec<Diagnostic>, Error> {
                     pat_var,
                     input.source(rust_file_id).unwrap(),
                     input.source(input.molt_file_id()).unwrap(),
+                    debug_print,
                 );
                 diagnostics.extend(match_result.make_diagnostics(rust_file_id));
             }
@@ -168,7 +170,7 @@ mod tests {
         let input = Input::new(MoltSource::file(molt_path).unwrap())
             .with_rust_src_file(&rust_path)
             .unwrap();
-        let diagnostics = super::run(&input);
+        let diagnostics = super::run(&input, false);
         match diagnostics {
             Ok(diagnostics) => diagnostics
                 .into_iter()

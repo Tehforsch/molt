@@ -4,6 +4,7 @@ use crate::{Id, Pattern};
 use crate::match_pattern::PatType;
 
 pub struct MatchCtx<Node: GetKind> {
+    pub debug_print: bool,
     pub pat_ctx: Ctx<Node>,
     pub ast_ctx: Ctx<Node>,
     rust_src: String,
@@ -11,8 +12,15 @@ pub struct MatchCtx<Node: GetKind> {
 }
 
 impl<Node: GetKind> MatchCtx<Node> {
-    pub fn new(pat_ctx: Ctx<Node>, ast_ctx: Ctx<Node>, rust_src: &str, molt_src: &str) -> Self {
+    pub fn new(
+        pat_ctx: Ctx<Node>,
+        ast_ctx: Ctx<Node>,
+        rust_src: &str,
+        molt_src: &str,
+        debug_print: bool,
+    ) -> Self {
         Self {
+            debug_print,
             pat_ctx,
             ast_ctx,
             rust_src: rust_src.to_owned(),
@@ -21,6 +29,9 @@ impl<Node: GetKind> MatchCtx<Node> {
     }
 
     pub fn dump(&self) {
+        if !self.debug_print {
+            return;
+        }
         println!("--------------------------------");
         for id in self.ast_ctx.iter() {
             let node = self.ast_ctx.get::<Node>(id).unwrap_real();

@@ -7,4 +7,6 @@ pub struct CliArgs {
     #[clap(short, long)]
     pub input_file: Option<PathBuf>,
     pub transform_file: PathBuf,
+    #[clap(short, long)]
+    pub debug_print: bool,
 }
