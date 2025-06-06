@@ -284,7 +284,7 @@ ast_struct! {
 
 #[cfg(feature = "parsing")]
 pub(crate) mod parsing {
-    use molt_lib::{NodeId, Pattern, WithSpan};
+    use molt_lib::{Pattern, WithSpan};
 
     use crate::error::Result;
     #[cfg(feature = "full")]

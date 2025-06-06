@@ -298,51 +298,29 @@ pub(crate) mod parsing {
 
         fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
             let allow_plus = true;
-            let allow_group_generic = true;
-            Ok(ambig_ty(input, allow_plus, allow_group_generic)?)
+            Ok(ambig_ty(input, allow_plus)?)
         }
     }
 
-    struct NoPlusGeneric;
+    pub struct NoPlus;
 
-    impl ParsePat for (Type, NoPlusGeneric) {
+    impl ParsePat for (Type, NoPlus) {
         type Target = Type;
 
         fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
             let allow_plus = false;
-            let allow_group_generic = true;
-            Ok(ambig_ty(input, allow_plus, allow_group_generic)?)
+            Ok(ambig_ty(input, allow_plus)?)
         }
     }
 
-    pub struct NoPlusNoGeneric;
-
-    impl ParsePat for (Type, NoPlusNoGeneric) {
-        type Target = Type;
-
-        fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
-            let allow_plus = false;
-            let allow_group_generic = false;
-            Ok(ambig_ty(input, allow_plus, allow_group_generic)?)
-        }
-    }
-
-    pub(crate) fn ambig_ty(
-        input: ParseStream,
-        allow_plus: bool,
-        allow_group_generic: bool,
-    ) -> Result<SpannedPat<Type>> {
+    pub(crate) fn ambig_ty(input: ParseStream, allow_plus: bool) -> Result<SpannedPat<Type>> {
         if let Some(var) = input.parse_var() {
             return var;
         }
-        input.call_spanned(|input| ambig_ty_inner(input, allow_plus, allow_group_generic))
+        input.call_spanned(|input| ambig_ty_inner(input, allow_plus))
     }
 
-    fn ambig_ty_inner(
-        input: ParseStream,
-        allow_plus: bool,
-        allow_group_generic: bool,
-    ) -> Result<Type> {
+    fn ambig_ty_inner(input: ParseStream, allow_plus: bool) -> Result<Type> {
         let begin = input.fork();
 
         if input.peek(token::Group) {
@@ -655,7 +633,7 @@ pub(crate) mod parsing {
                 star_token,
                 const_token,
                 mutability,
-                elem: input.parse_id::<(Type, NoPlusGeneric)>()?,
+                elem: input.parse_id::<(Type, NoPlus)>()?,
             })
         }
     }
@@ -668,7 +646,7 @@ pub(crate) mod parsing {
                 lifetime: input.parse()?,
                 mutability: input.parse()?,
                 // & binds tighter than +, so we don't allow + here.
-                elem: input.parse_id::<(Type, NoPlusGeneric)>()?,
+                elem: input.parse_id::<(Type, NoPlus)>()?,
             })
         }
     }
@@ -799,8 +777,7 @@ pub(crate) mod parsing {
         pub(crate) fn parse(input: ParseStream, allow_plus: bool) -> Result<Self> {
             if input.peek(Token![->]) {
                 let arrow = input.parse()?;
-                let allow_group_generic = true;
-                let ty = input.add_pat(ambig_ty(input, allow_plus, allow_group_generic)?);
+                let ty = input.add_pat(ambig_ty(input, allow_plus)?);
                 Ok(ReturnType::Type(arrow, ty))
             } else {
                 Ok(ReturnType::Default)
@@ -963,7 +940,7 @@ pub(crate) mod parsing {
             let content;
             Ok(TypeParen {
                 paren_token: parenthesized!(content in input),
-                elem: { input.parse_id::<(Type, NoPlusNoGeneric)>()? },
+                elem: { content.parse_id::<(Type, NoPlus)>()? },
             })
         }
     }

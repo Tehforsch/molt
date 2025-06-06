@@ -1211,12 +1211,12 @@ pub(crate) mod parsing {
     use crate::punctuated::Punctuated;
     #[cfg(feature = "full")]
     use crate::stmt::Block;
-    use crate::ty::parsing::NoPlusNoGeneric;
+    use crate::ty::parsing::NoPlus;
     #[cfg(feature = "full")]
     use crate::ty::ReturnType;
     use crate::verbatim;
     use crate::{token, Type};
-    use molt_lib::{Id, NodeId, NodeList, Pattern, Span, Spanned, SpannedPat, WithSpan};
+    use molt_lib::{Id, NodeId, NodeList, Pattern, Spanned, SpannedPat, WithSpan};
     use std::mem;
 
     // When we're parsing expressions which occur before blocks, like in an if
@@ -1395,9 +1395,7 @@ pub(crate) mod parsing {
                 .pattern_with_span(span);
             } else if Precedence::Cast >= base && input.peek(Token![as]) {
                 let as_token: Token![as] = input.parse()?;
-                let allow_plus = false;
-                let allow_group_generic = false;
-                let ty = input.parse_id::<(Type, NoPlusNoGeneric)>()?;
+                let ty = input.parse_id::<(Type, NoPlus)>()?;
                 check_cast(input)?;
                 let span = lhs.span().join(input.ctx().get_span(ty));
                 lhs = Expr::Cast(ExprCast {

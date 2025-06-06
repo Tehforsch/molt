@@ -929,11 +929,11 @@ pub(crate) mod parsing {
     use crate::punctuated::Punctuated;
     use crate::restriction::Visibility;
     use crate::stmt::Block;
+    use crate::token;
     use crate::ty::{Abi, ReturnType, Type};
     use crate::verbatim;
     use crate::{derive, TypePath};
-    use crate::{token, TypeReference};
-    use molt_lib::{NodeId, NodeList, Pattern, SpannedPat, WithSpan};
+    use molt_lib::{NodeId, NodeList, Pattern, WithSpan};
     use proc_macro2::TokenStream;
 
     #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
@@ -2598,7 +2598,7 @@ pub(crate) mod parsing {
 
         #[cfg(not(feature = "printing"))]
         let first_ty_span = input.span();
-        let (span, mut first_ty) = input.parse_pat::<Type>()?.decompose();
+        let (span, first_ty) = input.parse_pat::<Type>()?.decompose();
         let self_ty: NodeId<Type>;
         let trait_;
 
@@ -2612,7 +2612,7 @@ pub(crate) mod parsing {
                     first_ty_ref = ctx.get(ty.elem);
                 }
                 if let Pattern::Real(Type::Path(TypePath { qself: None, .. })) = first_ty_ref {
-                    while let Pattern::Real(Type::Group(ty)) = first_ty {
+                    if let Pattern::Real(Type::Group(_)) = first_ty {
                         // This is related to none-delimited types.
                         // These may occur in the result from macro expansion,
                         // which we currently do not treat anyways.
