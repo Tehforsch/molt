@@ -23,23 +23,47 @@ pub(crate) enum Decl {
     Command(Command<String>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct MoltFile {
     pub vars: Vec<VarDecl>,
     pub command: Command<Id>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum Command<T> {
-    Match(T),
-    Transform(T, T),
+    Match(MatchCommand<T>),
+    Transform(TransformCommand<T>),
+}
+
+#[derive(Clone, Debug)]
+pub struct MatchCommand<T> {
+    pub match_: Option<T>,
+    pub print: Option<T>,
+}
+
+#[derive(Clone, Debug)]
+pub struct TransformCommand<T> {
+    pub input: T,
+    pub output: T,
+    pub match_: Option<T>,
 }
 
 impl<T> Command<T> {
-    pub fn map<S>(self, f: impl Fn(T) -> S) -> Command<S> {
+    pub fn map<S>(self, f: impl Fn(T) -> S + Clone) -> Command<S> {
         match self {
-            Command::Match(t) => Command::Match(f(t)),
-            Command::Transform(a, b) => Command::Transform(f(a), f(b)),
+            Command::Match(MatchCommand { match_, print }) => Command::Match(MatchCommand {
+                match_: match_.map(f.clone()),
+                print: print.map(f),
+            }),
+            Command::Transform(TransformCommand {
+                input,
+                output,
+                match_,
+            }) => Command::Transform(TransformCommand {
+                input: f(input),
+                output: f(output),
+                match_: match_.map(f),
+            }),
         }
     }
 }

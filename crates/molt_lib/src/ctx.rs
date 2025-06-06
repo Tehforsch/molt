@@ -405,7 +405,7 @@ impl<Node: GetKind> PartialEq for Var<Node> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct VarDecl {
     pub id: Id,
     pub node: Option<Id>,

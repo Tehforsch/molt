@@ -9,6 +9,8 @@ pub use error::emit_error;
 pub use input::{Diagnostic, FileId, Input, MoltSource};
 
 use codespan_reporting::{diagnostic::Label, files::Files};
+use molt_grammar::MatchCommand;
+use molt_grammar::TransformCommand;
 use molt_grammar::{Command, MoltFile, UnresolvedMoltFile};
 
 use molt_lib::Config;
@@ -89,21 +91,22 @@ impl RustFile {
 }
 
 impl<'a> MatchResult<'a> {
-    fn make_diagnostics(&self, file_id: FileId) -> Vec<Diagnostic> {
+    fn make_diagnostics(&self, file_id: FileId, print: Option<Id>) -> Vec<Diagnostic> {
         self.matches
             .iter()
             .map(|match_| {
-                let binding = match_.get_binding(self.var);
+                let match_var = print.unwrap_or(self.var);
+                let binding = match_.get_binding(match_var);
                 let span = self.ctx.ast_ctx.get_span(binding.ast.unwrap());
                 let var_name = |var| format!("${}", self.ctx.get_var(var).name());
                 let mut diagnostic = Diagnostic::note().with_message("Match").with_labels(vec![
-                    Label::primary(file_id, span.byte_range()).with_message(var_name(self.var)),
+                    Label::primary(file_id, span.byte_range()).with_message(var_name(match_var)),
                 ]);
                 let mut keys = match_.iter_vars().collect::<Vec<_>>();
                 keys.sort_by_key(|var| var_name(*var).to_string());
                 for key in keys {
                     let binding = match_.get_binding(key);
-                    if key == self.var {
+                    if key == match_var {
                         continue;
                     }
                     if let Some(node) = binding.ast {
@@ -126,25 +129,30 @@ pub fn run(input: &Input, config: crate::Config) -> Result<Vec<Diagnostic>, Erro
     for rust_file_id in input.iter_rust_src() {
         let (_, ast_ctx) = RustFile::new(&input, rust_file_id)?;
         match molt_file.command() {
-            Command::Match(pat_var) => {
-                let pat_var = *pat_var;
+            Command::Match(MatchCommand {
+                match_: pat_var,
+                print,
+            }) => {
+                let pat_var = pat_var;
                 let match_result = molt_file.match_pattern(
                     &ast_ctx,
                     &pat_ctx,
-                    pat_var,
+                    pat_var.unwrap(),
                     input.source(rust_file_id).unwrap(),
                     input.source(input.molt_file_id()).unwrap(),
                     config.clone(),
                 );
-                diagnostics.extend(match_result.make_diagnostics(rust_file_id));
+                diagnostics.extend(match_result.make_diagnostics(rust_file_id, print));
             }
-            Command::Transform(input_var, output_var) => {
-                let input_var = *input_var;
-                let output_var = *output_var;
+            Command::Transform(TransformCommand {
+                input: input_var,
+                output: output_var,
+                match_,
+            }) => {
                 let match_result = molt_file.match_pattern(
                     &ast_ctx,
                     &pat_ctx,
-                    input_var,
+                    match_.unwrap(),
                     input.source(rust_file_id).unwrap(),
                     input.source(input.molt_file_id()).unwrap(),
                     config.clone(),

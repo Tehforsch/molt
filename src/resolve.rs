@@ -5,7 +5,9 @@ use rust_grammar::{Node, TokenStream, TokenTree};
 
 use crate::{
     Command, Error, FileId, MoltFile, PatCtx,
-    molt_grammar::{UnresolvedMoltFile, UnresolvedVarDecl, parse_node_with_kind},
+    molt_grammar::{
+        MatchCommand, TransformCommand, UnresolvedMoltFile, UnresolvedVarDecl, parse_node_with_kind,
+    },
 };
 
 type ResolvedCommand = Command<Id>;
@@ -21,9 +23,9 @@ pub enum ResolveError {
     Unresolvable,
     #[error("Reference to undefined variable.")]
     UndefinedVar,
-    #[error("No command given and there was no candidate for the inferred match variable.")]
+    #[error("There was no candidate for the inferred match variable.")]
     NoUnreferencedVariables,
-    #[error("No command given and there were multiple candidates for the inferred match variable.")]
+    #[error("There were multiple candidates for the inferred match variable.")]
     MultipleUnreferencedVariables,
 }
 
@@ -137,30 +139,65 @@ fn get_command(
     map: &HashMap<&String, Vec<TokenVar>>,
 ) -> Result<UnresolvedCommand, Error> {
     if commands.is_empty() {
-        // infer the command
-        let unreferenced_vars: Vec<_> = vars
-            .iter()
-            .filter(|var| {
-                !map.iter()
-                    .any(|(_, deps)| deps.iter().any(|v| v.name == var.name))
-            })
-            .collect();
-        if unreferenced_vars.is_empty() {
-            Err(ResolveError::NoUnreferencedVariables.into())
-        } else if unreferenced_vars.len() > 1 {
-            Err(ResolveError::MultipleUnreferencedVariables.into())
-        } else {
-            Ok(Command::Match(unreferenced_vars[0].name.clone()))
-        }
+        Ok(Command::Match(MatchCommand {
+            match_: Some(infer_var(vars, map, None)?),
+            print: None,
+        }))
     } else if commands.len() > 1 {
         Err(ResolveError::MultipleCommandGiven.into())
     } else {
-        Ok(commands.remove(0))
+        let command = commands.remove(0);
+        Ok(match command {
+            Command::Match(MatchCommand {
+                match_: None,
+                print,
+            }) => Command::Match(MatchCommand {
+                match_: Some(infer_var(vars, map, None)?),
+                print,
+            }),
+            Command::Transform(TransformCommand {
+                input,
+                output,
+                match_: None,
+            }) => Command::Transform(TransformCommand {
+                match_: Some(infer_var(vars, map, Some(&output))?),
+                input,
+                output,
+            }),
+            _ => unreachable!(),
+        })
+    }
+}
+
+fn infer_var(
+    vars: &[UnresolvedVarDecl],
+    map: &HashMap<&String, Vec<TokenVar>>,
+    exclude: Option<&String>,
+) -> Result<String, Error> {
+    // infer the command
+    let unreferenced_vars: Vec<_> = vars
+        .iter()
+        .filter(|var| {
+            if let Some(exclude) = exclude {
+                if &var.name == exclude {
+                    return false;
+                }
+            }
+            !map.iter()
+                .any(|(_, deps)| deps.iter().any(|v| v.name == var.name))
+        })
+        .collect();
+    if unreferenced_vars.is_empty() {
+        Err(ResolveError::NoUnreferencedVariables.into())
+    } else if unreferenced_vars.len() > 1 {
+        Err(ResolveError::MultipleUnreferencedVariables.into())
+    } else {
+        Ok(unreferenced_vars[0].name.clone())
     }
 }
 
 impl MoltFile {
-    pub(crate) fn command(&mut self) -> &ResolvedCommand {
-        &self.command
+    pub(crate) fn command(&mut self) -> ResolvedCommand {
+        self.command.clone()
     }
 }

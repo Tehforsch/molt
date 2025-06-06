@@ -2,7 +2,9 @@ use rust_grammar::ext::IdentExt;
 use rust_grammar::{Ident, Token, TokenStream};
 use rust_grammar::{Result, braced, parse::Parse, parse::ParseStream};
 
-use super::{Command, Decl, UnresolvedMoltFile, UnresolvedVarDecl, UserKind};
+use super::{
+    Command, Decl, MatchCommand, TransformCommand, UnresolvedMoltFile, UnresolvedVarDecl, UserKind,
+};
 
 mod kw {
     rust_grammar::custom_keyword!(transform);
@@ -74,11 +76,18 @@ impl Parse for Command<String> {
             let input: Ident = parser.parse()?;
             let _: Token![->] = parser.parse()?;
             let output: Ident = parser.parse()?;
-            Command::Transform(input.to_string(), output.to_string())
+            Command::Transform(TransformCommand {
+                input: input.to_string(),
+                output: output.to_string(),
+                match_: None,
+            })
         } else {
             let _: Token![match] = parser.parse()?;
-            let match_var: Ident = parser.parse()?;
-            Command::Match(match_var.to_string())
+            let print: Ident = parser.parse()?;
+            Command::Match(MatchCommand {
+                match_: None,
+                print: Some(print.to_string()),
+            })
         };
         let _: Token![;] = parser.parse()?;
         Ok(command)
