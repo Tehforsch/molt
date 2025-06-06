@@ -25,8 +25,7 @@ enum Error {
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
-pub(crate) fn get_cargo_toml() -> Result<PathBuf> {
-    let mut path = std::env::current_dir()?;
+pub(crate) fn get_cargo_toml(mut path: PathBuf) -> Result<PathBuf> {
     loop {
         let cargo_toml = path.join("Cargo.toml").canonicalize()?;
         if cargo_toml.is_file() {
@@ -54,10 +53,14 @@ fn get_cargo_source_files(path: &Path) -> Result<Vec<PathBuf>> {
 
 fn main() -> Result<()> {
     let args = CliArgs::parse();
-    let source_files = if let Some(file) = args.input_file {
-        vec![file.to_owned()]
+    let source_files = if let Some(path) = args.input_file {
+        if path.is_dir() {
+            get_cargo_source_files(&get_cargo_toml(path)?)?
+        } else {
+            vec![path.to_owned()]
+        }
     } else {
-        get_cargo_source_files(&get_cargo_toml()?)?
+        get_cargo_source_files(&get_cargo_toml(std::env::current_dir()?)?)?
     };
     let input = Input::new(MoltSource::file(&args.transform_file).unwrap())
         .with_rust_src_files(source_files.iter())
