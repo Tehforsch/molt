@@ -22,3 +22,7 @@ static FOO: Baz = 50;
 trait Foo {
     const CONST: usize = 5;
 }
+
+impl Foo {
+    const CONST: usize = 5;
+}

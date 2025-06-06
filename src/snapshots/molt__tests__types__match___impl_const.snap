@@ -1,0 +1,13 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (types), stringify! (impl_const))"
+---
+note: Match
+   ┌─ "test_data/types/main.rs":26:1
+   │  
+26 │ ╭ impl Foo {
+27 │ │     const CONST: usize = 5;
+28 │ │ }
+   │ ╰─^ $item
+   │  
+   = $ty = usize

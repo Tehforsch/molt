@@ -133,3 +133,15 @@ note: Match
    │
 23 │     const CONST: usize = 5;
    │                  ^^^^^ $x
+
+note: Match
+   ┌─ "test_data/types/main.rs":26:6
+   │
+26 │ impl Foo {
+   │      ^^^ $x
+
+note: Match
+   ┌─ "test_data/types/main.rs":27:18
+   │
+27 │     const CONST: usize = 5;
+   │                  ^^^^^ $x
