@@ -353,7 +353,9 @@ mod custom_punctuation;
 mod data;
 #[cfg(any(feature = "full", feature = "derive"))]
 #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-pub use crate::data::{Field, Fields, FieldsNamed, FieldsUnnamed, Variant};
+pub use crate::data::{
+    Field, FieldNamed, FieldUnnamed, Fields, FieldsNamed, FieldsUnnamed, Variant,
+};
 
 #[cfg(any(feature = "full", feature = "derive"))]
 mod derive;

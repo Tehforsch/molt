@@ -1,0 +1,33 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (fields), stringify! (fields))"
+---
+note: Match
+  ┌─ "test_data/fields/main.rs":2:5
+  │
+2 │     x: Bar,
+  │     ^^^^^^ $x
+
+note: Match
+  ┌─ "test_data/fields/main.rs":3:5
+  │
+3 │     y: Baz,
+  │     ^^^^^^ $x
+
+note: Match
+  ┌─ "test_data/fields/main.rs":6:12
+  │
+6 │ struct Foo(Foo, Bar, Baz);
+  │            ^^^ $x
+
+note: Match
+  ┌─ "test_data/fields/main.rs":6:17
+  │
+6 │ struct Foo(Foo, Bar, Baz);
+  │                 ^^^ $x
+
+note: Match
+  ┌─ "test_data/fields/main.rs":6:22
+  │
+6 │ struct Foo(Foo, Bar, Baz);
+  │                      ^^^ $x

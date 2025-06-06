@@ -1,7 +1,7 @@
 use derive_macro::CmpSyn;
 use molt_lib::ToNode;
 
-use crate::{Expr, Item, Lit, Stmt, Type};
+use crate::{Expr, Field, Item, Lit, Stmt, Type};
 
 macro_rules! define_node_and_kind {
     ($(($variant_name: ident, $ty: ty)),*$(,)?) => {
@@ -88,6 +88,7 @@ define_node_and_kind! {
     (Expr, Expr),
     (Stmt, Stmt),
     (Type, Type),
+    (Field, Field),
     // (Attr, Attribute),
     // (Signature, Signature),
     // (FnArg, FnArg),

@@ -1,0 +1,15 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (fields), stringify! (field_var))"
+---
+note: Match
+  ┌─ "test_data/fields/main.rs":1:1
+  │  
+1 │ ╭ struct Foo {
+2 │ │     x: Bar,
+3 │ │     y: Baz,
+4 │ │ }
+  │ ╰─^ $struct
+  │  
+  = $x = x: Bar
+  = $y = y: Baz

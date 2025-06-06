@@ -1,7 +1,10 @@
 mod parse;
 
 use molt_lib::{Id, NodeId, VarDecl};
-use rust_grammar::{Expr, Item, Kind, Lit, Node, Stmt, TokenStream, Type, parse::ParseStream};
+use rust_grammar::{
+    Expr, FieldNamed, FieldUnnamed, Item, Kind, Lit, Node, Stmt, TokenStream, Type,
+    parse::{ParseStream, discouraged::Speculative},
+};
 
 pub(crate) struct UnresolvedMoltFile {
     pub vars: Vec<UnresolvedVarDecl>,
@@ -39,7 +42,7 @@ impl<T> Command<T> {
 }
 
 macro_rules! define_user_kind {
-    ($(($variant_name: ident, $ty: ty $(, $expr: expr)?)),*$(,)?) => {
+    ($(($variant_name: ident, $kind_name: ident, $ty: ty $(, $expr: expr)?)),*$(,)?) => {
         #[derive(Debug, Clone, Copy)]
         pub enum UserKind {
             $( $variant_name, )*
@@ -49,7 +52,7 @@ macro_rules! define_user_kind {
             fn from(val: UserKind) -> Kind {
                 match val {
                     $(
-                        UserKind::$variant_name => Kind::$variant_name,
+                        UserKind::$variant_name => Kind::$kind_name,
                     )*
                 }
             }
@@ -104,18 +107,39 @@ macro_rules! parse_impl {
 }
 
 define_user_kind! {
-    (Lit, Lit),
-    (Item, Item),
-    (Type, Type, |parser: ParseStream| {
+    (Lit, Lit, Lit),
+    (Item, Item, Item),
+    (Type, Type, Type, |parser: ParseStream| {
         let type_: NodeId<Type> = parser.parse()?;
         Ok(type_.into())
     }),
-    (Expr, Expr, |parser: ParseStream| {
+    (Expr, Expr, Expr, |parser: ParseStream| {
         let expr: NodeId<Expr> = parser.parse()?;
         Ok(expr.into())
     }),
-    (Stmt, Stmt, |parser: ParseStream| {
+    (Stmt, Stmt, Stmt, |parser: ParseStream| {
         let stmt: NodeId<Stmt> = parser.parse()?;
         Ok(stmt.into())
     }),
+    // Let's see how this works out in practice.
+    // We speculatively parse a named field and
+    // if it doesn't work out, we parse an unnamed field.
+    (Field, Field, Field, |parser: ParseStream| {
+        let fork = parser.fork();
+        if let Ok(field) = fork.parse_id::<FieldNamed>() {
+            parser.advance_to(&fork); // probably unnecessary
+            Ok(field.into())
+        }
+        else {
+            Ok(parser.parse_id::<FieldUnnamed>()?.into())
+        }
+    }),
+    // (NamedField, Field, FieldNamed, |parser: ParseStream| {
+    //     let field: NodeId<Field> = parser.parse_id::<FieldNamed>()?;
+    //     Ok(field.into())
+    // }),
+    // (UnnamedField, Field, FieldUnnamed, |parser: ParseStream| {
+    //     let field: NodeId<Field> = parser.parse_id::<FieldUnnamed>()?;
+    //     Ok(field.into())
+    // }),
 }
