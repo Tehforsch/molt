@@ -1,26 +1,27 @@
+use crate::config::Config;
 use crate::{Ctx, GetKind, ToNode, Var};
 use crate::{Id, Pattern};
 
 use crate::match_pattern::PatType;
 
-pub struct MatchCtx<Node: GetKind> {
-    pub debug_print: bool,
-    pub pat_ctx: Ctx<Node>,
-    pub ast_ctx: Ctx<Node>,
+pub struct MatchCtx<'a, Node: GetKind> {
+    pub config: Config,
+    pub pat_ctx: &'a Ctx<Node>,
+    pub ast_ctx: &'a Ctx<Node>,
     rust_src: String,
     molt_src: String,
 }
 
-impl<Node: GetKind> MatchCtx<Node> {
+impl<'a, Node: GetKind> MatchCtx<'a, Node> {
     pub fn new(
-        pat_ctx: Ctx<Node>,
-        ast_ctx: Ctx<Node>,
-        rust_src: &str,
-        molt_src: &str,
-        debug_print: bool,
+        pat_ctx: &'a Ctx<Node>,
+        ast_ctx: &'a Ctx<Node>,
+        rust_src: &'a str,
+        molt_src: &'a str,
+        config: Config,
     ) -> Self {
         Self {
-            debug_print,
+            config,
             pat_ctx,
             ast_ctx,
             rust_src: rust_src.to_owned(),
@@ -29,7 +30,7 @@ impl<Node: GetKind> MatchCtx<Node> {
     }
 
     pub fn dump(&self) {
-        if !self.debug_print {
+        if !self.config.debug_print {
             return;
         }
         println!("--------------------------------");
@@ -60,11 +61,11 @@ impl<Node: GetKind> MatchCtx<Node> {
         }
     }
 
-    pub fn print_ast<'a>(&'a self, id: Id) -> &'a str {
+    pub fn print_ast(&self, id: Id) -> &str {
         self.ast_ctx.print(id, &self.rust_src)
     }
 
-    pub fn print_pat<'a>(&'a self, id: Id) -> &'a str {
+    pub fn print_pat(&self, id: Id) -> &str {
         self.pat_ctx.print(id, &self.molt_src)
     }
 

@@ -1,4 +1,5 @@
 mod cmp_syn;
+mod config;
 mod ctx;
 mod match_ctx;
 mod match_pattern;
@@ -7,6 +8,8 @@ pub use ctx::{
     Ctx, GetKind, Id, MatchingMode, NoPunct, NodeId, NodeList, Pattern, Span, Spanned, SpannedPat,
     ToNode, Var, VarDecl, WithSpan,
 };
+
+pub use config::Config;
 
 pub use cmp_syn::CmpSyn;
 pub use match_ctx::MatchCtx;

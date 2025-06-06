@@ -59,6 +59,12 @@ fn write_to_file(input: &Input, rust_file_id: FileId, code: String) -> Result<()
 
 fn check_overlap(transformations: &[Transformation]) -> Result<(), Error> {
     let mut last_byte = None;
+    dbg!(
+        transformations
+            .iter()
+            .map(|x| x.span.byte_range())
+            .collect::<Vec<_>>()
+    );
     for tf in transformations.iter() {
         if let Some(last_byte) = last_byte {
             if tf.span.byte_range().start <= last_byte {

@@ -11,6 +11,7 @@ pub use input::{Diagnostic, FileId, Input, MoltSource};
 use codespan_reporting::{diagnostic::Label, files::Files};
 use molt_grammar::{Command, MoltFile, UnresolvedMoltFile};
 
+use molt_lib::Config;
 use molt_lib::{Id, Match, MatchCtx};
 use rust_grammar::{
     Node,
@@ -30,9 +31,9 @@ type Ctx = molt_lib::Ctx<Node>;
 pub type PatCtx = Ctx;
 pub type AstCtx = Ctx;
 
-pub(crate) struct MatchResult {
+pub(crate) struct MatchResult<'a> {
     pub matches: Vec<Match>,
-    pub ctx: MatchCtx<Node>,
+    pub ctx: MatchCtx<'a, Node>,
     pub var: Id,
 }
 
@@ -45,16 +46,16 @@ impl MoltFile {
         unresolved.resolve(file_id)
     }
 
-    pub(crate) fn match_pattern(
-        &self,
-        ast_ctx: Ctx,
-        pat_ctx: Ctx,
+    pub(crate) fn match_pattern<'a>(
+        &'a self,
+        ast_ctx: &'a Ctx,
+        pat_ctx: &'a Ctx,
         var: Id,
-        rust_src: &str,
-        molt_src: &str,
-        debug_print: bool,
-    ) -> MatchResult {
-        let ctx = MatchCtx::new(pat_ctx, ast_ctx, rust_src, molt_src, debug_print);
+        rust_src: &'a str,
+        molt_src: &'a str,
+        config: Config,
+    ) -> MatchResult<'a> {
+        let ctx = MatchCtx::new(&pat_ctx, &ast_ctx, rust_src, molt_src, config);
         ctx.dump();
         let pat_kind = ctx.pat_ctx.get_kind(var);
         let matches = ctx
@@ -84,7 +85,7 @@ impl RustFile {
     }
 }
 
-impl MatchResult {
+impl<'a> MatchResult<'a> {
     fn make_diagnostics(&self, file_id: FileId) -> Vec<Diagnostic> {
         self.matches
             .iter()
@@ -116,21 +117,21 @@ impl MatchResult {
     }
 }
 
-pub fn run(input: &Input, debug_print: bool) -> Result<Vec<Diagnostic>, Error> {
+pub fn run(input: &Input, config: crate::Config) -> Result<Vec<Diagnostic>, Error> {
     let mut diagnostics = vec![];
+    let (mut molt_file, pat_ctx) = MoltFile::new(&input)?;
     for rust_file_id in input.iter_rust_src() {
         let (_, ast_ctx) = RustFile::new(&input, rust_file_id)?;
-        let (mut molt_file, pat_ctx) = MoltFile::new(&input)?;
         match molt_file.command() {
             Command::Match(pat_var) => {
                 let pat_var = *pat_var;
                 let match_result = molt_file.match_pattern(
-                    ast_ctx,
-                    pat_ctx,
+                    &ast_ctx,
+                    &pat_ctx,
                     pat_var,
                     input.source(rust_file_id).unwrap(),
                     input.source(input.molt_file_id()).unwrap(),
-                    debug_print,
+                    config.clone(),
                 );
                 diagnostics.extend(match_result.make_diagnostics(rust_file_id));
             }
@@ -138,12 +139,12 @@ pub fn run(input: &Input, debug_print: bool) -> Result<Vec<Diagnostic>, Error> {
                 let input_var = *input_var;
                 let output_var = *output_var;
                 let match_result = molt_file.match_pattern(
-                    ast_ctx,
-                    pat_ctx,
+                    &ast_ctx,
+                    &pat_ctx,
                     input_var,
                     input.source(rust_file_id).unwrap(),
                     input.source(input.molt_file_id()).unwrap(),
-                    debug_print,
+                    config.clone(),
                 );
                 transform::transform(input, rust_file_id, match_result, input_var, output_var)?;
                 // diagnostics.extend(match_result.make_diagnostics(rust_file_id));
@@ -156,6 +157,8 @@ pub fn run(input: &Input, debug_print: bool) -> Result<Vec<Diagnostic>, Error> {
 #[cfg(test)]
 mod tests {
     use std::path::Path;
+
+    use molt_lib::Config;
 
     use crate::{
         Error, MoltFile, RustFile,
@@ -185,7 +188,7 @@ mod tests {
         let input = Input::new(MoltSource::file(molt_path).unwrap())
             .with_rust_src_file(&rust_path)
             .unwrap();
-        let diagnostics = super::run(&input, false);
+        let diagnostics = super::run(&input, Config::default());
         match diagnostics {
             Ok(diagnostics) => diagnostics
                 .into_iter()

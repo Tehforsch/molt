@@ -65,7 +65,8 @@ fn main() -> Result<()> {
     let input = Input::new(MoltSource::file(&args.transform_file).unwrap())
         .with_rust_src_files(source_files.iter())
         .unwrap();
-    let diagnostics = emit_error(&input, run(&input, args.debug_print))?;
+    let config = molt_lib::Config::default();
+    let diagnostics = emit_error(&input, run(&input, config))?;
     let writer = StandardStream::stderr(ColorChoice::Always);
     let config = Config::default();
     for diagnostic in diagnostics {
