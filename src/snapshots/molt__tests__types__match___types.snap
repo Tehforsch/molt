@@ -193,3 +193,15 @@ note: Match
    │
 36 │ fn foo<T>(t: T) where <T as Trait>::Item: Trait2 {
    │                       ^^^^^^^^^^^^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/types/main.rs":39:15
+   │
+39 │ const SLICE: [usize] = [1, 2, 3];
+   │               ^^^^^ $x
+
+note: Match
+   ┌─ "test_data/types/main.rs":39:14
+   │
+39 │ const SLICE: [usize] = [1, 2, 3];
+   │              ^^^^^^^ $x

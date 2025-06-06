@@ -270,6 +270,7 @@ mod tests {
             receiver,
             type_array,
             as_trait,
+            type_slice,
         )
     );
     test_match_pattern!(fields, (fields, field_var));

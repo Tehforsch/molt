@@ -1,0 +1,11 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (types), stringify! (type_slice))"
+---
+note: Match
+   ┌─ "test_data/types/main.rs":39:14
+   │
+39 │ const SLICE: [usize] = [1, 2, 3];
+   │              ^^^^^^^ $item
+   │
+   = $ty = usize
