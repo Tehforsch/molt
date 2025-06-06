@@ -63,13 +63,19 @@ note: Match
   │              ^^^^^^^^^^^^^^^ $x
 
 note: Match
-  ┌─ "test_data/types/main.rs":9:21
+  ┌─ "test_data/types/main.rs":9:19
   │
-9 │ impl<'a, T> Foo<'a, T> {
-  │                     ^ $x
+9 │ impl<'a, const x: usize, T> Foo<'a, T> {
+  │                   ^^^^^ $x
 
 note: Match
-  ┌─ "test_data/types/main.rs":9:13
+  ┌─ "test_data/types/main.rs":9:37
   │
-9 │ impl<'a, T> Foo<'a, T> {
-  │             ^^^^^^^^^^ $x
+9 │ impl<'a, const x: usize, T> Foo<'a, T> {
+  │                                     ^ $x
+
+note: Match
+  ┌─ "test_data/types/main.rs":9:29
+  │
+9 │ impl<'a, const x: usize, T> Foo<'a, T> {
+  │                             ^^^^^^^^^^ $x

@@ -1,0 +1,12 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (types), stringify! (const_param))"
+---
+note: Match
+   ┌─ "test_data/types/main.rs":9:1
+   │  
+ 9 │ ╭ impl<'a, const x: usize, T> Foo<'a, T> {
+10 │ │ }
+   │ ╰─^ $x
+   │  
+   = $ty = usize
