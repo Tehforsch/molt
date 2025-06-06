@@ -1,0 +1,11 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (types), stringify! (type_alias))"
+---
+note: Match
+  ┌─ "test_data/types/main.rs":5:1
+  │
+5 │ type Result<T, E=Default> = std::result::Result<T, E>;
+  │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $item
+  │
+  = $ty = std::result::Result<T, E>
