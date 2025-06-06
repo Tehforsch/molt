@@ -145,3 +145,9 @@ note: Match
    │
 27 │     const CONST: usize = 5;
    │                  ^^^^^ $x
+
+note: Match
+   ┌─ "test_data/types/main.rs":28:19
+   │
+28 │     type Result = Baz;
+   │                   ^^^ $x

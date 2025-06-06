@@ -25,4 +25,5 @@ trait Foo {
 
 impl Foo {
     const CONST: usize = 5;
+    type Result = Baz;
 }

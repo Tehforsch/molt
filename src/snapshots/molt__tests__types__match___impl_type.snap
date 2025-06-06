@@ -1,6 +1,6 @@
 ---
 source: src/lib.rs
-expression: "super :: super :: match_pattern(stringify! (types), stringify! (impl_const))"
+expression: "super :: super :: match_pattern(stringify! (types), stringify! (impl_type))"
 ---
 note: Match
    ┌─ "test_data/types/main.rs":26:1
@@ -11,4 +11,4 @@ note: Match
 29 │ │ }
    │ ╰─^ $item
    │  
-   = $ty = usize
+   = $ty = Baz
