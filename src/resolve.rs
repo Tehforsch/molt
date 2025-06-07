@@ -6,12 +6,10 @@ use rust_grammar::{Node, TokenStream, TokenTree};
 use crate::{
     Command, Error, FileId, MoltFile, PatCtx,
     molt_grammar::{
-        MatchCommand, TransformCommand, UnresolvedMoltFile, UnresolvedVarDecl, parse_node_with_kind,
+        MatchCommand, TokenVar, TransformCommand, UnresolvedMoltFile, UnresolvedVarDecl,
+        parse_node_with_kind,
     },
 };
-
-type ResolvedCommand = Command<Id>;
-type UnresolvedCommand = Command<String>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ResolveError {
@@ -22,17 +20,21 @@ pub enum ResolveError {
     #[error("Unresolvable pattern.")]
     Unresolvable,
     #[error("Reference to undefined variable.")]
-    UndefinedVar,
+    UndefinedVar(Span, String),
     #[error("There was no candidate for the inferred match variable.")]
     NoUnreferencedVariables,
     #[error("There were multiple candidates for the inferred match variable.")]
     MultipleUnreferencedVariables,
 }
 
-pub(crate) struct TokenVar {
-    pub span: Span,
-    pub name: String,
+impl ResolveError {
+    fn in_file(self, file_id: FileId) -> Error {
+        Error::Resolve(self, file_id)
+    }
 }
+
+type ResolvedCommand = Command<Id>;
+type UnresolvedCommand = Command<TokenVar>;
 
 pub fn get_vars_in_token_stream(deps: &mut Vec<TokenVar>, tokens: TokenStream) {
     let mut token_iter = tokens.into_iter();
@@ -72,18 +74,21 @@ impl UnresolvedMoltFile {
             if let Some(ref tokens) = var.tokens {
                 get_vars_in_token_stream(&mut deps, tokens.clone());
             }
-            map.insert(&var.name, deps);
+            map.insert(&var.var.name, deps);
         }
         // Check every referenced var exists
         for deps in map.values() {
-            if deps
+            if let Some(dep) = deps
                 .iter()
-                .any(|referenced| !map.contains_key(&referenced.name))
+                .filter(|referenced| !map.contains_key(&referenced.name))
+                .next()
             {
-                return Err(ResolveError::UndefinedVar.into());
+                return Err(
+                    ResolveError::UndefinedVar(dep.span, dep.name.to_string()).in_file(file_id)
+                );
             }
         }
-        let command = get_command(self.commands, &vars, &map)?;
+        let command = get_command(self.commands, &vars, &map, file_id)?;
         // TODO: Warn unused
         // Populate the context with all variables.
         let mut pat_ctx = PatCtx::default();
@@ -92,7 +97,7 @@ impl UnresolvedMoltFile {
             .map(|var| {
                 (
                     pat_ctx
-                        .add_var::<Node>(Var::new(var.name, var.kind.into()))
+                        .add_var::<Node>(Var::new(var.var.name, var.kind.into()))
                         .into(),
                     var.kind,
                     var.tokens,
@@ -101,7 +106,7 @@ impl UnresolvedMoltFile {
             .collect();
         // Translate the command to use the newly
         // assigned ids by a lookup.
-        let command = command.map(|name| pat_ctx.get_id_by_name(&name));
+        let command = command.map(|var| pat_ctx.get_id_by_name(&var.name));
         // Now that we know that the referenced variables
         // exist, we can safely parse the TokenStream and
         // assume that we can resolve every variable in the
@@ -137,22 +142,30 @@ fn get_command(
     mut commands: Vec<UnresolvedCommand>,
     vars: &[UnresolvedVarDecl],
     map: &HashMap<&String, Vec<TokenVar>>,
+    file_id: FileId,
 ) -> Result<UnresolvedCommand, Error> {
     if commands.is_empty() {
         Ok(Command::Match(MatchCommand {
-            match_: Some(infer_var(vars, map, None)?),
+            match_: Some(infer_var(vars, map, None, file_id)?),
             print: None,
         }))
     } else if commands.len() > 1 {
-        Err(ResolveError::MultipleCommandGiven.into())
+        Err(ResolveError::MultipleCommandGiven.in_file(file_id))
     } else {
         let command = commands.remove(0);
+        for var in command.iter_var_names() {
+            if !vars.iter().any(|v| v.var.name == *var.name) {
+                return Err(
+                    ResolveError::UndefinedVar(var.span, var.name.to_string()).in_file(file_id)
+                );
+            }
+        }
         Ok(match command {
             Command::Match(MatchCommand {
                 match_: None,
                 print,
             }) => Command::Match(MatchCommand {
-                match_: Some(infer_var(vars, map, None)?),
+                match_: Some(infer_var(vars, map, None, file_id)?),
                 print,
             }),
             Command::Transform(TransformCommand {
@@ -160,7 +173,7 @@ fn get_command(
                 output,
                 match_: None,
             }) => Command::Transform(TransformCommand {
-                match_: Some(infer_var(vars, map, Some(&output))?),
+                match_: Some(infer_var(vars, map, Some(&output), file_id)?),
                 input,
                 output,
             }),
@@ -172,27 +185,28 @@ fn get_command(
 fn infer_var(
     vars: &[UnresolvedVarDecl],
     map: &HashMap<&String, Vec<TokenVar>>,
-    exclude: Option<&String>,
-) -> Result<String, Error> {
+    exclude: Option<&TokenVar>,
+    file_id: FileId,
+) -> Result<TokenVar, Error> {
     // infer the command
     let unreferenced_vars: Vec<_> = vars
         .iter()
         .filter(|var| {
             if let Some(exclude) = exclude {
-                if &var.name == exclude {
+                if var.var.name == exclude.name {
                     return false;
                 }
             }
             !map.iter()
-                .any(|(_, deps)| deps.iter().any(|v| v.name == var.name))
+                .any(|(_, deps)| deps.iter().any(|v| v.name == var.var.name))
         })
         .collect();
     if unreferenced_vars.is_empty() {
-        Err(ResolveError::NoUnreferencedVariables.into())
+        Err(ResolveError::NoUnreferencedVariables.in_file(file_id))
     } else if unreferenced_vars.len() > 1 {
-        Err(ResolveError::MultipleUnreferencedVariables.into())
+        Err(ResolveError::MultipleUnreferencedVariables.in_file(file_id))
     } else {
-        Ok(unreferenced_vars[0].name.clone())
+        Ok(unreferenced_vars[0].var.clone())
     }
 }
 

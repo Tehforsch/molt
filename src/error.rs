@@ -7,7 +7,7 @@ use codespan_reporting::{
         termcolor::{ColorChoice, StandardStream},
     },
 };
-use rust_grammar::Span;
+use molt_lib::Span;
 
 use crate::resolve::ResolveError;
 use crate::{
@@ -18,7 +18,7 @@ use crate::{
 #[derive(Debug)]
 pub enum Error {
     Parse(rust_grammar::Error, FileId),
-    Resolve(ResolveError),
+    Resolve(ResolveError, FileId),
     Misc(String),
     Transform(TransformError),
     Io(io::Error),
@@ -27,8 +27,11 @@ pub enum Error {
 impl Error {
     fn span_and_file_id(&self) -> Option<(Span, FileId)> {
         match self {
-            Error::Parse(error, file_id) => Some((error.span(), *file_id)),
-            Error::Resolve(_) => None,
+            Error::Parse(error, file_id) => Some((error.span().byte_range().into(), *file_id)),
+            Error::Resolve(e, file_id) => match e {
+                ResolveError::UndefinedVar(span, _) => Some((*span, *file_id)),
+                _ => None,
+            },
             Error::Misc(_) => None,
             Error::Transform(_) => None,
             Error::Io(_) => None,
@@ -70,12 +73,6 @@ pub(crate) fn emit_diagnostic_str(input: &Input, diagnostic: Diagnostic<FileId>)
     String::from_utf8(writer.into_inner()).unwrap()
 }
 
-impl From<ResolveError> for Error {
-    fn from(t: ResolveError) -> Self {
-        Self::Resolve(t)
-    }
-}
-
 impl From<TransformError> for Error {
     fn from(t: TransformError) -> Self {
         Self::Transform(t)
@@ -98,7 +95,7 @@ impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Error::Parse(error, _) => write!(f, "{}", error),
-            Error::Resolve(error) => write!(f, "{}", error),
+            Error::Resolve(error, _) => write!(f, "{}", error),
             Error::Misc(s) => write!(f, "{}", s),
             Error::Transform(s) => write!(f, "{}", s),
             Error::Io(s) => write!(f, "{}", s),

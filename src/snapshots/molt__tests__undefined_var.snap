@@ -3,3 +3,7 @@ source: src/lib.rs
 expression: "emit_diagnostic_str(& input, make_error_diagnostic(& err))"
 ---
 error: Reference to undefined variable.
+  ┌─ "test_data/molt_grammar/undefined_var.molt":4:23
+  │
+4 │ let foo: Expr = { 1 + $bar };
+  │                       ^^^^ Reference to undefined variable.

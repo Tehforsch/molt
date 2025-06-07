@@ -1,26 +1,33 @@
 mod parse;
 
-use molt_lib::{Id, NodeId, VarDecl};
+use molt_lib::{Id, NodeId, Span, VarDecl};
 use parse::UnresolvedVarDecls;
 use rust_grammar::{
     Expr, FieldNamed, FieldUnnamed, Item, Kind, Lit, Node, Stmt, TokenStream, Type,
     parse::{ParseStream, discouraged::Speculative},
 };
 
-pub(crate) struct UnresolvedMoltFile {
-    pub vars: Vec<UnresolvedVarDecl>,
-    pub commands: Vec<Command<String>>,
+#[derive(Debug, Clone)]
+pub struct TokenVar {
+    pub span: Span,
+    pub name: String,
 }
 
+pub(crate) struct UnresolvedMoltFile {
+    pub vars: Vec<UnresolvedVarDecl>,
+    pub commands: Vec<Command<TokenVar>>,
+}
+
+#[derive(Debug)]
 pub struct UnresolvedVarDecl {
-    pub name: String,
+    pub var: TokenVar,
     pub kind: UserKind,
     pub tokens: Option<TokenStream>,
 }
 
 pub(crate) enum Decl {
     VarDecl(UnresolvedVarDecls),
-    Command(Command<String>),
+    Command(Command<TokenVar>),
 }
 
 #[derive(Debug, Clone)]
@@ -64,6 +71,21 @@ impl<T> Command<T> {
                 output: f(output),
                 match_: match_.map(f),
             }),
+        }
+    }
+
+    pub(crate) fn iter_var_names(&self) -> Box<dyn Iterator<Item = &T> + '_> {
+        match self {
+            Command::Match(MatchCommand { match_, print }) => Box::new(match_.iter().chain(print)),
+            Command::Transform(TransformCommand {
+                input,
+                output,
+                match_,
+            }) => Box::new(
+                std::iter::once(input)
+                    .chain(std::iter::once(output))
+                    .chain(match_),
+            ),
         }
     }
 }

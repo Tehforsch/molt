@@ -5,8 +5,7 @@ use molt_lib::{Id, Match, MatchCtx, Span};
 use rust_grammar::{Node, TokenStream};
 
 use crate::{
-    Error, FileId, Input, MatchResult,
-    resolve::{TokenVar, get_vars_in_token_stream},
+    Error, FileId, Input, MatchResult, molt_grammar::TokenVar, resolve::get_vars_in_token_stream,
 };
 
 #[derive(Debug, thiserror::Error)]
