@@ -57,7 +57,9 @@ impl Parse for UnresolvedVarDecls {
         } else {
             None
         };
-        let _: Token![;] = input.parse()?;
+        if input.peek(Token![;]) {
+            let _: Token![;] = input.parse()?;
+        }
         Ok(Self(
             vars.into_iter()
                 .map(|var| UnresolvedVarDecl {
@@ -103,7 +105,9 @@ impl Parse for Command<TokenVar> {
                 print: Some(print),
             })
         };
-        let _: Token![;] = parser.parse()?;
+        if parser.peek(Token![;]) {
+            let _: Token![;] = parser.parse()?;
+        }
         Ok(command)
     }
 }
