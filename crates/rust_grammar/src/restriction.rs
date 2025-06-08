@@ -60,7 +60,7 @@ ast_enum! {
 pub(crate) mod parsing {
     use crate::error::Result;
     use crate::ext::IdentExt as _;
-    use crate::ident::Ident;
+    use crate::ident::{AnyIdent, Ident};
     use crate::parse::discouraged::Speculative as _;
     use crate::parse::{Parse, ParseStream};
     use crate::path::Path;
@@ -102,7 +102,7 @@ pub(crate) mod parsing {
                     || content.peek(Token![self])
                     || content.peek(Token![super])
                 {
-                    let path = content.call(Ident::parse_any)?;
+                    let path = content.parse_id::<AnyIdent>()?;
 
                     // Ensure there are no additional tokens within `content`.
                     // Without explicitly checking, we may misinterpret a tuple

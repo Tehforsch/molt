@@ -33,91 +33,18 @@ where
     }
 }
 
-impl Path {
-    /// Determines whether this is a path of length 1 equal to the given
-    /// ident.
-    ///
-    /// For them to compare equal, it must be the case that:
-    ///
-    /// - the path has no leading colon,
-    /// - the number of path segments is 1,
-    /// - the first path segment has no angle bracketed or parenthesized
-    ///   path arguments, and
-    /// - the ident of the first path segment is equal to the given one.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use proc_macro2::TokenStream;
-    /// use syn::{Attribute, Error, Meta, Result};
-    ///
-    /// fn get_serde_meta_item(attr: &Attribute) -> Result<Option<&TokenStream>> {
-    ///     if attr.path().is_ident("serde") {
-    ///         match &attr.meta {
-    ///             Meta::List(meta) => Ok(Some(&meta.tokens)),
-    ///             bad => Err(Error::new_spanned(bad, "unrecognized attribute")),
-    ///         }
-    ///     } else {
-    ///         Ok(None)
-    ///     }
-    /// }
-    /// ```
-    pub fn is_ident<I>(&self, ident: &I) -> bool
-    where
-        I: ?Sized,
-        Ident: PartialEq<I>,
-    {
-        match self.get_ident() {
-            Some(id) => id == ident,
-            None => false,
-        }
-    }
-
-    /// If this path consists of a single ident, returns the ident.
-    ///
-    /// A path is considered an ident if:
-    ///
-    /// - the path has no leading colon,
-    /// - the number of path segments is 1, and
-    /// - the first path segment has no angle bracketed or parenthesized
-    ///   path arguments.
-    pub fn get_ident(&self) -> Option<&Ident> {
-        if self.leading_colon.is_none()
-            && self.segments.len() == 1
-            && self.segments[0].arguments.is_none()
-        {
-            Some(&self.segments[0].ident)
-        } else {
-            None
-        }
-    }
-
-    /// An error if this path is not a single ident, as defined in `get_ident`.
-    #[cfg(feature = "parsing")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-    pub fn require_ident(&self) -> Result<&Ident> {
-        self.get_ident().ok_or_else(|| {
-            crate::error::new2(
-                self.segments.first().unwrap().ident.span(),
-                self.segments.last().unwrap().ident.span(),
-                "expected this path to be an identifier",
-            )
-        })
-    }
-}
-
 ast_struct! {
     /// A segment of a path together with any path arguments on that segment.
     #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
     pub struct PathSegment {
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub arguments: PathArguments,
     }
 }
 
 impl<T> From<T> for PathSegment
 where
-    T: Into<Ident>,
+    T: Into<NodeId<Ident>>,
 {
     fn from(ident: T) -> Self {
         PathSegment {
@@ -212,7 +139,7 @@ ast_struct! {
     /// in `Iterator<Item = u8>`.
     #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
     pub struct AssocType {
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub generics: Option<AngleBracketedGenericArguments>,
         pub eq_token: Token![=],
         pub ty: NodeId<Type>,
@@ -224,7 +151,7 @@ ast_struct! {
     /// `Trait<PANIC = false>`.
     #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
     pub struct AssocConst {
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub generics: Option<AngleBracketedGenericArguments>,
         pub eq_token: Token![=],
         pub value: Expr,
@@ -235,7 +162,7 @@ ast_struct! {
     /// An associated type bound: `Iterator<Item: Display>`.
     #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
     pub struct Constraint {
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub generics: Option<AngleBracketedGenericArguments>,
         pub colon_token: Token![:],
         pub bounds: Punctuated<TypeParamBound, Token![+]>,
@@ -284,7 +211,7 @@ ast_struct! {
 
 #[cfg(feature = "parsing")]
 pub(crate) mod parsing {
-    use molt_lib::{Pattern, WithSpan};
+    use molt_lib::{NodeId, Pattern, WithSpan};
 
     use crate::error::Result;
     #[cfg(feature = "full")]
@@ -293,7 +220,7 @@ pub(crate) mod parsing {
     use crate::ext::IdentExt as _;
     #[cfg(feature = "full")]
     use crate::generics::TypeParamBound;
-    use crate::ident::Ident;
+    use crate::ident::{AnyIdent, Ident};
     use crate::lifetime::Lifetime;
     use crate::lit::Lit;
     use crate::parse::{Parse, ParseStream};
@@ -420,8 +347,8 @@ pub(crate) mod parsing {
             return Ok(Expr::Lit(lit));
         }
 
-        if input.peek(Ident) {
-            let ident: Ident = input.parse()?;
+        if input.peek_pat::<Ident>() {
+            let ident: NodeId<Ident> = input.parse()?;
             return Ok(Expr::Path(ExprPath {
                 attrs: Vec::new(),
                 qself: None,
@@ -524,14 +451,14 @@ pub(crate) mod parsing {
                 || input.peek(Token![crate])
                 || cfg!(feature = "full") && input.peek(Token![try])
             {
-                let ident = input.call(Ident::parse_any)?;
+                let ident = input.parse_id::<AnyIdent>()?;
                 return Ok(PathSegment::from(ident));
             }
 
             let ident = if input.peek(Token![Self]) {
-                input.call(Ident::parse_any)?
+                input.parse_id::<AnyIdent>()?
             } else {
-                input.parse()?
+                input.parse_id::<Ident>()?
             };
 
             if !expr_style
@@ -588,7 +515,7 @@ pub(crate) mod parsing {
                 segments: {
                     let mut segments = Punctuated::new();
                     loop {
-                        if !input.peek(Ident)
+                        if !input.peek_pat::<Ident>()
                             && !input.peek(Token![super])
                             && !input.peek(Token![self])
                             && !input.peek(Token![Self])
@@ -596,7 +523,7 @@ pub(crate) mod parsing {
                         {
                             break;
                         }
-                        let ident = Ident::parse_any(input)?;
+                        let ident = input.parse_id::<AnyIdent>()?;
                         segments.push_value(PathSegment::from(ident));
                         if !input.peek(Token![::]) {
                             break;
@@ -605,7 +532,7 @@ pub(crate) mod parsing {
                         segments.push_punct(punct);
                     }
                     if segments.is_empty() {
-                        return Err(input.parse::<Ident>().unwrap_err());
+                        return Err(input.parse_id::<Ident>().unwrap_err());
                     } else if segments.trailing_punct() {
                         return Err(input.error("expected path segment after `::`"));
                     }

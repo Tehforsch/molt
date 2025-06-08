@@ -15,7 +15,7 @@ ast_struct! {
         pub attrs: Vec<Attribute>,
 
         /// Name of the variant.
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
 
         /// Content stored in the variant.
         pub fields: Fields,
@@ -83,7 +83,7 @@ ast_struct! {
         /// Name of the field, if any.
         ///
         /// Fields of tuple structs have no names.
-        pub ident: Option<Ident>,
+        pub ident: Option<NodeId<Ident>>,
 
         pub colon_token: Option<Token![:]>,
 
@@ -136,7 +136,7 @@ pub(crate) mod parsing {
     use crate::data::{Field, Fields, FieldsNamed, FieldsUnnamed, Variant};
     use crate::error::Result;
     use crate::ext::IdentExt as _;
-    use crate::ident::Ident;
+    use crate::ident::{AnyIdent, Ident};
     #[cfg(not(feature = "full"))]
     use crate::parse::discouraged::Speculative as _;
     use crate::parse::{Parse, ParsePat, ParseStream};
@@ -154,7 +154,7 @@ pub(crate) mod parsing {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = input.call(Attribute::parse_outer)?;
             let _visibility: Visibility = input.parse()?;
-            let ident: Ident = input.parse()?;
+            let ident: NodeId<Ident> = input.parse()?;
             let fields = if input.peek(token::Brace) {
                 Fields::Named(input.parse()?)
             } else if input.peek(token::Paren) {
@@ -228,7 +228,7 @@ pub(crate) mod parsing {
 
                 let unnamed_field = cfg!(feature = "full") && input.peek(Token![_]);
                 let ident = if unnamed_field {
-                    input.call(Ident::parse_any)
+                    input.parse_id::<AnyIdent>()
                 } else {
                     input.parse()
                 }?;
@@ -240,7 +240,7 @@ pub(crate) mod parsing {
                         || input.peek(Token![union]) && input.peek2(token::Brace))
                 {
                     let begin = input.fork();
-                    input.call(Ident::parse_any)?;
+                    input.parse_id::<AnyIdent>()?;
                     input.parse::<FieldsNamed>()?;
                     input.add(
                         Type::Verbatim(verbatim::between(&begin, input))

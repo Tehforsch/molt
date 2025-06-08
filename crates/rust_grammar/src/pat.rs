@@ -112,7 +112,7 @@ ast_struct! {
         pub attrs: Vec<Attribute>,
         pub by_ref: Option<Token![ref]>,
         pub mutability: Option<Token![mut]>,
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub subpat: Option<(Token![@], Box<Pat>)>,
     }
 }
@@ -244,7 +244,7 @@ pub(crate) mod parsing {
         Expr, ExprConst, ExprLit, ExprMacro, ExprPath, ExprRange, Member, RangeLimits,
     };
     use crate::ext::IdentExt as _;
-    use crate::ident::Ident;
+    use crate::ident::{AnyIdent, Ident};
     use crate::lit::Lit;
     use crate::mac::{self, Macro};
     use crate::parse::{Parse, ParseBuffer, ParseStream, PosMarker};
@@ -289,7 +289,7 @@ pub(crate) mod parsing {
         pub fn parse_single(input: ParseStream) -> Result<Self> {
             let begin = input.fork();
             let lookahead = input.lookahead1();
-            if lookahead.peek(Ident)
+            if lookahead.peek_pat::<Ident>()
                 && (input.peek2(Token![::])
                     || input.peek2(Token![!])
                     || input.peek2(token::Brace)
@@ -313,7 +313,7 @@ pub(crate) mod parsing {
             } else if lookahead.peek(Token![ref])
                 || lookahead.peek(Token![mut])
                 || input.peek(Token![self])
-                || input.peek(Ident)
+                || input.peek_pat::<Ident>()
             {
                 input.call(pat_ident).map(Pat::Ident)
             } else if lookahead.peek(Token![&]) {
@@ -476,7 +476,7 @@ pub(crate) mod parsing {
             mutability: input.parse()?,
             ident: {
                 if input.peek(Token![self]) {
-                    input.call(Ident::parse_any)?
+                    input.parse_id::<AnyIdent>()?
                 } else {
                     input.parse()?
                 }
@@ -755,7 +755,7 @@ pub(crate) mod parsing {
         let lookahead = input.lookahead1();
         let expr = if lookahead.peek(Lit) {
             PatRangeBound::Lit(input.parse()?)
-        } else if lookahead.peek(Ident)
+        } else if lookahead.peek_pat::<Ident>()
             || lookahead.peek(Token![::])
             || lookahead.peek(Token![<])
             || lookahead.peek(Token![self])

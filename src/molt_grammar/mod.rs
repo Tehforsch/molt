@@ -3,7 +3,7 @@ mod parse;
 use molt_lib::{Id, NodeId, Span, VarDecl};
 use parse::UnresolvedVarDecls;
 use rust_grammar::{
-    Expr, FieldNamed, FieldUnnamed, Item, Kind, Lit, Node, Stmt, TokenStream, Type,
+    Expr, FieldNamed, FieldUnnamed, Ident, Item, Kind, Lit, Node, Stmt, TokenStream, Type,
     parse::{ParseStream, discouraged::Speculative},
 };
 
@@ -182,6 +182,10 @@ define_user_kind! {
         else {
             Ok(parser.parse_id::<FieldUnnamed>()?.into())
         }
+    }),
+    (Ident, Ident, Ident, |parser: ParseStream| {
+        let ident: NodeId<Ident> = parser.parse()?;
+        Ok(ident.into())
     }),
     // (NamedField, Field, FieldNamed, |parser: ParseStream| {
     //     let field: NodeId<Field> = parser.parse_id::<FieldNamed>()?;

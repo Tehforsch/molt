@@ -1,6 +1,5 @@
 use crate::attr::Attribute;
 use crate::data::{Fields, FieldsNamed, Variant};
-use crate::derive::{Data, DataEnum, DataStruct, DataUnion, DeriveInput};
 use crate::expr::Expr;
 use crate::generics::{Generics, TypeParamBound};
 use crate::ident::Ident;
@@ -106,7 +105,7 @@ ast_struct! {
         pub attrs: Vec<Attribute>,
         pub vis: Visibility,
         pub const_token: Token![const],
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub generics: Generics,
         pub colon_token: Token![:],
         pub ty: NodeId<Type>,
@@ -123,7 +122,7 @@ ast_struct! {
         pub attrs: Vec<Attribute>,
         pub vis: Visibility,
         pub enum_token: Token![enum],
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub generics: Generics,
         pub brace_token: token::Brace,
         pub variants: Punctuated<Variant, Token![,]>,
@@ -138,8 +137,8 @@ ast_struct! {
         pub vis: Visibility,
         pub extern_token: Token![extern],
         pub crate_token: Token![crate],
-        pub ident: Ident,
-        pub rename: Option<(Token![as], Ident)>,
+        pub ident: NodeId<Ident>,
+        pub rename: Option<(Token![as], NodeId<Ident>)>,
         pub semi_token: Token![;],
     }
 }
@@ -192,7 +191,7 @@ ast_struct! {
     pub struct ItemMacro {
         pub attrs: Vec<Attribute>,
         /// The `example` in `macro_rules! example { ... }`.
-        pub ident: Option<Ident>,
+        pub ident: Option<NodeId<Ident>>,
         pub mac: Macro,
         pub semi_token: Option<Token![;]>,
     }
@@ -206,7 +205,7 @@ ast_struct! {
         pub vis: Visibility,
         pub unsafety: Option<Token![unsafe]>,
         pub mod_token: Token![mod],
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub content: Option<(token::Brace, Vec<Item>)>,
         pub semi: Option<Token![;]>,
     }
@@ -220,7 +219,7 @@ ast_struct! {
         pub vis: Visibility,
         pub static_token: Token![static],
         pub mutability: StaticMutability,
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub colon_token: Token![:],
         pub ty: NodeId<Type>,
         pub eq_token: Token![=],
@@ -236,7 +235,7 @@ ast_struct! {
         pub attrs: Vec<Attribute>,
         pub vis: Visibility,
         pub struct_token: Token![struct],
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub generics: Generics,
         pub fields: Fields,
         pub semi_token: Option<Token![;]>,
@@ -253,7 +252,7 @@ ast_struct! {
         pub auto_token: Option<Token![auto]>,
         pub restriction: Option<ImplRestriction>,
         pub trait_token: Token![trait],
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub generics: Generics,
         pub colon_token: Option<Token![:]>,
         pub supertraits: Punctuated<TypeParamBound, Token![+]>,
@@ -269,7 +268,7 @@ ast_struct! {
         pub attrs: Vec<Attribute>,
         pub vis: Visibility,
         pub trait_token: Token![trait],
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub generics: Generics,
         pub eq_token: Token![=],
         pub bounds: Punctuated<TypeParamBound, Token![+]>,
@@ -284,7 +283,7 @@ ast_struct! {
         pub attrs: Vec<Attribute>,
         pub vis: Visibility,
         pub type_token: Token![type],
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub generics: Generics,
         pub eq_token: Token![=],
         pub ty: NodeId<Type>,
@@ -299,7 +298,7 @@ ast_struct! {
         pub attrs: Vec<Attribute>,
         pub vis: Visibility,
         pub union_token: Token![union],
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub generics: Generics,
         pub fields: FieldsNamed,
     }
@@ -342,86 +341,6 @@ impl Item {
     }
 }
 
-impl From<DeriveInput> for Item {
-    fn from(input: DeriveInput) -> Item {
-        match input.data {
-            Data::Struct(data) => Item::Struct(ItemStruct {
-                attrs: input.attrs,
-                vis: input.vis,
-                struct_token: data.struct_token,
-                ident: input.ident,
-                generics: input.generics,
-                fields: data.fields,
-                semi_token: data.semi_token,
-            }),
-            Data::Enum(data) => Item::Enum(ItemEnum {
-                attrs: input.attrs,
-                vis: input.vis,
-                enum_token: data.enum_token,
-                ident: input.ident,
-                generics: input.generics,
-                brace_token: data.brace_token,
-                variants: data.variants,
-            }),
-            Data::Union(data) => Item::Union(ItemUnion {
-                attrs: input.attrs,
-                vis: input.vis,
-                union_token: data.union_token,
-                ident: input.ident,
-                generics: input.generics,
-                fields: data.fields,
-            }),
-        }
-    }
-}
-
-impl From<ItemStruct> for DeriveInput {
-    fn from(input: ItemStruct) -> DeriveInput {
-        DeriveInput {
-            attrs: input.attrs,
-            vis: input.vis,
-            ident: input.ident,
-            generics: input.generics,
-            data: Data::Struct(DataStruct {
-                struct_token: input.struct_token,
-                fields: input.fields,
-                semi_token: input.semi_token,
-            }),
-        }
-    }
-}
-
-impl From<ItemEnum> for DeriveInput {
-    fn from(input: ItemEnum) -> DeriveInput {
-        DeriveInput {
-            attrs: input.attrs,
-            vis: input.vis,
-            ident: input.ident,
-            generics: input.generics,
-            data: Data::Enum(DataEnum {
-                enum_token: input.enum_token,
-                brace_token: input.brace_token,
-                variants: input.variants,
-            }),
-        }
-    }
-}
-
-impl From<ItemUnion> for DeriveInput {
-    fn from(input: ItemUnion) -> DeriveInput {
-        DeriveInput {
-            attrs: input.attrs,
-            vis: input.vis,
-            ident: input.ident,
-            generics: input.generics,
-            data: Data::Union(DataUnion {
-                union_token: input.union_token,
-                fields: input.fields,
-            }),
-        }
-    }
-}
-
 ast_enum_of_structs! {
     /// A suffix of an import tree in a `use` item: `Type as Renamed` or `*`.
     ///
@@ -453,7 +372,7 @@ ast_struct! {
     /// A path prefix of imports in a `use` item: `std::...`.
     #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
     pub struct UsePath {
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub colon2_token: Token![::],
         pub tree: Box<UseTree>,
     }
@@ -463,7 +382,7 @@ ast_struct! {
     /// An identifier imported by a `use` item: `HashMap`.
     #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
     pub struct UseName {
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
     }
 }
 
@@ -471,7 +390,7 @@ ast_struct! {
     /// An renamed identifier imported by a `use` item: `HashMap as Map`.
     #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
     pub struct UseRename {
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub as_token: Token![as],
         pub rename: Ident,
     }
@@ -559,7 +478,7 @@ ast_struct! {
         pub vis: Visibility,
         pub static_token: Token![static],
         pub mutability: StaticMutability,
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub colon_token: Token![:],
         pub ty: NodeId<Type>,
         pub semi_token: Token![;],
@@ -573,7 +492,7 @@ ast_struct! {
         pub attrs: Vec<Attribute>,
         pub vis: Visibility,
         pub type_token: Token![type],
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub generics: Generics,
         pub semi_token: Token![;],
     }
@@ -641,7 +560,7 @@ ast_struct! {
     pub struct TraitItemConst {
         pub attrs: Vec<Attribute>,
         pub const_token: Token![const],
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub generics: Generics,
         pub colon_token: Token![:],
         pub ty: NodeId<Type>,
@@ -667,7 +586,7 @@ ast_struct! {
     pub struct TraitItemType {
         pub attrs: Vec<Attribute>,
         pub type_token: Token![type],
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub generics: Generics,
         pub colon_token: Option<Token![:]>,
         pub bounds: Punctuated<TypeParamBound, Token![+]>,
@@ -740,7 +659,7 @@ ast_struct! {
         pub vis: Visibility,
         pub defaultness: Option<Token![default]>,
         pub const_token: Token![const],
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub generics: Generics,
         pub colon_token: Token![:],
         pub ty: NodeId<Type>,
@@ -770,7 +689,7 @@ ast_struct! {
         pub vis: Visibility,
         pub defaultness: Option<Token![default]>,
         pub type_token: Token![type],
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub generics: Generics,
         pub eq_token: Token![=],
         pub ty: NodeId<Type>,
@@ -798,7 +717,7 @@ ast_struct! {
         pub unsafety: Option<Token![unsafe]>,
         pub abi: Option<Abi>,
         pub fn_token: Token![fn],
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub generics: Generics,
         pub paren_token: token::Paren,
         pub inputs: Punctuated<FnArg, Token![,]>,
@@ -910,7 +829,7 @@ pub(crate) mod parsing {
     use crate::expr::Expr;
     use crate::ext::IdentExt as _;
     use crate::generics::{Generics, TypeParamBound};
-    use crate::ident::Ident;
+    use crate::ident::{AnyIdent, Ident, TokenIdent};
     use crate::item::{
         FnArg, ForeignItem, ForeignItemFn, ForeignItemMacro, ForeignItemStatic, ForeignItemType,
         ImplItem, ImplItemConst, ImplItemFn, ImplItemMacro, ImplItemType, Item, ItemConst,
@@ -923,17 +842,17 @@ pub(crate) mod parsing {
     use crate::lit::LitStr;
     use crate::mac::{self, Macro};
     use crate::parse::discouraged::Speculative as _;
-    use crate::parse::{Parse, ParseBuffer, ParseStream};
+    use crate::parse::{Parse, ParseBuffer, ParsePat, ParseStream};
     use crate::pat::{Pat, PatType, PatWild};
     use crate::path::Path;
     use crate::punctuated::Punctuated;
     use crate::restriction::Visibility;
     use crate::stmt::Block;
-    use crate::token;
     use crate::ty::{Abi, ReturnType, Type};
     use crate::verbatim;
-    use crate::{derive, TypePath};
-    use molt_lib::{NodeId, NodeList, Pattern, WithSpan};
+    use crate::TypePath;
+    use crate::{derive, token};
+    use molt_lib::{NodeId, NodeList, Pattern, SpannedPat, WithSpan};
     use proc_macro2::TokenStream;
 
     #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
@@ -942,6 +861,17 @@ pub(crate) mod parsing {
             let begin = input.fork();
             let attrs = input.call(Attribute::parse_outer)?;
             parse_rest_of_item(begin, attrs, input)
+        }
+    }
+
+    impl ParsePat for Item {
+        type Target = Item;
+
+        fn parse_pat(input: ParseStream) -> Result<SpannedPat<Item>> {
+            if let Some(var) = input.parse_var() {
+                return var;
+            }
+            input.call_spanned(Item::parse)
         }
     }
 
@@ -1023,8 +953,8 @@ pub(crate) mod parsing {
             let vis = input.parse()?;
             let const_token: Token![const] = input.parse()?;
             let lookahead = input.lookahead1();
-            let ident = if lookahead.peek(Ident) || lookahead.peek(Token![_]) {
-                input.call(Ident::parse_any)?
+            let ident = if lookahead.peek_pat::<Ident>() || lookahead.peek(Token![_]) {
+                input.parse_id::<AnyIdent>()?
             } else {
                 return Err(lookahead.error());
             };
@@ -1106,7 +1036,7 @@ pub(crate) mod parsing {
             input.advance_to(&ahead);
             parse_macro2(begin, vis, input)
         } else if vis.is_inherited()
-            && (lookahead.peek(Ident)
+            && (lookahead.peek_pat::<Ident>()
                 || lookahead.peek(Token![self])
                 || lookahead.peek(Token![super])
                 || lookahead.peek(Token![crate])
@@ -1126,7 +1056,7 @@ pub(crate) mod parsing {
         vis: Visibility,
         defaultness: Option<Token![default]>,
         type_token: Token![type],
-        ident: Ident,
+        ident: NodeId<Ident>,
         generics: Generics,
         colon_token: Option<Token![:]>,
         bounds: Punctuated<TypeParamBound, Token![+]>,
@@ -1160,7 +1090,7 @@ pub(crate) mod parsing {
                 TypeDefaultness::Disallowed => None,
             };
             let type_token: Token![type] = input.parse()?;
-            let ident: Ident = input.parse()?;
+            let ident: NodeId<Ident> = input.parse()?;
             let mut generics: Generics = input.parse()?;
             let (colon_token, bounds) = Self::parse_optional_bounds(input)?;
 
@@ -1246,8 +1176,8 @@ pub(crate) mod parsing {
             let attrs = input.call(Attribute::parse_outer)?;
             let path = input.call(Path::parse_mod_style)?;
             let bang_token: Token![!] = input.parse()?;
-            let ident: Option<Ident> = if input.peek(Token![try]) {
-                input.call(Ident::parse_any).map(Some)
+            let ident: Option<NodeId<Ident>> = if input.peek(Token![try]) {
+                input.parse_id::<AnyIdent>().map(Some)
             } else {
                 input.parse()
             }?;
@@ -1273,7 +1203,7 @@ pub(crate) mod parsing {
 
     fn parse_macro2(begin: ParseBuffer, _vis: Visibility, input: ParseStream) -> Result<Item> {
         input.parse::<Token![macro]>()?;
-        input.parse::<Ident>()?;
+        input.parse::<NodeId<Ident>>()?;
 
         let mut lookahead = input.lookahead1();
         if lookahead.peek(token::Paren) {
@@ -1304,7 +1234,7 @@ pub(crate) mod parsing {
                 crate_token: input.parse()?,
                 ident: {
                     if input.peek(Token![self]) {
-                        input.call(Ident::parse_any)?
+                        input.parse_id::<AnyIdent>()?
                     } else {
                         input.parse()?
                     }
@@ -1312,8 +1242,8 @@ pub(crate) mod parsing {
                 rename: {
                     if input.peek(Token![as]) {
                         let as_token: Token![as] = input.parse()?;
-                        let rename: Ident = if input.peek(Token![_]) {
-                            Ident::from(input.parse::<Token![_]>()?)
+                        let rename: NodeId<Ident> = if input.peek(Token![_]) {
+                            input.parse_id::<TokenIdent<Token![_]>>()?
                         } else {
                             input.parse()?
                         };
@@ -1374,13 +1304,13 @@ pub(crate) mod parsing {
         allow_crate_root_in_path: bool,
     ) -> Result<Option<UseTree>> {
         let lookahead = input.lookahead1();
-        if lookahead.peek(Ident)
+        if lookahead.peek_pat::<Ident>()
             || lookahead.peek(Token![self])
             || lookahead.peek(Token![super])
             || lookahead.peek(Token![crate])
             || lookahead.peek(Token![try])
         {
-            let ident = input.call(Ident::parse_any)?;
+            let ident = input.parse_id::<AnyIdent>()?;
             if input.peek(Token![::]) {
                 Ok(Some(UseTree::Path(UsePath {
                     ident,
@@ -1392,7 +1322,7 @@ pub(crate) mod parsing {
                     ident,
                     as_token: input.parse()?,
                     rename: {
-                        if input.peek(Ident) {
+                        if input.peek_pat::<Ident>() {
                             input.parse()?
                         } else if input.peek(Token![_]) {
                             Ident::from(input.parse::<Token![_]>()?)
@@ -1471,8 +1401,8 @@ pub(crate) mod parsing {
             let const_token: Token![const] = input.parse()?;
 
             let lookahead = input.lookahead1();
-            let ident = if lookahead.peek(Ident) || lookahead.peek(Token![_]) {
-                input.call(Ident::parse_any)?
+            let ident = if lookahead.peek_pat::<Ident>() || lookahead.peek(Token![_]) {
+                input.parse_id::<AnyIdent>()?
             } else {
                 return Err(lookahead.error());
             };
@@ -1530,7 +1460,7 @@ pub(crate) mod parsing {
         }
         let abi: Option<Abi> = input.parse()?;
         let fn_token: Token![fn] = input.parse()?;
-        let ident: Ident = input.parse()?;
+        let ident = input.parse_id::<Ident>()?;
         let mut generics: Generics = input.parse()?;
 
         let content;
@@ -1620,7 +1550,7 @@ pub(crate) mod parsing {
         // Hack to parse pre-2018 syntax in
         // test/ui/rfc-2565-param-attrs/param-attrs-pretty.rs
         // because the rest of the test case is valuable.
-        if input.peek(Ident) && input.peek2(Token![<]) {
+        if input.peek_pat::<Ident>() && input.peek2(Token![<]) {
             let span = input.fork().parse::<Ident>()?.span();
             return Ok(FnArgOrVariadic::FnArg(FnArg::Typed(PatType {
                 attrs,
@@ -1768,8 +1698,8 @@ pub(crate) mod parsing {
             let vis: Visibility = input.parse()?;
             let unsafety: Option<Token![unsafe]> = input.parse()?;
             let mod_token: Token![mod] = input.parse()?;
-            let ident: Ident = if input.peek(Token![try]) {
-                input.call(Ident::parse_any)
+            let ident: NodeId<Ident> = if input.peek(Token![try]) {
+                input.parse_id::<AnyIdent>()
             } else {
                 input.parse()
             }?;
@@ -1909,7 +1839,7 @@ pub(crate) mod parsing {
             } else if lookahead.peek(Token![type]) {
                 parse_foreign_item_type(begin, input)
             } else if vis.is_inherited()
-                && (lookahead.peek(Ident)
+                && (lookahead.peek_pat::<Ident>()
                     || lookahead.peek(Token![self])
                     || lookahead.peek(Token![super])
                     || lookahead.peek(Token![crate])
@@ -2093,7 +2023,7 @@ pub(crate) mod parsing {
             let attrs = input.call(Attribute::parse_outer)?;
             let vis = input.parse::<Visibility>()?;
             let struct_token = input.parse::<Token![struct]>()?;
-            let ident = input.parse::<Ident>()?;
+            let ident = input.parse_id::<Ident>()?;
             let generics = input.parse::<Generics>()?;
             let (where_clause, fields, semi_token) = derive::parsing::data_struct(input)?;
             Ok(ItemStruct {
@@ -2117,7 +2047,7 @@ pub(crate) mod parsing {
             let attrs = input.call(Attribute::parse_outer)?;
             let vis = input.parse::<Visibility>()?;
             let enum_token = input.parse::<Token![enum]>()?;
-            let ident = input.parse::<Ident>()?;
+            let ident = input.parse_id::<Ident>()?;
             let generics = input.parse::<Generics>()?;
             let (where_clause, brace_token, variants) = derive::parsing::data_enum(input)?;
             Ok(ItemEnum {
@@ -2141,7 +2071,7 @@ pub(crate) mod parsing {
             let attrs = input.call(Attribute::parse_outer)?;
             let vis = input.parse::<Visibility>()?;
             let union_token = input.parse::<Token![union]>()?;
-            let ident = input.parse::<Ident>()?;
+            let ident = input.parse_id::<Ident>()?;
             let generics = input.parse::<Generics>()?;
             let (where_clause, fields) = derive::parsing::data_union(input)?;
             Ok(ItemUnion {
@@ -2194,7 +2124,7 @@ pub(crate) mod parsing {
             let unsafety: Option<Token![unsafe]> = input.parse()?;
             let auto_token: Option<Token![auto]> = input.parse()?;
             let trait_token: Token![trait] = input.parse()?;
-            let ident: Ident = input.parse()?;
+            let ident = input.parse_id::<Ident>()?;
             let generics: Generics = input.parse()?;
             parse_rest_of_trait(
                 input,
@@ -2216,7 +2146,7 @@ pub(crate) mod parsing {
         unsafety: Option<Token![unsafe]>,
         auto_token: Option<Token![auto]>,
         trait_token: Token![trait],
-        ident: Ident,
+        ident: NodeId<Ident>,
         mut generics: Generics,
     ) -> Result<ItemTrait> {
         let colon_token: Option<Token![:]> = input.parse()?;
@@ -2275,11 +2205,17 @@ pub(crate) mod parsing {
 
     fn parse_start_of_trait_alias(
         input: ParseStream,
-    ) -> Result<(Vec<Attribute>, Visibility, Token![trait], Ident, Generics)> {
+    ) -> Result<(
+        Vec<Attribute>,
+        Visibility,
+        Token![trait],
+        NodeId<Ident>,
+        Generics,
+    )> {
         let attrs = input.call(Attribute::parse_outer)?;
         let vis: Visibility = input.parse()?;
         let trait_token: Token![trait] = input.parse()?;
-        let ident: Ident = input.parse()?;
+        let ident: NodeId<Ident> = input.parse()?;
         let generics: Generics = input.parse()?;
         Ok((attrs, vis, trait_token, ident, generics))
     }
@@ -2289,7 +2225,7 @@ pub(crate) mod parsing {
         attrs: Vec<Attribute>,
         vis: Visibility,
         trait_token: Token![trait],
-        ident: Ident,
+        ident: NodeId<Ident>,
         mut generics: Generics,
     ) -> Result<ItemTraitAlias> {
         let eq_token: Token![=] = input.parse()?;
@@ -2341,9 +2277,9 @@ pub(crate) mod parsing {
             } else if lookahead.peek(Token![const]) {
                 let const_token: Token![const] = ahead.parse()?;
                 let lookahead = ahead.lookahead1();
-                if lookahead.peek(Ident) || lookahead.peek(Token![_]) {
+                if lookahead.peek_pat::<Ident>() || lookahead.peek(Token![_]) {
                     input.advance_to(&ahead);
-                    let ident = input.call(Ident::parse_any)?;
+                    let ident = input.parse_id::<AnyIdent>()?;
                     let mut generics: Generics = input.parse()?;
                     let colon_token: Token![:] = input.parse()?;
                     let ty: NodeId<Type> = input.parse()?;
@@ -2382,7 +2318,7 @@ pub(crate) mod parsing {
                 parse_trait_item_type(begin.fork(), input)
             } else if vis.is_inherited()
                 && defaultness.is_none()
-                && (lookahead.peek(Ident)
+                && (lookahead.peek_pat::<Ident>()
                     || lookahead.peek(Token![self])
                     || lookahead.peek(Token![super])
                     || lookahead.peek(Token![crate])
@@ -2418,8 +2354,8 @@ pub(crate) mod parsing {
             let const_token: Token![const] = input.parse()?;
 
             let lookahead = input.lookahead1();
-            let ident = if lookahead.peek(Ident) || lookahead.peek(Token![_]) {
-                input.call(Ident::parse_any)?
+            let ident = if lookahead.peek_pat::<Ident>() || lookahead.peek(Token![_]) {
+                input.parse_id::<AnyIdent>()?
             } else {
                 return Err(lookahead.error());
             };
@@ -2482,7 +2418,7 @@ pub(crate) mod parsing {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = input.call(Attribute::parse_outer)?;
             let type_token: Token![type] = input.parse()?;
-            let ident: Ident = input.parse()?;
+            let ident: NodeId<Ident> = input.parse()?;
             let mut generics: Generics = input.parse()?;
             let (colon_token, bounds) = FlexibleItemType::parse_optional_bounds(input)?;
             let default = FlexibleItemType::parse_optional_definition(input)?;
@@ -2700,8 +2636,8 @@ pub(crate) mod parsing {
                 input.advance_to(&ahead);
                 let const_token: Token![const] = input.parse()?;
                 let lookahead = input.lookahead1();
-                let ident = if lookahead.peek(Ident) || lookahead.peek(Token![_]) {
-                    input.call(Ident::parse_any)?
+                let ident = if lookahead.peek_pat::<Ident>() || lookahead.peek(Token![_]) {
+                    input.parse_id::<AnyIdent>()?
                 } else {
                     return Err(lookahead.error());
                 };
@@ -2740,7 +2676,7 @@ pub(crate) mod parsing {
                 parse_impl_item_type(begin, input)
             } else if vis.is_inherited()
                 && defaultness.is_none()
-                && (lookahead.peek(Ident)
+                && (lookahead.peek_pat::<Ident>()
                     || lookahead.peek(Token![self])
                     || lookahead.peek(Token![super])
                     || lookahead.peek(Token![crate])
@@ -2776,8 +2712,8 @@ pub(crate) mod parsing {
             let const_token: Token![const] = input.parse()?;
 
             let lookahead = input.lookahead1();
-            let ident = if lookahead.peek(Ident) || lookahead.peek(Token![_]) {
-                input.call(Ident::parse_any)?
+            let ident = if lookahead.peek_pat::<Ident>() || lookahead.peek(Token![_]) {
+                input.parse_id::<AnyIdent>()?
             } else {
                 return Err(lookahead.error());
             };
@@ -2852,7 +2788,7 @@ pub(crate) mod parsing {
             let vis: Visibility = input.parse()?;
             let defaultness: Option<Token![default]> = input.parse()?;
             let type_token: Token![type] = input.parse()?;
-            let ident: Ident = input.parse()?;
+            let ident: NodeId<Ident> = input.parse()?;
             let mut generics: Generics = input.parse()?;
             let eq_token: Token![=] = input.parse()?;
             let ty = input.parse()?;

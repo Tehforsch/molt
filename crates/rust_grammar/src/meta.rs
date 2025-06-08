@@ -2,6 +2,7 @@
 
 use crate::error::{Error, Result};
 use crate::ext::IdentExt as _;
+use crate::ident::AnyIdent;
 use crate::lit::Lit;
 use crate::parse::{ParseStream, Parser};
 use crate::path::{Path, PathSegment};
@@ -276,110 +277,6 @@ impl<'a> ParseNestedMeta<'a> {
         parenthesized!(content in self.input);
         parse_nested_meta(&content, logic)
     }
-
-    /// Report that the attribute's content did not conform to expectations.
-    ///
-    /// The span of the resulting error will cover `meta.path` *and* everything
-    /// that has been parsed so far since it.
-    ///
-    /// There are 2 ways you might call this. First, if `meta.path` is not
-    /// something you recognize:
-    ///
-    /// ```
-    /// # use syn::Attribute;
-    /// #
-    /// # fn example(attr: &Attribute) -> syn::Result<()> {
-    /// attr.parse_nested_meta(|meta| {
-    ///     if meta.path.is_ident("kind") {
-    ///         // ...
-    ///         Ok(())
-    ///     } else {
-    ///         Err(meta.error("unsupported tea property"))
-    ///     }
-    /// })?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    ///
-    /// In this case, it behaves exactly like
-    /// `syn::Error::new_spanned(&meta.path, "message...")`.
-    ///
-    /// ```console
-    /// error: unsupported tea property
-    ///  --> src/main.rs:3:26
-    ///   |
-    /// 3 | #[tea(kind = "EarlGrey", wat = "foo")]
-    ///   |                          ^^^
-    /// ```
-    ///
-    /// More usefully, the second place is if you've already parsed a value but
-    /// have decided not to accept the value:
-    ///
-    /// ```
-    /// # use syn::Attribute;
-    /// #
-    /// # fn example(attr: &Attribute) -> syn::Result<()> {
-    /// use syn::Expr;
-    ///
-    /// attr.parse_nested_meta(|meta| {
-    ///     if meta.path.is_ident("kind") {
-    ///         let expr: Expr = meta.value()?.parse()?;
-    ///         match expr {
-    ///             Expr::Lit(expr) => /* ... */
-    /// #               unimplemented!(),
-    ///             Expr::Path(expr) => /* ... */
-    /// #               unimplemented!(),
-    ///             Expr::Macro(expr) => /* ... */
-    /// #               unimplemented!(),
-    ///             _ => Err(meta.error("tea kind must be a string literal, path, or macro")),
-    ///         }
-    ///     } else /* as above */
-    /// #       { unimplemented!() }
-    ///
-    /// })?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    ///
-    /// ```console
-    /// error: tea kind must be a string literal, path, or macro
-    ///  --> src/main.rs:3:7
-    ///   |
-    /// 3 | #[tea(kind = async { replicator.await })]
-    ///   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    /// ```
-    ///
-    /// Often you may want to use `syn::Error::new_spanned` even in this
-    /// situation. In the above code, that would be:
-    ///
-    /// ```
-    /// # use syn::{Error, Expr};
-    /// #
-    /// # fn example(expr: Expr) -> syn::Result<()> {
-    ///     match expr {
-    ///         Expr::Lit(expr) => /* ... */
-    /// #           unimplemented!(),
-    ///         Expr::Path(expr) => /* ... */
-    /// #           unimplemented!(),
-    ///         Expr::Macro(expr) => /* ... */
-    /// #           unimplemented!(),
-    ///         _ => Err(Error::new_spanned(expr, "unsupported expression type for `kind`")),
-    ///     }
-    /// # }
-    /// ```
-    ///
-    /// ```console
-    /// error: unsupported expression type for `kind`
-    ///  --> src/main.rs:3:14
-    ///   |
-    /// 3 | #[tea(kind = async { replicator.await })]
-    ///   |              ^^^^^^^^^^^^^^^^^^^^^^^^^^
-    /// ```
-    pub fn error(&self, msg: impl Display) -> Error {
-        let start_span = self.path.segments[0].ident.span();
-        let end_span = self.input.cursor().prev_span();
-        crate::error::new2(start_span, end_span, msg)
-    }
 }
 
 pub(crate) fn parse_nested_meta(
@@ -405,8 +302,8 @@ fn parse_meta_path(input: ParseStream) -> Result<Path> {
         leading_colon: input.parse()?,
         segments: {
             let mut segments = Punctuated::new();
-            if input.peek(Ident::peek_any) {
-                let ident = Ident::parse_any(input)?;
+            if input.peek_pat::<AnyIdent>() {
+                let ident = input.parse_id::<AnyIdent>()?;
                 segments.push_value(PathSegment::from(ident));
             } else if input.is_empty() {
                 return Err(input.error("expected nested attribute"));
@@ -418,7 +315,7 @@ fn parse_meta_path(input: ParseStream) -> Result<Path> {
             while input.peek(Token![::]) {
                 let punct = input.parse()?;
                 segments.push_punct(punct);
-                let ident = Ident::parse_any(input)?;
+                let ident = input.parse_id::<AnyIdent>()?;
                 segments.push_value(PathSegment::from(ident));
             }
             segments

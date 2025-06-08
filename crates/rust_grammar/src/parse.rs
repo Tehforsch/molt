@@ -232,20 +232,21 @@ pub trait ParsePat {
     }
 }
 
-impl<T: ToNode<Node> + ParsePat<Target = T>> Parse for NodeId<T> {
-    fn parse(input: ParseStream) -> Result<NodeId<T>> {
-        T::parse_id(input)
+pub trait PeekPat {
+    type Target: ToNode<Node>;
+
+    fn peek(cursor: Cursor) -> bool;
+
+    fn peek_var(cursor: Cursor, ctx: &Ctx<Node>) -> bool;
+
+    fn peek_pat(cursor: Cursor, ctx: &Ctx<Node>) -> bool {
+        Self::peek(cursor) || Self::peek_var(cursor, ctx)
     }
 }
 
-// todo!(): Remove this, probably. Types that can also be patterns
-// shouldn't really be parsed normally, since that means we cant
-// match them with a variable in that particular place.
-impl<T: Parse + ToNode<Node>> ParsePat for T {
-    type Target = T;
-
-    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
-        input.call_spanned(T::parse)
+impl<T: ToNode<Node> + ParsePat<Target = T>> Parse for NodeId<T> {
+    fn parse(input: ParseStream) -> Result<NodeId<T>> {
+        T::parse_id(input)
     }
 }
 
@@ -498,6 +499,10 @@ fn span_of_unexpected_ignoring_nones(mut cursor: Cursor) -> Option<(Span, Delimi
     } else {
         Some((cursor.span(), cursor.scope_delimiter()))
     }
+}
+
+pub fn kind_matches(ctx: &Ctx<Node>, ident: &Ident, kind: crate::Kind) -> bool {
+    ctx.get_kind_by_name(&ident.to_string()) == kind
 }
 
 impl<'a> ParseBuffer<'a> {
@@ -888,7 +893,7 @@ impl<'a> ParseBuffer<'a> {
     /// }
     /// ```
     pub fn lookahead1(&self) -> Lookahead1<'a> {
-        lookahead::new(self.scope, self.cursor())
+        lookahead::new(self.scope, self.cursor(), self.ctx.clone())
     }
 
     /// Forks a parse stream so that parsing tokens out of either the original
@@ -1297,8 +1302,12 @@ impl<'a> ParseBuffer<'a> {
         self.ctx.borrow_mut().add(t)
     }
 
-    fn kind_matches(&self, ident: &Ident, kind: crate::Kind) -> bool {
-        self.ctx().get_kind_by_name(&ident.to_string()) == kind
+    pub fn peek_pat<T: PeekPat>(&self) -> bool {
+        T::peek_pat(self.cursor(), &self.ctx.borrow())
+    }
+
+    pub fn peek_var<T: PeekPat>(&self) -> bool {
+        self.fork().parse_var::<T::Target>().is_some()
     }
 
     pub fn parse_var<T: ToNode<Node>>(&self) -> Option<Result<SpannedPat<T>>> {
@@ -1308,7 +1317,7 @@ impl<'a> ParseBuffer<'a> {
                 let marker = ahead.marker();
                 let _: Token![$] = ahead.parse()?;
                 let ident: Ident = ahead.parse()?;
-                if !ahead.kind_matches(&ident, T::kind()) {
+                if !kind_matches(&ahead.ctx.borrow(), &ident, T::kind()) {
                     return Ok(None);
                 }
                 self.advance_to(&ahead);

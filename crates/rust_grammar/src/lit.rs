@@ -881,9 +881,11 @@ pub(crate) mod parsing {
         value, Lit, LitBool, LitByte, LitByteStr, LitCStr, LitChar, LitFloat, LitFloatRepr, LitInt,
         LitIntRepr, LitStr,
     };
-    use crate::parse::ParseCtx;
     use crate::parse::{Parse, ParseStream, Unexpected};
+    use crate::parse::{ParseCtx, ParsePat};
     use crate::token::{self, Token};
+    use crate::Node;
+    use molt_lib::{SpannedPat, ToNode};
     use proc_macro2::{Literal, Punct, Span};
     use std::cell::Cell;
     use std::rc::Rc;
@@ -917,6 +919,17 @@ pub(crate) mod parsing {
 
                 Err(cursor.error("expected literal"))
             })
+        }
+    }
+
+    impl ParsePat for Lit {
+        type Target = Lit;
+
+        fn parse_pat(input: ParseStream) -> Result<SpannedPat<Lit>> {
+            if let Some(var) = input.parse_var() {
+                return var;
+            }
+            input.call_spanned(Lit::parse)
         }
     }
 

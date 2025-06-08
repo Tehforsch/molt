@@ -183,7 +183,8 @@ impl ParseQuote for Field {
 
         let ident: Option<Ident>;
         let colon_token: Option<Token![:]>;
-        let is_named = input.peek(Ident) && input.peek2(Token![:]) && !input.peek2(Token![::]);
+        let is_named =
+            input.peek_pat::<Ident>() && input.peek2(Token![:]) && !input.peek2(Token![::]);
         if is_named {
             ident = Some(input.parse()?);
             colon_token = Some(input.parse()?);

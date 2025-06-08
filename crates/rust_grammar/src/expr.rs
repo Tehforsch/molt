@@ -7,7 +7,7 @@ use crate::error::Result;
 use crate::ext::IdentExt as _;
 #[cfg(feature = "full")]
 use crate::generics::BoundLifetimes;
-use crate::ident::Ident;
+use crate::ident::{AnyIdent, Ident};
 #[cfg(any(feature = "parsing", feature = "full"))]
 use crate::lifetime::Lifetime;
 use crate::lit::Lit;
@@ -540,7 +540,7 @@ ast_struct! {
         pub attrs: Vec<Attribute>,
         pub receiver: NodeId<Expr>,
         pub dot_token: Token![.],
-        pub method: Ident,
+        pub method: NodeId<Ident>,
         pub turbofish: Option<AngleBracketedGenericArguments>,
         pub paren_token: token::Paren,
         pub args: NodeList<Expr, Token![,]>,
@@ -903,10 +903,8 @@ impl Expr {
     /// required to be continued as a return value, such as `return <Struct as
     /// Trait>::CONST`. Meanwhile `return > …` treats the `>` as a binary
     /// operator because it cannot be a starting token for any Rust expression.
-    #[cfg(feature = "parsing")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     pub fn peek(input: ParseStream) -> bool {
-        input.peek(Ident::peek_any) && !input.peek(Token![as]) // value name or keyword
+        input.peek_pat::<AnyIdent>() && !input.peek(Token![as]) // value name or keyword
             || input.peek(token::Paren) // tuple
             || input.peek(token::Bracket) // array
             || input.peek(token::Brace) // block
@@ -921,8 +919,6 @@ impl Expr {
             || input.peek(Token![::]) // absolute path
             || input.peek(Lifetime) // labeled loop
             || input.peek(Token![#]) // expression attributes
-            // Allow vars too
-            || input.peek(Token![$])
     }
 
     #[cfg(all(feature = "parsing", feature = "full"))]
@@ -978,14 +974,14 @@ ast_enum! {
     #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
     pub enum Member {
         /// A named field like `self.x`.
-        Named(Ident),
+        Named(NodeId<Ident>),
         /// An unnamed field like `self.0`.
         Unnamed(Index),
     }
 }
 
-impl From<Ident> for Member {
-    fn from(ident: Ident) -> Member {
+impl From<NodeId<Ident>> for Member {
+    fn from(ident: NodeId<Ident>) -> Member {
         Member::Named(ident)
     }
 }
@@ -1756,7 +1752,7 @@ pub(crate) mod parsing {
         } else if token::parsing::peek_keyword(input.cursor(), "builtin") && input.peek2(Token![#])
         {
             unimplemented!()
-        } else if input.peek(Ident)
+        } else if input.peek_pat::<Ident>()
             || input.peek(Token![::])
             || input.peek(Token![<])
             || input.peek(Token![self])
@@ -1842,7 +1838,7 @@ pub(crate) mod parsing {
             input.parse().map(Expr::Lit)
         } else if input.peek(token::Paren) {
             paren_or_tuple(input)
-        } else if input.peek(Ident)
+        } else if input.peek_pat::<Ident>()
             || input.peek(Token![::])
             || input.peek(Token![<])
             || input.peek(Token![self])
@@ -2906,7 +2902,7 @@ pub(crate) mod parsing {
     #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for Member {
         fn parse(input: ParseStream) -> Result<Self> {
-            if input.peek(Ident) {
+            if input.peek_pat::<Ident>() {
                 input.parse().map(Member::Named)
             } else if input.peek(LitInt) {
                 input.parse().map(Member::Unnamed)

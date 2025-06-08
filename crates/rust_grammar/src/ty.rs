@@ -242,7 +242,7 @@ ast_struct! {
     #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
     pub struct BareFnArg {
         pub attrs: Vec<Attribute>,
-        pub name: Option<(Ident, Token![:])>,
+        pub name: Option<(NodeId<Ident>, Token![:])>,
         pub ty: NodeId<Type>,
     }
 }
@@ -252,7 +252,7 @@ ast_struct! {
     #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
     pub struct BareVariadic {
         pub attrs: Vec<Attribute>,
-        pub name: Option<(Ident, Token![:])>,
+        pub name: Option<(NodeId<Ident>, Token![:])>,
         pub dots: Token![...],
         pub comma: Option<Token![,]>,
     }
@@ -277,7 +277,7 @@ pub(crate) mod parsing {
     use crate::error::{self, Result};
     use crate::ext::IdentExt as _;
     use crate::generics::{BoundLifetimes, TraitBound, TraitBoundModifier, TypeParamBound};
-    use crate::ident::Ident;
+    use crate::ident::{AnyIdent, Ident};
     use crate::lifetime::Lifetime;
     use crate::mac::{self, Macro};
     use crate::parse::{Parse, ParsePat, ParseStream};
@@ -335,7 +335,7 @@ pub(crate) mod parsing {
         if lookahead.peek(Token![for]) {
             lifetimes = input.parse()?;
             lookahead = input.lookahead1();
-            if !lookahead.peek(Ident)
+            if !lookahead.peek_pat::<Ident>()
                 && !lookahead.peek(Token![fn])
                 && !lookahead.peek(Token![unsafe])
                 && !lookahead.peek(Token![extern])
@@ -481,7 +481,7 @@ pub(crate) mod parsing {
             let mut bare_fn: TypeBareFn = input.parse()?;
             bare_fn.lifetimes = lifetimes;
             Ok(Type::BareFn(bare_fn))
-        } else if lookahead.peek(Ident)
+        } else if lookahead.peek_pat::<Ident>()
             || input.peek(Token![super])
             || input.peek(Token![self])
             || input.peek(Token![Self])
@@ -518,7 +518,7 @@ pub(crate) mod parsing {
                 if allow_plus {
                     while input.peek(Token![+]) {
                         bounds.push_punct(input.parse()?);
-                        if !(input.peek(Ident::peek_any)
+                        if !(input.peek_pat::<AnyIdent>()
                             || input.peek(Token![::])
                             || input.peek(Token![?])
                             || input.peek(Lifetime)
@@ -671,7 +671,7 @@ pub(crate) mod parsing {
 
                         if inputs.empty_or_trailing()
                             && (args.peek(Token![...])
-                                || (args.peek(Ident) || args.peek(Token![_]))
+                                || (args.peek_pat::<Ident>() || args.peek(Token![_]))
                                     && args.peek2(Token![:])
                                     && args.peek3(Token![...]))
                         {
@@ -964,13 +964,13 @@ pub(crate) mod parsing {
         }
 
         let mut has_self = false;
-        let mut name = if (input.peek(Ident) || input.peek(Token![_]) || {
+        let mut name = if (input.peek_pat::<Ident>() || input.peek(Token![_]) || {
             has_self = allow_self && input.peek(Token![self]);
             has_self
         }) && input.peek2(Token![:])
             && !input.peek2(Token![::])
         {
-            let name = input.call(Ident::parse_any)?;
+            let name = input.parse_id::<AnyIdent>()?;
             let colon: Token![:] = input.parse()?;
             Some((name, colon))
         } else {
@@ -1007,8 +1007,8 @@ pub(crate) mod parsing {
     fn parse_bare_variadic(input: ParseStream, attrs: Vec<Attribute>) -> Result<BareVariadic> {
         Ok(BareVariadic {
             attrs,
-            name: if input.peek(Ident) || input.peek(Token![_]) {
-                let name = input.call(Ident::parse_any)?;
+            name: if input.peek_pat::<Ident>() || input.peek(Token![_]) {
+                let name = input.parse_id::<AnyIdent>()?;
                 let colon: Token![:] = input.parse()?;
                 Some((name, colon))
             } else {

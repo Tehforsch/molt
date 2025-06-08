@@ -1,6 +1,6 @@
 #[cfg(feature = "parsing")]
 use crate::lookahead;
-use molt_lib::{CmpSyn, Match};
+use molt_lib::{CmpSyn, Match, NodeId};
 use proc_macro2::{Ident, Span};
 use std::cmp::Ordering;
 use std::fmt::{self, Display};

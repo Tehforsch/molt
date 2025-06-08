@@ -1,8 +1,10 @@
 use crate::buffer::Cursor;
 use crate::error::{self, Error};
+use crate::parse::PeekPat;
 use crate::sealed::lookahead::Sealed;
 use crate::span::IntoSpans;
 use crate::token::{CustomToken, Token};
+use crate::ParseCtx;
 use proc_macro2::{Delimiter, Span};
 use std::cell::RefCell;
 
@@ -63,13 +65,15 @@ pub struct Lookahead1<'a> {
     scope: Span,
     cursor: Cursor<'a>,
     comparisons: RefCell<Vec<&'static str>>,
+    ctx: ParseCtx,
 }
 
-pub(crate) fn new(scope: Span, cursor: Cursor) -> Lookahead1 {
+pub(crate) fn new(scope: Span, cursor: Cursor, ctx: ParseCtx) -> Lookahead1 {
     Lookahead1 {
         scope,
         cursor,
         comparisons: RefCell::new(Vec::new()),
+        ctx,
     }
 }
 
@@ -103,6 +107,10 @@ impl<'a> Lookahead1<'a> {
     pub fn peek<T: Peek>(&self, token: T) -> bool {
         let _ = token;
         peek_impl(self, T::Token::peek, T::Token::display)
+    }
+
+    pub fn peek_pat<T: PeekPat>(&self) -> bool {
+        T::peek_pat(self.cursor, &self.ctx.borrow())
     }
 
     /// Triggers an error at the current position of the parse stream.

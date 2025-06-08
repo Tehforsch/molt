@@ -6,18 +6,6 @@ use crate::punctuated::Punctuated;
 use crate::restriction::Visibility;
 use crate::token;
 
-ast_struct! {
-    /// Data structure sent to a `proc_macro_derive` macro.
-    #[cfg_attr(docsrs, doc(cfg(feature = "derive")))]
-    pub struct DeriveInput {
-        pub attrs: Vec<Attribute>,
-        pub vis: Visibility,
-        pub ident: Ident,
-        pub generics: Generics,
-        pub data: Data,
-    }
-}
-
 ast_enum! {
     /// The storage of a struct, enum or union data structure.
     ///
@@ -67,7 +55,7 @@ ast_struct! {
 pub(crate) mod parsing {
     use crate::attr::Attribute;
     use crate::data::{Fields, FieldsNamed, Variant};
-    use crate::derive::{Data, DataEnum, DataStruct, DataUnion, DeriveInput};
+    use crate::derive::{Data, DataEnum, DataStruct, DataUnion};
     use crate::error::Result;
     use crate::generics::{Generics, WhereClause};
     use crate::ident::Ident;
@@ -75,75 +63,6 @@ pub(crate) mod parsing {
     use crate::punctuated::Punctuated;
     use crate::restriction::Visibility;
     use crate::token;
-
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-    impl Parse for DeriveInput {
-        fn parse(input: ParseStream) -> Result<Self> {
-            let attrs = input.call(Attribute::parse_outer)?;
-            let vis = input.parse::<Visibility>()?;
-
-            let lookahead = input.lookahead1();
-            if lookahead.peek(Token![struct]) {
-                let struct_token = input.parse::<Token![struct]>()?;
-                let ident = input.parse::<Ident>()?;
-                let generics = input.parse::<Generics>()?;
-                let (where_clause, fields, semi) = data_struct(input)?;
-                Ok(DeriveInput {
-                    attrs,
-                    vis,
-                    ident,
-                    generics: Generics {
-                        where_clause,
-                        ..generics
-                    },
-                    data: Data::Struct(DataStruct {
-                        struct_token,
-                        fields,
-                        semi_token: semi,
-                    }),
-                })
-            } else if lookahead.peek(Token![enum]) {
-                let enum_token = input.parse::<Token![enum]>()?;
-                let ident = input.parse::<Ident>()?;
-                let generics = input.parse::<Generics>()?;
-                let (where_clause, brace, variants) = data_enum(input)?;
-                Ok(DeriveInput {
-                    attrs,
-                    vis,
-                    ident,
-                    generics: Generics {
-                        where_clause,
-                        ..generics
-                    },
-                    data: Data::Enum(DataEnum {
-                        enum_token,
-                        brace_token: brace,
-                        variants,
-                    }),
-                })
-            } else if lookahead.peek(Token![union]) {
-                let union_token = input.parse::<Token![union]>()?;
-                let ident = input.parse::<Ident>()?;
-                let generics = input.parse::<Generics>()?;
-                let (where_clause, fields) = data_union(input)?;
-                Ok(DeriveInput {
-                    attrs,
-                    vis,
-                    ident,
-                    generics: Generics {
-                        where_clause,
-                        ..generics
-                    },
-                    data: Data::Union(DataUnion {
-                        union_token,
-                        fields,
-                    }),
-                })
-            } else {
-                Err(lookahead.error())
-            }
-        }
-    }
 
     pub(crate) fn data_struct(
         input: ParseStream,

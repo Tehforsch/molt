@@ -1,3 +1,4 @@
+#![allow(unused)]
 //! [![github]](https://github.com/dtolnay/syn)&ensp;[![crates-io]](https://crates.io/crates/syn)&ensp;[![docs-rs]](crate)
 //!
 //! [github]: https://img.shields.io/badge/github-8da0cb?style=for-the-badge&labelColor=555555&logo=github
@@ -357,11 +358,7 @@ pub use crate::data::{
     Field, FieldNamed, FieldUnnamed, Fields, FieldsNamed, FieldsUnnamed, Variant,
 };
 
-#[cfg(any(feature = "full", feature = "derive"))]
 mod derive;
-#[cfg(feature = "derive")]
-#[cfg_attr(docsrs, doc(cfg(feature = "derive")))]
-pub use crate::derive::{Data, DataEnum, DataStruct, DataUnion, DeriveInput};
 
 mod drops;
 

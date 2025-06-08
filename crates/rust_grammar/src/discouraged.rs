@@ -57,7 +57,7 @@ pub trait Speculative {
     /// # use syn::{Ident, PathArguments, Result, Token};
     ///
     /// pub struct PathSegment {
-    ///     pub ident: Ident,
+    ///     pub ident: NodeId<Ident>,
     ///     pub arguments: PathArguments,
     /// }
     /// #

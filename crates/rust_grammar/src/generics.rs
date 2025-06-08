@@ -70,7 +70,7 @@ ast_struct! {
     #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
     pub struct TypeParam {
         pub attrs: Vec<Attribute>,
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub colon_token: Option<Token![:]>,
         pub bounds: Punctuated<TypeParamBound, Token![+]>,
         pub eq_token: Option<Token![=]>,
@@ -84,7 +84,7 @@ ast_struct! {
     pub struct ConstParam {
         pub attrs: Vec<Attribute>,
         pub const_token: Token![const],
-        pub ident: Ident,
+        pub ident: NodeId<Ident>,
         pub colon_token: Token![:],
         pub ty: NodeId<Type>,
         pub eq_token: Option<Token![=]>,
@@ -383,19 +383,6 @@ impl LifetimeParam {
     }
 }
 
-impl From<Ident> for TypeParam {
-    fn from(ident: Ident) -> Self {
-        TypeParam {
-            attrs: vec![],
-            ident,
-            colon_token: None,
-            bounds: Punctuated::new(),
-            eq_token: None,
-            default: None,
-        }
-    }
-}
-
 ast_enum_of_structs! {
     /// A trait or lifetime used as a bound on a type parameter.
     #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
@@ -455,7 +442,7 @@ ast_enum! {
         /// A type parameter or const generic parameter in precise capturing
         /// bound: `fn f<T>() -> impl Trait + use<T>` or `fn f<const K: T>() ->
         /// impl Trait + use<K>`.
-        Ident(Ident),
+        Ident(NodeId<Ident>),
     }
 }
 
@@ -514,6 +501,8 @@ ast_struct! {
 
 #[cfg(feature = "parsing")]
 pub(crate) mod parsing {
+    use molt_lib::NodeId;
+
     use crate::attr::Attribute;
     use crate::error::{self, Result};
     use crate::ext::IdentExt as _;
@@ -524,7 +513,7 @@ pub(crate) mod parsing {
     };
     #[cfg(feature = "full")]
     use crate::generics::{CapturedParam, PreciseCapture};
-    use crate::ident::Ident;
+    use crate::ident::{AnyIdent, Ident};
     use crate::lifetime::Lifetime;
     use crate::parse::{Parse, ParseStream};
     use crate::path::{self, ParenthesizedGenericArguments, Path, PathArguments};
@@ -554,7 +543,7 @@ pub(crate) mod parsing {
                         attrs,
                         ..input.parse()?
                     }));
-                } else if lookahead.peek(Ident) {
+                } else if lookahead.peek_pat::<Ident>() {
                     params.push_value(GenericParam::Type(TypeParam {
                         attrs,
                         ..input.parse()?
@@ -567,7 +556,7 @@ pub(crate) mod parsing {
                 } else if input.peek(Token![_]) {
                     params.push_value(GenericParam::Type(TypeParam {
                         attrs,
-                        ident: input.call(Ident::parse_any)?,
+                        ident: input.parse_id::<AnyIdent>()?,
                         colon_token: None,
                         bounds: Punctuated::new(),
                         eq_token: None,
@@ -601,7 +590,7 @@ pub(crate) mod parsing {
             let attrs = input.call(Attribute::parse_outer)?;
 
             let lookahead = input.lookahead1();
-            if lookahead.peek(Ident) {
+            if lookahead.peek_pat::<Ident>() {
                 Ok(GenericParam::Type(TypeParam {
                     attrs,
                     ..input.parse()?
@@ -704,7 +693,7 @@ pub(crate) mod parsing {
     impl Parse for TypeParam {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = input.call(Attribute::parse_outer)?;
-            let ident: Ident = input.parse()?;
+            let ident: NodeId<Ident> = input.parse()?;
             let colon_token: Option<Token![:]> = input.parse()?;
 
             let mut bounds = Punctuated::new();
@@ -828,7 +817,7 @@ pub(crate) mod parsing {
                     break;
                 }
                 bounds.push_punct(input.parse()?);
-                if !(input.peek(Ident::peek_any)
+                if !(input.peek_pat::<AnyIdent>()
                     || input.peek(Token![::])
                     || input.peek(Token![?])
                     || input.peek(Lifetime)
@@ -1023,7 +1012,9 @@ pub(crate) mod parsing {
             loop {
                 let lookahead = input.lookahead1();
                 params.push_value(
-                    if lookahead.peek(Lifetime) || lookahead.peek(Ident) || input.peek(Token![Self])
+                    if lookahead.peek(Lifetime)
+                        || lookahead.peek_pat::<Ident>()
+                        || input.peek(Token![Self])
                     {
                         input.parse::<CapturedParam>()?
                     } else if lookahead.peek(Token![>]) {
@@ -1058,8 +1049,8 @@ pub(crate) mod parsing {
             let lookahead = input.lookahead1();
             if lookahead.peek(Lifetime) {
                 input.parse().map(CapturedParam::Lifetime)
-            } else if lookahead.peek(Ident) || input.peek(Token![Self]) {
-                input.call(Ident::parse_any).map(CapturedParam::Ident)
+            } else if lookahead.peek_pat::<Ident>() || input.peek(Token![Self]) {
+                input.parse_id::<AnyIdent>().map(CapturedParam::Ident)
             } else {
                 Err(lookahead.error())
             }
