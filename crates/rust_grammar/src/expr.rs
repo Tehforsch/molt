@@ -1229,10 +1229,8 @@ pub(crate) mod parsing {
 
         type Target = Expr;
 
-        fn parse_list_real(
-            input: ParseStream,
-        ) -> Result<molt_lib::RealNodeList<Self::Target, Self::Punct>> {
-            parse_list_real_normal::<Expr, _>(input)
+        fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Target>>> {
+            parse_list_real_normal::<Expr, Token![,]>(input)
         }
     }
 

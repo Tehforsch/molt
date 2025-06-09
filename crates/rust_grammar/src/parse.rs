@@ -184,8 +184,8 @@ pub mod discouraged;
 
 use discouraged::Speculative;
 use molt_lib::{
-    Ctx, GetKind, Id, NodeId, NodeList, ParsingMode, Pattern, RealNodeList, Spanned, SpannedPat,
-    ToNode, Var, WithSpan,
+    Ctx, GetKind, Id, NodeId, NodeList, ParsingMode, PatNodeList, Pattern, RealNodeList, Spanned,
+    SpannedPat, ToNode, Var, WithSpan,
 };
 
 use crate::buffer::{Cursor, TokenBuffer};
@@ -247,15 +247,15 @@ pub trait PeekPat {
 }
 
 pub trait ParseList {
-    type Punct: Parse;
     type Target: ToNode<Node>;
+    type Punct: Parse;
 
-    fn parse_list_real(input: ParseStream) -> Result<RealNodeList<Self::Target, Self::Punct>>;
+    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Target>>>;
 }
 
 pub fn parse_list_real_normal<T: ParsePat, P: Parse>(
     input: ParseStream,
-) -> Result<RealNodeList<<T as ParsePat>::Target, P>> {
+) -> Result<Vec<NodeId<<T as ParsePat>::Target>>> {
     Ok(
         Punctuated::<NodeId<T::Target>, P>::parse_terminated_with(input, T::parse_id)?
             .into_iter()
@@ -269,7 +269,7 @@ pub enum ListOrItem<T, P> {
 }
 
 pub trait ParseListOrItem {
-    type Target;
+    type Target: ToNode<Node>;
     type Punct;
 
     fn parse_list_or_item(input: ParseStream) -> Result<ListOrItem<Self::Target, Self::Punct>>;
@@ -787,6 +787,14 @@ impl<'a> ParseBuffer<'a> {
         transposed().transpose()
     }
 
+    fn parse_list_var<T, P>(
+        &self,
+        f: impl Fn(ParseStream) -> Result<Vec<NodeId<T>>>,
+    ) -> Result<PatNodeList<T, P>> {
+        let _: Token![$] = self.parse()?;
+        todo!()
+    }
+
     fn peek_list_var(&self, kind: Kind) -> bool {
         if self.peek(Token![$]) {
             if self.peek2(Ident) {
@@ -803,17 +811,35 @@ impl<'a> ParseBuffer<'a> {
 
     pub(crate) fn parse_list<T: ParseList>(&self) -> Result<NodeList<T::Target, T::Punct>> {
         if self.peek_list_var(<T as ParseList>::Target::kind()) {
-            todo!()
+            Ok(NodeList::Pat(
+                self.parse_list_var::<<T as ParseList>::Target, <T as ParseList>::Punct>(
+                    T::parse_list_real,
+                )?,
+            ))
+        } else {
+            let list = T::parse_list_real(self)?;
+            Ok(NodeList::Real(RealNodeList::new(list)))
         }
-        let list = T::parse_list_real(self)?;
-        Ok(NodeList::Real(list))
     }
 
     pub(crate) fn parse_list_or_item<T: ParseListOrItem>(
         &self,
     ) -> Result<ListOrItem<T::Target, T::Punct>> {
-        // todo!(): check for list vars here ?
-        T::parse_list_or_item(self)
+        if self.peek_list_var(<T as ParseListOrItem>::Target::kind()) {
+            Ok(ListOrItem::List(NodeList::Pat(
+                self.parse_list_var::<<T as ParseListOrItem>::Target, <T as ParseListOrItem>::Punct>(
+                    |input| {
+                        let list_or_item = T::parse_list_or_item(input)?;
+                        Ok(match list_or_item {
+                            ListOrItem::Item(item) => vec![input.add_pat(item)],
+                            ListOrItem::List(list) => list.unwrap_real().into(),
+                        })
+                    }
+                )?,
+            )))
+        } else {
+            T::parse_list_or_item(self)
+        }
     }
 
     pub(crate) fn add_pat<T: ToNode<Node>>(&self, item: SpannedPat<T>) -> NodeId<T> {

@@ -107,9 +107,7 @@ pub(crate) mod parsing {
         type Punct = Token![;];
         type Target = Stmt;
 
-        fn parse_list_real(
-            input: ParseStream,
-        ) -> Result<molt_lib::RealNodeList<Self::Target, Self::Punct>> {
+        fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Target>>> {
             let mut stmts = Vec::new();
             loop {
                 while let semi @ Some(_) = input.parse()? {
@@ -150,7 +148,7 @@ pub(crate) mod parsing {
                     return Err(input.error("unexpected token, expected `;`"));
                 }
             }
-            Ok(stmts.into_iter().collect())
+            Ok(stmts)
         }
     }
 

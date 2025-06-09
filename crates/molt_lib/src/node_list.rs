@@ -49,7 +49,20 @@ impl<T> From<Vec<NodeId<T>>> for RealNodeList<T, NoPunct> {
     }
 }
 
+impl<T, P> From<RealNodeList<T, P>> for Vec<NodeId<T>> {
+    fn from(val: RealNodeList<T, P>) -> Self {
+        val.items
+    }
+}
+
 impl<T, P> RealNodeList<T, P> {
+    pub fn new(items: Vec<NodeId<T>>) -> Self {
+        Self {
+            items,
+            _marker: PhantomData,
+        }
+    }
+
     pub fn empty() -> Self {
         Self {
             items: vec![],
