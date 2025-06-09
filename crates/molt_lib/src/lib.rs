@@ -3,11 +3,13 @@ mod config;
 mod ctx;
 mod match_ctx;
 mod match_pattern;
+mod node_list;
 
 pub use ctx::{
-    Ctx, GetKind, Id, MatchingMode, NoPunct, NodeId, NodeList, Pattern, Span, Spanned, SpannedPat,
-    ToNode, Var, VarDecl, WithSpan,
+    Ctx, GetKind, Id, NodeId, Pattern, Span, Spanned, SpannedPat, ToNode, Var, VarDecl, WithSpan,
 };
+
+pub use node_list::{MatchingMode, NoPunct, NodeList};
 
 pub use config::Config;
 
