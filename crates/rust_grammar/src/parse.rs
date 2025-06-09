@@ -186,11 +186,11 @@ use discouraged::Speculative;
 use molt_lib::{Ctx, Id, NodeId, NodeList, Pattern, Spanned, SpannedPat, ToNode, Var, WithSpan};
 
 use crate::buffer::{Cursor, TokenBuffer};
-use crate::lookahead;
 use crate::node::Node;
 use crate::punctuated::Punctuated;
 use crate::token::Token;
 use crate::{error, Ident};
+use crate::{lookahead, Kind};
 use proc_macro2::{Delimiter, Group, Literal, Punct, Span, TokenStream, TokenTree};
 #[cfg(feature = "printing")]
 use quote::ToTokens;
@@ -234,14 +234,24 @@ pub trait ParsePat {
 
 pub trait PeekPat {
     type Target: ToNode<Node>;
+    const KIND: Kind;
 
     fn peek(cursor: Cursor) -> bool;
 
-    fn peek_var(cursor: Cursor, ctx: &Ctx<Node>) -> bool;
-
     fn peek_pat(cursor: Cursor, ctx: &Ctx<Node>) -> bool {
-        Self::peek(cursor) || Self::peek_var(cursor, ctx)
+        Self::peek(cursor) || peek_var(cursor, ctx, <Self as PeekPat>::KIND)
     }
+}
+
+pub fn peek_var(cursor: Cursor, ctx: &Ctx<Node>, kind: Kind) -> bool {
+    if let Some((punct, _)) = cursor.punct() {
+        if punct.as_char() == '$' {
+            if let Some((ident, _)) = cursor.skip().and_then(|cursor| cursor.ident()) {
+                return kind_matches(&ctx, &ident, kind);
+            }
+        }
+    }
+    false
 }
 
 impl<T: ToNode<Node> + ParsePat<Target = T>> Parse for NodeId<T> {
@@ -1302,12 +1312,12 @@ impl<'a> ParseBuffer<'a> {
         self.ctx.borrow_mut().add(t)
     }
 
-    pub fn peek_pat<T: PeekPat>(&self) -> bool {
-        T::peek_pat(self.cursor(), &self.ctx.borrow())
+    pub fn peek_var<T: ToNode<Node>>(&self) -> bool {
+        peek_var(self.cursor(), &self.ctx.borrow(), T::kind())
     }
 
-    pub fn peek_var<T: PeekPat>(&self) -> bool {
-        self.fork().parse_var::<T::Target>().is_some()
+    pub fn peek_pat<T: PeekPat>(&self) -> bool {
+        T::peek_pat(self.cursor(), &self.ctx.borrow())
     }
 
     pub fn parse_var<T: ToNode<Node>>(&self) -> Option<Result<SpannedPat<T>>> {

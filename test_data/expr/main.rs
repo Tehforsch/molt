@@ -26,4 +26,6 @@ fn foo() {
     } else {
         expr5
     }
+
+    return Ok(foo);
 }

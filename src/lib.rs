@@ -277,7 +277,7 @@ mod tests {
     test_match_pattern!(control_flow, ());
     test_match_pattern!(arrays, (array));
     test_match_pattern!(ranges, ());
-    test_match_pattern!(expr, (expr, function_chain, stmts, nested_stmt,));
+    test_match_pattern!(expr, (expr, function_chain, stmts, nested_stmt, return_));
     test_match_pattern!(macros, (macros));
     test_match_pattern!(
         types,

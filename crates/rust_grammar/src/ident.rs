@@ -57,10 +57,10 @@ mod parsing {
     use crate::buffer::Cursor;
     use crate::error::Result;
     use crate::ext::IdentExt;
-    use crate::parse::{kind_matches, Parse, ParsePat, ParseStream, PeekPat};
+    use crate::parse::{Parse, ParsePat, ParseStream, PeekPat};
     use crate::token::Token;
-    use crate::Node;
-    use molt_lib::{Ctx, Pattern, Spanned, SpannedPat, ToNode};
+    use crate::Kind;
+    use molt_lib::{Pattern, Spanned, SpannedPat};
     use proc_macro2::Ident;
 
     use super::AnyIdent;
@@ -118,6 +118,7 @@ mod parsing {
 
     impl PeekPat for Ident {
         type Target = Ident;
+        const KIND: Kind = Kind::Ident;
 
         fn peek(cursor: Cursor) -> bool {
             if let Some((ident, _rest)) = cursor.ident() {
@@ -125,17 +126,6 @@ mod parsing {
             } else {
                 false
             }
-        }
-
-        fn peek_var(cursor: Cursor, ctx: &Ctx<Node>) -> bool {
-            if let Some((punct, _)) = cursor.punct() {
-                if punct.as_char() == '$' {
-                    if let Some((ident, _)) = cursor.skip().and_then(|cursor| cursor.ident()) {
-                        return kind_matches(&ctx, &ident, Ident::kind());
-                    }
-                }
-            }
-            false
         }
     }
 
@@ -152,13 +142,10 @@ mod parsing {
 
     impl PeekPat for AnyIdent {
         type Target = Ident;
+        const KIND: Kind = Kind::Ident;
 
         fn peek(cursor: Cursor) -> bool {
             cursor.ident().is_some()
-        }
-
-        fn peek_var(cursor: Cursor, ctx: &Ctx<Node>) -> bool {
-            Ident::peek_var(cursor, ctx)
         }
     }
 

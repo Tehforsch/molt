@@ -92,3 +92,9 @@ note: Match
 27 │ │         expr5
 28 │ │     }
    │ ╰─────^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":30:5
+   │
+30 │     return Ok(foo);
+   │     ^^^^^^^^^^^^^^^ $x

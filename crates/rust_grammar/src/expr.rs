@@ -892,7 +892,8 @@ impl Expr {
     /// Trait>::CONST`. Meanwhile `return > …` treats the `>` as a binary
     /// operator because it cannot be a starting token for any Rust expression.
     pub fn peek(input: ParseStream) -> bool {
-        input.peek_pat::<AnyIdent>() && !input.peek(Token![as]) // value name or keyword
+        input.peek_var::<Expr> ()
+            || input.peek_pat::<AnyIdent>() && !input.peek(Token![as]) // value name or keyword
             || input.peek(token::Paren) // tuple
             || input.peek(token::Bracket) // array
             || input.peek(token::Brace) // block
