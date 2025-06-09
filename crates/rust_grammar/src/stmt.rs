@@ -84,7 +84,7 @@ pub(crate) mod parsing {
     use crate::attr::Attribute;
     use crate::classify;
     use crate::error::Result;
-    use crate::expr::{Expr, ExprBlock, ExprMacro};
+    use crate::expr::{Expr, ExprBlock, ExprEarlierBoundaryRule, ExprMacro};
     use crate::ident::Ident;
     use crate::item;
     use crate::mac::{self, Macro};
@@ -372,7 +372,7 @@ pub(crate) mod parsing {
         mut attrs: Vec<Attribute>,
     ) -> Result<NodeId<Stmt>> {
         let marker = input.marker();
-        let e = Expr::parse_with_earlier_boundary_rule(input)?;
+        let e = input.parse_id::<ExprEarlierBoundaryRule>()?;
 
         let mut attr_target = e;
         loop {
