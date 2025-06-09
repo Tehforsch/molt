@@ -827,7 +827,6 @@ pub(crate) mod parsing {
     use crate::attr::{self, Attribute};
     use crate::error::{Error, Result};
     use crate::expr::Expr;
-    use crate::ext::IdentExt as _;
     use crate::generics::{Generics, TypeParamBound};
     use crate::ident::{AnyIdent, Ident, TokenIdent};
     use crate::item::{

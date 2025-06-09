@@ -243,7 +243,6 @@ pub(crate) mod parsing {
     use crate::expr::{
         Expr, ExprConst, ExprLit, ExprMacro, ExprPath, ExprRange, Member, RangeLimits,
     };
-    use crate::ext::IdentExt as _;
     use crate::ident::{AnyIdent, Ident};
     use crate::lit::Lit;
     use crate::mac::{self, Macro};

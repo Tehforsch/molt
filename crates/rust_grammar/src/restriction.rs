@@ -59,8 +59,7 @@ ast_enum! {
 #[cfg(feature = "parsing")]
 pub(crate) mod parsing {
     use crate::error::Result;
-    use crate::ext::IdentExt as _;
-    use crate::ident::{AnyIdent, Ident};
+    use crate::ident::AnyIdent;
     use crate::parse::discouraged::Speculative as _;
     use crate::parse::{Parse, ParseStream};
     use crate::path::Path;

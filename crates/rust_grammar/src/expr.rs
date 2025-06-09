@@ -3,8 +3,6 @@ use molt_lib::{NodeId, NodeList};
 use crate::attr::Attribute;
 #[cfg(all(feature = "parsing", feature = "full"))]
 use crate::error::Result;
-#[cfg(feature = "parsing")]
-use crate::ext::IdentExt as _;
 #[cfg(feature = "full")]
 use crate::generics::BoundLifetimes;
 use crate::ident::{AnyIdent, Ident};

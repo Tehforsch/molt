@@ -884,8 +884,7 @@ pub(crate) mod parsing {
     use crate::parse::{Parse, ParseStream, Unexpected};
     use crate::parse::{ParseCtx, ParsePat};
     use crate::token::{self, Token};
-    use crate::Node;
-    use molt_lib::{SpannedPat, ToNode};
+    use molt_lib::SpannedPat;
     use proc_macro2::{Literal, Punct, Span};
     use std::cell::Cell;
     use std::rc::Rc;

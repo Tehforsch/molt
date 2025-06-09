@@ -505,7 +505,6 @@ pub(crate) mod parsing {
 
     use crate::attr::Attribute;
     use crate::error::{self, Result};
-    use crate::ext::IdentExt as _;
     use crate::generics::{
         BoundLifetimes, ConstParam, GenericParam, Generics, LifetimeParam, PredicateLifetime,
         PredicateType, TraitBound, TraitBoundModifier, TypeParam, TypeParamBound, WhereClause,

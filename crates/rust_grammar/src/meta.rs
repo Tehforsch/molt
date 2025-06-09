@@ -1,14 +1,11 @@
 //! Facility for interpreting structured content inside of an `Attribute`.
 
-use crate::error::{Error, Result};
-use crate::ext::IdentExt as _;
+use crate::error::Result;
 use crate::ident::AnyIdent;
 use crate::lit::Lit;
 use crate::parse::{ParseStream, Parser};
 use crate::path::{Path, PathSegment};
 use crate::punctuated::Punctuated;
-use proc_macro2::Ident;
-use std::fmt::Display;
 
 /// Make a parser that is usable with `parse_macro_input!` in a
 /// `#[proc_macro_attribute]` macro.

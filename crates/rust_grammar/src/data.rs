@@ -135,7 +135,6 @@ pub(crate) mod parsing {
     use crate::attr::Attribute;
     use crate::data::{Field, Fields, FieldsNamed, FieldsUnnamed, Variant};
     use crate::error::Result;
-    use crate::ext::IdentExt as _;
     use crate::ident::{AnyIdent, Ident};
     #[cfg(not(feature = "full"))]
     use crate::parse::discouraged::Speculative as _;

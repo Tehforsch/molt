@@ -1,7 +1,5 @@
 use molt_lib::{NodeId, NodeList};
 
-#[cfg(feature = "parsing")]
-use crate::error::Result;
 use crate::expr::Expr;
 use crate::generics::TypeParamBound;
 use crate::ident::Ident;
@@ -217,7 +215,6 @@ pub(crate) mod parsing {
     #[cfg(feature = "full")]
     use crate::expr::ExprBlock;
     use crate::expr::{Expr, ExprPath};
-    use crate::ext::IdentExt as _;
     #[cfg(feature = "full")]
     use crate::generics::TypeParamBound;
     use crate::ident::{AnyIdent, Ident};

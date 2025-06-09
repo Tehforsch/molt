@@ -58,8 +58,8 @@ mod parsing {
     use crate::error::Result;
     use crate::ext::IdentExt;
     use crate::parse::{kind_matches, Parse, ParsePat, ParseStream, PeekPat};
-    use crate::token::{CustomToken, Token};
-    use crate::{Node, ParseCtx};
+    use crate::token::Token;
+    use crate::Node;
     use molt_lib::{Ctx, Pattern, Spanned, SpannedPat, ToNode};
     use proc_macro2::Ident;
 

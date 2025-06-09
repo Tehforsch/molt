@@ -275,7 +275,6 @@ ast_enum! {
 pub(crate) mod parsing {
     use crate::attr::Attribute;
     use crate::error::{self, Result};
-    use crate::ext::IdentExt as _;
     use crate::generics::{BoundLifetimes, TraitBound, TraitBoundModifier, TypeParamBound};
     use crate::ident::{AnyIdent, Ident};
     use crate::lifetime::Lifetime;

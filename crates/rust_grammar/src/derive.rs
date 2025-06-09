@@ -1,67 +1,10 @@
-use crate::attr::Attribute;
-use crate::data::{Fields, FieldsNamed, Variant};
-use crate::generics::Generics;
-use crate::ident::Ident;
-use crate::punctuated::Punctuated;
-use crate::restriction::Visibility;
-use crate::token;
-
-ast_enum! {
-    /// The storage of a struct, enum or union data structure.
-    ///
-    /// # Syntax tree enum
-    ///
-    /// This type is a [syntax tree enum].
-    ///
-    /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-    #[cfg_attr(docsrs, doc(cfg(feature = "derive")))]
-    pub enum Data {
-        Struct(DataStruct),
-        Enum(DataEnum),
-        Union(DataUnion),
-    }
-}
-
-ast_struct! {
-    /// A struct input to a `proc_macro_derive` macro.
-    #[cfg_attr(docsrs, doc(cfg(feature = "derive")))]
-    pub struct DataStruct {
-        pub struct_token: Token![struct],
-        pub fields: Fields,
-        pub semi_token: Option<Token![;]>,
-    }
-}
-
-ast_struct! {
-    /// An enum input to a `proc_macro_derive` macro.
-    #[cfg_attr(docsrs, doc(cfg(feature = "derive")))]
-    pub struct DataEnum {
-        pub enum_token: Token![enum],
-        pub brace_token: token::Brace,
-        pub variants: Punctuated<Variant, Token![,]>,
-    }
-}
-
-ast_struct! {
-    /// An untagged union input to a `proc_macro_derive` macro.
-    #[cfg_attr(docsrs, doc(cfg(feature = "derive")))]
-    pub struct DataUnion {
-        pub union_token: Token![union],
-        pub fields: FieldsNamed,
-    }
-}
-
 #[cfg(feature = "parsing")]
 pub(crate) mod parsing {
-    use crate::attr::Attribute;
     use crate::data::{Fields, FieldsNamed, Variant};
-    use crate::derive::{Data, DataEnum, DataStruct, DataUnion};
     use crate::error::Result;
-    use crate::generics::{Generics, WhereClause};
-    use crate::ident::Ident;
+    use crate::generics::WhereClause;
     use crate::parse::{Parse, ParseStream};
     use crate::punctuated::Punctuated;
-    use crate::restriction::Visibility;
     use crate::token;
 
     pub(crate) fn data_struct(
