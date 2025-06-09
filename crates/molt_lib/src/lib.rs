@@ -10,7 +10,9 @@ pub use ctx::{
     Ctx, GetKind, Id, NodeId, Pattern, Span, Spanned, SpannedPat, ToNode, Var, VarDecl, WithSpan,
 };
 
-pub use node_list::{MatchingMode, NoPunct, NodeList, PatNodeList, RealNodeList};
+pub use node_list::{
+    MatchingMode, NoPunct, NodeList, PatNodeList, RealNodeList, Single, SingleMatchingMode,
+};
 
 pub use config::Config;
 

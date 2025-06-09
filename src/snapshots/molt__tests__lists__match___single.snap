@@ -1,0 +1,21 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (lists), stringify! (single))"
+---
+note: Match
+  ┌─ "test_data/lists/main.rs":1:1
+  │
+1 │ pub const X: (Foo, Bar, Foo, Baz) = todo!();
+  │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $x
+  │
+  = $e = todo!()
+  = $ident = X
+
+note: Match
+  ┌─ "test_data/lists/main.rs":1:1
+  │
+1 │ pub const X: (Foo, Bar, Foo, Baz) = todo!();
+  │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $x
+  │
+  = $e = todo!()
+  = $ident = X

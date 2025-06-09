@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use crate::{GetKind, Id, MatchingMode, NodeId, NodeList, Pattern, VarDecl};
+use crate::{
+    GetKind, Id, MatchingMode, NodeId, NodeList, PatNodeList, Pattern, RealNodeList, Single,
+    VarDecl,
+};
 
 use crate::cmp_syn::CmpSyn;
 use crate::match_ctx::MatchCtx;
@@ -15,11 +18,11 @@ pub fn match_pattern<N: GetKind + CmpSyn>(
     match_.add_binding(ctx, var, ast);
     let mut current = vec![match_];
     let mut matches = vec![];
-    'outer: while let Some(mut match_) = current.pop() {
+    while let Some(mut match_) = current.pop() {
         while let Some(cmp) = match_.cmps.pop() {
             match_.cmp_ids(ctx, cmp.ast, cmp.pat, cmp.pat_type);
             if !match_.valid {
-                break 'outer;
+                break;
             }
         }
         if match_.forks.is_empty() {
@@ -186,9 +189,23 @@ impl Match {
     }
 
     pub fn cmp_lists<T: CmpSyn, P>(&mut self, ts1: &NodeList<T, P>, ts2: &NodeList<T, P>) {
-        let matching_mode = MatchingMode::Exact;
-        let NodeList::Real(ts1) = ts1 else { todo!() };
-        let NodeList::Real(ts2) = ts2 else { todo!() };
+        match (ts1, ts2) {
+            (Pattern::Real(ts1), Pattern::Real(ts2)) => {
+                self.cmp_lists_real(ts1, ts2, MatchingMode::Exact)
+            }
+            (Pattern::Real(ts1), Pattern::Pat(ts2)) => match ts2 {
+                PatNodeList::Single(single) => self.cmp_lists_single(ts1, single),
+            },
+            (Pattern::Pat(_), _) => unreachable!(),
+        }
+    }
+
+    fn cmp_lists_real<T: CmpSyn, P>(
+        &mut self,
+        ts1: &RealNodeList<T, P>,
+        ts2: &RealNodeList<T, P>,
+        matching_mode: MatchingMode,
+    ) {
         match matching_mode {
             MatchingMode::Exact => {
                 self.eq(ts1.len(), ts2.len());
@@ -211,6 +228,15 @@ impl Match {
                 }
             }
         }
+    }
+
+    fn cmp_lists_single<T: CmpSyn, P>(&mut self, ts1: &RealNodeList<T, P>, ts2: &Single<T, P>) {
+        let fork = Fork::new(
+            ts1.iter()
+                .map(|item1| Comparison::new(*item1, ts2.item(), self.pat_type))
+                .collect(),
+        );
+        self.fork(fork);
     }
 
     pub fn check(&mut self, val: bool) {

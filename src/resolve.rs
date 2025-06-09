@@ -45,7 +45,8 @@ pub fn get_vars_in_token_stream(deps: &mut Vec<TokenVar>, tokens: TokenStream) {
             }
             TokenTree::Punct(punct) => {
                 if punct.as_char() == '$' {
-                    if let Some(TokenTree::Ident(ident)) = token_iter.next() {
+                    let next_token = token_iter.next();
+                    if let Some(TokenTree::Ident(ident)) = next_token {
                         let dollar_span: Span = punct.span().byte_range().into();
                         let ident_span: Span = ident.span().byte_range().into();
                         let span = dollar_span.join(ident_span);
@@ -53,10 +54,16 @@ pub fn get_vars_in_token_stream(deps: &mut Vec<TokenVar>, tokens: TokenStream) {
                             span,
                             name: ident.to_string(),
                         });
+                    } else if let Some(TokenTree::Group(group)) = next_token {
+                        get_vars_in_token_stream(deps, group.stream())
                     } else {
                         // This is most likely invalid syntax, but
                         // we can defer reporting the error to the
                         // actual parsing.
+                        // However, for now it is useful if we panic here
+                        // immediately, to recognize if I made changes
+                        // to the molt syntax.
+                        panic!()
                     }
                 }
             }

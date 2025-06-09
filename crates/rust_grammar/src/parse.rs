@@ -184,14 +184,14 @@ pub mod discouraged;
 
 use discouraged::Speculative;
 use molt_lib::{
-    Ctx, GetKind, Id, NodeId, NodeList, ParsingMode, PatNodeList, Pattern, RealNodeList, Spanned,
-    SpannedPat, ToNode, Var, WithSpan,
+    Ctx, GetKind, Id, MatchingMode, NodeId, NodeList, ParsingMode, PatNodeList, Pattern,
+    RealNodeList, Single, SingleMatchingMode, Spanned, SpannedPat, ToNode, Var, WithSpan,
 };
 
 use crate::buffer::{Cursor, TokenBuffer};
 use crate::node::Node;
 use crate::punctuated::Punctuated;
-use crate::token::Token;
+use crate::token::{Paren, Token};
 use crate::{error, Ident};
 use crate::{lookahead, Kind};
 use proc_macro2::{Delimiter, Group, Literal, Punct, Span, TokenStream, TokenTree};
@@ -273,6 +273,23 @@ pub trait ParseListOrItem {
     fn parse_list_or_item(input: ParseStream) -> Result<ListOrItem<Self::Target, Self::Punct>>;
 }
 
+fn parse_single<T: ParseListOrItem>(input: ParseStream) -> Result<NodeId<T::Target>> {
+    let fork = input.fork();
+    let list_or_item = T::parse_list_or_item(input)?;
+    match list_or_item {
+        ListOrItem::Item(item) => Ok(input.add_pat(item)),
+        ListOrItem::List(list) => Err(fork.error("Expected a single item, found a list.")),
+    }
+}
+
+fn parse_list<T: ParseListOrItem>(input: ParseStream) -> Result<Vec<NodeId<T::Target>>> {
+    let list_or_item = T::parse_list_or_item(input)?;
+    Ok(match list_or_item {
+        ListOrItem::Item(item) => vec![input.add_pat(item)],
+        ListOrItem::List(list) => list.unwrap_real().into(),
+    })
+}
+
 pub fn peek_var(cursor: Cursor, ctx: &Ctx<Node>, kind: Kind) -> bool {
     if let Some((punct, _)) = cursor.punct() {
         if punct.as_char() == '$' {
@@ -287,6 +304,18 @@ pub fn peek_var(cursor: Cursor, ctx: &Ctx<Node>, kind: Kind) -> bool {
 impl<T: ToNode<Node> + ParsePat<Target = T>> Parse for NodeId<T> {
     fn parse(input: ParseStream) -> Result<NodeId<T>> {
         T::parse_id(input)
+    }
+}
+
+impl Parse for SingleMatchingMode {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let lookahead = input.lookahead1();
+        if lookahead.peek(Token![?]) {
+            let _: Token![?] = input.parse()?;
+            Ok(SingleMatchingMode::Any)
+        } else {
+            Err(lookahead.error())
+        }
     }
 }
 
@@ -787,10 +816,24 @@ impl<'a> ParseBuffer<'a> {
 
     fn parse_list_var<T, P>(
         &self,
-        f: impl Fn(ParseStream) -> Result<Vec<NodeId<T>>>,
+        parse_list: impl for<'b> FnOnce(&'b ParseBuffer<'b>) -> Result<Vec<NodeId<T>>>,
+        parse_single: impl for<'b> FnOnce(&'b ParseBuffer<'b>) -> Result<NodeId<T>>,
     ) -> Result<PatNodeList<T, P>> {
         let _: Token![$] = self.parse()?;
-        todo!()
+        let lookahead = self.lookahead1();
+        if lookahead.peek(Ident) {
+            // No need to check for the kind here, since that is
+            // already done in peek_list_var
+            todo!("Implement list kinds")
+        } else if lookahead.peek(Paren) {
+            let content;
+            let paren_token = parenthesized!(content in self);
+            let item = parse_single(&content)?;
+            let mode = self.parse()?;
+            Ok(PatNodeList::Single(Single::new(item, mode)))
+        } else {
+            Err(lookahead.error())
+        }
     }
 
     fn peek_list_var(&self, kind: Kind) -> bool {
@@ -812,6 +855,7 @@ impl<'a> ParseBuffer<'a> {
             Ok(NodeList::Pat(
                 self.parse_list_var::<<T as ParsePat>::Target, <T as ParseList>::Punct>(
                     T::parse_list_real,
+                    T::parse_id,
                 )?,
             ))
         } else {
@@ -826,13 +870,7 @@ impl<'a> ParseBuffer<'a> {
         if self.peek_list_var(<T as ParseListOrItem>::Target::kind()) {
             Ok(ListOrItem::List(NodeList::Pat(
                 self.parse_list_var::<<T as ParseListOrItem>::Target, <T as ParseListOrItem>::Punct>(
-                    |input| {
-                        let list_or_item = T::parse_list_or_item(input)?;
-                        Ok(match list_or_item {
-                            ListOrItem::Item(item) => vec![input.add_pat(item)],
-                            ListOrItem::List(list) => list.unwrap_real().into(),
-                        })
-                    }
+                    parse_list::<T>, parse_single::<T>
                 )?,
             )))
         } else {

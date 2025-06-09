@@ -15,7 +15,7 @@ pub enum PatNodeList<T, P> {
 #[derive(Debug)]
 pub struct Single<T, P> {
     item: NodeId<T>,
-    mode: MatchingMode,
+    mode: SingleMatchingMode,
     _marker: PhantomData<P>,
 }
 
@@ -23,6 +23,20 @@ pub struct Single<T, P> {
 pub struct RealNodeList<T, P> {
     items: Vec<NodeId<T>>,
     _marker: PhantomData<P>,
+}
+
+impl<T, P> Single<T, P> {
+    pub fn new(item: NodeId<T>, mode: SingleMatchingMode) -> Self {
+        Self {
+            item,
+            mode,
+            _marker: PhantomData,
+        }
+    }
+
+    pub fn item(&self) -> NodeId<T> {
+        self.item
+    }
 }
 
 impl<T, P> NodeList<T, P> {
@@ -98,8 +112,11 @@ impl<T, P> FromIterator<NodeId<T>> for RealNodeList<T, P> {
 
 #[derive(Debug)]
 pub enum MatchingMode {
-    #[allow(unused)]
     Exact,
-    // ContainsAllInOrder,
     ContainsAll,
+}
+
+#[derive(Debug)]
+pub enum SingleMatchingMode {
+    Any,
 }

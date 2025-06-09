@@ -1,0 +1,5 @@
+let e: Expr;
+let ident: Ident;
+let x: Item = {
+    pub const $ident: ($(Foo)?) = $e;
+};
