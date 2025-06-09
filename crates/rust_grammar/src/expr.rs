@@ -1188,7 +1188,10 @@ pub(crate) mod parsing {
     use crate::parse::discouraged::Speculative as _;
     #[cfg(feature = "full")]
     use crate::parse::ParseBuffer;
-    use crate::parse::{ListOrItem, Parse, ParseList, ParseListOrItem, ParsePat, ParseStream};
+    use crate::parse::{
+        parse_list_real_normal, ListOrItem, Parse, ParseList, ParseListOrItem, ParsePat,
+        ParseStream,
+    };
     #[cfg(feature = "full")]
     use crate::pat::{Pat, PatType};
     use crate::path::{self, AngleBracketedGenericArguments, Path, QSelf};
@@ -1223,6 +1226,14 @@ pub(crate) mod parsing {
 
     impl ParseList for Expr {
         type Punct = Token![,];
+
+        type Target = Expr;
+
+        fn parse_list_real(
+            input: ParseStream,
+        ) -> Result<molt_lib::RealNodeList<Self::Target, Self::Punct>> {
+            parse_list_real_normal::<Expr, _>(input)
+        }
     }
 
     impl ParsePat for ExprNoEagerBrace {
@@ -1905,42 +1916,53 @@ pub(crate) mod parsing {
     }
 
     fn paren_or_tuple(input: ParseStream) -> Result<Expr> {
-        todo!()
-        // let content;
-        // let paren_token = parenthesized!(content in input);
-        // if content.is_empty() {
-        //     return Ok(Expr::Tuple(ExprTuple {
-        //         attrs: Vec::new(),
-        //         paren_token,
-        //         elems: NodeList::empty(input.mode()),
-        //     }));
-        // }
+        let content;
+        let paren_token = parenthesized!(content in input);
+        Ok(match content.parse_list_or_item::<ExprTuple>()? {
+            ListOrItem::Item(expr) => Expr::Paren(ExprParen {
+                attrs: Vec::new(),
+                paren_token,
+                expr: input.add_pat(expr),
+            }),
+            ListOrItem::List(elems) => Expr::Tuple(ExprTuple {
+                attrs: Vec::new(),
+                paren_token,
+                elems,
+            }),
+        })
+    }
 
-        // let first = content.parse()?;
-        // if content.is_empty() {
-        //     return Ok(Expr::Paren(ExprParen {
-        //         attrs: Vec::new(),
-        //         paren_token,
-        //         expr: first,
-        //     }));
-        // }
+    impl ParseListOrItem for ExprTuple {
+        type Target = Expr;
 
-        // let mut elems = Punctuated::new();
-        // elems.push_value(first);
-        // while !content.is_empty() {
-        //     let punct = content.parse()?;
-        //     elems.push_punct(punct);
-        //     if content.is_empty() {
-        //         break;
-        //     }
-        //     let value = content.parse()?;
-        //     elems.push_value(value);
-        // }
-        // Ok(Expr::Tuple(ExprTuple {
-        //     attrs: Vec::new(),
-        //     paren_token,
-        //     elems: elems.into(),
-        // }))
+        type Punct = Token![,];
+
+        fn parse_list_or_item(input: ParseStream) -> Result<ListOrItem<Self::Target, Self::Punct>> {
+            if input.is_empty() {
+                return Ok(ListOrItem::List(NodeList::empty(input.mode())));
+            }
+
+            let first = input.parse_pat::<Expr>()?;
+            if input.is_empty() {
+                return Ok(ListOrItem::Item(first));
+            }
+
+            let first = input.add_pat(first);
+            let mut elems = Punctuated::<_, Token![,]>::new();
+            elems.push_value(first);
+            while !input.is_empty() {
+                let punct = input.parse()?;
+                elems.push_punct(punct);
+                if input.is_empty() {
+                    break;
+                }
+                let value = input.parse()?;
+                elems.push_value(value);
+            }
+            Ok(ListOrItem::List(NodeList::Real(
+                elems.into_iter().collect(),
+            )))
+        }
     }
 
     #[cfg(feature = "full")]
@@ -1951,13 +1973,6 @@ pub(crate) mod parsing {
 
         let content;
         let bracket_token = bracketed!(content in input);
-        if content.is_empty() {
-            return Ok(Expr::Array(ExprArray {
-                attrs: Vec::new(),
-                bracket_token,
-                elems: NodeList::empty(input.mode()),
-            }));
-        }
 
         match content.parse_list_or_item::<ExprArray>()? {
             ListOrItem::List(elems) => Ok(Expr::Array(ExprArray {
@@ -1985,6 +2000,9 @@ pub(crate) mod parsing {
         type Punct = Token![,];
 
         fn parse_list_or_item(input: ParseStream) -> Result<ListOrItem<Self::Target, Self::Punct>> {
+            if input.is_empty() {
+                return Ok(ListOrItem::List(NodeList::empty(input.mode())));
+            }
             let first = input.parse_pat::<Expr>()?;
             if input.is_empty() || input.peek(Token![,]) {
                 let mut elems = Punctuated::<_, Token![,]>::new();
@@ -2212,7 +2230,7 @@ pub(crate) mod parsing {
             let content;
             let brace_token = braced!(content in input);
             attr::parsing::parse_inner(&content, &mut attrs)?;
-            let stmts = content.call(Block::parse_within)?;
+            let stmts = content.parse_list::<Block>()?;
 
             Ok(ExprForLoop {
                 attrs,
@@ -2237,7 +2255,7 @@ pub(crate) mod parsing {
             let content;
             let brace_token = braced!(content in input);
             attr::parsing::parse_inner(&content, &mut attrs)?;
-            let stmts = content.call(Block::parse_within)?;
+            let stmts = content.parse_list::<Block>()?;
 
             Ok(ExprLoop {
                 attrs,
@@ -2547,7 +2565,7 @@ pub(crate) mod parsing {
             let content;
             let brace_token = braced!(content in input);
             attr::parsing::parse_inner(&content, &mut attrs)?;
-            let stmts = content.call(Block::parse_within)?;
+            let stmts = content.parse_list::<Block>()?;
 
             Ok(ExprWhile {
                 attrs,
@@ -2568,7 +2586,7 @@ pub(crate) mod parsing {
             let content;
             let brace_token = braced!(content in input);
             let inner_attrs = content.call(Attribute::parse_inner)?;
-            let stmts = content.call(Block::parse_within)?;
+            let stmts = content.parse_list::<Block>()?;
 
             Ok(ExprConst {
                 attrs: inner_attrs,
@@ -2743,7 +2761,7 @@ pub(crate) mod parsing {
             let content;
             let brace_token = braced!(content in input);
             let inner_attrs = content.call(Attribute::parse_inner)?;
-            let stmts = content.call(Block::parse_within)?;
+            let stmts = content.parse_list::<Block>()?;
 
             Ok(ExprUnsafe {
                 attrs: inner_attrs,
@@ -2763,7 +2781,7 @@ pub(crate) mod parsing {
             let content;
             let brace_token = braced!(content in input);
             attr::parsing::parse_inner(&content, &mut attrs)?;
-            let stmts = content.call(Block::parse_within)?;
+            let stmts = content.parse_list::<Block>()?;
 
             Ok(ExprBlock {
                 attrs,

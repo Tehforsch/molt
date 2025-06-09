@@ -91,7 +91,7 @@ pub(crate) mod parsing {
     use crate::item;
     use crate::mac::{self, Macro};
     use crate::parse::discouraged::Speculative as _;
-    use crate::parse::{Parse, ParsePat, ParseStream};
+    use crate::parse::{Parse, ParseList, ParsePat, ParseStream};
     use crate::pat::{Pat, PatType};
     use crate::path::Path;
     use crate::stmt::{Block, Local, LocalInit, Stmt, StmtMacro};
@@ -103,58 +103,13 @@ pub(crate) mod parsing {
 
     struct AllowNoSemi(bool);
 
-    impl Block {
-        /// Parse the body of a block as zero or more statements, possibly
-        /// including one trailing expression.
-        ///
-        /// # Example
-        ///
-        /// ```
-        /// use syn::{braced, token, Attribute, Block, Ident, Result, Stmt, Token};
-        /// use syn::parse::{Parse, ParseStream};
-        ///
-        /// // Parse a function with no generics or parameter list.
-        /// //
-        /// //     fn playground {
-        /// //         let mut x = 1;
-        /// //         x += 1;
-        /// //         println!("{}", x);
-        /// //     }
-        /// struct MiniFunction {
-        ///     attrs: Vec<Attribute>,
-        ///     fn_token: Token![fn],
-        ///     name: Ident,
-        ///     brace_token: token::Brace,
-        ///     stmts: Vec<Stmt>,
-        /// }
-        ///
-        /// impl Parse for MiniFunction {
-        ///     fn parse(input: ParseStream) -> Result<Self> {
-        ///         let outer_attrs = input.call(Attribute::parse_outer)?;
-        ///         let fn_token: Token![fn] = input.parse()?;
-        ///         let name: Ident = input.parse()?;
-        ///
-        ///         let content;
-        ///         let brace_token = braced!(content in input);
-        ///         let inner_attrs = content.call(Attribute::parse_inner)?;
-        ///         let stmts = content.call(Block::parse_within)?;
-        ///
-        ///         Ok(MiniFunction {
-        ///             attrs: {
-        ///                 let mut attrs = outer_attrs;
-        ///                 attrs.extend(inner_attrs);
-        ///                 attrs
-        ///             },
-        ///             fn_token,
-        ///             name,
-        ///             brace_token,
-        ///             stmts,
-        ///         })
-        ///     }
-        /// }
-        /// ```
-        #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-        pub fn parse_within(input: ParseStream) -> Result<NodeList<Stmt, Token![;]>> {
+    impl ParseList for Block {
+        type Punct = Token![;];
+        type Target = Stmt;
+
+        fn parse_list_real(
+            input: ParseStream,
+        ) -> Result<molt_lib::RealNodeList<Self::Target, Self::Punct>> {
             let mut stmts = Vec::new();
             loop {
                 while let semi @ Some(_) = input.parse()? {
@@ -195,10 +150,7 @@ pub(crate) mod parsing {
                     return Err(input.error("unexpected token, expected `;`"));
                 }
             }
-            match input.mode() {
-                ParsingMode::Real => Ok(NodeList::Real(stmts.into_iter().collect())),
-                ParsingMode::Pat => todo!(),
-            }
+            Ok(stmts.into_iter().collect())
         }
     }
 
@@ -208,7 +160,7 @@ pub(crate) mod parsing {
             let content;
             Ok(Block {
                 brace_token: braced!(content in input),
-                stmts: content.call(Block::parse_within)?,
+                stmts: content.parse_list::<Block>()?,
             })
         }
     }

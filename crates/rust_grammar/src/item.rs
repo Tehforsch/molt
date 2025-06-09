@@ -1506,7 +1506,7 @@ pub(crate) mod parsing {
         let content;
         let brace_token = braced!(content in input);
         attr::parsing::parse_inner(&content, &mut attrs)?;
-        let stmts = content.call(Block::parse_within)?;
+        let stmts = content.parse_list::<Block>()?;
 
         Ok(ItemFn {
             attrs,
@@ -1782,7 +1782,7 @@ pub(crate) mod parsing {
                     let content;
                     braced!(content in input);
                     content.call(Attribute::parse_inner)?;
-                    content.call(Block::parse_within)?;
+                    content.parse_list::<Block>()?;
                     None
                 } else {
                     Some(input.parse()?)
@@ -2393,7 +2393,7 @@ pub(crate) mod parsing {
                 let content;
                 let brace_token = braced!(content in input);
                 attr::parsing::parse_inner(&content, &mut attrs)?;
-                let stmts = content.call(Block::parse_within)?;
+                let stmts = content.parse_list::<Block>()?;
                 (Some(brace_token), stmts, None)
             } else if lookahead.peek(Token![;]) {
                 let semi_token: Token![;] = input.parse()?;
@@ -2767,7 +2767,7 @@ pub(crate) mod parsing {
         attrs.extend(content.call(Attribute::parse_inner)?);
         let block = Block {
             brace_token,
-            stmts: content.call(Block::parse_within)?,
+            stmts: content.parse_list::<Block>()?,
         };
 
         Ok(Some(ImplItemFn {

@@ -186,31 +186,31 @@ impl Match {
     }
 
     pub fn cmp_lists<T: CmpSyn, P>(&mut self, ts1: &NodeList<T, P>, ts2: &NodeList<T, P>) {
-        todo!()
-        // TODO: get this from the var
-        // let matching_mode = MatchingMode::Exact;
-        // match matching_mode {
-        //     MatchingMode::Exact => {
-        //         self.eq(ts1.len(), ts2.len());
-        //         for (item1, item2) in ts1.iter().zip(ts2.iter()) {
-        //             self.cmp_nodes(*item1, *item2);
-        //         }
-        //     }
-        //     MatchingMode::ContainsAll => {
-        //         if ts2.is_empty() {
-        //         } else if ts2.len() == 1 {
-        //             let item2 = ts2.get(0).unwrap();
-        //             let fork = Fork::new(
-        //                 ts1.iter()
-        //                     .map(|item1| Comparison::new(*item1, *item2, self.pat_type))
-        //                     .collect(),
-        //             );
-        //             self.fork(fork);
-        //         } else {
-        //             todo!()
-        //         }
-        //     }
-        // }
+        let matching_mode = MatchingMode::Exact;
+        let NodeList::Real(ts1) = ts1 else { todo!() };
+        let NodeList::Real(ts2) = ts2 else { todo!() };
+        match matching_mode {
+            MatchingMode::Exact => {
+                self.eq(ts1.len(), ts2.len());
+                for (item1, item2) in ts1.iter().zip(ts2.iter()) {
+                    self.cmp_nodes(*item1, *item2);
+                }
+            }
+            MatchingMode::ContainsAll => {
+                if ts2.is_empty() {
+                } else if ts2.len() == 1 {
+                    let item2 = ts2.get(0).unwrap();
+                    let fork = Fork::new(
+                        ts1.iter()
+                            .map(|item1| Comparison::new(*item1, *item2, self.pat_type))
+                            .collect(),
+                    );
+                    self.fork(fork);
+                } else {
+                    todo!()
+                }
+            }
+        }
     }
 
     pub fn check(&mut self, val: bool) {

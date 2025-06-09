@@ -814,7 +814,7 @@ pub(crate) mod parsing {
         let content;
         braced!(content in input);
         content.call(Attribute::parse_inner)?;
-        content.call(Block::parse_within)?;
+        content.parse_list::<Block>()?;
 
         Ok(verbatim::between(&begin, input))
     }
