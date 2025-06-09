@@ -17,6 +17,8 @@ ast_struct! {
     }
 }
 
+pub struct StmtAllowNoSemi;
+
 ast_enum! {
     /// A statement, usually ending in a semicolon.
     #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
@@ -89,13 +91,15 @@ pub(crate) mod parsing {
     use crate::item;
     use crate::mac::{self, Macro};
     use crate::parse::discouraged::Speculative as _;
-    use crate::parse::{Parse, ParseStream};
+    use crate::parse::{Parse, ParsePat, ParseStream};
     use crate::pat::{Pat, PatType};
     use crate::path::Path;
     use crate::stmt::{Block, Local, LocalInit, Stmt, StmtMacro};
     use crate::token;
-    use molt_lib::{NodeId, NodeList, Pattern, Spanned, ToNode, WithSpan};
+    use molt_lib::{NodeId, NodeList, Pattern, Spanned, SpannedPat, WithSpan};
     use proc_macro2::TokenStream;
+
+    use super::StmtAllowNoSemi;
 
     struct AllowNoSemi(bool);
 
@@ -170,8 +174,8 @@ pub(crate) mod parsing {
                 if input.is_empty() {
                     break;
                 }
-                let stmt = parse_stmt(input, AllowNoSemi(true))?;
-                let requires_semicolon = match input.ctx().get(stmt).real() {
+                let stmt = input.parse_pat::<StmtAllowNoSemi>()?;
+                let requires_semicolon = match stmt.real() {
                     Some(Stmt::Expr(stmt, None)) => {
                         classify::requires_semi_to_be_stmt(input, *stmt)
                     }
@@ -184,7 +188,7 @@ pub(crate) mod parsing {
                     // A pattern variable statement has an implicit semicolon
                     None => false,
                 };
-                stmts.push(stmt);
+                stmts.push(input.add_pat(stmt));
                 if input.is_empty() {
                     break;
                 } else if requires_semicolon {
@@ -206,16 +210,25 @@ pub(crate) mod parsing {
         }
     }
 
-    impl Parse for NodeId<Stmt> {
-        fn parse(input: ParseStream) -> Result<Self> {
-            let allow_nosemi = AllowNoSemi(false);
-            parse_stmt(input, allow_nosemi)
+    impl ParsePat for Stmt {
+        type Target = Stmt;
+
+        fn parse_pat(input: ParseStream) -> Result<molt_lib::SpannedPat<Self::Target>> {
+            parse_stmt(input, AllowNoSemi(false))
         }
     }
 
-    fn parse_stmt(input: ParseStream, allow_nosemi: AllowNoSemi) -> Result<NodeId<Stmt>> {
-        if let Some(var) = input.parse_var::<Stmt>() {
-            return Ok(var?.unwrap_var());
+    impl ParsePat for StmtAllowNoSemi {
+        type Target = Stmt;
+
+        fn parse_pat(input: ParseStream) -> Result<molt_lib::SpannedPat<Self::Target>> {
+            parse_stmt(input, AllowNoSemi(true))
+        }
+    }
+
+    fn parse_stmt(input: ParseStream, allow_nosemi: AllowNoSemi) -> Result<SpannedPat<Stmt>> {
+        if let Some(var) = input.parse_var() {
+            return var;
         }
         let marker = input.marker();
         let begin = input.fork();
@@ -234,13 +247,13 @@ pub(crate) mod parsing {
                         || ahead.peek3(Token![?]))
                 {
                     input.advance_to(&ahead);
-                    return Ok(input.add(stmt_mac(input, attrs, path)?.map(Stmt::Macro)));
+                    return stmt_mac(input, attrs, path);
                 }
             }
         }
 
         if input.peek(Token![let]) && !input.peek(token::Group) {
-            Ok(input.add(stmt_local(input, attrs)?.map(Stmt::Local)))
+            stmt_local(input, attrs)
         } else if input.peek(Token![pub])
             || input.peek(Token![crate]) && !input.peek2(Token![::])
             || input.peek(Token![extern])
@@ -279,23 +292,19 @@ pub(crate) mod parsing {
             || is_item_macro
         {
             let item = item::parsing::parse_rest_of_item(begin, attrs, input)?;
-            Ok(input.add(Stmt::Item(item).with_span(input.span_from_marker(marker))))
+            Ok(Stmt::Item(item).pattern_with_span(input.span_from_marker(marker)))
         } else {
             stmt_expr(input, allow_nosemi, attrs)
         }
     }
 
-    fn stmt_mac(
-        input: ParseStream,
-        attrs: Vec<Attribute>,
-        path: Path,
-    ) -> Result<Spanned<StmtMacro>> {
+    fn stmt_mac(input: ParseStream, attrs: Vec<Attribute>, path: Path) -> Result<SpannedPat<Stmt>> {
         let marker = input.marker();
         let bang_token: Token![!] = input.parse()?;
         let (delimiter, tokens) = mac::parse_delimiter(input)?;
         let semi_token: Option<Token![;]> = input.parse()?;
 
-        Ok(StmtMacro {
+        Ok(Stmt::Macro(StmtMacro {
             attrs,
             mac: Macro {
                 path,
@@ -304,11 +313,11 @@ pub(crate) mod parsing {
                 tokens,
             },
             semi_token,
-        }
-        .with_span(input.span_from_marker(marker)))
+        })
+        .pattern_with_span(input.span_from_marker(marker)))
     }
 
-    fn stmt_local(input: ParseStream, attrs: Vec<Attribute>) -> Result<Spanned<Local>> {
+    fn stmt_local(input: ParseStream, attrs: Vec<Attribute>) -> Result<SpannedPat<Stmt>> {
         let marker = input.marker();
         let let_token: Token![let] = input.parse()?;
 
@@ -356,34 +365,38 @@ pub(crate) mod parsing {
 
         let semi_token: Token![;] = input.parse()?;
 
-        Ok(Local {
+        Ok(Stmt::Local(Local {
             attrs,
             let_token,
             pat,
             init,
             semi_token,
-        }
-        .with_span(input.span_from_marker(marker)))
+        })
+        .pattern_with_span(input.span_from_marker(marker)))
     }
 
     fn stmt_expr(
         input: ParseStream,
         allow_nosemi: AllowNoSemi,
         mut attrs: Vec<Attribute>,
-    ) -> Result<NodeId<Stmt>> {
+    ) -> Result<SpannedPat<Stmt>> {
         let marker = input.marker();
-        let e = input.parse_id::<ExprEarlierBoundaryRule>()?;
+        let e = input.parse_pat::<ExprEarlierBoundaryRule>()?;
 
-        let mut attr_target = e;
+        let mut attr_target = None;
         loop {
             let ctx = input.ctx();
-            let Pattern::Real(e) = ctx.get(attr_target) else {
+            let e = match attr_target {
+                Some(id) => ctx.get(id),
+                None => e.as_ref(),
+            };
+            let Pattern::Real(e) = e else {
                 break;
             };
             attr_target = match e {
-                Expr::Assign(e) => e.left,
-                Expr::Binary(e) => e.left,
-                Expr::Cast(e) => e.expr,
+                Expr::Assign(e) => Some(e.left),
+                Expr::Binary(e) => Some(e.left),
+                Expr::Cast(e) => Some(e.expr),
                 Expr::Array(_)
                 | Expr::Async(_)
                 | Expr::Await(_)
@@ -423,43 +436,51 @@ pub(crate) mod parsing {
                 | Expr::Verbatim(_) => break,
             };
         }
-        match input.ctx_mut().get_mut(attr_target) {
-            Pattern::Real(attr_target) => {
-                attrs.extend(attr_target.replace_attrs(Vec::new()));
-                attr_target.replace_attrs(attrs);
-            }
-            Pattern::Pat(_) => {
-                if !attrs.is_empty() {
-                    panic!("Attr on var")
+        let mut e = e;
+        {
+            let mut ctx = input.ctx_mut();
+            let attr_target = match attr_target {
+                Some(id) => ctx.get_mut(id),
+                None => e.as_mut(),
+            };
+            match attr_target {
+                Pattern::Real(attr_target) => {
+                    attrs.extend(attr_target.replace_attrs(Vec::new()));
+                    attr_target.replace_attrs(attrs);
+                }
+                Pattern::Pat(_) => {
+                    if !attrs.is_empty() {
+                        panic!("Attr on var")
+                    }
                 }
             }
         }
 
+        let (expr_span, e) = e.decompose();
         let semi_token: Option<Token![;]> = input.parse()?;
+        let stmt_span = input.span_from_marker(marker);
 
-        if let Some(macro_stmt_id) = input.ctx_mut().change_node(e, |expr| match expr {
-            Expr::Macro(ExprMacro { attrs, mac })
+        match e {
+            Pattern::Real(Expr::Macro(ExprMacro { attrs, mac }))
                 if semi_token.is_some() || mac.delimiter.is_brace() =>
             {
-                Stmt::Macro(StmtMacro {
+                return Ok(Stmt::Macro(StmtMacro {
                     attrs: attrs,
                     mac: mac,
                     semi_token,
                 })
-                .to_node()
+                .pattern_with_span(stmt_span));
             }
-            e => e.to_node(),
-        }) {
-            return Ok(macro_stmt_id);
-        }
-
-        let span = input.span_from_marker(marker);
-        if semi_token.is_some() {
-            Ok(input.add(Stmt::Expr(e, semi_token).with_span(span)))
-        } else if allow_nosemi.0 || !classify::requires_semi_to_be_stmt(input, e) {
-            Ok(input.add(Stmt::Expr(e, None).with_span(span)))
-        } else {
-            Err(input.error("expected semicolon"))
+            _ => {
+                let e = input.add_pat(e.with_span(expr_span));
+                if semi_token.is_some() {
+                    Ok(Stmt::Expr(e, semi_token).pattern_with_span(stmt_span))
+                } else if allow_nosemi.0 || !classify::requires_semi_to_be_stmt(input, e) {
+                    Ok(Stmt::Expr(e, None).pattern_with_span(stmt_span))
+                } else {
+                    Err(input.error("expected semicolon"))
+                }
+            }
         }
     }
 }

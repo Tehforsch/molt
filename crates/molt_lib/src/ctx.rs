@@ -244,6 +244,13 @@ impl<Real, Pat: Copy> Pattern<Real, Pat> {
             Pattern::Pat(var) => Pattern::Pat(*var),
         }
     }
+
+    pub fn as_mut(&mut self) -> Pattern<&mut Real, Pat> {
+        match self {
+            Pattern::Real(real) => Pattern::Real(real),
+            Pattern::Pat(var) => Pattern::Pat(*var),
+        }
+    }
 }
 
 impl<Real, Pat> Pattern<Option<Real>, Pat> {
@@ -438,29 +445,6 @@ impl<Node: GetKind> Ctx<Node> {
             Pattern::Real(t) => Some(t),
             Pattern::Pat(_) => None,
         }
-    }
-
-    pub fn change_node<T: ToNode<Node>, S: ToNode<Node>>(
-        &mut self,
-        id: NodeId<T>,
-        f: impl Fn(T) -> Node,
-    ) -> Option<NodeId<S>> {
-        let id: Id = id.into();
-        let idx = match id.0 {
-            Pattern::Real(idx) => idx,
-            Pattern::Pat(_) => return None,
-        };
-        let node = self.nodes.remove(idx);
-        let t = T::from_node(node).unwrap();
-        let new_node = f(t);
-        let id = if new_node.kind() == S::kind() {
-            assert_eq!(S::kind(), new_node.kind());
-            Some(id.typed())
-        } else {
-            None
-        };
-        self.nodes.insert(idx, new_node);
-        id
     }
 
     pub fn get_var(&self, id: Id) -> &Var<Node> {
