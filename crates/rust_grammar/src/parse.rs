@@ -795,6 +795,7 @@ impl<'a> ParseBuffer<'a> {
     }
 
     pub(crate) fn parse_list<T: ParseList>(&self) -> Result<NodeList<T::Target, T::Punct>> {
+        // todo!(): check for list vars here ?
         T::parse_list(self)
     }
 
@@ -943,7 +944,8 @@ pub fn parse_ctx<T>(
     mode: ParsingMode,
 ) -> Result<(T, Ctx<Node>)> {
     let ctx = ParseCtx::default();
-    parse_with_ctx(ctx, f, proc_macro2::TokenStream::from_str(s)?, mode)
+    parse2_impl(ctx.clone(), f, proc_macro2::TokenStream::from_str(s)?, mode)
+        .map(|t| (t, ctx.take()))
 }
 
 pub fn parse_with_ctx<T>(
@@ -951,9 +953,9 @@ pub fn parse_with_ctx<T>(
     f: impl FnOnce(ParseStream) -> Result<T>,
     tokens: TokenStream,
     mode: ParsingMode,
-) -> Result<(T, Ctx<Node>)> {
+) -> Result<T> {
     let t = parse2_impl(ctx.clone(), f, tokens, mode);
-    t.map(|t| (t, ctx.take()))
+    t
 }
 
 fn err_unexpected_token(span: Span, delimiter: Delimiter) -> Error {

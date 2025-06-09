@@ -1188,7 +1188,7 @@ pub(crate) mod parsing {
     use crate::parse::discouraged::Speculative as _;
     #[cfg(feature = "full")]
     use crate::parse::ParseBuffer;
-    use crate::parse::{Parse, ParseList, ParsePat, ParseStream};
+    use crate::parse::{ListOrItem, Parse, ParseList, ParseListOrItem, ParsePat, ParseStream};
     #[cfg(feature = "full")]
     use crate::pat::{Pat, PatType};
     use crate::path::{self, AngleBracketedGenericArguments, Path, QSelf};
@@ -1947,6 +1947,8 @@ pub(crate) mod parsing {
     fn array_or_repeat(input: ParseStream) -> Result<Expr> {
         use molt_lib::NodeList;
 
+        use crate::parse::ListOrItem;
+
         let content;
         let bracket_token = bracketed!(content in input);
         if content.is_empty() {
@@ -1957,64 +1959,53 @@ pub(crate) mod parsing {
             }));
         }
 
-        todo!()
-        // let first: NodeId<Expr> = content.parse()?;
-        // if content.is_empty() || content.peek(Token![,]) {
-        //     let mut elems = Punctuated::new();
-        //     elems.push_value(first);
-        //     while !content.is_empty() {
-        //         let punct = content.parse()?;
-        //         elems.push_punct(punct);
-        //         if content.is_empty() {
-        //             break;
-        //         }
-        //         let value = content.parse()?;
-        //         elems.push_value(value);
-        //     }
-        //     Ok(Expr::Array(ExprArray {
-        //         attrs: Vec::new(),
-        //         bracket_token,
-        //         elems: elems.into(),
-        //     }))
-        // } else if content.peek(Token![;]) {
-        //     let semi_token: Token![;] = content.parse()?;
-        //     let len: NodeId<Expr> = content.parse()?;
-        //     Ok(Expr::Repeat(ExprRepeat {
-        //         attrs: Vec::new(),
-        //         bracket_token,
-        //         expr: first,
-        //         semi_token,
-        //         len: len,
-        //     }))
-        // } else {
-        //     Err(content.error("expected `,` or `;`"))
-        // }
+        match content.parse_list_or_item::<ExprArray>()? {
+            ListOrItem::List(elems) => Ok(Expr::Array(ExprArray {
+                attrs: Vec::new(),
+                bracket_token,
+                elems,
+            })),
+            ListOrItem::Item(expr) => {
+                let semi_token: Token![;] = content.parse()?;
+                let len: NodeId<Expr> = content.parse()?;
+                Ok(Expr::Repeat(ExprRepeat {
+                    attrs: Vec::new(),
+                    bracket_token,
+                    expr: content.add_pat(expr),
+                    semi_token,
+                    len: len,
+                }))
+            }
+        }
     }
 
-    #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-    impl Parse for ExprArray {
-        fn parse(input: ParseStream) -> Result<Self> {
-            todo!()
-            // let content;
-            // let bracket_token = bracketed!(content in input);
-            // let mut elems = Punctuated::new();
+    impl ParseListOrItem for ExprArray {
+        type Target = Expr;
 
-            // while !content.is_empty() {
-            //     let first: NodeId<Expr> = content.parse()?;
-            //     elems.push_value(first);
-            //     if content.is_empty() {
-            //         break;
-            //     }
-            //     let punct = content.parse()?;
-            //     elems.push_punct(punct);
-            // }
+        type Punct = Token![,];
 
-            // Ok(ExprArray {
-            //     attrs: Vec::new(),
-            //     bracket_token,
-            //     elems: elems.into(),
-            // })
+        fn parse_list_or_item(input: ParseStream) -> Result<ListOrItem<Self::Target, Self::Punct>> {
+            let first = input.parse_pat::<Expr>()?;
+            if input.is_empty() || input.peek(Token![,]) {
+                let mut elems = Punctuated::<_, Token![,]>::new();
+                elems.push_value(input.add_pat(first));
+                while !input.is_empty() {
+                    let punct = input.parse()?;
+                    elems.push_punct(punct);
+                    if input.is_empty() {
+                        break;
+                    }
+                    let value: NodeId<Expr> = input.parse()?;
+                    elems.push_value(value);
+                }
+                Ok(ListOrItem::List(NodeList::Real(
+                    elems.into_iter().collect(),
+                )))
+            } else if input.peek(Token![;]) {
+                Ok(ListOrItem::Item(first))
+            } else {
+                Err(input.error("expected `,` or `;`"))
+            }
         }
     }
 

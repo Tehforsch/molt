@@ -382,6 +382,10 @@ impl<Node: GetKind> Ctx<Node> {
         Id(InternalId::Real(self.nodes.len() - 1))
     }
 
+    pub fn num_vars(&self) -> usize {
+        self.vars.len()
+    }
+
     pub fn add<T: ToNode<Node>>(&mut self, t: Spanned<T>) -> NodeId<T> {
         self.add_node(t.map(|item| item.to_node())).typed()
     }

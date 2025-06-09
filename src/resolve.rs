@@ -123,7 +123,6 @@ impl UnresolvedMoltFile {
                             tokens,
                             ParsingMode::Pat,
                         )
-                        .map(|(id, _)| id)
                     })
                     .transpose()
                     .map_err(|e| Error::parse(e, file_id))?;
