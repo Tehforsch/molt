@@ -848,8 +848,8 @@ pub(crate) mod parsing {
     use crate::restriction::Visibility;
     use crate::stmt::Block;
     use crate::ty::{Abi, ReturnType, Type, TypePath};
-    use crate::verbatim;
     use crate::{derive, token};
+    use crate::{verbatim, Stmt};
     use molt_lib::{NodeId, NodeList, Pattern, SpannedPat, WithSpan};
     use proc_macro2::TokenStream;
 
@@ -1506,7 +1506,7 @@ pub(crate) mod parsing {
         let content;
         let brace_token = braced!(content in input);
         attr::parsing::parse_inner(&content, &mut attrs)?;
-        let stmts = content.parse_list::<Block>()?;
+        let stmts = content.parse_list::<Stmt>()?;
 
         Ok(ItemFn {
             attrs,
@@ -1782,7 +1782,7 @@ pub(crate) mod parsing {
                     let content;
                     braced!(content in input);
                     content.call(Attribute::parse_inner)?;
-                    content.parse_list::<Block>()?;
+                    content.parse_list::<Stmt>()?;
                     None
                 } else {
                     Some(input.parse()?)
@@ -2393,7 +2393,7 @@ pub(crate) mod parsing {
                 let content;
                 let brace_token = braced!(content in input);
                 attr::parsing::parse_inner(&content, &mut attrs)?;
-                let stmts = content.parse_list::<Block>()?;
+                let stmts = content.parse_list::<Stmt>()?;
                 (Some(brace_token), stmts, None)
             } else if lookahead.peek(Token![;]) {
                 let semi_token: Token![;] = input.parse()?;
@@ -2767,7 +2767,7 @@ pub(crate) mod parsing {
         attrs.extend(content.call(Attribute::parse_inner)?);
         let block = Block {
             brace_token,
-            stmts: content.parse_list::<Block>()?,
+            stmts: content.parse_list::<Stmt>()?,
         };
 
         Ok(Some(ImplItemFn {

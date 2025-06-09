@@ -246,21 +246,19 @@ pub trait PeekPat {
     }
 }
 
-pub trait ParseList {
-    type Target: ToNode<Node>;
+pub trait ParseList: ParsePat {
     type Punct: Parse;
 
-    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Target>>>;
-}
-
-pub fn parse_list_real_normal<T: ParsePat, P: Parse>(
-    input: ParseStream,
-) -> Result<Vec<NodeId<<T as ParsePat>::Target>>> {
-    Ok(
-        Punctuated::<NodeId<T::Target>, P>::parse_terminated_with(input, T::parse_id)?
+    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<<Self as ParsePat>::Target>>> {
+        Ok(
+            Punctuated::<NodeId<<Self as ParsePat>::Target>, Self::Punct>::parse_terminated_with(
+                input,
+                Self::parse_id,
+            )?
             .into_iter()
             .collect(),
-    )
+        )
+    }
 }
 
 pub enum ListOrItem<T, P> {
@@ -810,9 +808,9 @@ impl<'a> ParseBuffer<'a> {
     }
 
     pub(crate) fn parse_list<T: ParseList>(&self) -> Result<NodeList<T::Target, T::Punct>> {
-        if self.peek_list_var(<T as ParseList>::Target::kind()) {
+        if self.peek_list_var(<T as ParsePat>::Target::kind()) {
             Ok(NodeList::Pat(
-                self.parse_list_var::<<T as ParseList>::Target, <T as ParseList>::Punct>(
+                self.parse_list_var::<<T as ParsePat>::Target, <T as ParseList>::Punct>(
                     T::parse_list_real,
                 )?,
             ))

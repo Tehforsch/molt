@@ -279,10 +279,7 @@ pub(crate) mod parsing {
     use crate::ident::{AnyIdent, Ident};
     use crate::lifetime::Lifetime;
     use crate::mac::{self, Macro};
-    use crate::parse::{
-        parse_list_real_normal, ListOrItem, Parse, ParseList, ParseListOrItem, ParsePat,
-        ParseStream,
-    };
+    use crate::parse::{ListOrItem, Parse, ParseList, ParseListOrItem, ParsePat, ParseStream};
     use crate::path;
     use crate::punctuated::Punctuated;
     use crate::token::{self, Paren};
@@ -306,12 +303,6 @@ pub(crate) mod parsing {
 
     impl ParseList for Type {
         type Punct = Token![,];
-
-        type Target = Type;
-
-        fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Target>>> {
-            parse_list_real_normal::<Type, Token![,]>(input)
-        }
     }
 
     pub struct NoPlus;

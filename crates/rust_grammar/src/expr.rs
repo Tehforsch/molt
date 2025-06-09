@@ -1188,10 +1188,7 @@ pub(crate) mod parsing {
     use crate::parse::discouraged::Speculative as _;
     #[cfg(feature = "full")]
     use crate::parse::ParseBuffer;
-    use crate::parse::{
-        parse_list_real_normal, ListOrItem, Parse, ParseList, ParseListOrItem, ParsePat,
-        ParseStream,
-    };
+    use crate::parse::{ListOrItem, Parse, ParseList, ParseListOrItem, ParsePat, ParseStream};
     #[cfg(feature = "full")]
     use crate::pat::{Pat, PatType};
     use crate::path::{self, AngleBracketedGenericArguments, Path, QSelf};
@@ -1202,8 +1199,8 @@ pub(crate) mod parsing {
     use crate::ty::parsing::NoPlus;
     #[cfg(feature = "full")]
     use crate::ty::ReturnType;
-    use crate::verbatim;
     use crate::{token, Type};
+    use crate::{verbatim, Stmt};
     use molt_lib::{Id, NodeId, NodeList, Pattern, Spanned, SpannedPat, WithSpan};
     use std::mem;
 
@@ -1226,12 +1223,6 @@ pub(crate) mod parsing {
 
     impl ParseList for Expr {
         type Punct = Token![,];
-
-        type Target = Expr;
-
-        fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Target>>> {
-            parse_list_real_normal::<Expr, Token![,]>(input)
-        }
     }
 
     impl ParsePat for ExprNoEagerBrace {
@@ -2228,7 +2219,7 @@ pub(crate) mod parsing {
             let content;
             let brace_token = braced!(content in input);
             attr::parsing::parse_inner(&content, &mut attrs)?;
-            let stmts = content.parse_list::<Block>()?;
+            let stmts = content.parse_list::<Stmt>()?;
 
             Ok(ExprForLoop {
                 attrs,
@@ -2253,7 +2244,7 @@ pub(crate) mod parsing {
             let content;
             let brace_token = braced!(content in input);
             attr::parsing::parse_inner(&content, &mut attrs)?;
-            let stmts = content.parse_list::<Block>()?;
+            let stmts = content.parse_list::<Stmt>()?;
 
             Ok(ExprLoop {
                 attrs,
@@ -2563,7 +2554,7 @@ pub(crate) mod parsing {
             let content;
             let brace_token = braced!(content in input);
             attr::parsing::parse_inner(&content, &mut attrs)?;
-            let stmts = content.parse_list::<Block>()?;
+            let stmts = content.parse_list::<Stmt>()?;
 
             Ok(ExprWhile {
                 attrs,
@@ -2584,7 +2575,7 @@ pub(crate) mod parsing {
             let content;
             let brace_token = braced!(content in input);
             let inner_attrs = content.call(Attribute::parse_inner)?;
-            let stmts = content.parse_list::<Block>()?;
+            let stmts = content.parse_list::<Stmt>()?;
 
             Ok(ExprConst {
                 attrs: inner_attrs,
@@ -2759,7 +2750,7 @@ pub(crate) mod parsing {
             let content;
             let brace_token = braced!(content in input);
             let inner_attrs = content.call(Attribute::parse_inner)?;
-            let stmts = content.parse_list::<Block>()?;
+            let stmts = content.parse_list::<Stmt>()?;
 
             Ok(ExprUnsafe {
                 attrs: inner_attrs,
@@ -2779,7 +2770,7 @@ pub(crate) mod parsing {
             let content;
             let brace_token = braced!(content in input);
             attr::parsing::parse_inner(&content, &mut attrs)?;
-            let stmts = content.parse_list::<Block>()?;
+            let stmts = content.parse_list::<Stmt>()?;
 
             Ok(ExprBlock {
                 attrs,

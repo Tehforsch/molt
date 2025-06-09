@@ -103,9 +103,8 @@ pub(crate) mod parsing {
 
     struct AllowNoSemi(bool);
 
-    impl ParseList for Block {
+    impl ParseList for Stmt {
         type Punct = Token![;];
-        type Target = Stmt;
 
         fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Target>>> {
             let mut stmts = Vec::new();
@@ -158,7 +157,7 @@ pub(crate) mod parsing {
             let content;
             Ok(Block {
                 brace_token: braced!(content in input),
-                stmts: content.parse_list::<Block>()?,
+                stmts: content.parse_list::<Stmt>()?,
             })
         }
     }

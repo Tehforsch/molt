@@ -254,8 +254,8 @@ pub(crate) mod parsing {
     use crate::path::{self, Path, QSelf};
     use crate::punctuated::Punctuated;
     use crate::stmt::Block;
-    use crate::token;
     use crate::verbatim;
+    use crate::{token, Stmt};
     use molt_lib::{Pattern, WithSpan};
     use proc_macro2::TokenStream;
 
@@ -814,7 +814,7 @@ pub(crate) mod parsing {
         let content;
         braced!(content in input);
         content.call(Attribute::parse_inner)?;
-        content.parse_list::<Block>()?;
+        content.parse_list::<Stmt>()?;
 
         Ok(verbatim::between(&begin, input))
     }

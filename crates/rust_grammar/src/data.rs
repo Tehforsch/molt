@@ -138,7 +138,7 @@ pub(crate) mod parsing {
     use crate::ident::{AnyIdent, Ident};
     #[cfg(not(feature = "full"))]
     use crate::parse::discouraged::Speculative as _;
-    use crate::parse::{parse_list_real_normal, Parse, ParseList, ParsePat, ParseStream};
+    use crate::parse::{Parse, ParseList, ParsePat, ParseStream};
     use crate::restriction::{FieldMutability, Visibility};
     #[cfg(not(feature = "full"))]
     use crate::scan_expr::scan_expr;
@@ -214,20 +214,10 @@ pub(crate) mod parsing {
 
     impl ParseList for FieldNamed {
         type Punct = Token![,];
-        type Target = Field;
-
-        fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Target>>> {
-            parse_list_real_normal::<FieldNamed, Token![,]>(input)
-        }
     }
 
     impl ParseList for FieldUnnamed {
         type Punct = Token![,];
-        type Target = Field;
-
-        fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Target>>> {
-            parse_list_real_normal::<FieldUnnamed, Token![,]>(input)
-        }
     }
 
     impl ParsePat for FieldNamed {
