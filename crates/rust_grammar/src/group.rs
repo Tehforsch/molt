@@ -86,7 +86,8 @@ fn parse_delimited<'a>(
             let ctx = cursor.ctx.clone();
             let nested = crate::parse::advance_step_cursor(cursor, content);
             let unexpected = crate::parse::get_unexpected(input);
-            let content = crate::parse::new_parse_buffer(scope, nested, unexpected, ctx);
+            let content =
+                crate::parse::new_parse_buffer(scope, nested, unexpected, ctx, input.mode());
             Ok(((span, content), rest))
         } else {
             let message = match delimiter {

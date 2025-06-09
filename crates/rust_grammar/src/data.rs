@@ -138,7 +138,7 @@ pub(crate) mod parsing {
     use crate::ident::{AnyIdent, Ident};
     #[cfg(not(feature = "full"))]
     use crate::parse::discouraged::Speculative as _;
-    use crate::parse::{Parse, ParsePat, ParseStream};
+    use crate::parse::{Parse, ParseList, ParsePat, ParseStream};
     use crate::restriction::{FieldMutability, Visibility};
     #[cfg(not(feature = "full"))]
     use crate::scan_expr::scan_expr;
@@ -196,9 +196,7 @@ pub(crate) mod parsing {
             let content;
             Ok(FieldsNamed {
                 brace_token: braced!(content in input),
-                named: content
-                    .parse_terminated_pat::<FieldNamed, _>(Token![,])?
-                    .into(),
+                named: content.parse_list::<FieldNamed>()?,
             })
         }
     }
@@ -209,9 +207,17 @@ pub(crate) mod parsing {
             let content;
             Ok(FieldsUnnamed {
                 paren_token: parenthesized!(content in input),
-                unnamed: content.parse_terminated_pat::<FieldUnnamed, _>(Token![,])?,
+                unnamed: content.parse_list::<FieldUnnamed>()?,
             })
         }
+    }
+
+    impl ParseList for FieldNamed {
+        type Punct = Token![,];
+    }
+
+    impl ParseList for FieldUnnamed {
+        type Punct = Token![,];
     }
 
     impl ParsePat for FieldNamed {

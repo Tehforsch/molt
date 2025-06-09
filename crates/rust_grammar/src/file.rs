@@ -1,7 +1,9 @@
-use molt_lib::{NoPunct, NodeList};
+use molt_lib::{NoPunct, NodeId, NodeList, ParsingMode};
 
 use crate::attr::Attribute;
+use crate::error::Result;
 use crate::item::Item;
+use crate::{parse_str, whitespace};
 
 ast_struct! {
     /// A complete file of Rust source code.
@@ -81,7 +83,7 @@ ast_struct! {
     pub struct File {
         pub shebang: Option<String>,
         pub attrs: Vec<Attribute>,
-        pub items: NodeList<Item, NoPunct>,
+        pub items: Vec<NodeId<Item>>,
     }
 }
 
@@ -106,11 +108,37 @@ pub(crate) mod parsing {
                     while !input.is_empty() {
                         items.push(input.parse()?);
                     }
-                    items.into()
+                    items
                 },
             })
         }
     }
+}
+
+pub fn parse_file(mut content: &str, mode: ParsingMode) -> Result<File> {
+    // Strip the BOM if it is present
+    const BOM: &str = "\u{feff}";
+    if content.starts_with(BOM) {
+        content = &content[BOM.len()..];
+    }
+
+    let mut shebang = None;
+    if content.starts_with("#!") {
+        let rest = whitespace::skip(&content[2..]);
+        if !rest.starts_with('[') {
+            if let Some(idx) = content.find('\n') {
+                shebang = Some(content[..idx].to_string());
+                content = &content[idx..];
+            } else {
+                shebang = Some(content.to_string());
+                content = "";
+            }
+        }
+    }
+
+    let mut file: File = parse_str(content, mode)?;
+    file.shebang = shebang;
+    Ok(file)
 }
 
 #[cfg(feature = "printing")]

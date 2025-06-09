@@ -183,7 +183,10 @@
 pub mod discouraged;
 
 use discouraged::Speculative;
-use molt_lib::{Ctx, Id, NodeId, NodeList, Pattern, Spanned, SpannedPat, ToNode, Var, WithSpan};
+use molt_lib::{
+    Ctx, Id, NodeId, NodeList, ParsingMode, Pattern, RealNodeList, Spanned, SpannedPat, ToNode,
+    Var, WithSpan,
+};
 
 use crate::buffer::{Cursor, TokenBuffer};
 use crate::node::Node;
@@ -241,6 +244,42 @@ pub trait PeekPat {
     fn peek_pat(cursor: Cursor, ctx: &Ctx<Node>) -> bool {
         Self::peek(cursor) || peek_var(cursor, ctx, <Self as PeekPat>::KIND)
     }
+}
+
+pub trait ParseList: ParsePat {
+    type Punct: Parse;
+
+    fn parse_list(input: ParseStream) -> Result<NodeList<<Self as ParsePat>::Target, Self::Punct>> {
+        if input.peek(Token![$]) {
+            todo!();
+        }
+        let list = Self::parse_list_real(input)?;
+        Ok(NodeList::Real(list))
+    }
+
+    fn parse_list_real(
+        input: ParseStream,
+    ) -> Result<RealNodeList<<Self as ParsePat>::Target, Self::Punct>> {
+        if input.mode == ParsingMode::Real {
+            let p: Punctuated<NodeId<<Self as ParsePat>::Target>, Self::Punct> =
+                Punctuated::parse_terminated_with(input, Self::parse_id)?;
+            Ok(p.into_iter().collect())
+        } else {
+            todo!()
+        }
+    }
+}
+
+pub enum ListOrItem<T, P> {
+    Item(SpannedPat<T>),
+    List(NodeList<T, P>),
+}
+
+pub trait ParseListOrItem {
+    type Target;
+    type Punct;
+
+    fn parse_list_or_item(input: ParseStream) -> Result<ListOrItem<Self::Target, Self::Punct>>;
 }
 
 pub fn peek_var(cursor: Cursor, ctx: &Ctx<Node>, kind: Kind) -> bool {
@@ -305,6 +344,7 @@ pub struct ParseBuffer<'a> {
     marker: PhantomData<Cursor<'a>>,
     unexpected: Cell<Option<Rc<Cell<Unexpected>>>>,
     ctx: ParseCtx,
+    mode: ParsingMode,
 }
 
 impl<'a> Drop for ParseBuffer<'a> {
@@ -437,6 +477,7 @@ pub(crate) fn new_parse_buffer(
     cursor: Cursor,
     unexpected: Rc<Cell<Unexpected>>,
     ctx: ParseCtx,
+    mode: ParsingMode,
 ) -> ParseBuffer {
     ParseBuffer {
         scope,
@@ -445,6 +486,7 @@ pub(crate) fn new_parse_buffer(
         marker: PhantomData,
         unexpected: Cell::new(Some(unexpected)),
         ctx,
+        mode,
     }
 }
 
@@ -516,163 +558,19 @@ pub fn kind_matches(ctx: &Ctx<Node>, ident: &Ident, kind: crate::Kind) -> bool {
 }
 
 impl<'a> ParseBuffer<'a> {
-    /// Parses a syntax tree node of type `T`, advancing the position of our
-    /// parse stream past it.
     pub fn parse<T: Parse>(&self) -> Result<T> {
         T::parse(self)
     }
 
-    /// Calls the given parser function to parse a syntax tree node of type `T`
-    /// from this stream.
-    ///
-    /// # Example
-    ///
-    /// The parser below invokes [`Attribute::parse_outer`] to parse a vector of
-    /// zero or more outer attributes.
-    ///
-    /// [`Attribute::parse_outer`]: crate::Attribute::parse_outer
-    ///
-    /// ```
-    /// use syn::{Attribute, Ident, Result, Token};
-    /// use syn::parse::{Parse, ParseStream};
-    ///
-    /// // Parses a unit struct with attributes.
-    /// //
-    /// //     #[path = "s.tmpl"]
-    /// //     struct S;
-    /// struct UnitStruct {
-    ///     attrs: Vec<Attribute>,
-    ///     struct_token: Token![struct],
-    ///     name: Ident,
-    ///     semi_token: Token![;],
-    /// }
-    ///
-    /// impl Parse for UnitStruct {
-    ///     fn parse(input: ParseStream) -> Result<Self> {
-    ///         Ok(UnitStruct {
-    ///             attrs: input.call(Attribute::parse_outer)?,
-    ///             struct_token: input.parse()?,
-    ///             name: input.parse()?,
-    ///             semi_token: input.parse()?,
-    ///         })
-    ///     }
-    /// }
-    /// ```
     pub fn call<T>(&'a self, function: fn(ParseStream<'a>) -> Result<T>) -> Result<T> {
         function(self)
     }
 
-    /// Looks at the next token in the parse stream to determine whether it
-    /// matches the requested type of token.
-    ///
-    /// Does not advance the position of the parse stream.
-    ///
-    /// # Syntax
-    ///
-    /// Note that this method does not use turbofish syntax. Pass the peek type
-    /// inside of parentheses.
-    ///
-    /// - `input.peek(Token![struct])`
-    /// - `input.peek(Token![==])`
-    /// - `input.peek(syn::Ident)`&emsp;*(does not accept keywords)*
-    /// - `input.peek(syn::Ident::peek_any)`
-    /// - `input.peek(Lifetime)`
-    /// - `input.peek(token::Brace)`
-    ///
-    /// # Example
-    ///
-    /// In this example we finish parsing the list of supertraits when the next
-    /// token in the input is either `where` or an opening curly brace.
-    ///
-    /// ```
-    /// use syn::{braced, token, Generics, Ident, Result, Token, TypeParamBound};
-    /// use syn::parse::{Parse, ParseStream};
-    /// use syn::punctuated::Punctuated;
-    ///
-    /// // Parses a trait definition containing no associated items.
-    /// //
-    /// //     trait Marker<'de, T>: A + B<'de> where Box<T>: Clone {}
-    /// struct MarkerTrait {
-    ///     trait_token: Token![trait],
-    ///     ident: Ident,
-    ///     generics: Generics,
-    ///     colon_token: Option<Token![:]>,
-    ///     supertraits: Punctuated<TypeParamBound, Token![+]>,
-    ///     brace_token: token::Brace,
-    /// }
-    ///
-    /// impl Parse for MarkerTrait {
-    ///     fn parse(input: ParseStream) -> Result<Self> {
-    ///         let trait_token: Token![trait] = input.parse()?;
-    ///         let ident: Ident = input.parse()?;
-    ///         let mut generics: Generics = input.parse()?;
-    ///         let colon_token: Option<Token![:]> = input.parse()?;
-    ///
-    ///         let mut supertraits = Punctuated::new();
-    ///         if colon_token.is_some() {
-    ///             loop {
-    ///                 supertraits.push_value(input.parse()?);
-    ///                 if input.peek(Token![where]) || input.peek(token::Brace) {
-    ///                     break;
-    ///                 }
-    ///                 supertraits.push_punct(input.parse()?);
-    ///             }
-    ///         }
-    ///
-    ///         generics.where_clause = input.parse()?;
-    ///         let content;
-    ///         let empty_brace_token = braced!(content in input);
-    ///
-    ///         Ok(MarkerTrait {
-    ///             trait_token,
-    ///             ident,
-    ///             generics,
-    ///             colon_token,
-    ///             supertraits,
-    ///             brace_token: empty_brace_token,
-    ///         })
-    ///     }
-    /// }
-    /// ```
     pub fn peek<T: Peek>(&self, token: T) -> bool {
         let _ = token;
         T::Token::peek(self.cursor())
     }
 
-    /// Looks at the second-next token in the parse stream.
-    ///
-    /// This is commonly useful as a way to implement contextual keywords.
-    ///
-    /// # Example
-    ///
-    /// This example needs to use `peek2` because the symbol `union` is not a
-    /// keyword in Rust. We can't use just `peek` and decide to parse a union if
-    /// the very next token is `union`, because someone is free to write a `mod
-    /// union` and a macro invocation that looks like `union::some_macro! { ...
-    /// }`. In other words `union` is a contextual keyword.
-    ///
-    /// ```
-    /// use syn::{Ident, ItemUnion, Macro, Result, Token};
-    /// use syn::parse::{Parse, ParseStream};
-    ///
-    /// // Parses either a union or a macro invocation.
-    /// enum UnionOrMacro {
-    ///     // union MaybeUninit<T> { uninit: (), value: T }
-    ///     Union(ItemUnion),
-    ///     // lazy_static! { ... }
-    ///     Macro(Macro),
-    /// }
-    ///
-    /// impl Parse for UnionOrMacro {
-    ///     fn parse(input: ParseStream) -> Result<Self> {
-    ///         if input.peek(Token![union]) && input.peek2(Ident) {
-    ///             input.parse().map(UnionOrMacro::Union)
-    ///         } else {
-    ///             input.parse().map(UnionOrMacro::Macro)
-    ///         }
-    ///     }
-    /// }
-    /// ```
     pub fn peek2<T: Peek>(&self, token: T) -> bool {
         fn peek2(buffer: &ParseBuffer, peek: fn(Cursor) -> bool) -> bool {
             buffer.cursor().skip().map_or(false, peek)
@@ -682,7 +580,6 @@ impl<'a> ParseBuffer<'a> {
         peek2(self, T::Token::peek)
     }
 
-    /// Looks at the third-next token in the parse stream.
     pub fn peek3<T: Peek>(&self, token: T) -> bool {
         fn peek3(buffer: &ParseBuffer, peek: fn(Cursor) -> bool) -> bool {
             buffer
@@ -696,97 +593,6 @@ impl<'a> ParseBuffer<'a> {
         peek3(self, T::Token::peek)
     }
 
-    /// Parses zero or more occurrences of `T` separated by punctuation of type
-    /// `P`, with optional trailing punctuation.
-    ///
-    /// Parsing continues until the end of this parse stream. The entire content
-    /// of this parse stream must consist of `T` and `P`.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use quote::quote;
-    /// #
-    /// use syn::{parenthesized, token, Ident, Result, Token, Type};
-    /// use syn::parse::{Parse, ParseStream};
-    /// use syn::punctuated::Punctuated;
-    ///
-    /// // Parse a simplified tuple struct syntax like:
-    /// //
-    /// //     struct S(A, B);
-    /// struct TupleStruct {
-    ///     struct_token: Token![struct],
-    ///     ident: Ident,
-    ///     paren_token: token::Paren,
-    ///     fields: Punctuated<Type, Token![,]>,
-    ///     semi_token: Token![;],
-    /// }
-    ///
-    /// impl Parse for TupleStruct {
-    ///     fn parse(input: ParseStream) -> Result<Self> {
-    ///         let content;
-    ///         Ok(TupleStruct {
-    ///             struct_token: input.parse()?,
-    ///             ident: input.parse()?,
-    ///             paren_token: parenthesized!(content in input),
-    ///             fields: content.parse_terminated(Type::parse, Token![,])?,
-    ///             semi_token: input.parse()?,
-    ///         })
-    ///     }
-    /// }
-    /// #
-    /// # let input = quote! {
-    /// #     struct S(A, B);
-    /// # };
-    /// # syn::parse2::<TupleStruct>(input).unwrap();
-    /// ```
-    ///
-    /// # See also
-    ///
-    /// If your separator is anything more complicated than an invocation of the
-    /// `Token!` macro, this method won't be applicable and you can instead
-    /// directly use `Punctuated`'s parser functions: [`parse_terminated`],
-    /// [`parse_separated_nonempty`] etc.
-    ///
-    /// [`parse_terminated`]: Punctuated::parse_terminated
-    /// [`parse_separated_nonempty`]: Punctuated::parse_separated_nonempty
-    ///
-    /// ```
-    /// use syn::{custom_keyword, Expr, Result, Token};
-    /// use syn::parse::{Parse, ParseStream};
-    /// use syn::punctuated::Punctuated;
-    ///
-    /// mod kw {
-    ///     syn::custom_keyword!(fin);
-    /// }
-    ///
-    /// struct Fin(kw::fin, Token![;]);
-    ///
-    /// impl Parse for Fin {
-    ///     fn parse(input: ParseStream) -> Result<Self> {
-    ///         Ok(Self(input.parse()?, input.parse()?))
-    ///     }
-    /// }
-    ///
-    /// struct Thing {
-    ///     steps: Punctuated<Expr, Fin>,
-    /// }
-    ///
-    /// impl Parse for Thing {
-    ///     fn parse(input: ParseStream) -> Result<Self> {
-    /// # if true {
-    ///         Ok(Thing {
-    ///             steps: Punctuated::parse_terminated(input)?,
-    ///         })
-    /// # } else {
-    ///         // or equivalently, this means the same thing:
-    /// #       Ok(Thing {
-    ///             steps: input.call(Punctuated::parse_terminated)?,
-    /// #       })
-    /// # }
-    ///     }
-    /// }
-    /// ```
     pub fn parse_terminated<T, P>(
         &'a self,
         parser: fn(ParseStream<'a>) -> Result<T>,
@@ -800,238 +606,14 @@ impl<'a> ParseBuffer<'a> {
         Punctuated::parse_terminated_with(self, parser)
     }
 
-    pub fn parse_terminated_pat<T: ParsePat, P>(
-        &'a self,
-        separator: P,
-    ) -> Result<NodeList<T::Target, P::Token>>
-    where
-        P: Peek,
-        P::Token: Parse,
-    {
-        let _ = separator;
-        let p = Punctuated::parse_terminated_with(self, T::parse_id)?;
-        Ok(p.into())
-    }
-
-    /// Returns whether there are no more tokens remaining to be parsed from
-    /// this stream.
-    ///
-    /// This method returns true upon reaching the end of the content within a
-    /// set of delimiters, as well as at the end of the tokens provided to the
-    /// outermost parsing entry point.
-    ///
-    /// This is equivalent to
-    /// <code>.<a href="#method.peek">peek</a>(<a href="struct.End.html">syn::parse::End</a>)</code>.
-    /// Use `.peek2(End)` or `.peek3(End)` to look for the end of a parse stream
-    /// further ahead than the current position.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use syn::{braced, token, Ident, Item, Result, Token};
-    /// use syn::parse::{Parse, ParseStream};
-    ///
-    /// // Parses a Rust `mod m { ... }` containing zero or more items.
-    /// struct Mod {
-    ///     mod_token: Token![mod],
-    ///     name: Ident,
-    ///     brace_token: token::Brace,
-    ///     items: Vec<Item>,
-    /// }
-    ///
-    /// impl Parse for Mod {
-    ///     fn parse(input: ParseStream) -> Result<Self> {
-    ///         let content;
-    ///         Ok(Mod {
-    ///             mod_token: input.parse()?,
-    ///             name: input.parse()?,
-    ///             brace_token: braced!(content in input),
-    ///             items: {
-    ///                 let mut items = Vec::new();
-    ///                 while !content.is_empty() {
-    ///                     items.push(content.parse()?);
-    ///                 }
-    ///                 items
-    ///             },
-    ///         })
-    ///     }
-    /// }
-    /// ```
     pub fn is_empty(&self) -> bool {
         self.cursor().eof()
     }
 
-    /// Constructs a helper for peeking at the next token in this stream and
-    /// building an error message if it is not one of a set of expected tokens.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use syn::{ConstParam, Ident, Lifetime, LifetimeParam, Result, Token, TypeParam};
-    /// use syn::parse::{Parse, ParseStream};
-    ///
-    /// // A generic parameter, a single one of the comma-separated elements inside
-    /// // angle brackets in:
-    /// //
-    /// //     fn f<T: Clone, 'a, 'b: 'a, const N: usize>() { ... }
-    /// //
-    /// // On invalid input, lookahead gives us a reasonable error message.
-    /// //
-    /// //     error: expected one of: identifier, lifetime, `const`
-    /// //       |
-    /// //     5 |     fn f<!Sized>() {}
-    /// //       |          ^
-    /// enum GenericParam {
-    ///     Type(TypeParam),
-    ///     Lifetime(LifetimeParam),
-    ///     Const(ConstParam),
-    /// }
-    ///
-    /// impl Parse for GenericParam {
-    ///     fn parse(input: ParseStream) -> Result<Self> {
-    ///         let lookahead = input.lookahead1();
-    ///         if lookahead.peek(Ident) {
-    ///             input.parse().map(GenericParam::Type)
-    ///         } else if lookahead.peek(Lifetime) {
-    ///             input.parse().map(GenericParam::Lifetime)
-    ///         } else if lookahead.peek(Token![const]) {
-    ///             input.parse().map(GenericParam::Const)
-    ///         } else {
-    ///             Err(lookahead.error())
-    ///         }
-    ///     }
-    /// }
-    /// ```
     pub fn lookahead1(&self) -> Lookahead1<'a> {
         lookahead::new(self.scope, self.cursor(), self.ctx.clone())
     }
 
-    /// Forks a parse stream so that parsing tokens out of either the original
-    /// or the fork does not advance the position of the other.
-    ///
-    /// # Performance
-    ///
-    /// Forking a parse stream is a cheap fixed amount of work and does not
-    /// involve copying token buffers. Where you might hit performance problems
-    /// is if your macro ends up parsing a large amount of content more than
-    /// once.
-    ///
-    /// ```
-    /// # use syn::{Expr, Result};
-    /// # use syn::parse::ParseStream;
-    /// #
-    /// # fn bad(input: ParseStream) -> Result<Expr> {
-    /// // Do not do this.
-    /// if input.fork().parse::<Expr>().is_ok() {
-    ///     return input.parse::<Expr>();
-    /// }
-    /// # unimplemented!()
-    /// # }
-    /// ```
-    ///
-    /// As a rule, avoid parsing an unbounded amount of tokens out of a forked
-    /// parse stream. Only use a fork when the amount of work performed against
-    /// the fork is small and bounded.
-    ///
-    /// When complex speculative parsing against the forked stream is
-    /// unavoidable, use [`parse::discouraged::Speculative`] to advance the
-    /// original stream once the fork's parse is determined to have been
-    /// successful.
-    ///
-    /// For a lower level way to perform speculative parsing at the token level,
-    /// consider using [`ParseStream::step`] instead.
-    ///
-    /// [`parse::discouraged::Speculative`]: discouraged::Speculative
-    /// [`ParseStream::step`]: ParseBuffer::step
-    ///
-    /// # Example
-    ///
-    /// The parse implementation shown here parses possibly restricted `pub`
-    /// visibilities.
-    ///
-    /// - `pub`
-    /// - `pub(crate)`
-    /// - `pub(self)`
-    /// - `pub(super)`
-    /// - `pub(in some::path)`
-    ///
-    /// To handle the case of visibilities inside of tuple structs, the parser
-    /// needs to distinguish parentheses that specify visibility restrictions
-    /// from parentheses that form part of a tuple type.
-    ///
-    /// ```
-    /// # struct A;
-    /// # struct B;
-    /// # struct C;
-    /// #
-    /// struct S(pub(crate) A, pub (B, C));
-    /// ```
-    ///
-    /// In this example input the first tuple struct element of `S` has
-    /// `pub(crate)` visibility while the second tuple struct element has `pub`
-    /// visibility; the parentheses around `(B, C)` are part of the type rather
-    /// than part of a visibility restriction.
-    ///
-    /// The parser uses a forked parse stream to check the first token inside of
-    /// parentheses after the `pub` keyword. This is a small bounded amount of
-    /// work performed against the forked parse stream.
-    ///
-    /// ```
-    /// use syn::{parenthesized, token, Ident, Path, Result, Token};
-    /// use syn::ext::IdentExt;
-    /// use syn::parse::{Parse, ParseStream};
-    ///
-    /// struct PubVisibility {
-    ///     pub_token: Token![pub],
-    ///     restricted: Option<Restricted>,
-    /// }
-    ///
-    /// struct Restricted {
-    ///     paren_token: token::Paren,
-    ///     in_token: Option<Token![in]>,
-    ///     path: Path,
-    /// }
-    ///
-    /// impl Parse for PubVisibility {
-    ///     fn parse(input: ParseStream) -> Result<Self> {
-    ///         let pub_token: Token![pub] = input.parse()?;
-    ///
-    ///         if input.peek(token::Paren) {
-    ///             let ahead = input.fork();
-    ///             let mut content;
-    ///             parenthesized!(content in ahead);
-    ///
-    ///             if content.peek(Token![crate])
-    ///                 || content.peek(Token![self])
-    ///                 || content.peek(Token![super])
-    ///             {
-    ///                 return Ok(PubVisibility {
-    ///                     pub_token,
-    ///                     restricted: Some(Restricted {
-    ///                         paren_token: parenthesized!(content in input),
-    ///                         in_token: None,
-    ///                         path: Path::from(content.call(Ident::parse_any)?),
-    ///                     }),
-    ///                 });
-    ///             } else if content.peek(Token![in]) {
-    ///                 return Ok(PubVisibility {
-    ///                     pub_token,
-    ///                     restricted: Some(Restricted {
-    ///                         paren_token: parenthesized!(content in input),
-    ///                         in_token: Some(content.parse()?),
-    ///                         path: content.call(Path::parse_mod_style)?,
-    ///                     }),
-    ///                 });
-    ///             }
-    ///         }
-    ///
-    ///         Ok(PubVisibility {
-    ///             pub_token,
-    ///             restricted: None,
-    ///         })
-    ///     }
-    /// }
-    /// ```
     pub fn fork(&self) -> Self {
         ParseBuffer {
             scope: self.scope,
@@ -1041,86 +623,14 @@ impl<'a> ParseBuffer<'a> {
             // parses all the way unless we `advance_to`.
             unexpected: Cell::new(Some(Rc::new(Cell::new(Unexpected::None)))),
             ctx: self.ctx.clone(),
+            mode: self.mode,
         }
     }
 
-    /// Triggers an error at the current position of the parse stream.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use syn::{Expr, Result, Token};
-    /// use syn::parse::{Parse, ParseStream};
-    ///
-    /// // Some kind of loop: `while` or `for` or `loop`.
-    /// struct Loop {
-    ///     expr: Expr,
-    /// }
-    ///
-    /// impl Parse for Loop {
-    ///     fn parse(input: ParseStream) -> Result<Self> {
-    ///         if input.peek(Token![while])
-    ///             || input.peek(Token![for])
-    ///             || input.peek(Token![loop])
-    ///         {
-    ///             Ok(Loop {
-    ///                 expr: input.parse()?,
-    ///             })
-    ///         } else {
-    ///             Err(input.error("expected some kind of loop"))
-    ///         }
-    ///     }
-    /// }
-    /// ```
     pub fn error<T: Display>(&self, message: T) -> Error {
         error::new_at(self.scope, self.cursor(), message)
     }
 
-    /// Speculatively parses tokens from this parse stream, advancing the
-    /// position of this stream only if parsing succeeds.
-    ///
-    /// This is a powerful low-level API used for defining the `Parse` impls of
-    /// the basic built-in token types. It is not something that will be used
-    /// widely outside of the Syn codebase.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use proc_macro2::TokenTree;
-    /// use syn::Result;
-    /// use syn::parse::ParseStream;
-    ///
-    /// // This function advances the stream past the next occurrence of `@`. If
-    /// // no `@` is present in the stream, the stream position is unchanged and
-    /// // an error is returned.
-    /// fn skip_past_next_at(input: ParseStream) -> Result<()> {
-    ///     input.step(|cursor| {
-    ///         let mut rest = *cursor;
-    ///         while let Some((tt, next)) = rest.token_tree() {
-    ///             match &tt {
-    ///                 TokenTree::Punct(punct) if punct.as_char() == '@' => {
-    ///                     return Ok(((), next));
-    ///                 }
-    ///                 _ => rest = next,
-    ///             }
-    ///         }
-    ///         Err(cursor.error("no `@` was found after this point"))
-    ///     })
-    /// }
-    /// #
-    /// # fn remainder_after_skipping_past_next_at(
-    /// #     input: ParseStream,
-    /// # ) -> Result<proc_macro2::TokenStream> {
-    /// #     skip_past_next_at(input)?;
-    /// #     input.parse()
-    /// # }
-    /// #
-    /// # use syn::parse::Parser;
-    /// # let remainder = remainder_after_skipping_past_next_at
-    /// #     .parse_str("a @ b c")
-    /// #     .unwrap();
-    /// # assert_eq!(remainder.to_string(), "b c");
-    /// ```
     pub fn step<F, R>(&self, function: F) -> Result<R>
     where
         F: for<'c> FnOnce(StepCursor<'c, 'a>) -> Result<(R, Cursor<'c>)>,
@@ -1152,9 +662,6 @@ impl<'a> ParseBuffer<'a> {
         Ok(node)
     }
 
-    /// Returns the `Span` of the next token in the parse stream, or
-    /// `Span::call_site()` if this parse stream has completely exhausted its
-    /// input `TokenStream`.
     pub fn span(&self) -> Span {
         let cursor = self.cursor();
         if cursor.eof() {
@@ -1164,63 +671,6 @@ impl<'a> ParseBuffer<'a> {
         }
     }
 
-    /// Provides low-level access to the token representation underlying this
-    /// parse stream.
-    ///
-    /// Cursors are immutable so no operations you perform against the cursor
-    /// will affect the state of this parse stream.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use proc_macro2::TokenStream;
-    /// use syn::buffer::Cursor;
-    /// use syn::parse::{ParseStream, Result};
-    ///
-    /// // Run a parser that returns T, but get its output as TokenStream instead of T.
-    /// // This works without T needing to implement ToTokens.
-    /// fn recognize_token_stream<T>(
-    ///     recognizer: fn(ParseStream) -> Result<T>,
-    /// ) -> impl Fn(ParseStream) -> Result<TokenStream> {
-    ///     move |input| {
-    ///         let begin = input.cursor();
-    ///         recognizer(input)?;
-    ///         let end = input.cursor();
-    ///         Ok(tokens_between(begin, end))
-    ///     }
-    /// }
-    ///
-    /// // Collect tokens between two cursors as a TokenStream.
-    /// fn tokens_between(begin: Cursor, end: Cursor) -> TokenStream {
-    ///     assert!(begin <= end);
-    ///
-    ///     let mut cursor = begin;
-    ///     let mut tokens = TokenStream::new();
-    ///     while cursor < end {
-    ///         let (token, next) = cursor.token_tree().unwrap();
-    ///         tokens.extend(std::iter::once(token));
-    ///         cursor = next;
-    ///     }
-    ///     tokens
-    /// }
-    ///
-    /// fn main() {
-    ///     use quote::quote;
-    ///     use syn::parse::{Parse, Parser};
-    ///     use syn::Token;
-    ///
-    ///     // Parse syn::Type as a TokenStream, surrounded by angle brackets.
-    ///     fn example(input: ParseStream) -> Result<TokenStream> {
-    ///         let _langle: Token![<] = input.parse()?;
-    ///         let ty = recognize_token_stream(syn::Type::parse)(input)?;
-    ///         let _rangle: Token![>] = input.parse()?;
-    ///         Ok(ty)
-    ///     }
-    ///
-    ///     let tokens = quote! { <fn() -> u8> };
-    ///     println!("{}", example.parse2(tokens).unwrap());
-    /// }
-    /// ```
     pub fn cursor(&self) -> Cursor<'a> {
         self.cell.get()
     }
@@ -1344,12 +794,27 @@ impl<'a> ParseBuffer<'a> {
         transposed().transpose()
     }
 
+    pub(crate) fn parse_list<T: ParseList>(&self) -> Result<NodeList<T::Target, T::Punct>> {
+        T::parse_list(self)
+    }
+
+    pub(crate) fn parse_list_or_item<T: ParseListOrItem>(
+        &self,
+    ) -> Result<ListOrItem<T::Target, T::Punct>> {
+        // todo!(): check for list vars here ?
+        T::parse_list_or_item(self)
+    }
+
     pub(crate) fn add_pat<T: ToNode<Node>>(&self, item: SpannedPat<T>) -> NodeId<T> {
         self.ctx.borrow_mut().add_pat(item)
     }
 
     pub(crate) fn add_with_marker<T: ToNode<Node>>(&self, marker: PosMarker, t: T) -> NodeId<T> {
         self.add(t.with_span(self.span_from_marker(marker)))
+    }
+
+    pub(crate) fn mode(&self) -> ParsingMode {
+        self.mode
     }
 }
 
@@ -1443,65 +908,21 @@ impl Parse for Literal {
     }
 }
 
-/// Parser that can parse Rust tokens into a particular syntax tree node.
-///
-/// Refer to the [module documentation] for details about parsing in Syn.
-///
-/// [module documentation]: self
-pub trait Parser: Sized {
-    type Output;
-
-    /// Parse a proc-macro2 token stream into the chosen syntax tree node.
-    ///
-    /// This function enforces that the input is fully parsed. If there are any
-    /// unparsed tokens at the end of the stream, an error is returned.
-    fn parse2(self, tokens: TokenStream) -> Result<Self::Output>;
-
-    /// Parse tokens of source code into the chosen syntax tree node.
-    ///
-    /// This function enforces that the input is fully parsed. If there are any
-    /// unparsed tokens at the end of the stream, an error is returned.
-    #[cfg(feature = "proc-macro")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "proc-macro")))]
-    fn parse(self, tokens: proc_macro::TokenStream) -> Result<Self::Output> {
-        self.parse2(proc_macro2::TokenStream::from(tokens))
-    }
-
-    /// Parse a string of Rust code into the chosen syntax tree node.
-    ///
-    /// This function enforces that the input is fully parsed. If there are any
-    /// unparsed tokens at the end of the string, an error is returned.
-    ///
-    /// # Hygiene
-    ///
-    /// Every span in the resulting syntax tree will be set to resolve at the
-    /// macro call site.
-    fn parse_str(self, s: &str) -> Result<Self::Output> {
-        self.parse2(proc_macro2::TokenStream::from_str(s)?)
-    }
-
-    // Not public API.
-    #[doc(hidden)]
-    fn __parse_scoped(self, scope: Span, tokens: TokenStream) -> Result<Self::Output> {
-        let _ = scope;
-        self.parse2(tokens)
-    }
-}
-
-pub fn tokens_to_parse_buffer(ctx: ParseCtx, tokens: &TokenBuffer) -> ParseBuffer {
+fn tokens_to_parse_buffer(ctx: ParseCtx, tokens: &TokenBuffer, mode: ParsingMode) -> ParseBuffer {
     let scope = Span::call_site();
     let cursor = tokens.begin();
     let unexpected = Rc::new(Cell::new(Unexpected::None));
-    new_parse_buffer(scope, cursor, unexpected, ctx)
+    new_parse_buffer(scope, cursor, unexpected, ctx, mode)
 }
 
-pub fn parse2_impl<T>(
+fn parse2_impl<T>(
     ctx: ParseCtx,
     f: impl FnOnce(ParseStream) -> Result<T>,
     tokens: TokenStream,
+    mode: ParsingMode,
 ) -> Result<T> {
     let buf = TokenBuffer::new2(tokens);
-    let state = tokens_to_parse_buffer(ctx.clone(), &buf);
+    let state = tokens_to_parse_buffer(ctx.clone(), &buf, mode);
     let node = f(&state)?;
     state.check_unexpected()?;
     if let Some((unexpected_span, delimiter)) = span_of_unexpected_ignoring_nones(state.cursor()) {
@@ -1511,42 +932,28 @@ pub fn parse2_impl<T>(
     }
 }
 
-pub fn parse_ctx<T>(f: impl FnOnce(ParseStream) -> Result<T>, s: &str) -> Result<(T, Ctx<Node>)> {
+pub fn parse_str<T: Parse>(s: &str, mode: ParsingMode) -> Result<T> {
     let ctx = ParseCtx::default();
-    let t = parse2_impl(ctx.clone(), f, proc_macro2::TokenStream::from_str(s)?);
+    parse2_impl(ctx, T::parse, proc_macro2::TokenStream::from_str(s)?, mode)
+}
+
+pub fn parse_ctx<T>(
+    f: impl FnOnce(ParseStream) -> Result<T>,
+    s: &str,
+    mode: ParsingMode,
+) -> Result<(T, Ctx<Node>)> {
+    let ctx = ParseCtx::default();
+    parse_with_ctx(ctx, f, proc_macro2::TokenStream::from_str(s)?, mode)
+}
+
+pub fn parse_with_ctx<T>(
+    ctx: ParseCtx,
+    f: impl FnOnce(ParseStream) -> Result<T>,
+    tokens: TokenStream,
+    mode: ParsingMode,
+) -> Result<(T, Ctx<Node>)> {
+    let t = parse2_impl(ctx.clone(), f, tokens, mode);
     t.map(|t| (t, ctx.take()))
-}
-
-impl<F, T> Parser for F
-where
-    F: FnOnce(ParseStream) -> Result<T>,
-{
-    type Output = T;
-
-    fn parse2(self, tokens: TokenStream) -> Result<T> {
-        parse2_impl(ParseCtx::default(), self, tokens)
-    }
-
-    fn __parse_scoped(self, scope: Span, tokens: TokenStream) -> Result<Self::Output> {
-        let buf = TokenBuffer::new2(tokens);
-        let cursor = buf.begin();
-        let unexpected = Rc::new(Cell::new(Unexpected::None));
-        // TODO: Figure out what to do with the ctx here.
-        let state = new_parse_buffer(scope, cursor, unexpected, ParseCtx::default());
-        let node = self(&state)?;
-        state.check_unexpected()?;
-        if let Some((unexpected_span, delimiter)) =
-            span_of_unexpected_ignoring_nones(state.cursor())
-        {
-            Err(err_unexpected_token(unexpected_span, delimiter))
-        } else {
-            Ok(node)
-        }
-    }
-}
-
-pub(crate) fn parse_scoped<F: Parser>(f: F, scope: Span, tokens: TokenStream) -> Result<F::Output> {
-    f.__parse_scoped(scope, tokens)
 }
 
 fn err_unexpected_token(span: Span, delimiter: Delimiter) -> Error {

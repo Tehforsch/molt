@@ -1188,7 +1188,7 @@ pub(crate) mod parsing {
     use crate::parse::discouraged::Speculative as _;
     #[cfg(feature = "full")]
     use crate::parse::ParseBuffer;
-    use crate::parse::{Parse, ParsePat, ParseStream};
+    use crate::parse::{Parse, ParseList, ParsePat, ParseStream};
     #[cfg(feature = "full")]
     use crate::pat::{Pat, PatType};
     use crate::path::{self, AngleBracketedGenericArguments, Path, QSelf};
@@ -1219,6 +1219,10 @@ pub(crate) mod parsing {
         fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
             ambiguous_expr(input, AllowStruct(true))
         }
+    }
+
+    impl ParseList for Expr {
+        type Punct = Token![,];
     }
 
     impl ParsePat for ExprNoEagerBrace {
@@ -1599,10 +1603,7 @@ pub(crate) mod parsing {
                     attrs: Vec::new(),
                     func: input.add_pat(e),
                     paren_token: parenthesized!(content in input),
-                    args: content
-                        .parse_terminated(NodeId::<Expr>::parse, Token![,])?
-                        .into_iter()
-                        .collect(),
+                    args: content.parse_list::<Expr>()?,
                 });
                 let span = input.span_from_marker(marker).join(orig_span);
                 e = e2.pattern_with_span(span);
@@ -1652,10 +1653,7 @@ pub(crate) mod parsing {
                             method,
                             turbofish,
                             paren_token: parenthesized!(content in input),
-                            args: content
-                                .parse_terminated(NodeId::<Expr>::parse, Token![,])?
-                                .into_iter()
-                                .collect(),
+                            args: content.parse_list::<Expr>()?,
                         });
                         let span = input.span_from_marker(marker).join(orig_span);
                         e = e2.pattern_with_span(span);
@@ -1907,41 +1905,42 @@ pub(crate) mod parsing {
     }
 
     fn paren_or_tuple(input: ParseStream) -> Result<Expr> {
-        let content;
-        let paren_token = parenthesized!(content in input);
-        if content.is_empty() {
-            return Ok(Expr::Tuple(ExprTuple {
-                attrs: Vec::new(),
-                paren_token,
-                elems: NodeList::empty(),
-            }));
-        }
+        todo!()
+        // let content;
+        // let paren_token = parenthesized!(content in input);
+        // if content.is_empty() {
+        //     return Ok(Expr::Tuple(ExprTuple {
+        //         attrs: Vec::new(),
+        //         paren_token,
+        //         elems: NodeList::empty(input.mode()),
+        //     }));
+        // }
 
-        let first = content.parse()?;
-        if content.is_empty() {
-            return Ok(Expr::Paren(ExprParen {
-                attrs: Vec::new(),
-                paren_token,
-                expr: first,
-            }));
-        }
+        // let first = content.parse()?;
+        // if content.is_empty() {
+        //     return Ok(Expr::Paren(ExprParen {
+        //         attrs: Vec::new(),
+        //         paren_token,
+        //         expr: first,
+        //     }));
+        // }
 
-        let mut elems = Punctuated::new();
-        elems.push_value(first);
-        while !content.is_empty() {
-            let punct = content.parse()?;
-            elems.push_punct(punct);
-            if content.is_empty() {
-                break;
-            }
-            let value = content.parse()?;
-            elems.push_value(value);
-        }
-        Ok(Expr::Tuple(ExprTuple {
-            attrs: Vec::new(),
-            paren_token,
-            elems: elems.into(),
-        }))
+        // let mut elems = Punctuated::new();
+        // elems.push_value(first);
+        // while !content.is_empty() {
+        //     let punct = content.parse()?;
+        //     elems.push_punct(punct);
+        //     if content.is_empty() {
+        //         break;
+        //     }
+        //     let value = content.parse()?;
+        //     elems.push_value(value);
+        // }
+        // Ok(Expr::Tuple(ExprTuple {
+        //     attrs: Vec::new(),
+        //     paren_token,
+        //     elems: elems.into(),
+        // }))
     }
 
     #[cfg(feature = "full")]
@@ -1954,66 +1953,68 @@ pub(crate) mod parsing {
             return Ok(Expr::Array(ExprArray {
                 attrs: Vec::new(),
                 bracket_token,
-                elems: NodeList::empty(),
+                elems: NodeList::empty(input.mode()),
             }));
         }
 
-        let first: NodeId<Expr> = content.parse()?;
-        if content.is_empty() || content.peek(Token![,]) {
-            let mut elems = Punctuated::new();
-            elems.push_value(first);
-            while !content.is_empty() {
-                let punct = content.parse()?;
-                elems.push_punct(punct);
-                if content.is_empty() {
-                    break;
-                }
-                let value = content.parse()?;
-                elems.push_value(value);
-            }
-            Ok(Expr::Array(ExprArray {
-                attrs: Vec::new(),
-                bracket_token,
-                elems: elems.into(),
-            }))
-        } else if content.peek(Token![;]) {
-            let semi_token: Token![;] = content.parse()?;
-            let len: NodeId<Expr> = content.parse()?;
-            Ok(Expr::Repeat(ExprRepeat {
-                attrs: Vec::new(),
-                bracket_token,
-                expr: first,
-                semi_token,
-                len: len,
-            }))
-        } else {
-            Err(content.error("expected `,` or `;`"))
-        }
+        todo!()
+        // let first: NodeId<Expr> = content.parse()?;
+        // if content.is_empty() || content.peek(Token![,]) {
+        //     let mut elems = Punctuated::new();
+        //     elems.push_value(first);
+        //     while !content.is_empty() {
+        //         let punct = content.parse()?;
+        //         elems.push_punct(punct);
+        //         if content.is_empty() {
+        //             break;
+        //         }
+        //         let value = content.parse()?;
+        //         elems.push_value(value);
+        //     }
+        //     Ok(Expr::Array(ExprArray {
+        //         attrs: Vec::new(),
+        //         bracket_token,
+        //         elems: elems.into(),
+        //     }))
+        // } else if content.peek(Token![;]) {
+        //     let semi_token: Token![;] = content.parse()?;
+        //     let len: NodeId<Expr> = content.parse()?;
+        //     Ok(Expr::Repeat(ExprRepeat {
+        //         attrs: Vec::new(),
+        //         bracket_token,
+        //         expr: first,
+        //         semi_token,
+        //         len: len,
+        //     }))
+        // } else {
+        //     Err(content.error("expected `,` or `;`"))
+        // }
     }
 
     #[cfg(feature = "full")]
     #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprArray {
         fn parse(input: ParseStream) -> Result<Self> {
-            let content;
-            let bracket_token = bracketed!(content in input);
-            let mut elems = Punctuated::new();
+            todo!()
+            // let content;
+            // let bracket_token = bracketed!(content in input);
+            // let mut elems = Punctuated::new();
 
-            while !content.is_empty() {
-                let first: NodeId<Expr> = content.parse()?;
-                elems.push_value(first);
-                if content.is_empty() {
-                    break;
-                }
-                let punct = content.parse()?;
-                elems.push_punct(punct);
-            }
+            // while !content.is_empty() {
+            //     let first: NodeId<Expr> = content.parse()?;
+            //     elems.push_value(first);
+            //     if content.is_empty() {
+            //         break;
+            //     }
+            //     let punct = content.parse()?;
+            //     elems.push_punct(punct);
+            // }
 
-            Ok(ExprArray {
-                attrs: Vec::new(),
-                bracket_token,
-                elems: elems.into(),
-            })
+            // Ok(ExprArray {
+            //     attrs: Vec::new(),
+            //     bracket_token,
+            //     elems: elems.into(),
+            // })
         }
     }
 
@@ -2975,8 +2976,8 @@ pub(crate) mod parsing {
 
         let mut offset = 0;
         for part in float_repr.split('.') {
-            let mut index: Index =
-                crate::parse_str(part).map_err(|err| Error::new(float_span, err))?;
+            let mut index: Index = crate::parse::parse_str(part, input.mode())
+                .map_err(|err| Error::new(float_span, err))?;
             let part_end = offset + part.len();
             index.span = float_token.subspan(offset..part_end).unwrap_or(float_span);
 

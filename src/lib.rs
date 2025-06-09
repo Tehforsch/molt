@@ -14,6 +14,7 @@ use molt_grammar::TransformCommand;
 use molt_grammar::{Command, MoltFile, UnresolvedMoltFile};
 
 use molt_lib::Config;
+use molt_lib::ParsingMode;
 use molt_lib::{Id, Match, MatchCtx};
 use rust_grammar::{
     Node,
@@ -43,8 +44,8 @@ impl MoltFile {
     pub(crate) fn new(input: &Input) -> Result<(Self, PatCtx), Error> {
         let file_id = input.molt_file_id();
         let source = input.source(file_id).unwrap();
-        let unresolved: UnresolvedMoltFile =
-            rust_grammar::parse_str(source).map_err(|e| Error::parse(e, file_id))?;
+        let unresolved: UnresolvedMoltFile = rust_grammar::parse_str(source, ParsingMode::Pat)
+            .map_err(|e| Error::parse(e, file_id))?;
         unresolved.resolve(file_id)
     }
 
@@ -86,7 +87,8 @@ impl MoltFile {
 impl RustFile {
     pub(crate) fn new(input: &Input, file_id: FileId) -> Result<(Self, Ctx), Error> {
         let source = input.source(file_id).unwrap();
-        rust_grammar::parse_ctx(source).map_err(|e| Error::parse(e, file_id))
+        rust_grammar::parse_ctx(RustFile::parse, source, ParsingMode::Real)
+            .map_err(|e| Error::parse(e, file_id))
     }
 }
 

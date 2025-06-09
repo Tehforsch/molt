@@ -7,7 +7,7 @@ use crate::mac::MacroDelimiter;
 #[cfg(feature = "parsing")]
 use crate::meta::{self, ParseNestedMeta};
 #[cfg(feature = "parsing")]
-use crate::parse::{Parse, ParseStream, Parser};
+use crate::parse::{Parse, ParseStream};
 use crate::path::Path;
 use crate::token;
 use molt_lib::NodeId;
@@ -309,33 +309,6 @@ impl Meta {
             Meta::NameValue(meta) => meta.eq_token.span,
         };
         Err(Error::new(error_span, "unexpected token in attribute"))
-    }
-}
-
-impl MetaList {
-    /// See [`Attribute::parse_args`].
-    #[cfg(feature = "parsing")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-    pub fn parse_args<T: Parse>(&self) -> Result<T> {
-        self.parse_args_with(T::parse)
-    }
-
-    /// See [`Attribute::parse_args_with`].
-    #[cfg(feature = "parsing")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-    pub fn parse_args_with<F: Parser>(&self, parser: F) -> Result<F::Output> {
-        let scope = self.delimiter.span().close();
-        crate::parse::parse_scoped(parser, scope, self.tokens.clone())
-    }
-
-    /// See [`Attribute::parse_nested_meta`].
-    #[cfg(feature = "parsing")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-    pub fn parse_nested_meta(
-        &self,
-        logic: impl FnMut(ParseNestedMeta) -> Result<()>,
-    ) -> Result<()> {
-        self.parse_args_with(meta::parser(logic))
     }
 }
 

@@ -847,9 +847,8 @@ pub(crate) mod parsing {
     use crate::punctuated::Punctuated;
     use crate::restriction::Visibility;
     use crate::stmt::Block;
-    use crate::ty::{Abi, ReturnType, Type};
+    use crate::ty::{Abi, ReturnType, Type, TypePath};
     use crate::verbatim;
-    use crate::TypePath;
     use crate::{derive, token};
     use molt_lib::{NodeId, NodeList, Pattern, SpannedPat, WithSpan};
     use proc_macro2::TokenStream;
@@ -2398,7 +2397,7 @@ pub(crate) mod parsing {
                 (Some(brace_token), stmts, None)
             } else if lookahead.peek(Token![;]) {
                 let semi_token: Token![;] = input.parse()?;
-                (None, NodeList::empty(), Some(semi_token))
+                (None, NodeList::empty(input.mode()), Some(semi_token))
             } else {
                 return Err(lookahead.error());
             };

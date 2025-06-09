@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use molt_lib::{Id, Span, Var, VarDecl};
+use molt_lib::{Id, ParsingMode, Span, Var, VarDecl};
 use rust_grammar::{Node, TokenStream, TokenTree};
 
 use crate::{
@@ -121,7 +121,9 @@ impl UnresolvedMoltFile {
                             pat_ctx.clone(),
                             |stream| parse_node_with_kind(stream, kind),
                             tokens,
+                            ParsingMode::Pat,
                         )
+                        .map(|(id, _)| id)
                     })
                     .transpose()
                     .map_err(|e| Error::parse(e, file_id))?;

@@ -279,10 +279,10 @@ pub(crate) mod parsing {
     use crate::ident::{AnyIdent, Ident};
     use crate::lifetime::Lifetime;
     use crate::mac::{self, Macro};
-    use crate::parse::{Parse, ParsePat, ParseStream};
+    use crate::parse::{ListOrItem, Parse, ParseList, ParseListOrItem, ParsePat, ParseStream};
     use crate::path;
     use crate::punctuated::Punctuated;
-    use crate::token;
+    use crate::token::{self, Paren};
     use crate::ty::{
         Abi, BareFnArg, BareVariadic, ReturnType, Type, TypeArray, TypeBareFn, TypeGroup,
         TypeImplTrait, TypeInfer, TypeMacro, TypeNever, TypeParen, TypePath, TypePtr,
@@ -299,6 +299,10 @@ pub(crate) mod parsing {
             let allow_plus = true;
             Ok(ambig_ty(input, allow_plus)?)
         }
+    }
+
+    impl ParseList for Type {
+        type Punct = Token![,];
     }
 
     pub struct NoPlus;
@@ -355,7 +359,7 @@ pub(crate) mod parsing {
             if content.is_empty() {
                 return Ok(Type::Tuple(TypeTuple {
                     paren_token,
-                    elems: NodeList::empty(),
+                    elems: NodeList::empty(input.mode()),
                 }));
             }
             if content.peek(Lifetime) {
@@ -390,26 +394,13 @@ pub(crate) mod parsing {
                 }));
             }
 
-            let first = content.parse_pat::<Type>()?;
+            let first = match content.parse_list_or_item::<TypeTuple>()? {
+                ListOrItem::Item(item) => item,
+                ListOrItem::List(elems) => {
+                    return Ok(Type::Tuple(TypeTuple { paren_token, elems }));
+                }
+            };
 
-            if content.peek(Token![,]) {
-                return Ok(Type::Tuple(TypeTuple {
-                    paren_token,
-                    elems: {
-                        let mut elems: Punctuated<_, Token![,]> = Punctuated::new();
-                        elems.push_value(first);
-                        elems.push_punct(content.parse()?);
-                        while !content.is_empty() {
-                            elems.push_value(content.parse_pat::<Type>()?);
-                            if content.is_empty() {
-                                break;
-                            }
-                            elems.push_punct(content.parse()?);
-                        }
-                        elems.into_iter().map(|ty| input.add_pat(ty)).collect()
-                    },
-                }));
-            }
             let (span, mut first) = first.decompose();
             if allow_plus && input.peek(Token![+]) {
                 loop {
@@ -590,27 +581,30 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-    impl Parse for TypeSlice {
-        fn parse(input: ParseStream) -> Result<Self> {
-            let content;
-            Ok(TypeSlice {
-                bracket_token: bracketed!(content in input),
-                elem: content.parse()?,
-            })
-        }
-    }
+    impl ParseListOrItem for TypeTuple {
+        type Target = Type;
+        type Punct = Token![,];
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-    impl Parse for TypeArray {
-        fn parse(input: ParseStream) -> Result<Self> {
-            let content;
-            Ok(TypeArray {
-                bracket_token: bracketed!(content in input),
-                elem: content.parse()?,
-                semi_token: content.parse()?,
-                len: content.parse()?,
-            })
+        fn parse_list_or_item(input: ParseStream) -> Result<ListOrItem<Self::Target, Self::Punct>> {
+            let first = input.parse_pat::<Type>()?;
+
+            if input.peek(Token![,]) {
+                let mut elems: Punctuated<_, Token![,]> = Punctuated::new();
+                elems.push_value(first);
+                elems.push_punct(input.parse()?);
+                while !input.is_empty() {
+                    elems.push_value(input.parse_pat::<Type>()?);
+                    if input.is_empty() {
+                        break;
+                    }
+                    elems.push_punct(input.parse()?);
+                }
+                Ok(ListOrItem::List(NodeList::Real(
+                    elems.into_iter().map(|ty| input.add_pat(ty)).collect(),
+                )))
+            } else {
+                Ok(ListOrItem::Item(first))
+            }
         }
     }
 
@@ -716,48 +710,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-    impl Parse for TypeTuple {
-        fn parse(input: ParseStream) -> Result<Self> {
-            let content;
-            let paren_token = parenthesized!(content in input);
-
-            if content.is_empty() {
-                return Ok(TypeTuple {
-                    paren_token,
-                    elems: NodeList::empty(),
-                });
-            }
-
-            let first: NodeId<Type> = content.parse()?;
-            Ok(TypeTuple {
-                paren_token,
-                elems: {
-                    let mut elems = Punctuated::new();
-                    elems.push_value(first);
-                    elems.push_punct(content.parse()?);
-                    while !content.is_empty() {
-                        elems.push_value(content.parse()?);
-                        if content.is_empty() {
-                            break;
-                        }
-                        elems.push_punct(content.parse()?);
-                    }
-                    elems.into()
-                },
-            })
-        }
-    }
-
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-    impl Parse for TypeMacro {
-        fn parse(input: ParseStream) -> Result<Self> {
-            Ok(TypeMacro {
-                mac: input.parse()?,
-            })
-        }
-    }
-
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for TypePath {
         fn parse(input: ParseStream) -> Result<Self> {
             let expr_style = false;
@@ -856,21 +808,7 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-    impl Parse for TypeImplTrait {
-        fn parse(input: ParseStream) -> Result<Self> {
-            let allow_plus = true;
-            Self::parse(input, allow_plus)
-        }
-    }
-
     impl TypeImplTrait {
-        #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-        pub fn without_plus(input: ParseStream) -> Result<Self> {
-            let allow_plus = false;
-            Self::parse(input, allow_plus)
-        }
-
         pub(crate) fn parse(input: ParseStream, allow_plus: bool) -> Result<Self> {
             let impl_token: Token![impl] = input.parse()?;
             let allow_precise_capture = true;
@@ -919,36 +857,6 @@ pub(crate) mod parsing {
                 ));
             }
             Ok(TypeImplTrait { impl_token, bounds })
-        }
-    }
-
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-    impl Parse for TypeGroup {
-        fn parse(input: ParseStream) -> Result<Self> {
-            let group = crate::group::parse_group(input)?;
-            Ok(TypeGroup {
-                group_token: group.token,
-                elem: group.content.parse()?,
-            })
-        }
-    }
-
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-    impl Parse for TypeParen {
-        fn parse(input: ParseStream) -> Result<Self> {
-            let content;
-            Ok(TypeParen {
-                paren_token: parenthesized!(content in input),
-                elem: { content.parse_id::<(Type, NoPlus)>()? },
-            })
-        }
-    }
-
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-    impl Parse for BareFnArg {
-        fn parse(input: ParseStream) -> Result<Self> {
-            let allow_self = false;
-            parse_bare_fn_arg(input, allow_self)
         }
     }
 

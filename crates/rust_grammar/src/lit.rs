@@ -1,7 +1,7 @@
 #[cfg(feature = "parsing")]
 use crate::lookahead;
 #[cfg(feature = "parsing")]
-use crate::parse::{Parse, Parser};
+use crate::parse::Parse;
 use crate::{Error, Result};
 use molt_lib::CmpSyn;
 use proc_macro2::{Ident, Literal, Span};
@@ -170,112 +170,6 @@ impl LitStr {
         let repr = self.repr.token.to_string();
         let (value, _suffix) = value::parse_lit_str(&repr);
         String::from(value)
-    }
-
-    /// Parse a syntax tree node from the content of this string literal.
-    ///
-    /// All spans in the syntax tree will point to the span of this `LitStr`.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use syn::{Attribute, Error, Expr, Lit, Meta, Path, Result};
-    ///
-    /// // Parses the path from an attribute that looks like:
-    /// //
-    /// //     #[path = "a::b::c"]
-    /// //
-    /// // or returns `None` if the input is some other attribute.
-    /// fn get_path(attr: &Attribute) -> Result<Option<Path>> {
-    ///     if !attr.path().is_ident("path") {
-    ///         return Ok(None);
-    ///     }
-    ///
-    ///     if let Meta::NameValue(meta) = &attr.meta {
-    ///         if let Expr::Lit(expr) = &meta.value {
-    ///             if let Lit::Str(lit_str) = &expr.lit {
-    ///                 return lit_str.parse().map(Some);
-    ///             }
-    ///         }
-    ///     }
-    ///
-    ///     let message = "expected #[path = \"...\"]";
-    ///     Err(Error::new_spanned(attr, message))
-    /// }
-    /// ```
-    #[cfg(feature = "parsing")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-    pub fn parse<T: Parse>(&self) -> Result<T> {
-        self.parse_with(T::parse)
-    }
-
-    /// Invoke parser on the content of this string literal.
-    ///
-    /// All spans in the syntax tree will point to the span of this `LitStr`.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use proc_macro2::Span;
-    /// # use syn::{LitStr, Result};
-    /// #
-    /// # fn main() -> Result<()> {
-    /// #     let lit_str = LitStr::new("a::b::c", Span::call_site());
-    /// #
-    /// #     const IGNORE: &str = stringify! {
-    /// let lit_str: LitStr = /* ... */;
-    /// #     };
-    ///
-    /// // Parse a string literal like "a::b::c" into a Path, not allowing
-    /// // generic arguments on any of the path segments.
-    /// let basic_path = lit_str.parse_with(syn::Path::parse_mod_style)?;
-    /// #
-    /// #     Ok(())
-    /// # }
-    /// ```
-    #[cfg(feature = "parsing")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-    pub fn parse_with<F: Parser>(&self, parser: F) -> Result<F::Output> {
-        use proc_macro2::Group;
-
-        // Token stream with every span replaced by the given one.
-        fn respan_token_stream(stream: TokenStream, span: Span) -> TokenStream {
-            stream
-                .into_iter()
-                .map(|token| respan_token_tree(token, span))
-                .collect()
-        }
-
-        // Token tree with every span replaced by the given one.
-        fn respan_token_tree(mut token: TokenTree, span: Span) -> TokenTree {
-            match &mut token {
-                TokenTree::Group(g) => {
-                    let stream = respan_token_stream(g.stream(), span);
-                    *g = Group::new(g.delimiter(), stream);
-                    g.set_span(span);
-                }
-                other => other.set_span(span),
-            }
-            token
-        }
-
-        // Parse string literal into a token stream with every span equal to the
-        // original literal's span.
-        let span = self.span();
-        let mut tokens = TokenStream::from_str(&self.value())?;
-        tokens = respan_token_stream(tokens, span);
-
-        let result = crate::parse::parse_scoped(parser, span, tokens)?;
-
-        let suffix = self.suffix();
-        if !suffix.is_empty() {
-            return Err(Error::new(
-                self.span(),
-                format!("unexpected suffix `{}` on string literal", suffix),
-            ));
-        }
-
-        Ok(result)
     }
 
     pub fn span(&self) -> Span {
@@ -884,7 +778,7 @@ pub(crate) mod parsing {
     use crate::parse::{Parse, ParseStream, Unexpected};
     use crate::parse::{ParseCtx, ParsePat};
     use crate::token::{self, Token};
-    use molt_lib::SpannedPat;
+    use molt_lib::{ParsingMode, SpannedPat};
     use proc_macro2::{Literal, Punct, Span};
     use std::cell::Cell;
     use std::rc::Rc;
@@ -1063,7 +957,13 @@ pub(crate) mod parsing {
         let scope = Span::call_site();
         let unexpected = Rc::new(Cell::new(Unexpected::None));
         // TODO: Creating a new Ctx here is just a hack.
-        let buffer = crate::parse::new_parse_buffer(scope, cursor, unexpected, ParseCtx::default());
+        let buffer = crate::parse::new_parse_buffer(
+            scope,
+            cursor,
+            unexpected,
+            ParseCtx::default(),
+            ParsingMode::Pat,
+        );
         peek(&buffer)
     }
 

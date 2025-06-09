@@ -428,7 +428,7 @@ pub(crate) mod parsing {
             let content;
             Ok(ParenthesizedGenericArguments {
                 paren_token: parenthesized!(content in input),
-                inputs: content.parse_terminated_pat::<Type, _>(Token![,])?,
+                inputs: content.parse_list::<Type>()?,
                 output: input.call(ReturnType::without_plus)?,
             })
         }

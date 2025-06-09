@@ -24,11 +24,6 @@ pub type Formatter<'a> = std::fmt::Formatter<'a>;
 #[doc(hidden)]
 pub type FmtResult = std::fmt::Result;
 
-#[doc(hidden)]
-pub type bool = std::primitive::bool;
-#[doc(hidden)]
-pub type str = std::primitive::str;
-
 #[cfg(feature = "printing")]
 #[doc(hidden)]
 pub use quote;
@@ -61,13 +56,6 @@ pub use crate::token::printing::punct as print_punct;
 #[doc(hidden)]
 pub use crate::token::private::CustomToken;
 
-#[cfg(feature = "proc-macro")]
-#[doc(hidden)]
-pub type TokenStream = proc_macro::TokenStream;
-
 #[cfg(feature = "printing")]
 #[doc(hidden)]
 pub use quote::{ToTokens, TokenStreamExt};
-
-#[doc(hidden)]
-pub struct private(pub(crate) ());

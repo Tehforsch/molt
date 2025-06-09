@@ -89,7 +89,7 @@
 //! [`Span`]: https://docs.rs/proc-macro2/1.0/proc_macro2/struct.Span.html
 
 #[cfg(feature = "parsing")]
-pub(crate) use self::private::CustomToken;
+pub use self::private::CustomToken;
 use self::private::WithSpan;
 #[cfg(feature = "parsing")]
 use crate::buffer::Cursor;

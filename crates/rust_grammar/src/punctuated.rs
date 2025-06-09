@@ -1152,9 +1152,3 @@ impl<T: CmpSyn, P> CmpSyn for Punctuated<T, P> {
         }
     }
 }
-
-impl<T, P> From<Punctuated<NodeId<T>, P>> for NodeList<T, P> {
-    fn from(val: Punctuated<NodeId<T>, P>) -> Self {
-        val.into_iter().collect()
-    }
-}

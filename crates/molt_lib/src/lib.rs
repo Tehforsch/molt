@@ -1,3 +1,4 @@
+#![allow(unused)]
 mod cmp_syn;
 mod config;
 mod ctx;
@@ -9,10 +10,16 @@ pub use ctx::{
     Ctx, GetKind, Id, NodeId, Pattern, Span, Spanned, SpannedPat, ToNode, Var, VarDecl, WithSpan,
 };
 
-pub use node_list::{MatchingMode, NoPunct, NodeList};
+pub use node_list::{MatchingMode, NoPunct, NodeList, RealNodeList};
 
 pub use config::Config;
 
 pub use cmp_syn::CmpSyn;
 pub use match_ctx::MatchCtx;
 pub use match_pattern::{Binding, Match, PatType, match_pattern};
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum ParsingMode {
+    Real,
+    Pat,
+}

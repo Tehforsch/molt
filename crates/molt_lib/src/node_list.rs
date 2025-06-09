@@ -1,17 +1,46 @@
 use std::marker::PhantomData;
 
-use crate::NodeId;
+use crate::{NodeId, ParsingMode, Pattern};
 
 #[derive(Debug)]
 pub struct NoPunct;
 
+pub type NodeList<T, P> = Pattern<RealNodeList<T, P>, PatNodeList<T, P>>;
+
 #[derive(Debug)]
-pub struct NodeList<T, P> {
+pub enum PatNodeList<T, P> {
+    Single(Single<T, P>),
+}
+
+#[derive(Debug)]
+pub struct Single<T, P> {
+    item: NodeId<T>,
+    mode: MatchingMode,
+    _marker: PhantomData<P>,
+}
+
+#[derive(Debug)]
+pub struct RealNodeList<T, P> {
     items: Vec<NodeId<T>>,
     _marker: PhantomData<P>,
 }
 
-impl<T> From<Vec<NodeId<T>>> for NodeList<T, NoPunct> {
+impl<T, P> NodeList<T, P> {
+    pub fn empty(mode: ParsingMode) -> Self {
+        match mode {
+            ParsingMode::Real => Self::Real(RealNodeList::empty()),
+            ParsingMode::Pat => Self::Pat(PatNodeList::empty()),
+        }
+    }
+}
+
+impl<T, P> PatNodeList<T, P> {
+    fn empty() -> PatNodeList<T, P> {
+        todo!()
+    }
+}
+
+impl<T> From<Vec<NodeId<T>>> for RealNodeList<T, NoPunct> {
     fn from(items: Vec<NodeId<T>>) -> Self {
         Self {
             items,
@@ -20,7 +49,7 @@ impl<T> From<Vec<NodeId<T>>> for NodeList<T, NoPunct> {
     }
 }
 
-impl<T, P> NodeList<T, P> {
+impl<T, P> RealNodeList<T, P> {
     pub fn empty() -> Self {
         Self {
             items: vec![],
@@ -45,7 +74,7 @@ impl<T, P> NodeList<T, P> {
     }
 }
 
-impl<T, P> FromIterator<NodeId<T>> for NodeList<T, P> {
+impl<T, P> FromIterator<NodeId<T>> for RealNodeList<T, P> {
     fn from_iter<I: IntoIterator<Item = NodeId<T>>>(iter: I) -> Self {
         Self {
             items: iter.into_iter().collect(),
@@ -54,6 +83,7 @@ impl<T, P> FromIterator<NodeId<T>> for NodeList<T, P> {
     }
 }
 
+#[derive(Debug)]
 pub enum MatchingMode {
     #[allow(unused)]
     Exact,

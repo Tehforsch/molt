@@ -96,7 +96,7 @@ pub(crate) mod parsing {
     use crate::path::Path;
     use crate::stmt::{Block, Local, LocalInit, Stmt, StmtMacro};
     use crate::token;
-    use molt_lib::{NodeId, NodeList, Pattern, Spanned, SpannedPat, WithSpan};
+    use molt_lib::{NodeId, NodeList, ParsingMode, Pattern, Spanned, SpannedPat, WithSpan};
     use proc_macro2::TokenStream;
 
     use super::StmtAllowNoSemi;
@@ -195,7 +195,10 @@ pub(crate) mod parsing {
                     return Err(input.error("unexpected token, expected `;`"));
                 }
             }
-            Ok(stmts.into_iter().collect())
+            match input.mode() {
+                ParsingMode::Real => Ok(NodeList::Real(stmts.into_iter().collect())),
+                ParsingMode::Pat => todo!(),
+            }
         }
     }
 

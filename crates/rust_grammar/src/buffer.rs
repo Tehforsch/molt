@@ -5,12 +5,13 @@
 // Syn, and caution should be used when editing it. The public-facing interface
 // is 100% safe but the implementation is fragile internally.
 
-use crate::Lifetime;
 use proc_macro2::extra::DelimSpan;
 use proc_macro2::{Delimiter, Group, Ident, Literal, Punct, Spacing, Span, TokenStream, TokenTree};
 use std::cmp::Ordering;
 use std::marker::PhantomData;
 use std::ptr;
+
+use crate::lifetime::Lifetime;
 
 /// Internal type which is used instead of `TokenTree` to represent a token tree
 /// within a `TokenBuffer`.
@@ -58,16 +59,6 @@ impl TokenBuffer {
         }
     }
 
-    /// Creates a `TokenBuffer` containing all the tokens from the input
-    /// `proc_macro::TokenStream`.
-    #[cfg(feature = "proc-macro")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "proc-macro")))]
-    pub fn new(stream: proc_macro::TokenStream) -> Self {
-        Self::new2(stream.into())
-    }
-
-    /// Creates a `TokenBuffer` containing all the tokens from the input
-    /// `proc_macro2::TokenStream`.
     pub fn new2(stream: TokenStream) -> Self {
         let mut entries = Vec::new();
         Self::recursive_new(&mut entries, stream);
