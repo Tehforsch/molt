@@ -1,3 +1,4 @@
+use derive_macro::CmpSyn;
 use molt_lib::{NodeId, NodeList};
 
 use crate::attr::Attribute;
@@ -171,685 +172,644 @@ pub struct ExprNoEagerBrace;
 /// [`parse_without_eager_brace`]: Self::parse_without_eager_brace
 pub struct ExprEarlierBoundaryRule;
 
-ast_enum_of_structs! {
-    /// A Rust expression.
-    ///
-    /// *This type is available only if Syn is built with the `"derive"` or `"full"`
-    /// feature, but most of the variants are not available unless "full" is enabled.*
-    ///
-    /// # Syntax tree enums
-    ///
-    /// This type is a syntax tree enum. In Syn this and other syntax tree enums
-    /// are designed to be traversed using the following rebinding idiom.
-    ///
-    /// ```
-    /// # use syn::Expr;
-    /// #
-    /// # fn example(expr: Expr) {
-    /// # const IGNORE: &str = stringify! {
-    /// let expr: Expr = /* ... */;
-    /// # };
-    /// match expr {
-    ///     Expr::MethodCall(expr) => {
-    ///         /* ... */
-    ///     }
-    ///     Expr::Cast(expr) => {
-    ///         /* ... */
-    ///     }
-    ///     Expr::If(expr) => {
-    ///         /* ... */
-    ///     }
-    ///
-    ///     /* ... */
-    ///     # _ => {}
-    /// # }
-    /// # }
-    /// ```
-    ///
-    /// We begin with a variable `expr` of type `Expr` that has no fields
-    /// (because it is an enum), and by matching on it and rebinding a variable
-    /// with the same name `expr` we effectively imbue our variable with all of
-    /// the data fields provided by the variant that it turned out to be. So for
-    /// example above if we ended up in the `MethodCall` case then we get to use
-    /// `expr.receiver`, `expr.args` etc; if we ended up in the `If` case we get
-    /// to use `expr.cond`, `expr.then_branch`, `expr.else_branch`.
-    ///
-    /// This approach avoids repeating the variant names twice on every line.
-    ///
-    /// ```
-    /// # use syn::{Expr, ExprMethodCall};
-    /// #
-    /// # fn example(expr: Expr) {
-    /// // Repetitive; recommend not doing this.
-    /// match expr {
-    ///     Expr::MethodCall(ExprMethodCall { method, args, .. }) => {
-    /// # }
-    /// # _ => {}
-    /// # }
-    /// # }
-    /// ```
-    ///
-    /// In general, the name to which a syntax tree enum variant is bound should
-    /// be a suitable name for the complete syntax tree enum type.
-    ///
-    /// ```
-    /// # use syn::{Expr, ExprField};
-    /// #
-    /// # fn example(discriminant: ExprField) {
-    /// // Binding is called `base` which is the name I would use if I were
-    /// // assigning `*discriminant.base` without an `if let`.
-    /// if let Expr::Tuple(base) = *discriminant.base {
-    /// # }
-    /// # }
-    /// ```
-    ///
-    /// A sign that you may not be choosing the right variable names is if you
-    /// see names getting repeated in your code, like accessing
-    /// `receiver.receiver` or `pat.pat` or `cond.cond`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    #[non_exhaustive]
-    pub enum Expr {
-        /// A slice literal expression: `[a, b, c, d]`.
-        Array(ExprArray),
-
-        /// An assignment expression: `a = compute()`.
-        Assign(ExprAssign),
-
-        /// An async block: `async { ... }`.
-        Async(ExprAsync),
-
-        /// An await expression: `fut.await`.
-        Await(ExprAwait),
-
-        /// A binary operation: `a + b`, `a += b`.
-        Binary(ExprBinary),
-
-        /// A blocked scope: `{ ... }`.
-        Block(ExprBlock),
-
-        /// A `break`, with an optional label to break and an optional
-        /// expression.
-        Break(ExprBreak),
-
-        /// A function call expression: `invoke(a, b)`.
-        Call(ExprCall),
-
-        /// A cast expression: `foo as f64`.
-        Cast(ExprCast),
-
-        /// A closure expression: `|a, b| a + b`.
-        Closure(ExprClosure),
-
-        /// A const block: `const { ... }`.
-        Const(ExprConst),
-
-        /// A `continue`, with an optional label.
-        Continue(ExprContinue),
-
-        /// Access of a named struct field (`obj.k`) or unnamed tuple struct
-        /// field (`obj.0`).
-        Field(ExprField),
-
-        /// A for loop: `for pat in expr { ... }`.
-        ForLoop(ExprForLoop),
-
-        /// An expression contained within invisible delimiters.
-        ///
-        /// This variant is important for faithfully representing the precedence
-        /// of expressions and is related to `None`-delimited spans in a
-        /// `TokenStream`.
-        Group(ExprGroup),
-
-        /// An `if` expression with an optional `else` block: `if expr { ... }
-        /// else { ... }`.
-        ///
-        /// The `else` branch expression may only be an `If` or `Block`
-        /// expression, not any of the other types of expression.
-        If(ExprIf),
-
-        /// A square bracketed indexing expression: `vector[2]`.
-        Index(ExprIndex),
-
-        /// The inferred value of a const generic argument, denoted `_`.
-        Infer(ExprInfer),
-
-        /// A `let` guard: `let Some(x) = opt`.
-        Let(ExprLet),
-
-        /// A literal in place of an expression: `1`, `"foo"`.
-        Lit(ExprLit),
-
-        /// Conditionless loop: `loop { ... }`.
-        Loop(ExprLoop),
-
-        /// A macro invocation expression: `format!("{}", q)`.
-        Macro(ExprMacro),
-
-        /// A `match` expression: `match n { Some(n) => {}, None => {} }`.
-        Match(ExprMatch),
-
-        /// A method call expression: `x.foo::<T>(a, b)`.
-        MethodCall(ExprMethodCall),
-
-        /// A parenthesized expression: `(a + b)`.
-        Paren(ExprParen),
-
-        /// A path like `std::mem::replace` possibly containing generic
-        /// parameters and a qualified self-type.
-        ///
-        /// A plain identifier like `x` is a path of length 1.
-        Path(ExprPath),
-
-        /// A range expression: `1..2`, `1..`, `..2`, `1..=2`, `..=2`.
-        Range(ExprRange),
-
-        /// Address-of operation: `&raw const place` or `&raw mut place`.
-        RawAddr(ExprRawAddr),
-
-        /// A referencing operation: `&a` or `&mut a`.
-        Reference(ExprReference),
-
-        /// An array literal constructed from one repeated element: `[0u8; N]`.
-        Repeat(ExprRepeat),
-
-        /// A `return`, with an optional value to be returned.
-        Return(ExprReturn),
-
-        /// A struct literal expression: `Point { x: 1, y: 1 }`.
-        ///
-        /// The `rest` provides the value of the remaining fields as in `S { a:
-        /// 1, b: 1, ..rest }`.
-        Struct(ExprStruct),
-
-        /// A try-expression: `expr?`.
-        Try(ExprTry),
-
-        /// A try block: `try { ... }`.
-        TryBlock(ExprTryBlock),
-
-        /// A tuple expression: `(a, b, c, d)`.
-        Tuple(ExprTuple),
-
-        /// A unary operation: `!x`, `*x`.
-        Unary(ExprUnary),
-
-        /// An unsafe block: `unsafe { ... }`.
-        Unsafe(ExprUnsafe),
-
-        /// Tokens in expression position not interpreted by Syn.
-        Verbatim(TokenStream),
-
-        /// A while loop: `while expr { ... }`.
-        While(ExprWhile),
-
-        /// A yield expression: `yield expr`.
-        Yield(ExprYield),
-
-        // For testing exhaustiveness in downstream code, use the following idiom:
-        //
-        //     match expr {
-        //         #![cfg_attr(test, deny(non_exhaustive_omitted_patterns))]
-        //
-        //         Expr::Array(expr) => {...}
-        //         Expr::Assign(expr) => {...}
-        //         ...
-        //         Expr::Yield(expr) => {...}
-        //
-        //         _ => { /* some sane fallback */ }
-        //     }
-        //
-        // This way we fail your tests but don't break your library when adding
-        // a variant. You will be notified by a test failure when a variant is
-        // added, so that you can add code to handle it, but your library will
-        // continue to compile and work for downstream users in the interim.
-    }
-}
-
-ast_struct! {
+#[derive(Debug, CmpSyn)]
+/// A Rust expression.
+///
+/// *This type is available only if Syn is built with the `"derive"` or `"full"`
+/// feature, but most of the variants are not available unless "full" is enabled.*
+///
+/// # Syntax tree enums
+///
+/// This type is a syntax tree enum. In Syn this and other syntax tree enums
+/// are designed to be traversed using the following rebinding idiom.
+///
+/// ```
+/// # use syn::Expr;
+/// #
+/// # fn example(expr: Expr) {
+/// # const IGNORE: &str = stringify! {
+/// let expr: Expr = /* ... */;
+/// # };
+/// match expr {
+///     Expr::MethodCall(expr) => {
+///         /* ... */
+///     }
+///     Expr::Cast(expr) => {
+///         /* ... */
+///     }
+///     Expr::If(expr) => {
+///         /* ... */
+///     }
+///
+///     /* ... */
+///     # _ => {}
+/// # }
+/// # }
+/// ```
+///
+/// We begin with a variable `expr` of type `Expr` that has no fields
+/// (because it is an enum), and by matching on it and rebinding a variable
+/// with the same name `expr` we effectively imbue our variable with all of
+/// the data fields provided by the variant that it turned out to be. So for
+/// example above if we ended up in the `MethodCall` case then we get to use
+/// `expr.receiver`, `expr.args` etc; if we ended up in the `If` case we get
+/// to use `expr.cond`, `expr.then_branch`, `expr.else_branch`.
+///
+/// This approach avoids repeating the variant names twice on every line.
+///
+/// ```
+/// # use syn::{Expr, ExprMethodCall};
+/// #
+/// # fn example(expr: Expr) {
+/// // Repetitive; recommend not doing this.
+/// match expr {
+///     Expr::MethodCall(ExprMethodCall { method, args, .. }) => {
+/// # }
+/// # _ => {}
+/// # }
+/// # }
+/// ```
+///
+/// In general, the name to which a syntax tree enum variant is bound should
+/// be a suitable name for the complete syntax tree enum type.
+///
+/// ```
+/// # use syn::{Expr, ExprField};
+/// #
+/// # fn example(discriminant: ExprField) {
+/// // Binding is called `base` which is the name I would use if I were
+/// // assigning `*discriminant.base` without an `if let`.
+/// if let Expr::Tuple(base) = *discriminant.base {
+/// # }
+/// # }
+/// ```
+///
+/// A sign that you may not be choosing the right variable names is if you
+/// see names getting repeated in your code, like accessing
+/// `receiver.receiver` or `pat.pat` or `cond.cond`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+#[non_exhaustive]
+pub enum Expr {
     /// A slice literal expression: `[a, b, c, d]`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprArray #full {
-        pub attrs: Vec<Attribute>,
-        pub bracket_token: token::Bracket,
-        pub elems: NodeList<Expr, Token![,]>,
-    }
-}
+    Array(ExprArray),
 
-ast_struct! {
     /// An assignment expression: `a = compute()`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprAssign #full {
-        pub attrs: Vec<Attribute>,
-        pub left: NodeId<Expr>,
-        pub eq_token: Token![=],
-        pub right: NodeId<Expr>,
-    }
-}
+    Assign(ExprAssign),
 
-ast_struct! {
     /// An async block: `async { ... }`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprAsync #full {
-        pub attrs: Vec<Attribute>,
-        pub async_token: Token![async],
-        pub capture: Option<Token![move]>,
-        pub block: Block,
-    }
-}
+    Async(ExprAsync),
 
-ast_struct! {
     /// An await expression: `fut.await`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprAwait #full {
-        pub attrs: Vec<Attribute>,
-        pub base: NodeId<Expr>,
-        pub dot_token: Token![.],
-        pub await_token: Token![await],
-    }
-}
+    Await(ExprAwait),
 
-ast_struct! {
     /// A binary operation: `a + b`, `a += b`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct ExprBinary {
-        pub attrs: Vec<Attribute>,
-        pub left: NodeId<Expr>,
-        pub op: BinOp,
-        pub right: NodeId<Expr>,
-    }
-}
+    Binary(ExprBinary),
 
-ast_struct! {
     /// A blocked scope: `{ ... }`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprBlock #full {
-        pub attrs: Vec<Attribute>,
-        pub label: Option<Label>,
-        pub block: Block,
-    }
-}
+    Block(ExprBlock),
 
-ast_struct! {
     /// A `break`, with an optional label to break and an optional
     /// expression.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprBreak #full {
-        pub attrs: Vec<Attribute>,
-        pub break_token: Token![break],
-        pub label: Option<Lifetime>,
-        pub expr: Option<NodeId<Expr>>,
-    }
-}
+    Break(ExprBreak),
 
-ast_struct! {
     /// A function call expression: `invoke(a, b)`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct ExprCall {
-        pub attrs: Vec<Attribute>,
-        pub func: NodeId<Expr>,
-        pub paren_token: token::Paren,
-        pub args: NodeList<Expr, Token![,]>,
-    }
-}
+    Call(ExprCall),
 
-ast_struct! {
     /// A cast expression: `foo as f64`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct ExprCast {
-        pub attrs: Vec<Attribute>,
-        pub expr: NodeId<Expr>,
-        pub as_token: Token![as],
-        pub ty: NodeId<Type>,
-    }
-}
+    Cast(ExprCast),
 
-ast_struct! {
     /// A closure expression: `|a, b| a + b`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprClosure #full {
-        pub attrs: Vec<Attribute>,
-        pub lifetimes: Option<BoundLifetimes>,
-        pub constness: Option<Token![const]>,
-        pub movability: Option<Token![static]>,
-        pub asyncness: Option<Token![async]>,
-        pub capture: Option<Token![move]>,
-        pub or1_token: Token![|],
-        pub inputs: Punctuated<Pat, Token![,]>,
-        pub or2_token: Token![|],
-        pub output: ReturnType,
-        pub body: NodeId<Expr>,
-    }
-}
+    Closure(ExprClosure),
 
-ast_struct! {
     /// A const block: `const { ... }`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprConst #full {
-        pub attrs: Vec<Attribute>,
-        pub const_token: Token![const],
-        pub block: Block,
-    }
-}
+    Const(ExprConst),
 
-ast_struct! {
     /// A `continue`, with an optional label.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprContinue #full {
-        pub attrs: Vec<Attribute>,
-        pub continue_token: Token![continue],
-        pub label: Option<Lifetime>,
-    }
-}
+    Continue(ExprContinue),
 
-ast_struct! {
     /// Access of a named struct field (`obj.k`) or unnamed tuple struct
     /// field (`obj.0`).
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct ExprField {
-        pub attrs: Vec<Attribute>,
-        pub base: NodeId<Expr>,
-        pub dot_token: Token![.],
-        pub member: Member,
-    }
-}
+    Field(ExprField),
 
-ast_struct! {
     /// A for loop: `for pat in expr { ... }`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprForLoop #full {
-        pub attrs: Vec<Attribute>,
-        pub label: Option<Label>,
-        pub for_token: Token![for],
-        pub pat: Box<Pat>,
-        pub in_token: Token![in],
-        pub expr: NodeId<Expr>,
-        pub body: Block,
-    }
-}
+    ForLoop(ExprForLoop),
 
-ast_struct! {
     /// An expression contained within invisible delimiters.
     ///
     /// This variant is important for faithfully representing the precedence
     /// of expressions and is related to `None`-delimited spans in a
     /// `TokenStream`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprGroup {
-        pub attrs: Vec<Attribute>,
-        pub group_token: token::Group,
-        pub expr: NodeId<Expr>,
-    }
-}
+    Group(ExprGroup),
 
-ast_struct! {
     /// An `if` expression with an optional `else` block: `if expr { ... }
     /// else { ... }`.
     ///
     /// The `else` branch expression may only be an `If` or `Block`
     /// expression, not any of the other types of expression.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprIf #full {
-        pub attrs: Vec<Attribute>,
-        pub if_token: Token![if],
-        pub cond: NodeId<Expr>,
-        pub then_branch: Block,
-        pub else_branch: Option<(Token![else], NodeId<Expr>)>,
-    }
-}
+    If(ExprIf),
 
-ast_struct! {
     /// A square bracketed indexing expression: `vector[2]`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct ExprIndex {
-        pub attrs: Vec<Attribute>,
-        pub expr: NodeId<Expr>,
-        pub bracket_token: token::Bracket,
-        pub index: NodeId<Expr>,
-    }
-}
+    Index(ExprIndex),
 
-ast_struct! {
     /// The inferred value of a const generic argument, denoted `_`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprInfer #full {
-        pub attrs: Vec<Attribute>,
-        pub underscore_token: Token![_],
-    }
-}
+    Infer(ExprInfer),
 
-ast_struct! {
     /// A `let` guard: `let Some(x) = opt`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprLet #full {
-        pub attrs: Vec<Attribute>,
-        pub let_token: Token![let],
-        pub pat: Box<Pat>,
-        pub eq_token: Token![=],
-        pub expr: NodeId<Expr>,
-    }
-}
+    Let(ExprLet),
 
-ast_struct! {
     /// A literal in place of an expression: `1`, `"foo"`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct ExprLit {
-        pub attrs: Vec<Attribute>,
-        pub lit: NodeId<Lit>,
-    }
-}
+    Lit(ExprLit),
 
-ast_struct! {
     /// Conditionless loop: `loop { ... }`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprLoop #full {
-        pub attrs: Vec<Attribute>,
-        pub label: Option<Label>,
-        pub loop_token: Token![loop],
-        pub body: Block,
-    }
-}
+    Loop(ExprLoop),
 
-ast_struct! {
     /// A macro invocation expression: `format!("{}", q)`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct ExprMacro {
-        pub attrs: Vec<Attribute>,
-        pub mac: Macro,
-    }
-}
+    Macro(ExprMacro),
 
-ast_struct! {
     /// A `match` expression: `match n { Some(n) => {}, None => {} }`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprMatch #full {
-        pub attrs: Vec<Attribute>,
-        pub match_token: Token![match],
-        pub expr: NodeId<Expr>,
-        pub brace_token: token::Brace,
-        pub arms: Vec<Arm>,
-    }
-}
+    Match(ExprMatch),
 
-ast_struct! {
     /// A method call expression: `x.foo::<T>(a, b)`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct ExprMethodCall {
-        pub attrs: Vec<Attribute>,
-        pub receiver: NodeId<Expr>,
-        pub dot_token: Token![.],
-        pub method: NodeId<Ident>,
-        pub turbofish: Option<AngleBracketedGenericArguments>,
-        pub paren_token: token::Paren,
-        pub args: NodeList<Expr, Token![,]>,
-    }
-}
+    MethodCall(ExprMethodCall),
 
-ast_struct! {
     /// A parenthesized expression: `(a + b)`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct ExprParen {
-        pub attrs: Vec<Attribute>,
-        pub paren_token: token::Paren,
-        pub expr: NodeId<Expr>,
-    }
-}
+    Paren(ExprParen),
 
-ast_struct! {
     /// A path like `std::mem::replace` possibly containing generic
     /// parameters and a qualified self-type.
     ///
     /// A plain identifier like `x` is a path of length 1.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct ExprPath {
-        pub attrs: Vec<Attribute>,
-        pub qself: Option<QSelf>,
-        pub path: Path,
-    }
-}
+    Path(ExprPath),
 
-ast_struct! {
     /// A range expression: `1..2`, `1..`, `..2`, `1..=2`, `..=2`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprRange #full {
-        pub attrs: Vec<Attribute>,
-        pub start: Option<NodeId<Expr>>,
-        pub limits: RangeLimits,
-        pub end: Option<NodeId<Expr>>,
-    }
-}
+    Range(ExprRange),
 
-ast_struct! {
     /// Address-of operation: `&raw const place` or `&raw mut place`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprRawAddr #full {
-        pub attrs: Vec<Attribute>,
-        pub and_token: Token![&],
-        pub raw: Token![raw],
-        pub mutability: PointerMutability,
-        pub expr: NodeId<Expr>,
-    }
-}
+    RawAddr(ExprRawAddr),
 
-ast_struct! {
     /// A referencing operation: `&a` or `&mut a`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct ExprReference {
-        pub attrs: Vec<Attribute>,
-        pub and_token: Token![&],
-        pub mutability: Option<Token![mut]>,
-        pub expr: NodeId<Expr>,
-    }
-}
+    Reference(ExprReference),
 
-ast_struct! {
     /// An array literal constructed from one repeated element: `[0u8; N]`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprRepeat #full {
-        pub attrs: Vec<Attribute>,
-        pub bracket_token: token::Bracket,
-        pub expr: NodeId<Expr>,
-        pub semi_token: Token![;],
-        pub len: NodeId<Expr>,
-    }
-}
+    Repeat(ExprRepeat),
 
-ast_struct! {
     /// A `return`, with an optional value to be returned.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprReturn #full {
-        pub attrs: Vec<Attribute>,
-        pub return_token: Token![return],
-        pub expr: Option<NodeId<Expr>>,
-    }
-}
+    Return(ExprReturn),
 
-ast_struct! {
     /// A struct literal expression: `Point { x: 1, y: 1 }`.
     ///
     /// The `rest` provides the value of the remaining fields as in `S { a:
     /// 1, b: 1, ..rest }`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct ExprStruct {
-        pub attrs: Vec<Attribute>,
-        pub qself: Option<QSelf>,
-        pub path: Path,
-        pub brace_token: token::Brace,
-        pub fields: Punctuated<FieldValue, Token![,]>,
-        pub dot2_token: Option<Token![..]>,
-        pub rest: Option<NodeId<Expr>>,
-    }
-}
+    Struct(ExprStruct),
 
-ast_struct! {
     /// A try-expression: `expr?`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprTry #full {
-        pub attrs: Vec<Attribute>,
-        pub expr: NodeId<Expr>,
-        pub question_token: Token![?],
-    }
-}
+    Try(ExprTry),
 
-ast_struct! {
     /// A try block: `try { ... }`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprTryBlock #full {
-        pub attrs: Vec<Attribute>,
-        pub try_token: Token![try],
-        pub block: Block,
-    }
-}
+    TryBlock(ExprTryBlock),
 
-ast_struct! {
     /// A tuple expression: `(a, b, c, d)`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprTuple {
-        pub attrs: Vec<Attribute>,
-        pub paren_token: token::Paren,
-        pub elems: NodeList<Expr, Token![,]>,
-    }
-}
+    Tuple(ExprTuple),
 
-ast_struct! {
     /// A unary operation: `!x`, `*x`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct ExprUnary {
-        pub attrs: Vec<Attribute>,
-        pub op: UnOp,
-        pub expr: NodeId<Expr>,
-    }
-}
+    Unary(ExprUnary),
 
-ast_struct! {
     /// An unsafe block: `unsafe { ... }`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprUnsafe #full {
-        pub attrs: Vec<Attribute>,
-        pub unsafe_token: Token![unsafe],
-        pub block: Block,
-    }
-}
+    Unsafe(ExprUnsafe),
 
-ast_struct! {
+    /// Tokens in expression position not interpreted by Syn.
+    Verbatim(TokenStream),
+
     /// A while loop: `while expr { ... }`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprWhile #full {
-        pub attrs: Vec<Attribute>,
-        pub label: Option<Label>,
-        pub while_token: Token![while],
-        pub cond: NodeId<Expr>,
-        pub body: Block,
-    }
+    While(ExprWhile),
+
+    /// A yield expression: `yield expr`.
+    Yield(ExprYield),
+    // For testing exhaustiveness in downstream code, use the following idiom:
+    //
+    //     match expr {
+    //         #![cfg_attr(test, deny(non_exhaustive_omitted_patterns))]
+    //
+    //         Expr::Array(expr) => {...}
+    //         Expr::Assign(expr) => {...}
+    //         ...
+    //         Expr::Yield(expr) => {...}
+    //
+    //         _ => { /* some sane fallback */ }
+    //     }
+    //
+    // This way we fail your tests but don't break your library when adding
+    // a variant. You will be notified by a test failure when a variant is
+    // added, so that you can add code to handle it, but your library will
+    // continue to compile and work for downstream users in the interim.
 }
 
-ast_struct! {
-    /// A yield expression: `yield expr`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ExprYield #full {
-        pub attrs: Vec<Attribute>,
-        pub yield_token: Token![yield],
-        pub expr: Option<NodeId<Expr>>,
-    }
+#[derive(Debug, CmpSyn)]
+/// A slice literal expression: `[a, b, c, d]`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprArray {
+    pub attrs: Vec<Attribute>,
+    pub bracket_token: token::Bracket,
+    pub elems: NodeList<Expr, Token![,]>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// An assignment expression: `a = compute()`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprAssign {
+    pub attrs: Vec<Attribute>,
+    pub left: NodeId<Expr>,
+    pub eq_token: Token![=],
+    pub right: NodeId<Expr>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// An async block: `async { ... }`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprAsync {
+    pub attrs: Vec<Attribute>,
+    pub async_token: Token![async],
+    pub capture: Option<Token![move]>,
+    pub block: Block,
+}
+
+#[derive(Debug, CmpSyn)]
+/// An await expression: `fut.await`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprAwait {
+    pub attrs: Vec<Attribute>,
+    pub base: NodeId<Expr>,
+    pub dot_token: Token![.],
+    pub await_token: Token![await],
+}
+
+#[derive(Debug, CmpSyn)]
+/// A binary operation: `a + b`, `a += b`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct ExprBinary {
+    pub attrs: Vec<Attribute>,
+    pub left: NodeId<Expr>,
+    pub op: BinOp,
+    pub right: NodeId<Expr>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A blocked scope: `{ ... }`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprBlock {
+    pub attrs: Vec<Attribute>,
+    pub label: Option<Label>,
+    pub block: Block,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A `break`, with an optional label to break and an optional
+/// expression.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprBreak {
+    pub attrs: Vec<Attribute>,
+    pub break_token: Token![break],
+    pub label: Option<Lifetime>,
+    pub expr: Option<NodeId<Expr>>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A function call expression: `invoke(a, b)`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct ExprCall {
+    pub attrs: Vec<Attribute>,
+    pub func: NodeId<Expr>,
+    pub paren_token: token::Paren,
+    pub args: NodeList<Expr, Token![,]>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A cast expression: `foo as f64`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct ExprCast {
+    pub attrs: Vec<Attribute>,
+    pub expr: NodeId<Expr>,
+    pub as_token: Token![as],
+    pub ty: NodeId<Type>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A closure expression: `|a, b| a + b`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprClosure {
+    pub attrs: Vec<Attribute>,
+    pub lifetimes: Option<BoundLifetimes>,
+    pub constness: Option<Token![const]>,
+    pub movability: Option<Token![static]>,
+    pub asyncness: Option<Token![async]>,
+    pub capture: Option<Token![move]>,
+    pub or1_token: Token![|],
+    pub inputs: Punctuated<Pat, Token![,]>,
+    pub or2_token: Token![|],
+    pub output: ReturnType,
+    pub body: NodeId<Expr>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A const block: `const { ... }`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprConst {
+    pub attrs: Vec<Attribute>,
+    pub const_token: Token![const],
+    pub block: Block,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A `continue`, with an optional label.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprContinue {
+    pub attrs: Vec<Attribute>,
+    pub continue_token: Token![continue],
+    pub label: Option<Lifetime>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// Access of a named struct field (`obj.k`) or unnamed tuple struct
+/// field (`obj.0`).
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct ExprField {
+    pub attrs: Vec<Attribute>,
+    pub base: NodeId<Expr>,
+    pub dot_token: Token![.],
+    pub member: Member,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A for loop: `for pat in expr { ... }`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprForLoop {
+    pub attrs: Vec<Attribute>,
+    pub label: Option<Label>,
+    pub for_token: Token![for],
+    pub pat: Box<Pat>,
+    pub in_token: Token![in],
+    pub expr: NodeId<Expr>,
+    pub body: Block,
+}
+
+#[derive(Debug, CmpSyn)]
+/// An expression contained within invisible delimiters.
+///
+/// This variant is important for faithfully representing the precedence
+/// of expressions and is related to `None`-delimited spans in a
+/// `TokenStream`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprGroup {
+    pub attrs: Vec<Attribute>,
+    pub group_token: token::Group,
+    pub expr: NodeId<Expr>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// An `if` expression with an optional `else` block: `if expr { ... }
+/// else { ... }`.
+///
+/// The `else` branch expression may only be an `If` or `Block`
+/// expression, not any of the other types of expression.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprIf {
+    pub attrs: Vec<Attribute>,
+    pub if_token: Token![if],
+    pub cond: NodeId<Expr>,
+    pub then_branch: Block,
+    pub else_branch: Option<(Token![else], NodeId<Expr>)>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A square bracketed indexing expression: `vector[2]`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct ExprIndex {
+    pub attrs: Vec<Attribute>,
+    pub expr: NodeId<Expr>,
+    pub bracket_token: token::Bracket,
+    pub index: NodeId<Expr>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// The inferred value of a const generic argument, denoted `_`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprInfer {
+    pub attrs: Vec<Attribute>,
+    pub underscore_token: Token![_],
+}
+
+#[derive(Debug, CmpSyn)]
+/// A `let` guard: `let Some(x) = opt`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprLet {
+    pub attrs: Vec<Attribute>,
+    pub let_token: Token![let],
+    pub pat: Box<Pat>,
+    pub eq_token: Token![=],
+    pub expr: NodeId<Expr>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A literal in place of an expression: `1`, `"foo"`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct ExprLit {
+    pub attrs: Vec<Attribute>,
+    pub lit: NodeId<Lit>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// Conditionless loop: `loop { ... }`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprLoop {
+    pub attrs: Vec<Attribute>,
+    pub label: Option<Label>,
+    pub loop_token: Token![loop],
+    pub body: Block,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A macro invocation expression: `format!("{}", q)`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct ExprMacro {
+    pub attrs: Vec<Attribute>,
+    pub mac: Macro,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A `match` expression: `match n { Some(n) => {}, None => {} }`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprMatch {
+    pub attrs: Vec<Attribute>,
+    pub match_token: Token![match],
+    pub expr: NodeId<Expr>,
+    pub brace_token: token::Brace,
+    pub arms: Vec<Arm>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A method call expression: `x.foo::<T>(a, b)`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct ExprMethodCall {
+    pub attrs: Vec<Attribute>,
+    pub receiver: NodeId<Expr>,
+    pub dot_token: Token![.],
+    pub method: NodeId<Ident>,
+    pub turbofish: Option<AngleBracketedGenericArguments>,
+    pub paren_token: token::Paren,
+    pub args: NodeList<Expr, Token![,]>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A parenthesized expression: `(a + b)`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct ExprParen {
+    pub attrs: Vec<Attribute>,
+    pub paren_token: token::Paren,
+    pub expr: NodeId<Expr>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A path like `std::mem::replace` possibly containing generic
+/// parameters and a qualified self-type.
+///
+/// A plain identifier like `x` is a path of length 1.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct ExprPath {
+    pub attrs: Vec<Attribute>,
+    pub qself: Option<QSelf>,
+    pub path: Path,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A range expression: `1..2`, `1..`, `..2`, `1..=2`, `..=2`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprRange {
+    pub attrs: Vec<Attribute>,
+    pub start: Option<NodeId<Expr>>,
+    pub limits: RangeLimits,
+    pub end: Option<NodeId<Expr>>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// Address-of operation: `&raw const place` or `&raw mut place`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprRawAddr {
+    pub attrs: Vec<Attribute>,
+    pub and_token: Token![&],
+    pub raw: Token![raw],
+    pub mutability: PointerMutability,
+    pub expr: NodeId<Expr>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A referencing operation: `&a` or `&mut a`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct ExprReference {
+    pub attrs: Vec<Attribute>,
+    pub and_token: Token![&],
+    pub mutability: Option<Token![mut]>,
+    pub expr: NodeId<Expr>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// An array literal constructed from one repeated element: `[0u8; N]`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprRepeat {
+    pub attrs: Vec<Attribute>,
+    pub bracket_token: token::Bracket,
+    pub expr: NodeId<Expr>,
+    pub semi_token: Token![;],
+    pub len: NodeId<Expr>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A `return`, with an optional value to be returned.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprReturn {
+    pub attrs: Vec<Attribute>,
+    pub return_token: Token![return],
+    pub expr: Option<NodeId<Expr>>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A struct literal expression: `Point { x: 1, y: 1 }`.
+///
+/// The `rest` provides the value of the remaining fields as in `S { a:
+/// 1, b: 1, ..rest }`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct ExprStruct {
+    pub attrs: Vec<Attribute>,
+    pub qself: Option<QSelf>,
+    pub path: Path,
+    pub brace_token: token::Brace,
+    pub fields: Punctuated<FieldValue, Token![,]>,
+    pub dot2_token: Option<Token![..]>,
+    pub rest: Option<NodeId<Expr>>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A try-expression: `expr?`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprTry {
+    pub attrs: Vec<Attribute>,
+    pub expr: NodeId<Expr>,
+    pub question_token: Token![?],
+}
+
+#[derive(Debug, CmpSyn)]
+/// A try block: `try { ... }`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprTryBlock {
+    pub attrs: Vec<Attribute>,
+    pub try_token: Token![try],
+    pub block: Block,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A tuple expression: `(a, b, c, d)`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprTuple {
+    pub attrs: Vec<Attribute>,
+    pub paren_token: token::Paren,
+    pub elems: NodeList<Expr, Token![,]>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A unary operation: `!x`, `*x`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct ExprUnary {
+    pub attrs: Vec<Attribute>,
+    pub op: UnOp,
+    pub expr: NodeId<Expr>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// An unsafe block: `unsafe { ... }`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprUnsafe {
+    pub attrs: Vec<Attribute>,
+    pub unsafe_token: Token![unsafe],
+    pub block: Block,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A while loop: `while expr { ... }`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprWhile {
+    pub attrs: Vec<Attribute>,
+    pub label: Option<Label>,
+    pub while_token: Token![while],
+    pub cond: NodeId<Expr>,
+    pub body: Block,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A yield expression: `yield expr`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ExprYield {
+    pub attrs: Vec<Attribute>,
+    pub yield_token: Token![yield],
+    pub expr: Option<NodeId<Expr>>,
 }
 
 impl Expr {
@@ -957,16 +917,15 @@ impl Expr {
     }
 }
 
-ast_enum! {
-    /// A struct or tuple struct field accessed in a struct literal or field
-    /// expression.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub enum Member {
-        /// A named field like `self.x`.
-        Named(NodeId<Ident>),
-        /// An unnamed field like `self.0`.
-        Unnamed(Index),
-    }
+#[derive(Debug, CmpSyn)]
+/// A struct or tuple struct field accessed in a struct literal or field
+/// expression.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub enum Member {
+    /// A named field like `self.x`.
+    Named(NodeId<Ident>),
+    /// An unnamed field like `self.0`.
+    Unnamed(Index),
 }
 
 impl From<NodeId<Ident>> for Member {
@@ -1035,13 +994,12 @@ impl Member {
     }
 }
 
-ast_struct! {
-    /// The index of an unnamed tuple struct field.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct Index {
-        pub index: u32,
-        pub span: Span,
-    }
+#[derive(Debug, CmpSyn)]
+/// The index of an unnamed tuple struct field.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct Index {
+    pub index: u32,
+    pub span: Span,
 }
 
 impl From<usize> for Index {
@@ -1079,82 +1037,73 @@ impl IdentFragment for Index {
     }
 }
 
-ast_struct! {
-    /// A field-value pair in a struct literal.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct FieldValue {
-        pub attrs: Vec<Attribute>,
-        pub member: Member,
+#[derive(Debug, CmpSyn)]
+/// A field-value pair in a struct literal.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct FieldValue {
+    pub attrs: Vec<Attribute>,
+    pub member: Member,
 
-        /// The colon in `Struct { x: x }`. If written in shorthand like
-        /// `Struct { x }`, there is no colon.
-        pub colon_token: Option<Token![:]>,
+    /// The colon in `Struct { x: x }`. If written in shorthand like
+    /// `Struct { x }`, there is no colon.
+    pub colon_token: Option<Token![:]>,
 
-        pub expr: NodeId<Expr>,
-    }
+    pub expr: NodeId<Expr>,
 }
 
-#[cfg(feature = "full")]
-ast_struct! {
-    /// A lifetime labeling a `for`, `while`, or `loop`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct Label {
-        pub name: Lifetime,
-        pub colon_token: Token![:],
-    }
+#[derive(Debug, CmpSyn)]
+/// A lifetime labeling a `for`, `while`, or `loop`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct Label {
+    pub name: Lifetime,
+    pub colon_token: Token![:],
 }
 
-#[cfg(feature = "full")]
-ast_struct! {
-    /// One arm of a `match` expression: `0..=10 => { return true; }`.
-    ///
-    /// As in:
-    ///
-    /// ```
-    /// # fn f() -> bool {
-    /// #     let n = 0;
-    /// match n {
-    ///     0..=10 => {
-    ///         return true;
-    ///     }
-    ///     // ...
-    ///     # _ => {}
-    /// }
-    /// #   false
-    /// # }
-    /// ```
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct Arm {
-        pub attrs: Vec<Attribute>,
-        pub pat: Pat,
-        pub guard: Option<(Token![if], NodeId<Expr>)>,
-        pub fat_arrow_token: Token![=>],
-        pub body: NodeId<Expr>,
-        pub comma: Option<Token![,]>,
-    }
+#[derive(Debug, CmpSyn)]
+/// One arm of a `match` expression: `0..=10 => { return true; }`.
+///
+/// As in:
+///
+/// ```
+/// # fn f() -> bool {
+/// #     let n = 0;
+/// match n {
+///     0..=10 => {
+///         return true;
+///     }
+///     // ...
+///     # _ => {}
+/// }
+/// #   false
+/// # }
+/// ```
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct Arm {
+    pub attrs: Vec<Attribute>,
+    pub pat: Pat,
+    pub guard: Option<(Token![if], NodeId<Expr>)>,
+    pub fat_arrow_token: Token![=>],
+    pub body: NodeId<Expr>,
+    pub comma: Option<Token![,]>,
 }
 
-#[cfg(feature = "full")]
-ast_enum! {
-    /// Limit types of a range, inclusive or exclusive.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub enum RangeLimits {
-        /// Inclusive at the beginning, exclusive at the end.
-        HalfOpen(Token![..]),
-        /// Inclusive at the beginning and end.
-        Closed(Token![..=]),
-    }
+#[derive(Debug, CmpSyn)]
+/// Limit types of a range, inclusive or exclusive.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub enum RangeLimits {
+    /// Inclusive at the beginning, exclusive at the end.
+    HalfOpen(Token![..]),
+    /// Inclusive at the beginning and end.
+    Closed(Token![..=]),
 }
 
-#[cfg(feature = "full")]
-ast_enum! {
-    /// Mutability of a raw pointer (`*const T`, `*mut T`), in which non-mutable
-    /// isn't the implicit default.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub enum PointerMutability {
-        Const(Token![const]),
-        Mut(Token![mut]),
-    }
+#[derive(Debug, CmpSyn)]
+/// Mutability of a raw pointer (`*const T`, `*mut T`), in which non-mutable
+/// isn't the implicit default.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub enum PointerMutability {
+    Const(Token![const]),
+    Mut(Token![mut]),
 }
 
 #[cfg(feature = "parsing")]

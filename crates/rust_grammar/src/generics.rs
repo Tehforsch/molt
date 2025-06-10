@@ -1,3 +1,5 @@
+use derive_macro::CmpSyn;
+
 use crate::attr::Attribute;
 use crate::expr::Expr;
 use crate::ident::Ident;
@@ -13,83 +15,78 @@ use std::fmt::{self, Debug};
 #[cfg(all(feature = "printing", feature = "extra-traits"))]
 use std::hash::{Hash, Hasher};
 
-ast_struct! {
-    /// Lifetimes and type parameters attached to a declaration of a function,
-    /// enum, trait, etc.
-    ///
-    /// This struct represents two distinct optional syntactic elements,
-    /// [generic parameters] and [where clause]. In some locations of the
-    /// grammar, there may be other tokens in between these two things.
-    ///
-    /// [generic parameters]: https://doc.rust-lang.org/stable/reference/items/generics.html#generic-parameters
-    /// [where clause]: https://doc.rust-lang.org/stable/reference/items/generics.html#where-clauses
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct Generics {
-        pub lt_token: Option<Token![<]>,
-        pub params: Punctuated<GenericParam, Token![,]>,
-        pub gt_token: Option<Token![>]>,
-        pub where_clause: Option<WhereClause>,
-    }
+#[derive(Debug, CmpSyn)]
+/// Lifetimes and type parameters attached to a declaration of a function,
+/// enum, trait, etc.
+///
+/// This struct represents two distinct optional syntactic elements,
+/// [generic parameters] and [where clause]. In some locations of the
+/// grammar, there may be other tokens in between these two things.
+///
+/// [generic parameters]: https://doc.rust-lang.org/stable/reference/items/generics.html#generic-parameters
+/// [where clause]: https://doc.rust-lang.org/stable/reference/items/generics.html#where-clauses
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct Generics {
+    pub lt_token: Option<Token![<]>,
+    pub params: Punctuated<GenericParam, Token![,]>,
+    pub gt_token: Option<Token![>]>,
+    pub where_clause: Option<WhereClause>,
 }
 
-ast_enum_of_structs! {
-    /// A generic type parameter, lifetime, or const generic: `T: Into<String>`,
-    /// `'a: 'b`, `const LEN: usize`.
-    ///
-    /// # Syntax tree enum
-    ///
-    /// This type is a [syntax tree enum].
-    ///
-    /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub enum GenericParam {
-        /// A lifetime parameter: `'a: 'b + 'c + 'd`.
-        Lifetime(LifetimeParam),
+#[derive(Debug, CmpSyn)]
+/// A generic type parameter, lifetime, or const generic: `T: Into<String>`,
+/// `'a: 'b`, `const LEN: usize`.
+///
+/// # Syntax tree enum
+///
+/// This type is a [syntax tree enum].
+///
+/// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub enum GenericParam {
+    /// A lifetime parameter: `'a: 'b + 'c + 'd`.
+    Lifetime(LifetimeParam),
 
-        /// A generic type parameter: `T: Into<String>`.
-        Type(TypeParam),
-
-        /// A const generic parameter: `const LENGTH: usize`.
-        Const(ConstParam),
-    }
-}
-
-ast_struct! {
-    /// A lifetime definition: `'a: 'b + 'c + 'd`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct LifetimeParam {
-        pub attrs: Vec<Attribute>,
-        pub lifetime: Lifetime,
-        pub colon_token: Option<Token![:]>,
-        pub bounds: Punctuated<Lifetime, Token![+]>,
-    }
-}
-
-ast_struct! {
     /// A generic type parameter: `T: Into<String>`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct TypeParam {
-        pub attrs: Vec<Attribute>,
-        pub ident: NodeId<Ident>,
-        pub colon_token: Option<Token![:]>,
-        pub bounds: Punctuated<TypeParamBound, Token![+]>,
-        pub eq_token: Option<Token![=]>,
-        pub default: Option<NodeId<Type>>,
-    }
+    Type(TypeParam),
+
+    /// A const generic parameter: `const LENGTH: usize`.
+    Const(ConstParam),
 }
 
-ast_struct! {
-    /// A const generic parameter: `const LENGTH: usize`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct ConstParam {
-        pub attrs: Vec<Attribute>,
-        pub const_token: Token![const],
-        pub ident: NodeId<Ident>,
-        pub colon_token: Token![:],
-        pub ty: NodeId<Type>,
-        pub eq_token: Option<Token![=]>,
-        pub default: Option<Expr>,
-    }
+#[derive(Debug, CmpSyn)]
+/// A lifetime definition: `'a: 'b + 'c + 'd`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct LifetimeParam {
+    pub attrs: Vec<Attribute>,
+    pub lifetime: Lifetime,
+    pub colon_token: Option<Token![:]>,
+    pub bounds: Punctuated<Lifetime, Token![+]>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A generic type parameter: `T: Into<String>`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct TypeParam {
+    pub attrs: Vec<Attribute>,
+    pub ident: NodeId<Ident>,
+    pub colon_token: Option<Token![:]>,
+    pub bounds: Punctuated<TypeParamBound, Token![+]>,
+    pub eq_token: Option<Token![=]>,
+    pub default: Option<NodeId<Type>>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A const generic parameter: `const LENGTH: usize`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct ConstParam {
+    pub attrs: Vec<Attribute>,
+    pub const_token: Token![const],
+    pub ident: NodeId<Ident>,
+    pub colon_token: Token![:],
+    pub ty: NodeId<Type>,
+    pub eq_token: Option<Token![=]>,
+    pub default: Option<Expr>,
 }
 
 impl Default for Generics {
@@ -103,131 +100,120 @@ impl Default for Generics {
     }
 }
 
-ast_struct! {
-    /// A set of bound lifetimes: `for<'a, 'b, 'c>`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct BoundLifetimes {
-        pub for_token: Token![for],
-        pub lt_token: Token![<],
-        pub lifetimes: Punctuated<GenericParam, Token![,]>,
-        pub gt_token: Token![>],
-    }
+#[derive(Debug, CmpSyn)]
+/// A set of bound lifetimes: `for<'a, 'b, 'c>`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct BoundLifetimes {
+    pub for_token: Token![for],
+    pub lt_token: Token![<],
+    pub lifetimes: Punctuated<GenericParam, Token![,]>,
+    pub gt_token: Token![>],
 }
 
-ast_enum_of_structs! {
-    /// A trait or lifetime used as a bound on a type parameter.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    #[non_exhaustive]
-    pub enum TypeParamBound {
-        Trait(TraitBound),
-        Lifetime(Lifetime),
-        PreciseCapture(PreciseCapture),
-        Verbatim(TokenStream),
-    }
+#[derive(Debug, CmpSyn)]
+/// A trait used as a bound on a type parameter.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct TraitBound {
+    pub paren_token: Option<token::Paren>,
+    pub modifier: TraitBoundModifier,
+    /// The `for<'a>` in `for<'a> Foo<&'a T>`
+    pub lifetimes: Option<BoundLifetimes>,
+    /// The `Foo<&'a T>` in `for<'a> Foo<&'a T>`
+    pub path: Path,
 }
 
-ast_struct! {
-    /// A trait used as a bound on a type parameter.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct TraitBound {
-        pub paren_token: Option<token::Paren>,
-        pub modifier: TraitBoundModifier,
-        /// The `for<'a>` in `for<'a> Foo<&'a T>`
-        pub lifetimes: Option<BoundLifetimes>,
-        /// The `Foo<&'a T>` in `for<'a> Foo<&'a T>`
-        pub path: Path,
-    }
+#[derive(Debug, CmpSyn)]
+/// A trait or lifetime used as a bound on a type parameter.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+#[non_exhaustive]
+pub enum TypeParamBound {
+    Trait(TraitBound),
+    Lifetime(Lifetime),
+    PreciseCapture(PreciseCapture),
+    Verbatim(TokenStream),
 }
 
-ast_enum! {
-    /// A modifier on a trait bound, currently only used for the `?` in
-    /// `?Sized`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub enum TraitBoundModifier {
-        None,
-        Maybe(Token![?]),
-    }
+#[derive(Debug, CmpSyn)]
+/// A modifier on a trait bound, currently only used for the `?` in
+/// `?Sized`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub enum TraitBoundModifier {
+    None,
+    Maybe(Token![?]),
 }
 
-ast_struct! {
-    /// Precise capturing bound: the 'use&lt;&hellip;&gt;' in `impl Trait +
-    /// use<'a, T>`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct PreciseCapture #full {
-        pub use_token: Token![use],
-        pub lt_token: Token![<],
-        pub params: Punctuated<CapturedParam, Token![,]>,
-        pub gt_token: Token![>],
-    }
+#[derive(Debug, CmpSyn)]
+/// Precise capturing bound: the 'use&lt;&hellip;&gt;' in `impl Trait +
+/// use<'a, T>`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct PreciseCapture {
+    pub use_token: Token![use],
+    pub lt_token: Token![<],
+    pub params: Punctuated<CapturedParam, Token![,]>,
+    pub gt_token: Token![>],
 }
 
-#[cfg(feature = "full")]
-ast_enum! {
-    /// Single parameter in a precise capturing bound.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    #[non_exhaustive]
-    pub enum CapturedParam {
-        /// A lifetime parameter in precise capturing bound: `fn f<'a>() -> impl
-        /// Trait + use<'a>`.
-        Lifetime(Lifetime),
-        /// A type parameter or const generic parameter in precise capturing
-        /// bound: `fn f<T>() -> impl Trait + use<T>` or `fn f<const K: T>() ->
-        /// impl Trait + use<K>`.
-        Ident(NodeId<Ident>),
-    }
+#[derive(Debug, CmpSyn)]
+/// Single parameter in a precise capturing bound.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+#[non_exhaustive]
+pub enum CapturedParam {
+    /// A lifetime parameter in precise capturing bound: `fn f<'a>() -> impl
+    /// Trait + use<'a>`.
+    Lifetime(Lifetime),
+    /// A type parameter or const generic parameter in precise capturing
+    /// bound: `fn f<T>() -> impl Trait + use<T>` or `fn f<const K: T>() ->
+    /// impl Trait + use<K>`.
+    Ident(NodeId<Ident>),
 }
 
-ast_struct! {
-    /// A `where` clause in a definition: `where T: Deserialize<'de>, D:
-    /// 'static`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct WhereClause {
-        pub where_token: Token![where],
-        pub predicates: Punctuated<WherePredicate, Token![,]>,
-    }
+#[derive(Debug, CmpSyn)]
+/// A `where` clause in a definition: `where T: Deserialize<'de>, D:
+/// 'static`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct WhereClause {
+    pub where_token: Token![where],
+    pub predicates: Punctuated<WherePredicate, Token![,]>,
 }
 
-ast_enum_of_structs! {
-    /// A single predicate in a `where` clause: `T: Deserialize<'de>`.
-    ///
-    /// # Syntax tree enum
-    ///
-    /// This type is a [syntax tree enum].
-    ///
-    /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    #[non_exhaustive]
-    pub enum WherePredicate {
-        /// A lifetime predicate in a `where` clause: `'a: 'b + 'c`.
-        Lifetime(PredicateLifetime),
-
-        /// A type predicate in a `where` clause: `for<'c> Foo<'c>: Trait<'c>`.
-        Type(PredicateType),
-    }
-}
-
-ast_struct! {
+#[derive(Debug, CmpSyn)]
+/// A single predicate in a `where` clause: `T: Deserialize<'de>`.
+///
+/// # Syntax tree enum
+///
+/// This type is a [syntax tree enum].
+///
+/// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+#[non_exhaustive]
+pub enum WherePredicate {
     /// A lifetime predicate in a `where` clause: `'a: 'b + 'c`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct PredicateLifetime {
-        pub lifetime: Lifetime,
-        pub colon_token: Token![:],
-        pub bounds: Punctuated<Lifetime, Token![+]>,
-    }
+    Lifetime(PredicateLifetime),
+
+    /// A type predicate in a `where` clause: `for<'c> Foo<'c>: Trait<'c>`.
+    Type(PredicateType),
 }
 
-ast_struct! {
-    /// A type predicate in a `where` clause: `for<'c> Foo<'c>: Trait<'c>`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct PredicateType {
-        /// Any lifetimes from a `for` binding
-        pub lifetimes: Option<BoundLifetimes>,
-        /// The type being bounded
-        pub bounded_ty: NodeId<Type>,
-        pub colon_token: Token![:],
-        /// Trait and lifetime bounds (`Clone+Send+'static`)
-        pub bounds: Punctuated<TypeParamBound, Token![+]>,
-    }
+#[derive(Debug, CmpSyn)]
+/// A lifetime predicate in a `where` clause: `'a: 'b + 'c`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct PredicateLifetime {
+    pub lifetime: Lifetime,
+    pub colon_token: Token![:],
+    pub bounds: Punctuated<Lifetime, Token![+]>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A type predicate in a `where` clause: `for<'c> Foo<'c>: Trait<'c>`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct PredicateType {
+    /// Any lifetimes from a `for` binding
+    pub lifetimes: Option<BoundLifetimes>,
+    /// The type being bounded
+    pub bounded_ty: NodeId<Type>,
+    pub colon_token: Token![:],
+    /// Trait and lifetime bounds (`Clone+Send+'static`)
+    pub bounds: Punctuated<TypeParamBound, Token![+]>,
 }
 
 #[cfg(feature = "parsing")]

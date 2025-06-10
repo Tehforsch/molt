@@ -1,9 +1,6 @@
 #![allow(unused)]
 
 #[macro_use]
-mod macros;
-
-#[macro_use]
 mod group;
 
 #[macro_use]

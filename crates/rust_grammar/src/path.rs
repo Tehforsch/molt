@@ -1,3 +1,4 @@
+use derive_macro::CmpSyn;
 use molt_lib::{NodeId, NodeList};
 
 use crate::expr::Expr;
@@ -8,13 +9,12 @@ use crate::punctuated::Punctuated;
 use crate::token;
 use crate::ty::{ReturnType, Type};
 
-ast_struct! {
-    /// A path at which a named item is exported (e.g. `std::collections::HashMap`).
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct Path {
-        pub leading_colon: Option<Token![::]>,
-        pub segments: Punctuated<PathSegment, Token![::]>,
-    }
+#[derive(Debug, CmpSyn)]
+/// A path at which a named item is exported (e.g. `std::collections::HashMap`).
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct Path {
+    pub leading_colon: Option<Token![::]>,
+    pub segments: Punctuated<PathSegment, Token![::]>,
 }
 
 impl<T> From<T> for Path
@@ -31,13 +31,12 @@ where
     }
 }
 
-ast_struct! {
-    /// A segment of a path together with any path arguments on that segment.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct PathSegment {
-        pub ident: NodeId<Ident>,
-        pub arguments: PathArguments,
-    }
+#[derive(Debug, CmpSyn)]
+/// A segment of a path together with any path arguments on that segment.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct PathSegment {
+    pub ident: NodeId<Ident>,
+    pub arguments: PathArguments,
 }
 
 impl<T> From<T> for PathSegment
@@ -52,24 +51,23 @@ where
     }
 }
 
-ast_enum! {
-    /// Angle bracketed or parenthesized arguments of a path segment.
-    ///
-    /// ## Angle bracketed
-    ///
+#[derive(Debug, CmpSyn)]
+/// Angle bracketed or parenthesized arguments of a path segment.
+///
+/// ## Angle bracketed
+///
+/// The `<'a, T>` in `std::slice::iter<'a, T>`.
+///
+/// ## Parenthesized
+///
+/// The `(A, B) -> C` in `Fn(A, B) -> C`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub enum PathArguments {
+    None,
     /// The `<'a, T>` in `std::slice::iter<'a, T>`.
-    ///
-    /// ## Parenthesized
-    ///
+    AngleBracketed(AngleBracketedGenericArguments),
     /// The `(A, B) -> C` in `Fn(A, B) -> C`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub enum PathArguments {
-        None,
-        /// The `<'a, T>` in `std::slice::iter<'a, T>`.
-        AngleBracketed(AngleBracketedGenericArguments),
-        /// The `(A, B) -> C` in `Fn(A, B) -> C`.
-        Parenthesized(ParenthesizedGenericArguments),
-    }
+    Parenthesized(ParenthesizedGenericArguments),
 }
 
 impl Default for PathArguments {
@@ -95,116 +93,109 @@ impl PathArguments {
     }
 }
 
-ast_enum! {
-    /// An individual generic argument, like `'a`, `T`, or `Item = T`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    #[non_exhaustive]
-    pub enum GenericArgument {
-        /// A lifetime argument.
-        Lifetime(Lifetime),
-        /// A type argument.
-        Type(NodeId<Type>),
-        /// A const expression. Must be inside of a block.
-        ///
-        /// NOTE: Identity expressions are represented as Type arguments, as
-        /// they are indistinguishable syntactically.
-        Const(Expr),
-        /// A binding (equality constraint) on an associated type: the `Item =
-        /// u8` in `Iterator<Item = u8>`.
-        AssocType(AssocType),
-        /// An equality constraint on an associated constant: the `PANIC =
-        /// false` in `Trait<PANIC = false>`.
-        AssocConst(AssocConst),
-        /// An associated type bound: `Iterator<Item: Display>`.
-        Constraint(Constraint),
-    }
-}
-
-ast_struct! {
-    /// Angle bracketed arguments of a path segment: the `<K, V>` in `HashMap<K,
-    /// V>`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct AngleBracketedGenericArguments {
-        pub colon2_token: Option<Token![::]>,
-        pub lt_token: Token![<],
-        pub args: Punctuated<GenericArgument, Token![,]>,
-        pub gt_token: Token![>],
-    }
-}
-
-ast_struct! {
-    /// A binding (equality constraint) on an associated type: the `Item = u8`
-    /// in `Iterator<Item = u8>`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct AssocType {
-        pub ident: NodeId<Ident>,
-        pub generics: Option<AngleBracketedGenericArguments>,
-        pub eq_token: Token![=],
-        pub ty: NodeId<Type>,
-    }
-}
-
-ast_struct! {
-    /// An equality constraint on an associated constant: the `PANIC = false` in
-    /// `Trait<PANIC = false>`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct AssocConst {
-        pub ident: NodeId<Ident>,
-        pub generics: Option<AngleBracketedGenericArguments>,
-        pub eq_token: Token![=],
-        pub value: Expr,
-    }
-}
-
-ast_struct! {
+#[derive(Debug, CmpSyn)]
+/// An individual generic argument, like `'a`, `T`, or `Item = T`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+#[non_exhaustive]
+pub enum GenericArgument {
+    /// A lifetime argument.
+    Lifetime(Lifetime),
+    /// A type argument.
+    Type(NodeId<Type>),
+    /// A const expression. Must be inside of a block.
+    ///
+    /// NOTE: Identity expressions are represented as Type arguments, as
+    /// they are indistinguishable syntactically.
+    Const(Expr),
+    /// A binding (equality constraint) on an associated type: the `Item =
+    /// u8` in `Iterator<Item = u8>`.
+    AssocType(AssocType),
+    /// An equality constraint on an associated constant: the `PANIC =
+    /// false` in `Trait<PANIC = false>`.
+    AssocConst(AssocConst),
     /// An associated type bound: `Iterator<Item: Display>`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct Constraint {
-        pub ident: NodeId<Ident>,
-        pub generics: Option<AngleBracketedGenericArguments>,
-        pub colon_token: Token![:],
-        pub bounds: Punctuated<TypeParamBound, Token![+]>,
-    }
+    Constraint(Constraint),
 }
 
-ast_struct! {
-    /// Arguments of a function path segment: the `(A, B) -> C` in `Fn(A,B) ->
-    /// C`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct ParenthesizedGenericArguments {
-        pub paren_token: token::Paren,
-        /// `(A, B)`
-        pub inputs: NodeList<Type, Token![,]>,
-        /// `C`
-        pub output: ReturnType,
-    }
+#[derive(Debug, CmpSyn)]
+/// Angle bracketed arguments of a path segment: the `<K, V>` in `HashMap<K,
+/// V>`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct AngleBracketedGenericArguments {
+    pub colon2_token: Option<Token![::]>,
+    pub lt_token: Token![<],
+    pub args: Punctuated<GenericArgument, Token![,]>,
+    pub gt_token: Token![>],
 }
 
-ast_struct! {
-    /// The explicit Self type in a qualified path: the `T` in `<T as
-    /// Display>::fmt`.
-    ///
-    /// The actual path, including the trait and the associated item, is stored
-    /// separately. The `position` field represents the index of the associated
-    /// item qualified with this Self type.
-    ///
-    /// ```text
-    /// <Vec<T> as a::b::Trait>::AssociatedItem
-    ///  ^~~~~~    ~~~~~~~~~~~~~~^
-    ///  ty        position = 3
-    ///
-    /// <Vec<T>>::AssociatedItem
-    ///  ^~~~~~   ^
-    ///  ty       position = 0
-    /// ```
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct QSelf {
-        pub lt_token: Token![<],
-        pub ty: NodeId<Type>,
-        pub position: usize,
-        pub as_token: Option<Token![as]>,
-        pub gt_token: Token![>],
-    }
+#[derive(Debug, CmpSyn)]
+/// A binding (equality constraint) on an associated type: the `Item = u8`
+/// in `Iterator<Item = u8>`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct AssocType {
+    pub ident: NodeId<Ident>,
+    pub generics: Option<AngleBracketedGenericArguments>,
+    pub eq_token: Token![=],
+    pub ty: NodeId<Type>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// An equality constraint on an associated constant: the `PANIC = false` in
+/// `Trait<PANIC = false>`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct AssocConst {
+    pub ident: NodeId<Ident>,
+    pub generics: Option<AngleBracketedGenericArguments>,
+    pub eq_token: Token![=],
+    pub value: Expr,
+}
+
+#[derive(Debug, CmpSyn)]
+/// An associated type bound: `Iterator<Item: Display>`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct Constraint {
+    pub ident: NodeId<Ident>,
+    pub generics: Option<AngleBracketedGenericArguments>,
+    pub colon_token: Token![:],
+    pub bounds: Punctuated<TypeParamBound, Token![+]>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// Arguments of a function path segment: the `(A, B) -> C` in `Fn(A,B) ->
+/// C`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct ParenthesizedGenericArguments {
+    pub paren_token: token::Paren,
+    /// `(A, B)`
+    pub inputs: NodeList<Type, Token![,]>,
+    /// `C`
+    pub output: ReturnType,
+}
+
+#[derive(Debug, CmpSyn)]
+/// The explicit Self type in a qualified path: the `T` in `<T as
+/// Display>::fmt`.
+///
+/// The actual path, including the trait and the associated item, is stored
+/// separately. The `position` field represents the index of the associated
+/// item qualified with this Self type.
+///
+/// ```text
+/// <Vec<T> as a::b::Trait>::AssociatedItem
+///  ^~~~~~    ~~~~~~~~~~~~~~^
+///  ty        position = 3
+///
+/// <Vec<T>>::AssociatedItem
+///  ^~~~~~   ^
+///  ty       position = 0
+/// ```
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct QSelf {
+    pub lt_token: Token![<],
+    pub ty: NodeId<Type>,
+    pub position: usize,
+    pub as_token: Option<Token![as]>,
+    pub gt_token: Token![>],
 }
 
 #[cfg(feature = "parsing")]

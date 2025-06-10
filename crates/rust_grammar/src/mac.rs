@@ -1,3 +1,5 @@
+use derive_macro::CmpSyn;
+
 #[cfg(feature = "parsing")]
 use crate::error::Result;
 #[cfg(feature = "parsing")]
@@ -11,25 +13,23 @@ use proc_macro2::TokenStream;
 #[cfg(feature = "parsing")]
 use proc_macro2::TokenTree;
 
-ast_struct! {
-    /// A macro invocation: `println!("{}", mac)`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct Macro {
-        pub path: Path,
-        pub bang_token: Token![!],
-        pub delimiter: MacroDelimiter,
-        pub tokens: TokenStream,
-    }
+#[derive(Debug, CmpSyn)]
+/// A macro invocation: `println!("{}", mac)`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct Macro {
+    pub path: Path,
+    pub bang_token: Token![!],
+    pub delimiter: MacroDelimiter,
+    pub tokens: TokenStream,
 }
 
-ast_enum! {
-    /// A grouping token that surrounds a macro body: `m!(...)` or `m!{...}` or `m![...]`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub enum MacroDelimiter {
-        Paren(Paren),
-        Brace(Brace),
-        Bracket(Bracket),
-    }
+#[derive(Debug, CmpSyn)]
+/// A grouping token that surrounds a macro body: `m!(...)` or `m!{...}` or `m![...]`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub enum MacroDelimiter {
+    Paren(Paren),
+    Brace(Brace),
+    Bracket(Bracket),
 }
 
 impl MacroDelimiter {

@@ -1,79 +1,79 @@
-ast_enum! {
-    /// A binary operator: `+`, `+=`, `&`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    #[non_exhaustive]
-    pub enum BinOp {
-        /// The `+` operator (addition)
-        Add(Token![+]),
-        /// The `-` operator (subtraction)
-        Sub(Token![-]),
-        /// The `*` operator (multiplication)
-        Mul(Token![*]),
-        /// The `/` operator (division)
-        Div(Token![/]),
-        /// The `%` operator (modulus)
-        Rem(Token![%]),
-        /// The `&&` operator (logical and)
-        And(Token![&&]),
-        /// The `||` operator (logical or)
-        Or(Token![||]),
-        /// The `^` operator (bitwise xor)
-        BitXor(Token![^]),
-        /// The `&` operator (bitwise and)
-        BitAnd(Token![&]),
-        /// The `|` operator (bitwise or)
-        BitOr(Token![|]),
-        /// The `<<` operator (shift left)
-        Shl(Token![<<]),
-        /// The `>>` operator (shift right)
-        Shr(Token![>>]),
-        /// The `==` operator (equality)
-        Eq(Token![==]),
-        /// The `<` operator (less than)
-        Lt(Token![<]),
-        /// The `<=` operator (less than or equal to)
-        Le(Token![<=]),
-        /// The `!=` operator (not equal to)
-        Ne(Token![!=]),
-        /// The `>=` operator (greater than or equal to)
-        Ge(Token![>=]),
-        /// The `>` operator (greater than)
-        Gt(Token![>]),
-        /// The `+=` operator
-        AddAssign(Token![+=]),
-        /// The `-=` operator
-        SubAssign(Token![-=]),
-        /// The `*=` operator
-        MulAssign(Token![*=]),
-        /// The `/=` operator
-        DivAssign(Token![/=]),
-        /// The `%=` operator
-        RemAssign(Token![%=]),
-        /// The `^=` operator
-        BitXorAssign(Token![^=]),
-        /// The `&=` operator
-        BitAndAssign(Token![&=]),
-        /// The `|=` operator
-        BitOrAssign(Token![|=]),
-        /// The `<<=` operator
-        ShlAssign(Token![<<=]),
-        /// The `>>=` operator
-        ShrAssign(Token![>>=]),
-    }
+use derive_macro::CmpSyn;
+
+#[derive(Debug, CmpSyn)]
+/// A binary operator: `+`, `+=`, `&`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+#[non_exhaustive]
+pub enum BinOp {
+    /// The `+` operator (addition)
+    Add(Token![+]),
+    /// The `-` operator (subtraction)
+    Sub(Token![-]),
+    /// The `*` operator (multiplication)
+    Mul(Token![*]),
+    /// The `/` operator (division)
+    Div(Token![/]),
+    /// The `%` operator (modulus)
+    Rem(Token![%]),
+    /// The `&&` operator (logical and)
+    And(Token![&&]),
+    /// The `||` operator (logical or)
+    Or(Token![||]),
+    /// The `^` operator (bitwise xor)
+    BitXor(Token![^]),
+    /// The `&` operator (bitwise and)
+    BitAnd(Token![&]),
+    /// The `|` operator (bitwise or)
+    BitOr(Token![|]),
+    /// The `<<` operator (shift left)
+    Shl(Token![<<]),
+    /// The `>>` operator (shift right)
+    Shr(Token![>>]),
+    /// The `==` operator (equality)
+    Eq(Token![==]),
+    /// The `<` operator (less than)
+    Lt(Token![<]),
+    /// The `<=` operator (less than or equal to)
+    Le(Token![<=]),
+    /// The `!=` operator (not equal to)
+    Ne(Token![!=]),
+    /// The `>=` operator (greater than or equal to)
+    Ge(Token![>=]),
+    /// The `>` operator (greater than)
+    Gt(Token![>]),
+    /// The `+=` operator
+    AddAssign(Token![+=]),
+    /// The `-=` operator
+    SubAssign(Token![-=]),
+    /// The `*=` operator
+    MulAssign(Token![*=]),
+    /// The `/=` operator
+    DivAssign(Token![/=]),
+    /// The `%=` operator
+    RemAssign(Token![%=]),
+    /// The `^=` operator
+    BitXorAssign(Token![^=]),
+    /// The `&=` operator
+    BitAndAssign(Token![&=]),
+    /// The `|=` operator
+    BitOrAssign(Token![|=]),
+    /// The `<<=` operator
+    ShlAssign(Token![<<=]),
+    /// The `>>=` operator
+    ShrAssign(Token![>>=]),
 }
 
-ast_enum! {
-    /// A unary operator: `*`, `!`, `-`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    #[non_exhaustive]
-    pub enum UnOp {
-        /// The `*` operator for dereferencing
-        Deref(Token![*]),
-        /// The `!` operator for logical inversion
-        Not(Token![!]),
-        /// The `-` operator for negation
-        Neg(Token![-]),
-    }
+#[derive(Debug, CmpSyn)]
+/// A unary operator: `*`, `!`, `-`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+#[non_exhaustive]
+pub enum UnOp {
+    /// The `*` operator for dereferencing
+    Deref(Token![*]),
+    /// The `!` operator for logical inversion
+    Not(Token![!]),
+    /// The `-` operator for negation
+    Neg(Token![-]),
 }
 
 #[cfg(feature = "parsing")]

@@ -1,3 +1,5 @@
+use derive_macro::CmpSyn;
+
 use crate::attr::Attribute;
 use crate::expr::Expr;
 use crate::generics::{BoundLifetimes, TypeParamBound};
@@ -11,264 +13,244 @@ use crate::token;
 use molt_lib::{NodeId, NodeList};
 use proc_macro2::TokenStream;
 
-ast_enum_of_structs! {
-    /// The possible types that a Rust value could have.
-    ///
-    /// # Syntax tree enum
-    ///
-    /// This type is a [syntax tree enum].
-    ///
-    /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    #[non_exhaustive]
-    pub enum Type {
-        /// A fixed size array type: `[T; n]`.
-        Array(TypeArray),
-
-        /// A bare function type: `fn(usize) -> bool`.
-        BareFn(TypeBareFn),
-
-        /// A type contained within invisible delimiters.
-        Group(TypeGroup),
-
-        /// An `impl Bound1 + Bound2 + Bound3` type where `Bound` is a trait or
-        /// a lifetime.
-        ImplTrait(TypeImplTrait),
-
-        /// Indication that a type should be inferred by the compiler: `_`.
-        Infer(TypeInfer),
-
-        /// A macro in the type position.
-        Macro(TypeMacro),
-
-        /// The never type: `!`.
-        Never(TypeNever),
-
-        /// A parenthesized type equivalent to the inner type.
-        Paren(TypeParen),
-
-        /// A path like `std::slice::Iter`, optionally qualified with a
-        /// self-type as in `<Vec<T> as SomeTrait>::Associated`.
-        Path(TypePath),
-
-        /// A raw pointer type: `*const T` or `*mut T`.
-        Ptr(TypePtr),
-
-        /// A reference type: `&'a T` or `&'a mut T`.
-        Reference(TypeReference),
-
-        /// A dynamically sized slice type: `[T]`.
-        Slice(TypeSlice),
-
-        /// A trait object type `dyn Bound1 + Bound2 + Bound3` where `Bound` is a
-        /// trait or a lifetime.
-        TraitObject(TypeTraitObject),
-
-        /// A tuple type: `(A, B, C, String)`.
-        Tuple(TypeTuple),
-
-        /// Tokens in type position not interpreted by Syn.
-        Verbatim(TokenStream),
-
-        // For testing exhaustiveness in downstream code, use the following idiom:
-        //
-        //     match ty {
-        //         #![cfg_attr(test, deny(non_exhaustive_omitted_patterns))]
-        //
-        //         Type::Array(ty) => {...}
-        //         Type::BareFn(ty) => {...}
-        //         ...
-        //         Type::Verbatim(ty) => {...}
-        //
-        //         _ => { /* some sane fallback */ }
-        //     }
-        //
-        // This way we fail your tests but don't break your library when adding
-        // a variant. You will be notified by a test failure when a variant is
-        // added, so that you can add code to handle it, but your library will
-        // continue to compile and work for downstream users in the interim.
-    }
-}
-
-ast_struct! {
+#[derive(Debug, CmpSyn)]
+/// The possible types that a Rust value could have.
+///
+/// # Syntax tree enum
+///
+/// This type is a [syntax tree enum].
+///
+/// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+#[non_exhaustive]
+pub enum Type {
     /// A fixed size array type: `[T; n]`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct TypeArray {
-        pub bracket_token: token::Bracket,
-        pub elem: NodeId<Type>,
-        pub semi_token: Token![;],
-        pub len: NodeId<Expr>,
-    }
-}
+    Array(TypeArray),
 
-ast_struct! {
     /// A bare function type: `fn(usize) -> bool`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct TypeBareFn {
-        pub lifetimes: Option<BoundLifetimes>,
-        pub unsafety: Option<Token![unsafe]>,
-        pub abi: Option<Abi>,
-        pub fn_token: Token![fn],
-        pub paren_token: token::Paren,
-        pub inputs: Punctuated<BareFnArg, Token![,]>,
-        pub variadic: Option<BareVariadic>,
-        pub output: ReturnType,
-    }
-}
+    BareFn(TypeBareFn),
 
-ast_struct! {
     /// A type contained within invisible delimiters.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct TypeGroup {
-        pub group_token: token::Group,
-        pub elem: NodeId<Type>,
-    }
-}
+    Group(TypeGroup),
 
-ast_struct! {
     /// An `impl Bound1 + Bound2 + Bound3` type where `Bound` is a trait or
     /// a lifetime.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct TypeImplTrait {
-        pub impl_token: Token![impl],
-        pub bounds: Punctuated<TypeParamBound, Token![+]>,
-    }
-}
+    ImplTrait(TypeImplTrait),
 
-ast_struct! {
     /// Indication that a type should be inferred by the compiler: `_`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct TypeInfer {
-        pub underscore_token: Token![_],
-    }
-}
+    Infer(TypeInfer),
 
-ast_struct! {
     /// A macro in the type position.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct TypeMacro {
-        pub mac: Macro,
-    }
-}
+    Macro(TypeMacro),
 
-ast_struct! {
     /// The never type: `!`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct TypeNever {
-        pub bang_token: Token![!],
-    }
-}
+    Never(TypeNever),
 
-ast_struct! {
     /// A parenthesized type equivalent to the inner type.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct TypeParen {
-        pub paren_token: token::Paren,
-        pub elem: NodeId<Type>,
-    }
-}
+    Paren(TypeParen),
 
-ast_struct! {
     /// A path like `std::slice::Iter`, optionally qualified with a
     /// self-type as in `<Vec<T> as SomeTrait>::Associated`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct TypePath {
-        pub qself: Option<QSelf>,
-        pub path: Path,
-    }
-}
+    Path(TypePath),
 
-ast_struct! {
     /// A raw pointer type: `*const T` or `*mut T`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct TypePtr {
-        pub star_token: Token![*],
-        pub const_token: Option<Token![const]>,
-        pub mutability: Option<Token![mut]>,
-        pub elem: NodeId<Type>,
-    }
-}
+    Ptr(TypePtr),
 
-ast_struct! {
     /// A reference type: `&'a T` or `&'a mut T`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct TypeReference {
-        pub and_token: Token![&],
-        pub lifetime: Option<Lifetime>,
-        pub mutability: Option<Token![mut]>,
-        pub elem: NodeId<Type>,
-    }
-}
+    Reference(TypeReference),
 
-ast_struct! {
     /// A dynamically sized slice type: `[T]`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct TypeSlice {
-        pub bracket_token: token::Bracket,
-        pub elem: NodeId<Type>,
-    }
-}
+    Slice(TypeSlice),
 
-ast_struct! {
     /// A trait object type `dyn Bound1 + Bound2 + Bound3` where `Bound` is a
     /// trait or a lifetime.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct TypeTraitObject {
-        pub dyn_token: Option<Token![dyn]>,
-        pub bounds: Punctuated<TypeParamBound, Token![+]>,
-    }
-}
+    TraitObject(TypeTraitObject),
 
-ast_struct! {
     /// A tuple type: `(A, B, C, String)`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct TypeTuple {
-        pub paren_token: token::Paren,
-        pub elems: NodeList<Type, Token![,]>,
-    }
+    Tuple(TypeTuple),
+
+    /// Tokens in type position not interpreted by Syn.
+    Verbatim(TokenStream),
+    // For testing exhaustiveness in downstream code, use the following idiom:
+    //
+    //     match ty {
+    //         #![cfg_attr(test, deny(non_exhaustive_omitted_patterns))]
+    //
+    //         Type::Array(ty) => {...}
+    //         Type::BareFn(ty) => {...}
+    //         ...
+    //         Type::Verbatim(ty) => {...}
+    //
+    //         _ => { /* some sane fallback */ }
+    //     }
+    //
+    // This way we fail your tests but don't break your library when adding
+    // a variant. You will be notified by a test failure when a variant is
+    // added, so that you can add code to handle it, but your library will
+    // continue to compile and work for downstream users in the interim.
 }
 
-ast_struct! {
-    /// The binary interface of a function: `extern "C"`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct Abi {
-        pub extern_token: Token![extern],
-        pub name: Option<LitStr>,
-    }
+#[derive(Debug, CmpSyn)]
+/// A fixed size array type: `[T; n]`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct TypeArray {
+    pub bracket_token: token::Bracket,
+    pub elem: NodeId<Type>,
+    pub semi_token: Token![;],
+    pub len: NodeId<Expr>,
 }
 
-ast_struct! {
-    /// An argument in a function type: the `usize` in `fn(usize) -> bool`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct BareFnArg {
-        pub attrs: Vec<Attribute>,
-        pub name: Option<(NodeId<Ident>, Token![:])>,
-        pub ty: NodeId<Type>,
-    }
+#[derive(Debug, CmpSyn)]
+/// A bare function type: `fn(usize) -> bool`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct TypeBareFn {
+    pub lifetimes: Option<BoundLifetimes>,
+    pub unsafety: Option<Token![unsafe]>,
+    pub abi: Option<Abi>,
+    pub fn_token: Token![fn],
+    pub paren_token: token::Paren,
+    pub inputs: Punctuated<BareFnArg, Token![,]>,
+    pub variadic: Option<BareVariadic>,
+    pub output: ReturnType,
 }
 
-ast_struct! {
-    /// The variadic argument of a function pointer like `fn(usize, ...)`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct BareVariadic {
-        pub attrs: Vec<Attribute>,
-        pub name: Option<(NodeId<Ident>, Token![:])>,
-        pub dots: Token![...],
-        pub comma: Option<Token![,]>,
-    }
+#[derive(Debug, CmpSyn)]
+/// A type contained within invisible delimiters.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct TypeGroup {
+    pub group_token: token::Group,
+    pub elem: NodeId<Type>,
 }
 
-ast_enum! {
-    /// Return type of a function signature.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub enum ReturnType {
-        /// Return type is not specified.
-        ///
-        /// Functions default to `()` and closures default to type inference.
-        Default,
-        /// A particular type is returned.
-        Type(Token![->], NodeId<Type>),
-    }
+#[derive(Debug, CmpSyn)]
+/// An `impl Bound1 + Bound2 + Bound3` type where `Bound` is a trait or
+/// a lifetime.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct TypeImplTrait {
+    pub impl_token: Token![impl],
+    pub bounds: Punctuated<TypeParamBound, Token![+]>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// Indication that a type should be inferred by the compiler: `_`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct TypeInfer {
+    pub underscore_token: Token![_],
+}
+
+#[derive(Debug, CmpSyn)]
+/// A macro in the type position.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct TypeMacro {
+    pub mac: Macro,
+}
+
+#[derive(Debug, CmpSyn)]
+/// The never type: `!`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct TypeNever {
+    pub bang_token: Token![!],
+}
+
+#[derive(Debug, CmpSyn)]
+/// A parenthesized type equivalent to the inner type.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct TypeParen {
+    pub paren_token: token::Paren,
+    pub elem: NodeId<Type>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A path like `std::slice::Iter`, optionally qualified with a
+/// self-type as in `<Vec<T> as SomeTrait>::Associated`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct TypePath {
+    pub qself: Option<QSelf>,
+    pub path: Path,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A raw pointer type: `*const T` or `*mut T`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct TypePtr {
+    pub star_token: Token![*],
+    pub const_token: Option<Token![const]>,
+    pub mutability: Option<Token![mut]>,
+    pub elem: NodeId<Type>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A reference type: `&'a T` or `&'a mut T`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct TypeReference {
+    pub and_token: Token![&],
+    pub lifetime: Option<Lifetime>,
+    pub mutability: Option<Token![mut]>,
+    pub elem: NodeId<Type>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A dynamically sized slice type: `[T]`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct TypeSlice {
+    pub bracket_token: token::Bracket,
+    pub elem: NodeId<Type>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A trait object type `dyn Bound1 + Bound2 + Bound3` where `Bound` is a
+/// trait or a lifetime.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct TypeTraitObject {
+    pub dyn_token: Option<Token![dyn]>,
+    pub bounds: Punctuated<TypeParamBound, Token![+]>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A tuple type: `(A, B, C, String)`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct TypeTuple {
+    pub paren_token: token::Paren,
+    pub elems: NodeList<Type, Token![,]>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// The binary interface of a function: `extern "C"`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct Abi {
+    pub extern_token: Token![extern],
+    pub name: Option<LitStr>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// An argument in a function type: the `usize` in `fn(usize) -> bool`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct BareFnArg {
+    pub attrs: Vec<Attribute>,
+    pub name: Option<(NodeId<Ident>, Token![:])>,
+    pub ty: NodeId<Type>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// The variadic argument of a function pointer like `fn(usize, ...)`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct BareVariadic {
+    pub attrs: Vec<Attribute>,
+    pub name: Option<(NodeId<Ident>, Token![:])>,
+    pub dots: Token![...],
+    pub comma: Option<Token![,]>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// Return type of a function signature.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub enum ReturnType {
+    /// Return type is not specified.
+    ///
+    /// Functions default to `()` and closures default to type inference.
+    Default,
+    /// A particular type is returned.
+    Type(Token![->], NodeId<Type>),
 }
 
 #[cfg(feature = "parsing")]

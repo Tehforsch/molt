@@ -1,3 +1,4 @@
+use derive_macro::CmpSyn;
 use molt_lib::{NodeId, NodeList};
 
 use crate::attr::Attribute;
@@ -7,78 +8,73 @@ use crate::mac::Macro;
 use crate::pat::Pat;
 use crate::token;
 
-ast_struct! {
-    /// A braced block containing Rust statements.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct Block {
-        pub brace_token: token::Brace,
-        /// Statements in a block
-        pub stmts: NodeList<Stmt, Token![;]>,
-    }
+#[derive(Debug, CmpSyn)]
+/// A braced block containing Rust statements.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct Block {
+    pub brace_token: token::Brace,
+    /// Statements in a block
+    pub stmts: NodeList<Stmt, Token![;]>,
 }
 
 pub struct StmtAllowNoSemi;
 
-ast_enum! {
-    /// A statement, usually ending in a semicolon.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub enum Stmt {
-        /// A local (let) binding.
-        Local(Local),
+#[derive(Debug, CmpSyn)]
+/// A statement, usually ending in a semicolon.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub enum Stmt {
+    /// A local (let) binding.
+    Local(Local),
 
-        /// An item definition.
-        Item(Item),
+    /// An item definition.
+    Item(Item),
 
-        /// Expression, with or without trailing semicolon.
-        Expr(NodeId<Expr>, Option<Token![;]>),
+    /// Expression, with or without trailing semicolon.
+    Expr(NodeId<Expr>, Option<Token![;]>),
 
-        /// A macro invocation in statement position.
-        ///
-        /// Syntactically it's ambiguous which other kind of statement this
-        /// macro would expand to. It can be any of local variable (`let`),
-        /// item, or expression.
-        Macro(StmtMacro),
-    }
-}
-
-ast_struct! {
-    /// A local `let` binding: `let x: u64 = s.parse()?;`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct Local {
-        pub attrs: Vec<Attribute>,
-        pub let_token: Token![let],
-        pub pat: Pat,
-        pub init: Option<LocalInit>,
-        pub semi_token: Token![;],
-    }
-}
-
-ast_struct! {
-    /// The expression assigned in a local `let` binding, including optional
-    /// diverging `else` block.
-    ///
-    /// `LocalInit` represents `= s.parse()?` in `let x: u64 = s.parse()?` and
-    /// `= r else { return }` in `let Ok(x) = r else { return }`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct LocalInit {
-        pub eq_token: Token![=],
-        pub expr: NodeId<Expr>,
-        pub diverge: Option<(Token![else], NodeId<Expr>)>,
-    }
-}
-
-ast_struct! {
     /// A macro invocation in statement position.
     ///
-    /// Syntactically it's ambiguous which other kind of statement this macro
-    /// would expand to. It can be any of local variable (`let`), item, or
-    /// expression.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct StmtMacro {
-        pub attrs: Vec<Attribute>,
-        pub mac: Macro,
-        pub semi_token: Option<Token![;]>,
-    }
+    /// Syntactically it's ambiguous which other kind of statement this
+    /// macro would expand to. It can be any of local variable (`let`),
+    /// item, or expression.
+    Macro(StmtMacro),
+}
+
+#[derive(Debug, CmpSyn)]
+/// A local `let` binding: `let x: u64 = s.parse()?;`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct Local {
+    pub attrs: Vec<Attribute>,
+    pub let_token: Token![let],
+    pub pat: Pat,
+    pub init: Option<LocalInit>,
+    pub semi_token: Token![;],
+}
+
+#[derive(Debug, CmpSyn)]
+/// The expression assigned in a local `let` binding, including optional
+/// diverging `else` block.
+///
+/// `LocalInit` represents `= s.parse()?` in `let x: u64 = s.parse()?` and
+/// `= r else { return }` in `let Ok(x) = r else { return }`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct LocalInit {
+    pub eq_token: Token![=],
+    pub expr: NodeId<Expr>,
+    pub diverge: Option<(Token![else], NodeId<Expr>)>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A macro invocation in statement position.
+///
+/// Syntactically it's ambiguous which other kind of statement this macro
+/// would expand to. It can be any of local variable (`let`), item, or
+/// expression.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct StmtMacro {
+    pub attrs: Vec<Attribute>,
+    pub mac: Macro,
+    pub semi_token: Option<Token![;]>,
 }
 
 #[cfg(feature = "parsing")]

@@ -1,3 +1,5 @@
+use derive_macro::CmpSyn;
+
 use crate::attr::Attribute;
 use crate::data::{Fields, FieldsNamed, Variant};
 use crate::expr::Expr;
@@ -17,304 +19,287 @@ use proc_macro2::TokenStream;
 #[cfg(feature = "parsing")]
 use std::mem;
 
-ast_enum_of_structs! {
-    /// Things that can appear directly inside of a module or scope.
-    ///
-    /// # Syntax tree enum
-    ///
-    /// This type is a [syntax tree enum].
-    ///
-    /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    #[non_exhaustive]
-    pub enum Item {
-        /// A constant item: `const MAX: u16 = 65535`.
-        Const(ItemConst),
-
-        /// An enum definition: `enum Foo<A, B> { A(A), B(B) }`.
-        Enum(ItemEnum),
-
-        /// An `extern crate` item: `extern crate serde`.
-        ExternCrate(ItemExternCrate),
-
-        /// A free-standing function: `fn process(n: usize) -> Result<()> { ...
-        /// }`.
-        Fn(ItemFn),
-
-        /// A block of foreign items: `extern "C" { ... }`.
-        ForeignMod(ItemForeignMod),
-
-        /// An impl block providing trait or associated items: `impl<A> Trait
-        /// for Data<A> { ... }`.
-        Impl(ItemImpl),
-
-        /// A macro invocation, which includes `macro_rules!` definitions.
-        Macro(ItemMacro),
-
-        /// A module or module declaration: `mod m` or `mod m { ... }`.
-        Mod(ItemMod),
-
-        /// A static item: `static BIKE: Shed = Shed(42)`.
-        Static(ItemStatic),
-
-        /// A struct definition: `struct Foo<A> { x: A }`.
-        Struct(ItemStruct),
-
-        /// A trait definition: `pub trait Iterator { ... }`.
-        Trait(ItemTrait),
-
-        /// A trait alias: `pub trait SharableIterator = Iterator + Sync`.
-        TraitAlias(ItemTraitAlias),
-
-        /// A type alias: `type Result<T> = std::result::Result<T, MyError>`.
-        Type(ItemType),
-
-        /// A union definition: `union Foo<A, B> { x: A, y: B }`.
-        Union(ItemUnion),
-
-        /// A use declaration: `use std::collections::HashMap`.
-        Use(ItemUse),
-
-        /// Tokens forming an item not interpreted by Syn.
-        Verbatim(TokenStream),
-
-        // For testing exhaustiveness in downstream code, use the following idiom:
-        //
-        //     match item {
-        //         #![cfg_attr(test, deny(non_exhaustive_omitted_patterns))]
-        //
-        //         Item::Const(item) => {...}
-        //         Item::Enum(item) => {...}
-        //         ...
-        //         Item::Verbatim(item) => {...}
-        //
-        //         _ => { /* some sane fallback */ }
-        //     }
-        //
-        // This way we fail your tests but don't break your library when adding
-        // a variant. You will be notified by a test failure when a variant is
-        // added, so that you can add code to handle it, but your library will
-        // continue to compile and work for downstream users in the interim.
-    }
-}
-
-ast_struct! {
+#[derive(Debug, CmpSyn)]
+/// Things that can appear directly inside of a module or scope.
+///
+/// # Syntax tree enum
+///
+/// This type is a [syntax tree enum].
+///
+/// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+#[non_exhaustive]
+pub enum Item {
     /// A constant item: `const MAX: u16 = 65535`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ItemConst {
-        pub attrs: Vec<Attribute>,
-        pub vis: Visibility,
-        pub const_token: Token![const],
-        pub ident: NodeId<Ident>,
-        pub generics: Generics,
-        pub colon_token: Token![:],
-        pub ty: NodeId<Type>,
-        pub eq_token: Token![=],
-        pub expr: NodeId<Expr>,
-        pub semi_token: Token![;],
-    }
-}
+    Const(ItemConst),
 
-ast_struct! {
     /// An enum definition: `enum Foo<A, B> { A(A), B(B) }`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ItemEnum {
-        pub attrs: Vec<Attribute>,
-        pub vis: Visibility,
-        pub enum_token: Token![enum],
-        pub ident: NodeId<Ident>,
-        pub generics: Generics,
-        pub brace_token: token::Brace,
-        pub variants: Punctuated<Variant, Token![,]>,
-    }
-}
+    Enum(ItemEnum),
 
-ast_struct! {
     /// An `extern crate` item: `extern crate serde`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ItemExternCrate {
-        pub attrs: Vec<Attribute>,
-        pub vis: Visibility,
-        pub extern_token: Token![extern],
-        pub crate_token: Token![crate],
-        pub ident: NodeId<Ident>,
-        pub rename: Option<(Token![as], NodeId<Ident>)>,
-        pub semi_token: Token![;],
-    }
-}
+    ExternCrate(ItemExternCrate),
 
-ast_struct! {
-    /// A free-standing function: `fn process(n: usize) -> Result<()> { ... }`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ItemFn {
-        pub attrs: Vec<Attribute>,
-        pub vis: Visibility,
-        pub sig: Signature,
-        pub block: Box<Block>,
-    }
-}
+    /// A free-standing function: `fn process(n: usize) -> Result<()> { ...
+    /// }`.
+    Fn(ItemFn),
 
-ast_struct! {
     /// A block of foreign items: `extern "C" { ... }`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ItemForeignMod {
-        pub attrs: Vec<Attribute>,
-        pub unsafety: Option<Token![unsafe]>,
-        pub abi: Abi,
-        pub brace_token: token::Brace,
-        pub items: Vec<ForeignItem>,
-    }
-}
+    ForeignMod(ItemForeignMod),
 
-ast_struct! {
     /// An impl block providing trait or associated items: `impl<A> Trait
     /// for Data<A> { ... }`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ItemImpl {
-        pub attrs: Vec<Attribute>,
-        pub defaultness: Option<Token![default]>,
-        pub unsafety: Option<Token![unsafe]>,
-        pub impl_token: Token![impl],
-        pub generics: Generics,
-        /// Trait this impl implements.
-        pub trait_: Option<(Option<Token![!]>, Path, Token![for])>,
-        /// The Self type of the impl.
-        pub self_ty: NodeId<Type>,
-        pub brace_token: token::Brace,
-        pub items: Vec<ImplItem>,
-    }
-}
+    Impl(ItemImpl),
 
-ast_struct! {
     /// A macro invocation, which includes `macro_rules!` definitions.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ItemMacro {
-        pub attrs: Vec<Attribute>,
-        /// The `example` in `macro_rules! example { ... }`.
-        pub ident: Option<NodeId<Ident>>,
-        pub mac: Macro,
-        pub semi_token: Option<Token![;]>,
-    }
-}
+    Macro(ItemMacro),
 
-ast_struct! {
     /// A module or module declaration: `mod m` or `mod m { ... }`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ItemMod {
-        pub attrs: Vec<Attribute>,
-        pub vis: Visibility,
-        pub unsafety: Option<Token![unsafe]>,
-        pub mod_token: Token![mod],
-        pub ident: NodeId<Ident>,
-        pub content: Option<(token::Brace, Vec<Item>)>,
-        pub semi: Option<Token![;]>,
-    }
-}
+    Mod(ItemMod),
 
-ast_struct! {
     /// A static item: `static BIKE: Shed = Shed(42)`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ItemStatic {
-        pub attrs: Vec<Attribute>,
-        pub vis: Visibility,
-        pub static_token: Token![static],
-        pub mutability: StaticMutability,
-        pub ident: NodeId<Ident>,
-        pub colon_token: Token![:],
-        pub ty: NodeId<Type>,
-        pub eq_token: Token![=],
-        pub expr: NodeId<Expr>,
-        pub semi_token: Token![;],
-    }
-}
+    Static(ItemStatic),
 
-ast_struct! {
     /// A struct definition: `struct Foo<A> { x: A }`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ItemStruct {
-        pub attrs: Vec<Attribute>,
-        pub vis: Visibility,
-        pub struct_token: Token![struct],
-        pub ident: NodeId<Ident>,
-        pub generics: Generics,
-        pub fields: Fields,
-        pub semi_token: Option<Token![;]>,
-    }
-}
+    Struct(ItemStruct),
 
-ast_struct! {
     /// A trait definition: `pub trait Iterator { ... }`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ItemTrait {
-        pub attrs: Vec<Attribute>,
-        pub vis: Visibility,
-        pub unsafety: Option<Token![unsafe]>,
-        pub auto_token: Option<Token![auto]>,
-        pub restriction: Option<ImplRestriction>,
-        pub trait_token: Token![trait],
-        pub ident: NodeId<Ident>,
-        pub generics: Generics,
-        pub colon_token: Option<Token![:]>,
-        pub supertraits: Punctuated<TypeParamBound, Token![+]>,
-        pub brace_token: token::Brace,
-        pub items: Vec<TraitItem>,
-    }
-}
+    Trait(ItemTrait),
 
-ast_struct! {
     /// A trait alias: `pub trait SharableIterator = Iterator + Sync`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ItemTraitAlias {
-        pub attrs: Vec<Attribute>,
-        pub vis: Visibility,
-        pub trait_token: Token![trait],
-        pub ident: NodeId<Ident>,
-        pub generics: Generics,
-        pub eq_token: Token![=],
-        pub bounds: Punctuated<TypeParamBound, Token![+]>,
-        pub semi_token: Token![;],
-    }
-}
+    TraitAlias(ItemTraitAlias),
 
-ast_struct! {
     /// A type alias: `type Result<T> = std::result::Result<T, MyError>`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ItemType {
-        pub attrs: Vec<Attribute>,
-        pub vis: Visibility,
-        pub type_token: Token![type],
-        pub ident: NodeId<Ident>,
-        pub generics: Generics,
-        pub eq_token: Token![=],
-        pub ty: NodeId<Type>,
-        pub semi_token: Token![;],
-    }
-}
+    Type(ItemType),
 
-ast_struct! {
     /// A union definition: `union Foo<A, B> { x: A, y: B }`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ItemUnion {
-        pub attrs: Vec<Attribute>,
-        pub vis: Visibility,
-        pub union_token: Token![union],
-        pub ident: NodeId<Ident>,
-        pub generics: Generics,
-        pub fields: FieldsNamed,
-    }
+    Union(ItemUnion),
+
+    /// A use declaration: `use std::collections::HashMap`.
+    Use(ItemUse),
+
+    /// Tokens forming an item not interpreted by Syn.
+    Verbatim(TokenStream),
+    // For testing exhaustiveness in downstream code, use the following idiom:
+    //
+    //     match item {
+    //         #![cfg_attr(test, deny(non_exhaustive_omitted_patterns))]
+    //
+    //         Item::Const(item) => {...}
+    //         Item::Enum(item) => {...}
+    //         ...
+    //         Item::Verbatim(item) => {...}
+    //
+    //         _ => { /* some sane fallback */ }
+    //     }
+    //
+    // This way we fail your tests but don't break your library when adding
+    // a variant. You will be notified by a test failure when a variant is
+    // added, so that you can add code to handle it, but your library will
+    // continue to compile and work for downstream users in the interim.
 }
 
-ast_struct! {
-    /// A use declaration: `use std::collections::HashMap`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ItemUse {
-        pub attrs: Vec<Attribute>,
-        pub vis: Visibility,
-        pub use_token: Token![use],
-        pub leading_colon: Option<Token![::]>,
-        pub tree: UseTree,
-        pub semi_token: Token![;],
-    }
+#[derive(Debug, CmpSyn)]
+/// A constant item: `const MAX: u16 = 65535`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ItemConst {
+    pub attrs: Vec<Attribute>,
+    pub vis: Visibility,
+    pub const_token: Token![const],
+    pub ident: NodeId<Ident>,
+    pub generics: Generics,
+    pub colon_token: Token![:],
+    pub ty: NodeId<Type>,
+    pub eq_token: Token![=],
+    pub expr: NodeId<Expr>,
+    pub semi_token: Token![;],
+}
+
+#[derive(Debug, CmpSyn)]
+/// An enum definition: `enum Foo<A, B> { A(A), B(B) }`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ItemEnum {
+    pub attrs: Vec<Attribute>,
+    pub vis: Visibility,
+    pub enum_token: Token![enum],
+    pub ident: NodeId<Ident>,
+    pub generics: Generics,
+    pub brace_token: token::Brace,
+    pub variants: Punctuated<Variant, Token![,]>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// An `extern crate` item: `extern crate serde`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ItemExternCrate {
+    pub attrs: Vec<Attribute>,
+    pub vis: Visibility,
+    pub extern_token: Token![extern],
+    pub crate_token: Token![crate],
+    pub ident: NodeId<Ident>,
+    pub rename: Option<(Token![as], NodeId<Ident>)>,
+    pub semi_token: Token![;],
+}
+
+#[derive(Debug, CmpSyn)]
+/// A free-standing function: `fn process(n: usize) -> Result<()> { ... }`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ItemFn {
+    pub attrs: Vec<Attribute>,
+    pub vis: Visibility,
+    pub sig: Signature,
+    pub block: Box<Block>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A block of foreign items: `extern "C" { ... }`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ItemForeignMod {
+    pub attrs: Vec<Attribute>,
+    pub unsafety: Option<Token![unsafe]>,
+    pub abi: Abi,
+    pub brace_token: token::Brace,
+    pub items: Vec<ForeignItem>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// An impl block providing trait or associated items: `impl<A> Trait
+/// for Data<A> { ... }`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ItemImpl {
+    pub attrs: Vec<Attribute>,
+    pub defaultness: Option<Token![default]>,
+    pub unsafety: Option<Token![unsafe]>,
+    pub impl_token: Token![impl],
+    pub generics: Generics,
+    /// Trait this impl implements.
+    pub trait_: Option<(Option<Token![!]>, Path, Token![for])>,
+    /// The Self type of the impl.
+    pub self_ty: NodeId<Type>,
+    pub brace_token: token::Brace,
+    pub items: Vec<ImplItem>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A macro invocation, which includes `macro_rules!` definitions.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ItemMacro {
+    pub attrs: Vec<Attribute>,
+    /// The `example` in `macro_rules! example { ... }`.
+    pub ident: Option<NodeId<Ident>>,
+    pub mac: Macro,
+    pub semi_token: Option<Token![;]>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A module or module declaration: `mod m` or `mod m { ... }`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ItemMod {
+    pub attrs: Vec<Attribute>,
+    pub vis: Visibility,
+    pub unsafety: Option<Token![unsafe]>,
+    pub mod_token: Token![mod],
+    pub ident: NodeId<Ident>,
+    pub content: Option<(token::Brace, Vec<Item>)>,
+    pub semi: Option<Token![;]>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A static item: `static BIKE: Shed = Shed(42)`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ItemStatic {
+    pub attrs: Vec<Attribute>,
+    pub vis: Visibility,
+    pub static_token: Token![static],
+    pub mutability: StaticMutability,
+    pub ident: NodeId<Ident>,
+    pub colon_token: Token![:],
+    pub ty: NodeId<Type>,
+    pub eq_token: Token![=],
+    pub expr: NodeId<Expr>,
+    pub semi_token: Token![;],
+}
+
+#[derive(Debug, CmpSyn)]
+/// A struct definition: `struct Foo<A> { x: A }`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ItemStruct {
+    pub attrs: Vec<Attribute>,
+    pub vis: Visibility,
+    pub struct_token: Token![struct],
+    pub ident: NodeId<Ident>,
+    pub generics: Generics,
+    pub fields: Fields,
+    pub semi_token: Option<Token![;]>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A trait definition: `pub trait Iterator { ... }`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ItemTrait {
+    pub attrs: Vec<Attribute>,
+    pub vis: Visibility,
+    pub unsafety: Option<Token![unsafe]>,
+    pub auto_token: Option<Token![auto]>,
+    pub restriction: Option<ImplRestriction>,
+    pub trait_token: Token![trait],
+    pub ident: NodeId<Ident>,
+    pub generics: Generics,
+    pub colon_token: Option<Token![:]>,
+    pub supertraits: Punctuated<TypeParamBound, Token![+]>,
+    pub brace_token: token::Brace,
+    pub items: Vec<TraitItem>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A trait alias: `pub trait SharableIterator = Iterator + Sync`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ItemTraitAlias {
+    pub attrs: Vec<Attribute>,
+    pub vis: Visibility,
+    pub trait_token: Token![trait],
+    pub ident: NodeId<Ident>,
+    pub generics: Generics,
+    pub eq_token: Token![=],
+    pub bounds: Punctuated<TypeParamBound, Token![+]>,
+    pub semi_token: Token![;],
+}
+
+#[derive(Debug, CmpSyn)]
+/// A type alias: `type Result<T> = std::result::Result<T, MyError>`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ItemType {
+    pub attrs: Vec<Attribute>,
+    pub vis: Visibility,
+    pub type_token: Token![type],
+    pub ident: NodeId<Ident>,
+    pub generics: Generics,
+    pub eq_token: Token![=],
+    pub ty: NodeId<Type>,
+    pub semi_token: Token![;],
+}
+
+#[derive(Debug, CmpSyn)]
+/// A union definition: `union Foo<A, B> { x: A, y: B }`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ItemUnion {
+    pub attrs: Vec<Attribute>,
+    pub vis: Visibility,
+    pub union_token: Token![union],
+    pub ident: NodeId<Ident>,
+    pub generics: Generics,
+    pub fields: FieldsNamed,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A use declaration: `use std::collections::HashMap`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ItemUse {
+    pub attrs: Vec<Attribute>,
+    pub vis: Visibility,
+    pub use_token: Token![use],
+    pub leading_colon: Option<Token![::]>,
+    pub tree: UseTree,
+    pub semi_token: Token![;],
 }
 
 impl Item {
@@ -341,389 +326,364 @@ impl Item {
     }
 }
 
-ast_enum_of_structs! {
-    /// A suffix of an import tree in a `use` item: `Type as Renamed` or `*`.
-    ///
-    /// # Syntax tree enum
-    ///
-    /// This type is a [syntax tree enum].
-    ///
-    /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub enum UseTree {
-        /// A path prefix of imports in a `use` item: `std::...`.
-        Path(UsePath),
-
-        /// An identifier imported by a `use` item: `HashMap`.
-        Name(UseName),
-
-        /// An renamed identifier imported by a `use` item: `HashMap as Map`.
-        Rename(UseRename),
-
-        /// A glob import in a `use` item: `*`.
-        Glob(UseGlob),
-
-        /// A braced group of imports in a `use` item: `{A, B, C}`.
-        Group(UseGroup),
-    }
-}
-
-ast_struct! {
+#[derive(Debug, CmpSyn)]
+/// A suffix of an import tree in a `use` item: `Type as Renamed` or `*`.
+///
+/// # Syntax tree enum
+///
+/// This type is a [syntax tree enum].
+///
+/// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub enum UseTree {
     /// A path prefix of imports in a `use` item: `std::...`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct UsePath {
-        pub ident: NodeId<Ident>,
-        pub colon2_token: Token![::],
-        pub tree: Box<UseTree>,
-    }
-}
+    Path(UsePath),
 
-ast_struct! {
     /// An identifier imported by a `use` item: `HashMap`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct UseName {
-        pub ident: NodeId<Ident>,
-    }
-}
+    Name(UseName),
 
-ast_struct! {
     /// An renamed identifier imported by a `use` item: `HashMap as Map`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct UseRename {
-        pub ident: NodeId<Ident>,
-        pub as_token: Token![as],
-        pub rename: Ident,
-    }
-}
+    Rename(UseRename),
 
-ast_struct! {
     /// A glob import in a `use` item: `*`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct UseGlob {
-        pub star_token: Token![*],
-    }
-}
+    Glob(UseGlob),
 
-ast_struct! {
     /// A braced group of imports in a `use` item: `{A, B, C}`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct UseGroup {
-        pub brace_token: token::Brace,
-        pub items: Punctuated<UseTree, Token![,]>,
-    }
+    Group(UseGroup),
 }
 
-ast_enum_of_structs! {
-    /// An item within an `extern` block.
-    ///
-    /// # Syntax tree enum
-    ///
-    /// This type is a [syntax tree enum].
-    ///
-    /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    #[non_exhaustive]
-    pub enum ForeignItem {
-        /// A foreign function in an `extern` block.
-        Fn(ForeignItemFn),
-
-        /// A foreign static item in an `extern` block: `static ext: u8`.
-        Static(ForeignItemStatic),
-
-        /// A foreign type in an `extern` block: `type void`.
-        Type(ForeignItemType),
-
-        /// A macro invocation within an extern block.
-        Macro(ForeignItemMacro),
-
-        /// Tokens in an `extern` block not interpreted by Syn.
-        Verbatim(TokenStream),
-
-        // For testing exhaustiveness in downstream code, use the following idiom:
-        //
-        //     match item {
-        //         #![cfg_attr(test, deny(non_exhaustive_omitted_patterns))]
-        //
-        //         ForeignItem::Fn(item) => {...}
-        //         ForeignItem::Static(item) => {...}
-        //         ...
-        //         ForeignItem::Verbatim(item) => {...}
-        //
-        //         _ => { /* some sane fallback */ }
-        //     }
-        //
-        // This way we fail your tests but don't break your library when adding
-        // a variant. You will be notified by a test failure when a variant is
-        // added, so that you can add code to handle it, but your library will
-        // continue to compile and work for downstream users in the interim.
-    }
+#[derive(Debug, CmpSyn)]
+/// A path prefix of imports in a `use` item: `std::...`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct UsePath {
+    pub ident: NodeId<Ident>,
+    pub colon2_token: Token![::],
+    pub tree: Box<UseTree>,
 }
 
-ast_struct! {
+#[derive(Debug, CmpSyn)]
+/// An identifier imported by a `use` item: `HashMap`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct UseName {
+    pub ident: NodeId<Ident>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// An renamed identifier imported by a `use` item: `HashMap as Map`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct UseRename {
+    pub ident: NodeId<Ident>,
+    pub as_token: Token![as],
+    pub rename: Ident,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A glob import in a `use` item: `*`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct UseGlob {
+    pub star_token: Token![*],
+}
+
+#[derive(Debug, CmpSyn)]
+/// A braced group of imports in a `use` item: `{A, B, C}`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct UseGroup {
+    pub brace_token: token::Brace,
+    pub items: Punctuated<UseTree, Token![,]>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// An item within an `extern` block.
+///
+/// # Syntax tree enum
+///
+/// This type is a [syntax tree enum].
+///
+/// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+#[non_exhaustive]
+pub enum ForeignItem {
     /// A foreign function in an `extern` block.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ForeignItemFn {
-        pub attrs: Vec<Attribute>,
-        pub vis: Visibility,
-        pub sig: Signature,
-        pub semi_token: Token![;],
-    }
-}
+    Fn(ForeignItemFn),
 
-ast_struct! {
     /// A foreign static item in an `extern` block: `static ext: u8`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ForeignItemStatic {
-        pub attrs: Vec<Attribute>,
-        pub vis: Visibility,
-        pub static_token: Token![static],
-        pub mutability: StaticMutability,
-        pub ident: NodeId<Ident>,
-        pub colon_token: Token![:],
-        pub ty: NodeId<Type>,
-        pub semi_token: Token![;],
-    }
-}
+    Static(ForeignItemStatic),
 
-ast_struct! {
     /// A foreign type in an `extern` block: `type void`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ForeignItemType {
-        pub attrs: Vec<Attribute>,
-        pub vis: Visibility,
-        pub type_token: Token![type],
-        pub ident: NodeId<Ident>,
-        pub generics: Generics,
-        pub semi_token: Token![;],
-    }
-}
+    Type(ForeignItemType),
 
-ast_struct! {
     /// A macro invocation within an extern block.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ForeignItemMacro {
-        pub attrs: Vec<Attribute>,
-        pub mac: Macro,
-        pub semi_token: Option<Token![;]>,
-    }
+    Macro(ForeignItemMacro),
+
+    /// Tokens in an `extern` block not interpreted by Syn.
+    Verbatim(TokenStream),
+    // For testing exhaustiveness in downstream code, use the following idiom:
+    //
+    //     match item {
+    //         #![cfg_attr(test, deny(non_exhaustive_omitted_patterns))]
+    //
+    //         ForeignItem::Fn(item) => {...}
+    //         ForeignItem::Static(item) => {...}
+    //         ...
+    //         ForeignItem::Verbatim(item) => {...}
+    //
+    //         _ => { /* some sane fallback */ }
+    //     }
+    //
+    // This way we fail your tests but don't break your library when adding
+    // a variant. You will be notified by a test failure when a variant is
+    // added, so that you can add code to handle it, but your library will
+    // continue to compile and work for downstream users in the interim.
 }
 
-ast_enum_of_structs! {
-    /// An item declaration within the definition of a trait.
-    ///
-    /// # Syntax tree enum
-    ///
-    /// This type is a [syntax tree enum].
-    ///
-    /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    #[non_exhaustive]
-    pub enum TraitItem {
-        /// An associated constant within the definition of a trait.
-        Const(TraitItemConst),
-
-        /// An associated function within the definition of a trait.
-        Fn(TraitItemFn),
-
-        /// An associated type within the definition of a trait.
-        Type(TraitItemType),
-
-        /// A macro invocation within the definition of a trait.
-        Macro(TraitItemMacro),
-
-        /// Tokens within the definition of a trait not interpreted by Syn.
-        Verbatim(TokenStream),
-
-        // For testing exhaustiveness in downstream code, use the following idiom:
-        //
-        //     match item {
-        //         #![cfg_attr(test, deny(non_exhaustive_omitted_patterns))]
-        //
-        //         TraitItem::Const(item) => {...}
-        //         TraitItem::Fn(item) => {...}
-        //         ...
-        //         TraitItem::Verbatim(item) => {...}
-        //
-        //         _ => { /* some sane fallback */ }
-        //     }
-        //
-        // This way we fail your tests but don't break your library when adding
-        // a variant. You will be notified by a test failure when a variant is
-        // added, so that you can add code to handle it, but your library will
-        // continue to compile and work for downstream users in the interim.
-    }
+#[derive(Debug, CmpSyn)]
+/// A foreign function in an `extern` block.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ForeignItemFn {
+    pub attrs: Vec<Attribute>,
+    pub vis: Visibility,
+    pub sig: Signature,
+    pub semi_token: Token![;],
 }
 
-ast_struct! {
+#[derive(Debug, CmpSyn)]
+/// A foreign static item in an `extern` block: `static ext: u8`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ForeignItemStatic {
+    pub attrs: Vec<Attribute>,
+    pub vis: Visibility,
+    pub static_token: Token![static],
+    pub mutability: StaticMutability,
+    pub ident: NodeId<Ident>,
+    pub colon_token: Token![:],
+    pub ty: NodeId<Type>,
+    pub semi_token: Token![;],
+}
+
+#[derive(Debug, CmpSyn)]
+/// A foreign type in an `extern` block: `type void`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ForeignItemType {
+    pub attrs: Vec<Attribute>,
+    pub vis: Visibility,
+    pub type_token: Token![type],
+    pub ident: NodeId<Ident>,
+    pub generics: Generics,
+    pub semi_token: Token![;],
+}
+
+#[derive(Debug, CmpSyn)]
+/// A macro invocation within an extern block.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ForeignItemMacro {
+    pub attrs: Vec<Attribute>,
+    pub mac: Macro,
+    pub semi_token: Option<Token![;]>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// An item declaration within the definition of a trait.
+///
+/// # Syntax tree enum
+///
+/// This type is a [syntax tree enum].
+///
+/// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+#[non_exhaustive]
+pub enum TraitItem {
     /// An associated constant within the definition of a trait.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct TraitItemConst {
-        pub attrs: Vec<Attribute>,
-        pub const_token: Token![const],
-        pub ident: NodeId<Ident>,
-        pub generics: Generics,
-        pub colon_token: Token![:],
-        pub ty: NodeId<Type>,
-        pub default: Option<(Token![=], NodeId<Expr>)>,
-        pub semi_token: Token![;],
-    }
-}
+    Const(TraitItemConst),
 
-ast_struct! {
     /// An associated function within the definition of a trait.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct TraitItemFn {
-        pub attrs: Vec<Attribute>,
-        pub sig: Signature,
-        pub default: Option<Block>,
-        pub semi_token: Option<Token![;]>,
-    }
-}
+    Fn(TraitItemFn),
 
-ast_struct! {
     /// An associated type within the definition of a trait.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct TraitItemType {
-        pub attrs: Vec<Attribute>,
-        pub type_token: Token![type],
-        pub ident: NodeId<Ident>,
-        pub generics: Generics,
-        pub colon_token: Option<Token![:]>,
-        pub bounds: Punctuated<TypeParamBound, Token![+]>,
-        pub default: Option<(Token![=], NodeId<Type>)>,
-        pub semi_token: Token![;],
-    }
-}
+    Type(TraitItemType),
 
-ast_struct! {
     /// A macro invocation within the definition of a trait.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct TraitItemMacro {
-        pub attrs: Vec<Attribute>,
-        pub mac: Macro,
-        pub semi_token: Option<Token![;]>,
-    }
+    Macro(TraitItemMacro),
+
+    /// Tokens within the definition of a trait not interpreted by Syn.
+    Verbatim(TokenStream),
+    // For testing exhaustiveness in downstream code, use the following idiom:
+    //
+    //     match item {
+    //         #![cfg_attr(test, deny(non_exhaustive_omitted_patterns))]
+    //
+    //         TraitItem::Const(item) => {...}
+    //         TraitItem::Fn(item) => {...}
+    //         ...
+    //         TraitItem::Verbatim(item) => {...}
+    //
+    //         _ => { /* some sane fallback */ }
+    //     }
+    //
+    // This way we fail your tests but don't break your library when adding
+    // a variant. You will be notified by a test failure when a variant is
+    // added, so that you can add code to handle it, but your library will
+    // continue to compile and work for downstream users in the interim.
 }
 
-ast_enum_of_structs! {
-    /// An item within an impl block.
-    ///
-    /// # Syntax tree enum
-    ///
-    /// This type is a [syntax tree enum].
-    ///
-    /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    #[non_exhaustive]
-    pub enum ImplItem {
-        /// An associated constant within an impl block.
-        Const(ImplItemConst),
-
-        /// An associated function within an impl block.
-        Fn(ImplItemFn),
-
-        /// An associated type within an impl block.
-        Type(ImplItemType),
-
-        /// A macro invocation within an impl block.
-        Macro(ImplItemMacro),
-
-        /// Tokens within an impl block not interpreted by Syn.
-        Verbatim(TokenStream),
-
-        // For testing exhaustiveness in downstream code, use the following idiom:
-        //
-        //     match item {
-        //         #![cfg_attr(test, deny(non_exhaustive_omitted_patterns))]
-        //
-        //         ImplItem::Const(item) => {...}
-        //         ImplItem::Fn(item) => {...}
-        //         ...
-        //         ImplItem::Verbatim(item) => {...}
-        //
-        //         _ => { /* some sane fallback */ }
-        //     }
-        //
-        // This way we fail your tests but don't break your library when adding
-        // a variant. You will be notified by a test failure when a variant is
-        // added, so that you can add code to handle it, but your library will
-        // continue to compile and work for downstream users in the interim.
-    }
+#[derive(Debug, CmpSyn)]
+/// An associated constant within the definition of a trait.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct TraitItemConst {
+    pub attrs: Vec<Attribute>,
+    pub const_token: Token![const],
+    pub ident: NodeId<Ident>,
+    pub generics: Generics,
+    pub colon_token: Token![:],
+    pub ty: NodeId<Type>,
+    pub default: Option<(Token![=], NodeId<Expr>)>,
+    pub semi_token: Token![;],
 }
 
-ast_struct! {
+#[derive(Debug, CmpSyn)]
+/// An associated function within the definition of a trait.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct TraitItemFn {
+    pub attrs: Vec<Attribute>,
+    pub sig: Signature,
+    pub default: Option<Block>,
+    pub semi_token: Option<Token![;]>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// An associated type within the definition of a trait.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct TraitItemType {
+    pub attrs: Vec<Attribute>,
+    pub type_token: Token![type],
+    pub ident: NodeId<Ident>,
+    pub generics: Generics,
+    pub colon_token: Option<Token![:]>,
+    pub bounds: Punctuated<TypeParamBound, Token![+]>,
+    pub default: Option<(Token![=], NodeId<Type>)>,
+    pub semi_token: Token![;],
+}
+
+#[derive(Debug, CmpSyn)]
+/// A macro invocation within the definition of a trait.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct TraitItemMacro {
+    pub attrs: Vec<Attribute>,
+    pub mac: Macro,
+    pub semi_token: Option<Token![;]>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// An item within an impl block.
+///
+/// # Syntax tree enum
+///
+/// This type is a [syntax tree enum].
+///
+/// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+#[non_exhaustive]
+pub enum ImplItem {
     /// An associated constant within an impl block.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ImplItemConst {
-        pub attrs: Vec<Attribute>,
-        pub vis: Visibility,
-        pub defaultness: Option<Token![default]>,
-        pub const_token: Token![const],
-        pub ident: NodeId<Ident>,
-        pub generics: Generics,
-        pub colon_token: Token![:],
-        pub ty: NodeId<Type>,
-        pub eq_token: Token![=],
-        pub expr: NodeId<Expr>,
-        pub semi_token: Token![;],
-    }
-}
+    Const(ImplItemConst),
 
-ast_struct! {
     /// An associated function within an impl block.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ImplItemFn {
-        pub attrs: Vec<Attribute>,
-        pub vis: Visibility,
-        pub defaultness: Option<Token![default]>,
-        pub sig: Signature,
-        pub block: Block,
-    }
-}
+    Fn(ImplItemFn),
 
-ast_struct! {
     /// An associated type within an impl block.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ImplItemType {
-        pub attrs: Vec<Attribute>,
-        pub vis: Visibility,
-        pub defaultness: Option<Token![default]>,
-        pub type_token: Token![type],
-        pub ident: NodeId<Ident>,
-        pub generics: Generics,
-        pub eq_token: Token![=],
-        pub ty: NodeId<Type>,
-        pub semi_token: Token![;],
-    }
-}
+    Type(ImplItemType),
 
-ast_struct! {
     /// A macro invocation within an impl block.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct ImplItemMacro {
-        pub attrs: Vec<Attribute>,
-        pub mac: Macro,
-        pub semi_token: Option<Token![;]>,
-    }
+    Macro(ImplItemMacro),
+
+    /// Tokens within an impl block not interpreted by Syn.
+    Verbatim(TokenStream),
+    // For testing exhaustiveness in downstream code, use the following idiom:
+    //
+    //     match item {
+    //         #![cfg_attr(test, deny(non_exhaustive_omitted_patterns))]
+    //
+    //         ImplItem::Const(item) => {...}
+    //         ImplItem::Fn(item) => {...}
+    //         ...
+    //         ImplItem::Verbatim(item) => {...}
+    //
+    //         _ => { /* some sane fallback */ }
+    //     }
+    //
+    // This way we fail your tests but don't break your library when adding
+    // a variant. You will be notified by a test failure when a variant is
+    // added, so that you can add code to handle it, but your library will
+    // continue to compile and work for downstream users in the interim.
 }
 
-ast_struct! {
-    /// A function signature in a trait or implementation: `unsafe fn
-    /// initialize(&self)`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct Signature {
-        pub constness: Option<Token![const]>,
-        pub asyncness: Option<Token![async]>,
-        pub unsafety: Option<Token![unsafe]>,
-        pub abi: Option<Abi>,
-        pub fn_token: Token![fn],
-        pub ident: NodeId<Ident>,
-        pub generics: Generics,
-        pub paren_token: token::Paren,
-        pub inputs: Punctuated<FnArg, Token![,]>,
-        pub variadic: Option<Variadic>,
-        pub output: ReturnType,
-    }
+#[derive(Debug, CmpSyn)]
+/// An associated constant within an impl block.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ImplItemConst {
+    pub attrs: Vec<Attribute>,
+    pub vis: Visibility,
+    pub defaultness: Option<Token![default]>,
+    pub const_token: Token![const],
+    pub ident: NodeId<Ident>,
+    pub generics: Generics,
+    pub colon_token: Token![:],
+    pub ty: NodeId<Type>,
+    pub eq_token: Token![=],
+    pub expr: NodeId<Expr>,
+    pub semi_token: Token![;],
+}
+
+#[derive(Debug, CmpSyn)]
+/// An associated function within an impl block.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ImplItemFn {
+    pub attrs: Vec<Attribute>,
+    pub vis: Visibility,
+    pub defaultness: Option<Token![default]>,
+    pub sig: Signature,
+    pub block: Block,
+}
+
+#[derive(Debug, CmpSyn)]
+/// An associated type within an impl block.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ImplItemType {
+    pub attrs: Vec<Attribute>,
+    pub vis: Visibility,
+    pub defaultness: Option<Token![default]>,
+    pub type_token: Token![type],
+    pub ident: NodeId<Ident>,
+    pub generics: Generics,
+    pub eq_token: Token![=],
+    pub ty: NodeId<Type>,
+    pub semi_token: Token![;],
+}
+
+#[derive(Debug, CmpSyn)]
+/// A macro invocation within an impl block.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct ImplItemMacro {
+    pub attrs: Vec<Attribute>,
+    pub mac: Macro,
+    pub semi_token: Option<Token![;]>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A function signature in a trait or implementation: `unsafe fn
+/// initialize(&self)`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct Signature {
+    pub constness: Option<Token![const]>,
+    pub asyncness: Option<Token![async]>,
+    pub unsafety: Option<Token![unsafe]>,
+    pub abi: Option<Abi>,
+    pub fn_token: Token![fn],
+    pub ident: NodeId<Ident>,
+    pub generics: Generics,
+    pub paren_token: token::Paren,
+    pub inputs: Punctuated<FnArg, Token![,]>,
+    pub variadic: Option<Variadic>,
+    pub output: ReturnType,
 }
 
 impl Signature {
@@ -737,35 +697,33 @@ impl Signature {
     }
 }
 
-ast_enum_of_structs! {
-    /// An argument in a function signature: the `n: usize` in `fn f(n: usize)`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub enum FnArg {
-        /// The `self` argument of an associated method.
-        Receiver(Receiver),
+#[derive(Debug, CmpSyn)]
+/// An argument in a function signature: the `n: usize` in `fn f(n: usize)`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub enum FnArg {
+    /// The `self` argument of an associated method.
+    Receiver(Receiver),
 
-        /// A function argument accepted by pattern and type.
-        Typed(PatType),
-    }
+    /// A function argument accepted by pattern and type.
+    Typed(PatType),
 }
 
-ast_struct! {
-    /// The `self` argument of an associated method.
-    ///
-    /// If `colon_token` is present, the receiver is written with an explicit
-    /// type such as `self: Box<Self>`. If `colon_token` is absent, the receiver
-    /// is written in shorthand such as `self` or `&self` or `&mut self`. In the
-    /// shorthand case, the type in `ty` is reconstructed as one of `Self`,
-    /// `&Self`, or `&mut Self`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct Receiver {
-        pub attrs: Vec<Attribute>,
-        pub reference: Option<(Token![&], Option<Lifetime>)>,
-        pub mutability: Option<Token![mut]>,
-        pub self_token: Token![self],
-        pub colon_token: Option<Token![:]>,
-        pub ty: Option<NodeId<Type>>,
-    }
+#[derive(Debug, CmpSyn)]
+/// The `self` argument of an associated method.
+///
+/// If `colon_token` is present, the receiver is written with an explicit
+/// type such as `self: Box<Self>`. If `colon_token` is absent, the receiver
+/// is written in shorthand such as `self` or `&self` or `&mut self`. In the
+/// shorthand case, the type in `ty` is reconstructed as one of `Self`,
+/// `&Self`, or `&mut Self`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct Receiver {
+    pub attrs: Vec<Attribute>,
+    pub reference: Option<(Token![&], Option<Lifetime>)>,
+    pub mutability: Option<Token![mut]>,
+    pub self_token: Token![self],
+    pub colon_token: Option<Token![:]>,
+    pub ty: Option<NodeId<Type>>,
 }
 
 impl Receiver {
@@ -774,53 +732,49 @@ impl Receiver {
     }
 }
 
-ast_struct! {
-    /// The variadic argument of a foreign function.
-    ///
-    /// ```rust
-    /// # struct c_char;
-    /// # struct c_int;
-    /// #
-    /// extern "C" {
-    ///     fn printf(format: *const c_char, ...) -> c_int;
-    ///     //                               ^^^
-    /// }
-    /// ```
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    pub struct Variadic {
-        pub attrs: Vec<Attribute>,
-        pub pat: Option<(Box<Pat>, Token![:])>,
-        pub dots: Token![...],
-        pub comma: Option<Token![,]>,
-    }
+#[derive(Debug, CmpSyn)]
+/// The variadic argument of a foreign function.
+///
+/// ```rust
+/// # struct c_char;
+/// # struct c_int;
+/// #
+/// extern "C" {
+///     fn printf(format: *const c_char, ...) -> c_int;
+///     //                               ^^^
+/// }
+/// ```
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+pub struct Variadic {
+    pub attrs: Vec<Attribute>,
+    pub pat: Option<(Box<Pat>, Token![:])>,
+    pub dots: Token![...],
+    pub comma: Option<Token![,]>,
 }
 
-ast_enum! {
-    /// The mutability of an `Item::Static` or `ForeignItem::Static`.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    #[non_exhaustive]
-    pub enum StaticMutability {
-        Mut(Token![mut]),
-        None,
-    }
+#[derive(Debug, CmpSyn)]
+/// The mutability of an `Item::Static` or `ForeignItem::Static`.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+#[non_exhaustive]
+pub enum StaticMutability {
+    Mut(Token![mut]),
+    None,
 }
 
-ast_enum! {
-    /// Unused, but reserved for RFC 3323 restrictions.
-    #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
-    #[non_exhaustive]
-    pub enum ImplRestriction {}
+#[derive(Debug, CmpSyn)]
+/// Unused, but reserved for RFC 3323 restrictions.
+#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
+#[non_exhaustive]
+pub enum ImplRestriction {}
 
-
-    // TODO: https://rust-lang.github.io/rfcs/3323-restrictions.html
-    //
-    // pub struct ImplRestriction {
-    //     pub impl_token: Token![impl],
-    //     pub paren_token: token::Paren,
-    //     pub in_token: Option<Token![in]>,
-    //     pub path: Box<Path>,
-    // }
-}
+// TODO: https://rust-lang.github.io/rfcs/3323-restrictions.html
+//
+// pub struct ImplRestriction {
+//     pub impl_token: Token![impl],
+//     pub paren_token: token::Paren,
+//     pub in_token: Option<Token![in]>,
+//     pub path: Box<Path>,
+// }
 
 #[cfg(feature = "parsing")]
 pub(crate) mod parsing {

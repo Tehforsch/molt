@@ -6,13 +6,10 @@ pub use proc_macro2::Ident;
 pub struct AnyIdent;
 pub struct TokenIdent<T>(T);
 
-#[cfg(feature = "parsing")]
-pub_if_not_doc! {
-    #[doc(hidden)]
-    #[allow(non_snake_case)]
-    pub fn Ident(marker: lookahead::TokenMarker) -> Ident {
-        match marker {}
-    }
+#[doc(hidden)]
+#[allow(non_snake_case)]
+pub fn Ident(marker: lookahead::TokenMarker) -> Ident {
+    match marker {}
 }
 
 macro_rules! ident_from_token {

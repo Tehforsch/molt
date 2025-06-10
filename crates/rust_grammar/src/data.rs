@@ -1,3 +1,4 @@
+use derive_macro::CmpSyn;
 use molt_lib::{NodeId, NodeList};
 
 use crate::attr::Attribute;
@@ -8,87 +9,82 @@ use crate::restriction::{FieldMutability, Visibility};
 use crate::token;
 use crate::ty::Type;
 
-ast_struct! {
-    /// An enum variant.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct Variant {
-        pub attrs: Vec<Attribute>,
+#[derive(Debug, CmpSyn)]
+/// An enum variant.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct Variant {
+    pub attrs: Vec<Attribute>,
 
-        /// Name of the variant.
-        pub ident: NodeId<Ident>,
+    /// Name of the variant.
+    pub ident: NodeId<Ident>,
 
-        /// Content stored in the variant.
-        pub fields: Fields,
+    /// Content stored in the variant.
+    pub fields: Fields,
 
-        /// Explicit discriminant: `Variant = 1`
-        pub discriminant: Option<(Token![=], NodeId<Expr>)>,
-    }
+    /// Explicit discriminant: `Variant = 1`
+    pub discriminant: Option<(Token![=], NodeId<Expr>)>,
 }
 
-ast_enum_of_structs! {
-    /// Data stored within an enum variant or struct.
-    ///
-    /// # Syntax tree enum
-    ///
-    /// This type is a [syntax tree enum].
-    ///
-    /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub enum Fields {
-        /// Named fields of a struct or struct variant such as `Point { x: f64,
-        /// y: f64 }`.
-        Named(FieldsNamed),
+#[derive(Debug, CmpSyn)]
+/// Data stored within an enum variant or struct.
+///
+/// # Syntax tree enum
+///
+/// This type is a [syntax tree enum].
+///
+/// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub enum Fields {
+    /// Named fields of a struct or struct variant such as `Point { x: f64,
+    /// y: f64 }`.
+    Named(FieldsNamed),
 
-        /// Unnamed fields of a tuple struct or tuple variant such as `Some(T)`.
-        Unnamed(FieldsUnnamed),
+    /// Unnamed fields of a tuple struct or tuple variant such as `Some(T)`.
+    Unnamed(FieldsUnnamed),
 
-        /// Unit struct or unit variant such as `None`.
-        Unit,
-    }
+    /// Unit struct or unit variant such as `None`.
+    Unit,
 }
 
 pub struct FieldNamed;
 
 pub struct FieldUnnamed;
 
-ast_struct! {
-    /// Named fields of a struct or struct variant such as `Point { x: f64,
-    /// y: f64 }`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct FieldsNamed {
-        pub brace_token: token::Brace,
-        pub named: NodeList<Field, Token![,]>,
-    }
+#[derive(Debug, CmpSyn)]
+/// Named fields of a struct or struct variant such as `Point { x: f64,
+/// y: f64 }`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct FieldsNamed {
+    pub brace_token: token::Brace,
+    pub named: NodeList<Field, Token![,]>,
 }
 
-ast_struct! {
-    /// Unnamed fields of a tuple struct or tuple variant such as `Some(T)`.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct FieldsUnnamed {
-        pub paren_token: token::Paren,
-        pub unnamed: NodeList<Field, Token![,]>,
-    }
+#[derive(Debug, CmpSyn)]
+/// Unnamed fields of a tuple struct or tuple variant such as `Some(T)`.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct FieldsUnnamed {
+    pub paren_token: token::Paren,
+    pub unnamed: NodeList<Field, Token![,]>,
 }
 
-ast_struct! {
-    /// A field of a struct or enum variant.
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
-    pub struct Field {
-        pub attrs: Vec<Attribute>,
+#[derive(Debug, CmpSyn)]
+/// A field of a struct or enum variant.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+pub struct Field {
+    pub attrs: Vec<Attribute>,
 
-        pub vis: Visibility,
+    pub vis: Visibility,
 
-        pub mutability: FieldMutability,
+    pub mutability: FieldMutability,
 
-        /// Name of the field, if any.
-        ///
-        /// Fields of tuple structs have no names.
-        pub ident: Option<NodeId<Ident>>,
+    /// Name of the field, if any.
+    ///
+    /// Fields of tuple structs have no names.
+    pub ident: Option<NodeId<Ident>>,
 
-        pub colon_token: Option<Token![:]>,
+    pub colon_token: Option<Token![:]>,
 
-        pub ty: NodeId<Type>,
-    }
+    pub ty: NodeId<Type>,
 }
 
 pub struct Members<'a> {

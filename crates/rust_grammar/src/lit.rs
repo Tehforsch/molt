@@ -1,3 +1,5 @@
+use derive_macro::CmpSyn;
+
 #[cfg(feature = "parsing")]
 use crate::lookahead;
 #[cfg(feature = "parsing")]
@@ -13,80 +15,74 @@ use std::fmt::{self, Display};
 use std::hash::{Hash, Hasher};
 use std::str::{self, FromStr};
 
-ast_enum_of_structs! {
-    /// A Rust literal such as a string or integer or boolean.
-    ///
-    /// # Syntax tree enum
-    ///
-    /// This type is a [syntax tree enum].
-    ///
-    /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-    #[non_exhaustive]
-    pub enum Lit {
-        /// A UTF-8 string literal: `"foo"`.
-        Str(LitStr),
-
-        /// A byte string literal: `b"foo"`.
-        ByteStr(LitByteStr),
-
-        /// A nul-terminated C-string literal: `c"foo"`.
-        CStr(LitCStr),
-
-        /// A byte literal: `b'f'`.
-        Byte(LitByte),
-
-        /// A character literal: `'a'`.
-        Char(LitChar),
-
-        /// An integer literal: `1` or `1u16`.
-        Int(LitInt),
-
-        /// A floating point literal: `1f64` or `1.0e10f64`.
-        ///
-        /// Must be finite. May not be infinite or NaN.
-        Float(LitFloat),
-
-        /// A boolean literal: `true` or `false`.
-        Bool(LitBool),
-
-        /// A raw token literal not interpreted by Syn.
-        Verbatim(Literal),
-    }
-}
-
-ast_struct! {
+#[derive(Debug, CmpSyn)]
+/// A Rust literal such as a string or integer or boolean.
+///
+/// # Syntax tree enum
+///
+/// This type is a [syntax tree enum].
+///
+/// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
+#[non_exhaustive]
+pub enum Lit {
     /// A UTF-8 string literal: `"foo"`.
-    pub struct LitStr {
-        repr: Box<LitRepr>,
-    }
-}
+    Str(LitStr),
 
-ast_struct! {
     /// A byte string literal: `b"foo"`.
-    pub struct LitByteStr {
-        repr: Box<LitRepr>,
-    }
-}
+    ByteStr(LitByteStr),
 
-ast_struct! {
     /// A nul-terminated C-string literal: `c"foo"`.
-    pub struct LitCStr {
-        repr: Box<LitRepr>,
-    }
-}
+    CStr(LitCStr),
 
-ast_struct! {
     /// A byte literal: `b'f'`.
-    pub struct LitByte {
-        repr: Box<LitRepr>,
-    }
+    Byte(LitByte),
+
+    /// A character literal: `'a'`.
+    Char(LitChar),
+
+    /// An integer literal: `1` or `1u16`.
+    Int(LitInt),
+
+    /// A floating point literal: `1f64` or `1.0e10f64`.
+    ///
+    /// Must be finite. May not be infinite or NaN.
+    Float(LitFloat),
+
+    /// A boolean literal: `true` or `false`.
+    Bool(LitBool),
+
+    /// A raw token literal not interpreted by Syn.
+    Verbatim(Literal),
 }
 
-ast_struct! {
-    /// A character literal: `'a'`.
-    pub struct LitChar {
-        repr: Box<LitRepr>,
-    }
+#[derive(Debug, CmpSyn)]
+/// A UTF-8 string literal: `"foo"`.
+pub struct LitStr {
+    repr: Box<LitRepr>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A byte string literal: `b"foo"`.
+pub struct LitByteStr {
+    repr: Box<LitRepr>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A nul-terminated C-string literal: `c"foo"`.
+pub struct LitCStr {
+    repr: Box<LitRepr>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A byte literal: `b'f'`.
+pub struct LitByte {
+    repr: Box<LitRepr>,
+}
+
+#[derive(Debug, CmpSyn)]
+/// A character literal: `'a'`.
+pub struct LitChar {
+    repr: Box<LitRepr>,
 }
 
 #[derive(Debug)]
@@ -102,11 +98,10 @@ impl CmpSyn for LitRepr {
     }
 }
 
-ast_struct! {
-    /// An integer literal: `1` or `1u16`.
-    pub struct LitInt {
-        repr: Box<LitIntRepr>,
-    }
+#[derive(Debug, CmpSyn)]
+/// An integer literal: `1` or `1u16`.
+pub struct LitInt {
+    repr: Box<LitIntRepr>,
 }
 
 #[derive(Debug)]
@@ -123,13 +118,12 @@ impl CmpSyn for LitIntRepr {
     }
 }
 
-ast_struct! {
-    /// A floating point literal: `1f64` or `1.0e10f64`.
-    ///
-    /// Must be finite. May not be infinite or NaN.
-    pub struct LitFloat {
-        repr: Box<LitFloatRepr>,
-    }
+#[derive(Debug, CmpSyn)]
+/// A floating point literal: `1f64` or `1.0e10f64`.
+///
+/// Must be finite. May not be infinite or NaN.
+pub struct LitFloat {
+    repr: Box<LitFloatRepr>,
 }
 
 #[derive(Debug)]
@@ -146,12 +140,11 @@ impl CmpSyn for LitFloatRepr {
     }
 }
 
-ast_struct! {
-    /// A boolean literal: `true` or `false`.
-    pub struct LitBool {
-        pub value: bool,
-        pub span: Span,
-    }
+#[derive(Debug, CmpSyn)]
+/// A boolean literal: `true` or `false`.
+pub struct LitBool {
+    pub value: bool,
+    pub span: Span,
 }
 
 impl LitStr {
@@ -718,13 +711,9 @@ macro_rules! lit_extra_traits {
             }
         }
 
-        #[cfg(feature = "parsing")]
-        pub_if_not_doc! {
-            #[doc(hidden)]
-            #[allow(non_snake_case)]
-            pub fn $ty(marker: lookahead::TokenMarker) -> $ty {
-                match marker {}
-            }
+        #[allow(non_snake_case)]
+        pub fn $ty(marker: lookahead::TokenMarker) -> $ty {
+            match marker {}
         }
     };
 }
@@ -737,13 +726,9 @@ lit_extra_traits!(LitChar);
 lit_extra_traits!(LitInt);
 lit_extra_traits!(LitFloat);
 
-#[cfg(feature = "parsing")]
-pub_if_not_doc! {
-    #[doc(hidden)]
-    #[allow(non_snake_case)]
-    pub fn LitBool(marker: lookahead::TokenMarker) -> LitBool {
-        match marker {}
-    }
+#[allow(non_snake_case)]
+pub fn LitBool(marker: lookahead::TokenMarker) -> LitBool {
+    match marker {}
 }
 
 /// The style of a string literal, either plain quoted or a raw string like
@@ -758,13 +743,10 @@ pub enum StrStyle {
     Raw(usize),
 }
 
-#[cfg(feature = "parsing")]
-pub_if_not_doc! {
-    #[doc(hidden)]
-    #[allow(non_snake_case)]
-    pub fn Lit(marker: lookahead::TokenMarker) -> Lit {
-        match marker {}
-    }
+#[doc(hidden)]
+#[allow(non_snake_case)]
+pub fn Lit(marker: lookahead::TokenMarker) -> Lit {
+    match marker {}
 }
 
 #[cfg(feature = "parsing")]
