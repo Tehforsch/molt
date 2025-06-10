@@ -144,13 +144,8 @@ macro_rules! parse_impl {
     };
     ($parser: ident, $kind: ident, $variant_name: ident, $ty: ty) => {
         if let UserKind::$variant_name = $kind {
-            return Ok($parser
-                .add(
-                    $parser
-                        .parse_spanned::<$ty>()?
-                        .map(|t| Node::$variant_name(t)),
-                )
-                .into());
+            let parsed: NodeId<$ty> = $parser.parse()?;
+            return Ok(parsed.into());
         }
     };
 }
@@ -158,18 +153,10 @@ macro_rules! parse_impl {
 define_user_kind! {
     (Lit, Lit, Lit),
     (Item, Item, Item),
-    (Type, Type, Type, |parser: ParseStream| {
-        let type_: NodeId<Type> = parser.parse()?;
-        Ok(type_.into())
-    }),
-    (Expr, Expr, Expr, |parser: ParseStream| {
-        let expr: NodeId<Expr> = parser.parse()?;
-        Ok(expr.into())
-    }),
-    (Stmt, Stmt, Stmt, |parser: ParseStream| {
-        let stmt: NodeId<Stmt> = parser.parse()?;
-        Ok(stmt.into())
-    }),
+    (Type, Type, Type),
+    (Expr, Expr, Expr),
+    (Stmt, Stmt, Stmt),
+    (Ident, Ident, Ident),
     // Let's see how this works out in practice.
     // We speculatively parse a named field and
     // if it doesn't work out, we parse an unnamed field.
@@ -183,16 +170,4 @@ define_user_kind! {
             Ok(parser.parse_id::<FieldUnnamed>()?.into())
         }
     }),
-    (Ident, Ident, Ident, |parser: ParseStream| {
-        let ident: NodeId<Ident> = parser.parse()?;
-        Ok(ident.into())
-    }),
-    // (NamedField, Field, FieldNamed, |parser: ParseStream| {
-    //     let field: NodeId<Field> = parser.parse_id::<FieldNamed>()?;
-    //     Ok(field.into())
-    // }),
-    // (UnnamedField, Field, FieldUnnamed, |parser: ParseStream| {
-    //     let field: NodeId<Field> = parser.parse_id::<FieldUnnamed>()?;
-    //     Ok(field.into())
-    // }),
 }
