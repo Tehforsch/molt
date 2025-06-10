@@ -92,7 +92,7 @@ pub(crate) mod parsing {
     use crate::path::Path;
     use crate::stmt::{Block, Local, LocalInit, Stmt, StmtMacro};
     use crate::token;
-    use molt_lib::{NodeId, NodeList, ParsingMode, Pattern, Spanned, SpannedPat, WithSpan};
+    use molt_lib::{NodeId, Pattern, Spanned, SpannedPat, WithSpan};
     use proc_macro2::TokenStream;
 
     use super::StmtAllowNoSemi;

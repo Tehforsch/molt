@@ -3,7 +3,7 @@ use derive_macro::CmpSyn;
 #[cfg(feature = "parsing")]
 use crate::error::Result;
 #[cfg(feature = "parsing")]
-use crate::parse::{Parse, ParseStream};
+use crate::parse::ParseStream;
 use crate::path::Path;
 use crate::token::{Brace, Bracket, Paren};
 use proc_macro2::extra::DelimSpan;

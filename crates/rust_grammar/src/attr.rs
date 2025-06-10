@@ -7,9 +7,7 @@ use crate::error::Result;
 use crate::expr::Expr;
 use crate::mac::MacroDelimiter;
 #[cfg(feature = "parsing")]
-use crate::meta::{self, ParseNestedMeta};
-#[cfg(feature = "parsing")]
-use crate::parse::{Parse, ParseStream};
+use crate::parse::ParseStream;
 use crate::path::Path;
 use crate::token;
 use molt_lib::NodeId;

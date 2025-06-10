@@ -16,19 +16,9 @@ use molt_grammar::{Command, MoltFile, UnresolvedMoltFile};
 use molt_lib::Config;
 use molt_lib::ParsingMode;
 use molt_lib::{Id, Match, MatchCtx};
-use rust_grammar::{
-    Node,
-    parse::{Parse, ParseStream},
-};
+use rust_grammar::Node;
 
 pub struct RustFile;
-
-impl Parse for RustFile {
-    fn parse(input: ParseStream) -> rust_grammar::Result<Self> {
-        let _: rust_grammar::File = input.parse()?;
-        Ok(Self)
-    }
-}
 
 type Ctx = molt_lib::Ctx<Node>;
 pub type PatCtx = Ctx;
@@ -87,8 +77,9 @@ impl MoltFile {
 impl RustFile {
     pub(crate) fn new(input: &Input, file_id: FileId) -> Result<(Self, Ctx), Error> {
         let source = input.source(file_id).unwrap();
-        rust_grammar::parse_ctx(RustFile::parse, source, ParsingMode::Real)
+        rust_grammar::parse_file(source, ParsingMode::Real)
             .map_err(|e| Error::parse(e, file_id))
+            .map(|(_, ctx)| (RustFile, ctx))
     }
 }
 

@@ -20,7 +20,7 @@
 //!                 ~~~~^ ~~~~^ ~~~~
 //! ```
 
-use molt_lib::{CmpSyn, NodeId, NodeList};
+use molt_lib::CmpSyn;
 
 use crate::drops::{NoDrop, TrivialDrop};
 #[cfg(feature = "parsing")]

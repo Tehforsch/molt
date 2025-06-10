@@ -2,13 +2,9 @@ use derive_macro::CmpSyn;
 
 #[cfg(feature = "parsing")]
 use crate::lookahead;
-#[cfg(feature = "parsing")]
-use crate::parse::Parse;
-use crate::{Error, Result};
+use crate::{Error, Ident, Result};
 use molt_lib::CmpSyn;
-use proc_macro2::{Ident, Literal, Span};
-#[cfg(feature = "parsing")]
-use proc_macro2::{TokenStream, TokenTree};
+use proc_macro2::{Literal, Span};
 use std::ffi::{CStr, CString};
 use std::fmt::{self, Display};
 #[cfg(feature = "extra-traits")]
@@ -719,29 +715,7 @@ macro_rules! lit_extra_traits {
 }
 
 lit_extra_traits!(LitStr);
-lit_extra_traits!(LitByteStr);
-lit_extra_traits!(LitCStr);
-lit_extra_traits!(LitByte);
-lit_extra_traits!(LitChar);
 lit_extra_traits!(LitInt);
-lit_extra_traits!(LitFloat);
-
-#[allow(non_snake_case)]
-pub fn LitBool(marker: lookahead::TokenMarker) -> LitBool {
-    match marker {}
-}
-
-/// The style of a string literal, either plain quoted or a raw string like
-/// `r##"data"##`.
-#[doc(hidden)] // https://github.com/dtolnay/syn/issues/1566
-pub enum StrStyle {
-    /// An ordinary string like `"data"`.
-    Cooked,
-    /// A raw string like `r##"data"##`.
-    ///
-    /// The unsigned integer is the number of `#` symbols used.
-    Raw(usize),
-}
 
 #[doc(hidden)]
 #[allow(non_snake_case)]

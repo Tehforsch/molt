@@ -1903,10 +1903,7 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     fn array_or_repeat(input: ParseStream) -> Result<Expr> {
-        use molt_lib::NodeList;
-
         use crate::parse::ListOrItem;
 
         let content;

@@ -184,8 +184,8 @@ pub mod discouraged;
 
 use discouraged::Speculative;
 use molt_lib::{
-    Ctx, GetKind, Id, MatchingMode, NodeId, NodeList, ParsingMode, PatNodeList, Pattern,
-    RealNodeList, Single, SingleMatchingMode, Spanned, SpannedPat, ToNode, Var, WithSpan,
+    Ctx, Id, NodeId, NodeList, ParsingMode, PatNodeList, Pattern, RealNodeList, Single,
+    SingleMatchingMode, Spanned, SpannedPat, ToNode, Var, WithSpan,
 };
 
 use crate::buffer::{Cursor, TokenBuffer};
@@ -278,7 +278,7 @@ fn parse_single<T: ParseListOrItem>(input: ParseStream) -> Result<NodeId<T::Targ
     let list_or_item = T::parse_list_or_item(input)?;
     match list_or_item {
         ListOrItem::Item(item) => Ok(input.add_pat(item)),
-        ListOrItem::List(list) => Err(fork.error("Expected a single item, found a list.")),
+        ListOrItem::List(_) => Err(fork.error("Expected a single item, found a list.")),
     }
 }
 
@@ -816,7 +816,7 @@ impl<'a> ParseBuffer<'a> {
 
     fn parse_list_var<T, P>(
         &self,
-        parse_list: impl for<'b> FnOnce(&'b ParseBuffer<'b>) -> Result<Vec<NodeId<T>>>,
+        _parse_list: impl for<'b> FnOnce(&'b ParseBuffer<'b>) -> Result<Vec<NodeId<T>>>,
         parse_single: impl for<'b> FnOnce(&'b ParseBuffer<'b>) -> Result<NodeId<T>>,
     ) -> Result<PatNodeList<T, P>> {
         let _: Token![$] = self.parse()?;
@@ -827,7 +827,7 @@ impl<'a> ParseBuffer<'a> {
             todo!("Implement list kinds")
         } else if lookahead.peek(Paren) {
             let content;
-            let paren_token = parenthesized!(content in self);
+            let _ = parenthesized!(content in self);
             let item = parse_single(&content)?;
             let mode = self.parse()?;
             Ok(PatNodeList::Single(Single::new(item, mode)))
@@ -836,7 +836,7 @@ impl<'a> ParseBuffer<'a> {
         }
     }
 
-    fn peek_list_var(&self, kind: Kind) -> bool {
+    fn peek_list_var(&self, _: Kind) -> bool {
         if self.peek(Token![$]) {
             if self.peek2(Ident) {
                 false
@@ -1008,6 +1008,17 @@ fn parse2_impl<T>(
 pub fn parse_str<T: Parse>(s: &str, mode: ParsingMode) -> Result<T> {
     let ctx = ParseCtx::default();
     parse2_impl(ctx, T::parse, proc_macro2::TokenStream::from_str(s)?, mode)
+}
+
+pub fn parse_str_ctx<T: Parse>(s: &str, mode: ParsingMode) -> Result<(T, Ctx<Node>)> {
+    let ctx = ParseCtx::default();
+    parse2_impl(
+        ctx.clone(),
+        T::parse,
+        proc_macro2::TokenStream::from_str(s)?,
+        mode,
+    )
+    .map(|t| (t, ctx.take()))
 }
 
 pub fn parse_ctx<T>(

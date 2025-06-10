@@ -5,7 +5,7 @@ use crate::expr::Expr;
 use crate::ident::Ident;
 use crate::lifetime::Lifetime;
 use crate::path::Path;
-use crate::punctuated::{Iter, IterMut, Punctuated};
+use crate::punctuated::Punctuated;
 use crate::token;
 use crate::ty::Type;
 use molt_lib::NodeId;

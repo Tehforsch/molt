@@ -1,10 +1,10 @@
-use derive_macro::CmpSyn;
-use molt_lib::{NoPunct, NodeId, NodeList, ParsingMode};
+use molt_lib::{Ctx, NodeId, ParsingMode};
 
 use crate::attr::Attribute;
 use crate::error::Result;
 use crate::item::Item;
-use crate::{parse_str, whitespace};
+use crate::parse::parse_str_ctx;
+use crate::{whitespace, Node};
 
 #[derive(Debug)]
 /// A complete file of Rust source code.
@@ -115,7 +115,7 @@ pub(crate) mod parsing {
     }
 }
 
-pub fn parse_file(mut content: &str, mode: ParsingMode) -> Result<File> {
+pub fn parse_file(mut content: &str, mode: ParsingMode) -> Result<(File, Ctx<Node>)> {
     // Strip the BOM if it is present
     const BOM: &str = "\u{feff}";
     if content.starts_with(BOM) {
@@ -136,9 +136,9 @@ pub fn parse_file(mut content: &str, mode: ParsingMode) -> Result<File> {
         }
     }
 
-    let mut file: File = parse_str(content, mode)?;
+    let (mut file, ctx): (File, _) = parse_str_ctx(content, mode)?;
     file.shebang = shebang;
-    Ok(file)
+    Ok((file, ctx))
 }
 
 #[cfg(feature = "printing")]

@@ -264,11 +264,11 @@ pub(crate) mod parsing {
     use crate::parse::{ListOrItem, Parse, ParseList, ParseListOrItem, ParsePat, ParseStream};
     use crate::path;
     use crate::punctuated::Punctuated;
-    use crate::token::{self, Paren};
+    use crate::token::{self};
     use crate::ty::{
-        Abi, BareFnArg, BareVariadic, ReturnType, Type, TypeArray, TypeBareFn, TypeGroup,
-        TypeImplTrait, TypeInfer, TypeMacro, TypeNever, TypeParen, TypePath, TypePtr,
-        TypeReference, TypeSlice, TypeTraitObject, TypeTuple,
+        Abi, BareFnArg, BareVariadic, ReturnType, Type, TypeArray, TypeBareFn, TypeImplTrait,
+        TypeInfer, TypeMacro, TypeNever, TypeParen, TypePath, TypePtr, TypeReference, TypeSlice,
+        TypeTraitObject, TypeTuple,
     };
     use crate::verbatim;
     use molt_lib::{NodeId, NodeList, Pattern, SpannedPat, WithSpan};

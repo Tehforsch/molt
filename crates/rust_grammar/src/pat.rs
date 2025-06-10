@@ -241,7 +241,6 @@ pub(crate) mod parsing {
     };
     use crate::path::{self, Path, QSelf};
     use crate::punctuated::Punctuated;
-    use crate::stmt::Block;
     use crate::verbatim;
     use crate::{token, Stmt};
     use molt_lib::{Pattern, WithSpan};

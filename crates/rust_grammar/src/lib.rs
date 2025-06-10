@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 #[macro_use]
 mod group;
 
@@ -7,7 +5,6 @@ mod group;
 pub mod token;
 
 mod attr;
-use parse::ParseStream;
 pub use proc_macro2::Span;
 
 mod bigint;
@@ -37,7 +34,7 @@ pub mod ext;
 
 mod file;
 
-pub use crate::file::File;
+pub use crate::file::{parse_file, File};
 
 mod generics;
 
@@ -55,8 +52,6 @@ pub use crate::lit::Lit;
 mod lookahead;
 
 mod mac;
-
-mod meta;
 
 mod op;
 

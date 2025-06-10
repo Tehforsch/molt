@@ -80,7 +80,6 @@ fn make_transformation(
     input: Id,
     output: Id,
 ) -> Transformation {
-    ctx.dump();
     let ast = match_.get_binding(input).ast.unwrap();
     let ast_span = ctx.ast_ctx.get_span(ast);
     Transformation {
