@@ -1,5 +1,6 @@
 use derive_macro::CmpSyn;
 use molt_lib::ToNode;
+use proc_macro2::TokenStream;
 
 use crate::{Expr, Field, Ident, Item, Lit, Stmt, Type};
 
@@ -90,4 +91,5 @@ define_node_and_kind! {
     (Type, Type),
     (Field, Field),
     (Ident, Ident),
+    (Tokens, TokenStream)
 }

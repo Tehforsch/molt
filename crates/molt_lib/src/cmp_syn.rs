@@ -82,14 +82,16 @@ impl_cmp_syn_with_partial_eq!(String);
 // simply reexported types from `proc_macro2`.
 impl CmpSyn for proc_macro2::Literal {
     fn cmp_syn(&self, ctx: &mut Match, pat: &Self) {
-        ctx.cmp_syn(&self.to_string(), &pat.to_string())
+        ctx.eq(&self.to_string(), &pat.to_string())
     }
 }
 
 impl CmpSyn for proc_macro2::TokenStream {
-    fn cmp_syn(&self, _: &mut Match, _: &Self) {
-        // only needed for verbatim items
-        unreachable!()
+    fn cmp_syn(&self, match_: &mut Match, other: &Self) {
+        // Needed for macros and verbatim items.
+        // This impl isnt perfect but good enough
+        // for my purposes so far.
+        match_.eq(self.to_string(), other.to_string());
     }
 }
 

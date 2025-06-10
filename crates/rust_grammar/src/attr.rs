@@ -272,7 +272,7 @@ ast_struct! {
     pub struct MetaList {
         pub path: Path,
         pub delimiter: MacroDelimiter,
-        pub tokens: TokenStream,
+        pub tokens: NodeId<TokenStream>,
     }
 }
 

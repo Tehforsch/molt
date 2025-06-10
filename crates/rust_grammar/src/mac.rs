@@ -4,6 +4,7 @@ use crate::error::Result;
 use crate::parse::{Parse, ParseStream};
 use crate::path::Path;
 use crate::token::{Brace, Bracket, Paren};
+use molt_lib::NodeId;
 use proc_macro2::extra::DelimSpan;
 #[cfg(feature = "parsing")]
 use proc_macro2::Delimiter;
@@ -18,7 +19,7 @@ ast_struct! {
         pub path: Path,
         pub bang_token: Token![!],
         pub delimiter: MacroDelimiter,
-        pub tokens: TokenStream,
+        pub tokens: NodeId<TokenStream>,
     }
 }
 
@@ -51,23 +52,34 @@ impl MacroDelimiter {
 }
 
 #[cfg(feature = "parsing")]
-pub(crate) fn parse_delimiter(input: ParseStream) -> Result<(MacroDelimiter, TokenStream)> {
-    input.step(|cursor| {
-        if let Some((TokenTree::Group(g), rest)) = cursor.token_tree() {
-            let span = g.delim_span();
-            let delimiter = match g.delimiter() {
-                Delimiter::Parenthesis => MacroDelimiter::Paren(Paren(span)),
-                Delimiter::Brace => MacroDelimiter::Brace(Brace(span)),
-                Delimiter::Bracket => MacroDelimiter::Bracket(Bracket(span)),
-                Delimiter::None => {
-                    return Err(cursor.error("expected delimiter"));
-                }
-            };
-            Ok(((delimiter, g.stream()), rest))
-        } else {
-            Err(cursor.error("expected delimiter"))
-        }
-    })
+pub(crate) fn parse_delimiter(input: ParseStream) -> Result<(MacroDelimiter, NodeId<TokenStream>)> {
+    use molt_lib::WithSpan;
+
+    input
+        .step(|cursor| {
+            if let Some((TokenTree::Group(g), rest)) = cursor.token_tree() {
+                let span = g.delim_span();
+                let delimiter = match g.delimiter() {
+                    Delimiter::Parenthesis => MacroDelimiter::Paren(Paren(span)),
+                    Delimiter::Brace => MacroDelimiter::Brace(Brace(span)),
+                    Delimiter::Bracket => MacroDelimiter::Bracket(Bracket(span)),
+                    Delimiter::None => {
+                        return Err(cursor.error("expected delimiter"));
+                    }
+                };
+                // TODO: Since the inner part of the token stream points to the
+                // macro call site, we reconstruct the span in a super hacky way.
+                // There is probably a better way, but I don't know what it is.
+                let range = g.span().byte_range();
+                let start = range.start + 1;
+                let end = (range.end - 1).max(start);
+                let inner_span = molt_lib::Span::new(start, end);
+                Ok(((delimiter, g.stream(), inner_span), rest))
+            } else {
+                Err(cursor.error("expected delimiter"))
+            }
+        })
+        .map(|(delim, tokens, span)| (delim, input.add(tokens.with_span(span))))
 }
 
 #[cfg(feature = "parsing")]
