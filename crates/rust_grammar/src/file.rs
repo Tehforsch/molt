@@ -6,7 +6,7 @@ use crate::error::Result;
 use crate::item::Item;
 use crate::{parse_str, whitespace};
 
-#[derive(Debug, CmpSyn)]
+#[derive(Debug)]
 /// A complete file of Rust source code.
 ///
 /// Typically `File` objects are created with [`parse_file`].

@@ -74,22 +74,22 @@ macro_rules! impl_cmp_syn_with_partial_eq {
 impl_cmp_syn_with_partial_eq!(bool);
 impl_cmp_syn_with_partial_eq!(u32);
 impl_cmp_syn_with_partial_eq!(usize);
-// TODO: Remove? This is needed for shebang on File
-impl_cmp_syn_with_partial_eq!(String);
 
 // The following impls exist because of the orphan rule.
 // I can't do them within `rust_grammar` since they are
 // simply reexported types from `proc_macro2`.
 impl CmpSyn for proc_macro2::Literal {
     fn cmp_syn(&self, ctx: &mut Match, pat: &Self) {
-        ctx.cmp_syn(&self.to_string(), &pat.to_string())
+        ctx.eq(&self.to_string(), &pat.to_string())
     }
 }
 
 impl CmpSyn for proc_macro2::TokenStream {
-    fn cmp_syn(&self, _: &mut Match, _: &Self) {
-        // only needed for verbatim items
-        unreachable!()
+    fn cmp_syn(&self, match_: &mut Match, other: &Self) {
+        // Needed for macros and verbatim items.
+        // This impl isnt perfect but good enough
+        // for my purposes so far.
+        match_.eq(self.to_string(), other.to_string());
     }
 }
 
