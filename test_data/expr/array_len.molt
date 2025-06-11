@@ -1,4 +1,4 @@
 let e: Expr;
-let expr: Type = {
+let ty: Type = {
     [Foo; $e]
 };

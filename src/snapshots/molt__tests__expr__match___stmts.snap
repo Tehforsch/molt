@@ -1,6 +1,7 @@
 ---
 source: src/lib.rs
 expression: "super :: super :: match_pattern(stringify! (expr), stringify! (stmts))"
+snapshot_kind: text
 ---
 note: Match
   ┌─ "test_data/expr/main.rs":2:5
@@ -38,63 +39,69 @@ note: Match
    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":15:9
+   ┌─ "test_data/expr/main.rs":13:5
    │
-15 │         foo();
+13 │     foo = 10;
+   │     ^^^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":16:9
+   │
+16 │         foo();
    │         ^^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":14:5
+   ┌─ "test_data/expr/main.rs":15:5
    │  
-14 │ ╭     fn inner() {
-15 │ │         foo();
-16 │ │     }
+15 │ ╭     fn inner() {
+16 │ │         foo();
+17 │ │     }
    │ ╰─────^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":19:9
+   ┌─ "test_data/expr/main.rs":20:9
    │
-19 │         expr1
+20 │         expr1
    │         ^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":21:9
+   ┌─ "test_data/expr/main.rs":22:9
    │
-21 │         expr2
+22 │         expr2
    │         ^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":23:9
+   ┌─ "test_data/expr/main.rs":24:9
    │
-23 │         expr3
+24 │         expr3
    │         ^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":25:9
+   ┌─ "test_data/expr/main.rs":26:9
    │
-25 │         expr4
+26 │         expr4
    │         ^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":27:9
+   ┌─ "test_data/expr/main.rs":28:9
    │
-27 │         expr5
+28 │         expr5
    │         ^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":18:5
+   ┌─ "test_data/expr/main.rs":19:5
    │  
-18 │ ╭     if cond1 {
-19 │ │         expr1
-20 │ │     } else if cond2 {
-21 │ │         expr2
+19 │ ╭     if cond1 {
+20 │ │         expr1
+21 │ │     } else if cond2 {
+22 │ │         expr2
    · │
-27 │ │         expr5
-28 │ │     }
+28 │ │         expr5
+29 │ │     }
    │ ╰─────^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":30:5
+   ┌─ "test_data/expr/main.rs":31:5
    │
-30 │     return Ok(foo);
+31 │     return Ok(foo);
    │     ^^^^^^^^^^^^^^^ $x

@@ -272,7 +272,16 @@ mod tests {
     test_match_pattern!(ranges, ());
     test_match_pattern!(
         expr,
-        (expr, function_chain, stmts, nested_stmt, return_, array_len)
+        (
+            expr,
+            function_chain,
+            stmts,
+            nested_stmt,
+            return_,
+            array_len,
+            assign_lhs,
+            assign_rhs
+        )
     );
     test_match_pattern!(macros, (macros));
     test_match_pattern!(

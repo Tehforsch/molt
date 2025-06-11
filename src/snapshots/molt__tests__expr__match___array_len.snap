@@ -4,9 +4,9 @@ expression: "super :: super :: match_pattern(stringify! (expr), stringify! (arra
 snapshot_kind: text
 ---
 note: Match
-   ┌─ "test_data/expr/main.rs":33:12
+   ┌─ "test_data/expr/main.rs":34:12
    │
-33 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
-   │            ^^^^^^^^ $expr
+34 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
+   │            ^^^^^^^^ $ty
    │
    = $e = 3

@@ -177,179 +177,197 @@ note: Match
    │               ^^^^^^^^^^^^^^^^^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":15:9
+   ┌─ "test_data/expr/main.rs":13:5
    │
-15 │         foo();
+13 │     foo = 10;
+   │     ^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":13:11
+   │
+13 │     foo = 10;
+   │           ^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":13:5
+   │
+13 │     foo = 10;
+   │     ^^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":16:9
+   │
+16 │         foo();
    │         ^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":15:9
+   ┌─ "test_data/expr/main.rs":16:9
    │
-15 │         foo();
+16 │         foo();
    │         ^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":18:8
+   ┌─ "test_data/expr/main.rs":19:8
    │
-18 │     if cond1 {
+19 │     if cond1 {
    │        ^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":19:9
+   ┌─ "test_data/expr/main.rs":20:9
    │
-19 │         expr1
+20 │         expr1
    │         ^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":20:15
+   ┌─ "test_data/expr/main.rs":21:15
    │
-20 │     } else if cond2 {
+21 │     } else if cond2 {
    │               ^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":21:9
+   ┌─ "test_data/expr/main.rs":22:9
    │
-21 │         expr2
+22 │         expr2
    │         ^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":22:15
+   ┌─ "test_data/expr/main.rs":23:15
    │
-22 │     } else if cond3 {
+23 │     } else if cond3 {
    │               ^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":23:9
+   ┌─ "test_data/expr/main.rs":24:9
    │
-23 │         expr3
+24 │         expr3
    │         ^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":24:15
+   ┌─ "test_data/expr/main.rs":25:15
    │
-24 │     } else if cond4 {
+25 │     } else if cond4 {
    │               ^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":25:9
+   ┌─ "test_data/expr/main.rs":26:9
    │
-25 │         expr4
+26 │         expr4
    │         ^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":27:9
+   ┌─ "test_data/expr/main.rs":28:9
    │
-27 │         expr5
+28 │         expr5
    │         ^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":26:12
+   ┌─ "test_data/expr/main.rs":27:12
    │  
-26 │       } else {
+27 │       } else {
    │ ╭────────────^
-27 │ │         expr5
-28 │ │     }
+28 │ │         expr5
+29 │ │     }
    │ ╰─────^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":24:12
+   ┌─ "test_data/expr/main.rs":25:12
    │  
-24 │       } else if cond4 {
+25 │       } else if cond4 {
    │ ╭────────────^
-25 │ │         expr4
-26 │ │     } else {
-27 │ │         expr5
-28 │ │     }
+26 │ │         expr4
+27 │ │     } else {
+28 │ │         expr5
+29 │ │     }
    │ ╰─────^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":22:12
+   ┌─ "test_data/expr/main.rs":23:12
    │  
-22 │       } else if cond3 {
+23 │       } else if cond3 {
    │ ╭────────────^
-23 │ │         expr3
-24 │ │     } else if cond4 {
-25 │ │         expr4
-26 │ │     } else {
-27 │ │         expr5
-28 │ │     }
+24 │ │         expr3
+25 │ │     } else if cond4 {
+26 │ │         expr4
+27 │ │     } else {
+28 │ │         expr5
+29 │ │     }
    │ ╰─────^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":20:12
+   ┌─ "test_data/expr/main.rs":21:12
    │  
-20 │       } else if cond2 {
+21 │       } else if cond2 {
    │ ╭────────────^
-21 │ │         expr2
-22 │ │     } else if cond3 {
-23 │ │         expr3
+22 │ │         expr2
+23 │ │     } else if cond3 {
+24 │ │         expr3
    · │
-27 │ │         expr5
-28 │ │     }
+28 │ │         expr5
+29 │ │     }
    │ ╰─────^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":18:5
+   ┌─ "test_data/expr/main.rs":19:5
    │  
-18 │ ╭     if cond1 {
-19 │ │         expr1
-20 │ │     } else if cond2 {
-21 │ │         expr2
+19 │ ╭     if cond1 {
+20 │ │         expr1
+21 │ │     } else if cond2 {
+22 │ │         expr2
    · │
-27 │ │         expr5
-28 │ │     }
+28 │ │         expr5
+29 │ │     }
    │ ╰─────^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":30:12
+   ┌─ "test_data/expr/main.rs":31:12
    │
-30 │     return Ok(foo);
+31 │     return Ok(foo);
    │            ^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":30:15
+   ┌─ "test_data/expr/main.rs":31:15
    │
-30 │     return Ok(foo);
+31 │     return Ok(foo);
    │               ^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":30:12
+   ┌─ "test_data/expr/main.rs":31:12
    │
-30 │     return Ok(foo);
+31 │     return Ok(foo);
    │            ^^^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":30:5
+   ┌─ "test_data/expr/main.rs":31:5
    │
-30 │     return Ok(foo);
+31 │     return Ok(foo);
    │     ^^^^^^^^^^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":33:18
+   ┌─ "test_data/expr/main.rs":34:18
    │
-33 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
+34 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
    │                  ^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":33:24
+   ┌─ "test_data/expr/main.rs":34:24
    │
-33 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
+34 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
    │                        ^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":33:29
+   ┌─ "test_data/expr/main.rs":34:29
    │
-33 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
+34 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
    │                             ^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":33:34
+   ┌─ "test_data/expr/main.rs":34:34
    │
-33 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
+34 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
    │                                  ^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":33:23
+   ┌─ "test_data/expr/main.rs":34:23
    │
-33 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
+34 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
    │                       ^^^^^^^^^^^^^^^ $x
