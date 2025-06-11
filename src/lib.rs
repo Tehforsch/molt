@@ -317,7 +317,7 @@ mod tests {
         )
     );
     test_match_pattern!(fields, (fields, field_var));
-    test_match_pattern!(lists, (single));
+    test_match_pattern!(lists, (single, all));
 
     molt_test_err!(
         molt_grammar,

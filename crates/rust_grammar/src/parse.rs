@@ -184,15 +184,15 @@ pub mod discouraged;
 
 use discouraged::Speculative;
 use molt_lib::{
-    Ctx, Id, NodeId, NodeList, ParsingMode, PatNodeList, Pattern, RealNodeList, Single,
-    SingleMatchingMode, Spanned, SpannedPat, ToNode, Var, WithSpan,
+    Ctx, Id, List, ListMatchingMode, NodeId, NodeList, ParsingMode, PatNodeList, Pattern,
+    RealNodeList, Single, SingleMatchingMode, Spanned, SpannedPat, ToNode, Var, WithSpan,
 };
 
 use crate::buffer::{Cursor, TokenBuffer};
 use crate::ext::IdentExt;
 use crate::node::Node;
 use crate::punctuated::Punctuated;
-use crate::token::{Paren, Token};
+use crate::token::{Bracket, Paren, Token};
 use crate::{error, Ident};
 use crate::{lookahead, Kind};
 use proc_macro2::{Delimiter, Group, Literal, Punct, Span, TokenStream, TokenTree};
@@ -314,6 +314,24 @@ impl Parse for SingleMatchingMode {
         if lookahead.peek(Token![?]) {
             let _: Token![?] = input.parse()?;
             Ok(SingleMatchingMode::Any)
+        } else if lookahead.peek(Token![*]) {
+            let _: Token![*] = input.parse()?;
+            Ok(SingleMatchingMode::All)
+        } else {
+            Err(lookahead.error())
+        }
+    }
+}
+
+impl Parse for ListMatchingMode {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let lookahead = input.lookahead1();
+        if lookahead.peek(Token![!]) {
+            let _: Token![!] = input.parse()?;
+            Ok(ListMatchingMode::Exact)
+        } else if lookahead.peek(Token![?]) {
+            let _: Token![?] = input.parse()?;
+            Ok(ListMatchingMode::ContainsAll)
         } else {
             Err(lookahead.error())
         }
@@ -817,7 +835,7 @@ impl<'a> ParseBuffer<'a> {
 
     fn parse_list_var<T, P>(
         &self,
-        _parse_list: impl for<'b> FnOnce(&'b ParseBuffer<'b>) -> Result<Vec<NodeId<T>>>,
+        parse_list: impl for<'b> FnOnce(&'b ParseBuffer<'b>) -> Result<Vec<NodeId<T>>>,
         parse_single: impl for<'b> FnOnce(&'b ParseBuffer<'b>) -> Result<NodeId<T>>,
     ) -> Result<PatNodeList<T, P>> {
         let _: Token![$] = self.parse()?;
@@ -832,6 +850,12 @@ impl<'a> ParseBuffer<'a> {
             let item = parse_single(&content)?;
             let mode = self.parse()?;
             Ok(PatNodeList::Single(Single::new(item, mode)))
+        } else if lookahead.peek(Bracket) {
+            let content;
+            let _ = bracketed!(content in self);
+            let items = parse_list(&content)?;
+            let mode = self.parse()?;
+            Ok(PatNodeList::List(List::new(items, mode)))
         } else {
             Err(lookahead.error())
         }

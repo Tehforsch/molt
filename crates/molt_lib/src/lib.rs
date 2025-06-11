@@ -11,7 +11,8 @@ pub use ctx::{
 };
 
 pub use node_list::{
-    MatchingMode, NoPunct, NodeList, PatNodeList, RealNodeList, Single, SingleMatchingMode,
+    List, ListMatchingMode, NoPunct, NodeList, PatNodeList, RealNodeList, Set, SetMatchingMode,
+    Single, SingleMatchingMode,
 };
 
 pub use config::Config;

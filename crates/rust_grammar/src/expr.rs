@@ -643,7 +643,7 @@ pub struct ExprMatch {
     pub match_token: Token![match],
     pub expr: NodeId<Expr>,
     pub brace_token: token::Brace,
-    pub arms: Vec<Arm>,
+    pub arms: NodeList<Arm, Token![,]>,
 }
 
 #[derive(Debug, CmpSyn)]
@@ -2213,7 +2213,7 @@ pub(crate) mod parsing {
             let brace_token = braced!(content in input);
             attr::parsing::parse_inner(&content, &mut attrs)?;
 
-            let arms = Arm::parse_multiple(&content)?;
+            let arms = content.parse_list::<Arm>()?;
 
             Ok(ExprMatch {
                 attrs,
@@ -2841,12 +2841,13 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
-    impl Arm {
-        pub(crate) fn parse_multiple(input: ParseStream) -> Result<Vec<Self>> {
+    impl ParseList for Arm {
+        type Punct = Token![,];
+
+        fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Arm>>> {
             let mut arms = Vec::new();
             while !input.is_empty() {
-                arms.push(input.call(Arm::parse)?);
+                arms.push(input.parse_id::<Arm>()?);
             }
             Ok(arms)
         }
@@ -2854,34 +2855,38 @@ pub(crate) mod parsing {
 
     #[cfg(feature = "full")]
     #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-    impl Parse for Arm {
-        fn parse(input: ParseStream) -> Result<Arm> {
-            let requires_comma;
-            Ok(Arm {
-                attrs: input.call(Attribute::parse_outer)?,
-                pat: Pat::parse_multi_with_leading_vert(input)?,
-                guard: {
-                    if input.peek(Token![if]) {
-                        let if_token: Token![if] = input.parse()?;
-                        let guard: NodeId<Expr> = input.parse()?;
-                        Some((if_token, guard))
-                    } else {
-                        None
-                    }
-                },
-                fat_arrow_token: input.parse()?,
-                body: {
-                    let body = input.parse_id::<ExprEarlierBoundaryRule>()?;
-                    requires_comma = classify::requires_comma_to_be_match_arm(input, body);
-                    body
-                },
-                comma: {
-                    if requires_comma && !input.is_empty() {
-                        Some(input.parse()?)
-                    } else {
-                        input.parse()?
-                    }
-                },
+    impl ParsePat for Arm {
+        type Target = Arm;
+
+        fn parse_pat(input: ParseStream) -> Result<SpannedPat<Arm>> {
+            input.call_spanned(|input| {
+                let requires_comma;
+                Ok(Arm {
+                    attrs: input.call(Attribute::parse_outer)?,
+                    pat: Pat::parse_multi_with_leading_vert(input)?,
+                    guard: {
+                        if input.peek(Token![if]) {
+                            let if_token: Token![if] = input.parse()?;
+                            let guard: NodeId<Expr> = input.parse()?;
+                            Some((if_token, guard))
+                        } else {
+                            None
+                        }
+                    },
+                    fat_arrow_token: input.parse()?,
+                    body: {
+                        let body = input.parse_id::<ExprEarlierBoundaryRule>()?;
+                        requires_comma = classify::requires_comma_to_be_match_arm(input, body);
+                        body
+                    },
+                    comma: {
+                        if requires_comma && !input.is_empty() {
+                            Some(input.parse()?)
+                        } else {
+                            input.parse()?
+                        }
+                    },
+                })
             })
         }
     }

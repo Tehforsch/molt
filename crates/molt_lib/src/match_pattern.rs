@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
+use crate::node_list::{List, Set};
 use crate::{
-    GetKind, Id, MatchingMode, NodeId, NodeList, PatNodeList, Pattern, RealNodeList, Single,
-    VarDecl,
+    GetKind, Id, ListMatchingMode, NodeId, NodeList, PatNodeList, Pattern, RealNodeList,
+    SetMatchingMode, Single, SingleMatchingMode, VarDecl,
 };
 
 use crate::cmp_syn::CmpSyn;
@@ -191,29 +192,46 @@ impl Match {
     pub fn cmp_lists<T: CmpSyn, P>(&mut self, ts1: &NodeList<T, P>, ts2: &NodeList<T, P>) {
         match (ts1, ts2) {
             (Pattern::Real(ts1), Pattern::Real(ts2)) => {
-                self.cmp_lists_real(ts1, ts2, MatchingMode::Exact)
+                self.cmp_lists_real(ts1.items(), ts2.items())
             }
             (Pattern::Real(ts1), Pattern::Pat(ts2)) => match ts2 {
                 PatNodeList::Single(single) => self.cmp_lists_single(ts1, single),
+                PatNodeList::List(list) => self.cmp_lists_list(ts1, list),
+                PatNodeList::Set(set) => self.cmp_lists_set(ts1, set),
             },
             (Pattern::Pat(_), _) => unreachable!(),
         }
     }
 
-    fn cmp_lists_real<T: CmpSyn, P>(
-        &mut self,
-        ts1: &RealNodeList<T, P>,
-        ts2: &RealNodeList<T, P>,
-        matching_mode: MatchingMode,
-    ) {
-        match matching_mode {
-            MatchingMode::Exact => {
-                self.eq(ts1.len(), ts2.len());
-                for (item1, item2) in ts1.iter().zip(ts2.iter()) {
-                    self.cmp_nodes(*item1, *item2);
+    fn cmp_lists_real<T: CmpSyn>(&mut self, ts1: &[NodeId<T>], ts2: &[NodeId<T>]) {
+        self.eq(ts1.len(), ts2.len());
+        for (item1, item2) in ts1.iter().zip(ts2.iter()) {
+            self.cmp_nodes(*item1, *item2);
+        }
+    }
+
+    fn cmp_lists_single<T: CmpSyn, P>(&mut self, ts1: &RealNodeList<T, P>, ts2: &Single<T, P>) {
+        match ts2.mode() {
+            SingleMatchingMode::Any => {
+                let fork = Fork::new(
+                    ts1.iter()
+                        .map(|item1| Comparison::new(*item1, ts2.item(), self.pat_type))
+                        .collect(),
+                );
+                self.fork(fork);
+            }
+            SingleMatchingMode::All => {
+                for item in ts1.iter() {
+                    self.cmp_syn(item, &ts2.item())
                 }
             }
-            MatchingMode::ContainsAll => {
+        }
+    }
+
+    fn cmp_lists_list<T: CmpSyn, P>(&mut self, ts1: &RealNodeList<T, P>, ts2: &List<T, P>) {
+        match ts2.mode() {
+            ListMatchingMode::Exact => self.cmp_lists_real(ts1.items(), ts2.items()),
+            ListMatchingMode::ContainsAll => {
                 if ts2.is_empty() {
                 } else if ts2.len() == 1 {
                     let item2 = ts2.get(0).unwrap();
@@ -230,13 +248,8 @@ impl Match {
         }
     }
 
-    fn cmp_lists_single<T: CmpSyn, P>(&mut self, ts1: &RealNodeList<T, P>, ts2: &Single<T, P>) {
-        let fork = Fork::new(
-            ts1.iter()
-                .map(|item1| Comparison::new(*item1, ts2.item(), self.pat_type))
-                .collect(),
-        );
-        self.fork(fork);
+    fn cmp_lists_set<T: CmpSyn, P>(&mut self, ts1: &RealNodeList<T, P>, ts2: &Set<T, P>) {
+        todo!()
     }
 
     pub fn check(&mut self, val: bool) {

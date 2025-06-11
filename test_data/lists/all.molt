@@ -1,0 +1,9 @@
+let expr: Expr;
+let ident: Ident;
+let x: Expr = {
+    match foo {
+        $(
+            Foo::$ident => Ok($expr),
+        )*
+    }
+};

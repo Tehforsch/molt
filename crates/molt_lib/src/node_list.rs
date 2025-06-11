@@ -10,12 +10,28 @@ pub type NodeList<T, P> = Pattern<RealNodeList<T, P>, PatNodeList<T, P>>;
 #[derive(Debug)]
 pub enum PatNodeList<T, P> {
     Single(Single<T, P>),
+    List(List<T, P>),
+    Set(Set<T, P>),
 }
 
 #[derive(Debug)]
 pub struct Single<T, P> {
     item: NodeId<T>,
     mode: SingleMatchingMode,
+    _marker: PhantomData<P>,
+}
+
+#[derive(Debug)]
+pub struct List<T, P> {
+    items: Vec<NodeId<T>>,
+    mode: ListMatchingMode,
+    _marker: PhantomData<P>,
+}
+
+#[derive(Debug)]
+pub struct Set<T, P> {
+    items: Vec<NodeId<T>>,
+    mode: SetMatchingMode,
     _marker: PhantomData<P>,
 }
 
@@ -36,6 +52,70 @@ impl<T, P> Single<T, P> {
 
     pub fn item(&self) -> NodeId<T> {
         self.item
+    }
+
+    pub(crate) fn mode(&self) -> SingleMatchingMode {
+        self.mode
+    }
+}
+
+impl<T, P> List<T, P> {
+    pub fn new(items: Vec<NodeId<T>>, mode: ListMatchingMode) -> Self {
+        Self {
+            items,
+            mode,
+            _marker: PhantomData,
+        }
+    }
+
+    pub(crate) fn mode(&self) -> ListMatchingMode {
+        self.mode
+    }
+
+    pub(crate) fn items(&self) -> &[NodeId<T>] {
+        &self.items
+    }
+
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+
+    pub fn get(&self, idx: usize) -> Option<&NodeId<T>> {
+        self.items.get(idx)
+    }
+}
+
+impl<T, P> Set<T, P> {
+    pub fn new(items: Vec<NodeId<T>>, mode: SetMatchingMode) -> Self {
+        Self {
+            items,
+            mode,
+            _marker: PhantomData,
+        }
+    }
+
+    pub(crate) fn mode(&self) -> SetMatchingMode {
+        self.mode
+    }
+
+    pub(crate) fn items(&self) -> &[NodeId<T>] {
+        &self.items
+    }
+
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+
+    pub fn get(&self, idx: usize) -> Option<&NodeId<T>> {
+        self.items.get(idx)
     }
 }
 
@@ -99,6 +179,10 @@ impl<T, P> RealNodeList<T, P> {
     pub fn get(&self, idx: usize) -> Option<&NodeId<T>> {
         self.items.get(idx)
     }
+
+    pub(crate) fn items(&self) -> &[NodeId<T>] {
+        &self.items
+    }
 }
 
 impl<T, P> FromIterator<NodeId<T>> for RealNodeList<T, P> {
@@ -110,13 +194,19 @@ impl<T, P> FromIterator<NodeId<T>> for RealNodeList<T, P> {
     }
 }
 
-#[derive(Debug)]
-pub enum MatchingMode {
+#[derive(Debug, Copy, Clone)]
+pub enum ListMatchingMode {
     Exact,
     ContainsAll,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
+pub enum SetMatchingMode {
+    AllMatch,
+}
+
+#[derive(Debug, Copy, Clone)]
 pub enum SingleMatchingMode {
     Any,
+    All,
 }
