@@ -284,6 +284,7 @@ mod tests {
             await_,
             binary,
             call,
+            cast,
         )
     );
     test_match_pattern!(macros, (macros));
