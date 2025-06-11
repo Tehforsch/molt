@@ -1,0 +1,4 @@
+let e: Expr;
+let expr: Type = {
+    [Foo; $e]
+};

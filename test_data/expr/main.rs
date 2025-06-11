@@ -29,3 +29,5 @@ fn foo() {
 
     return Ok(foo);
 }
+
+const FOO: [Foo; 3] = [Foo, Foo, Foo];

@@ -1,6 +1,7 @@
 ---
 source: src/lib.rs
 expression: "super :: super :: match_pattern(stringify! (expr), stringify! (expr))"
+snapshot_kind: text
 ---
 note: Match
   ┌─ "test_data/expr/main.rs":2:6
@@ -322,3 +323,33 @@ note: Match
    │
 30 │     return Ok(foo);
    │     ^^^^^^^^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":33:18
+   │
+33 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
+   │                  ^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":33:24
+   │
+33 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
+   │                        ^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":33:29
+   │
+33 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
+   │                             ^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":33:34
+   │
+33 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
+   │                                  ^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":33:23
+   │
+33 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
+   │                       ^^^^^^^^^^^^^^^ $x
