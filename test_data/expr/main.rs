@@ -34,3 +34,7 @@ fn foo() {
 }
 
 const FOO: [Foo; 3] = [Foo, Foo, Foo];
+
+fn bar() {
+    (1 + 2) + (3 + 4)
+}

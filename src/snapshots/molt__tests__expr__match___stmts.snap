@@ -111,3 +111,9 @@ note: Match
    │
 33 │     return Ok(foo);
    │     ^^^^^^^^^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":39:5
+   │
+39 │     (1 + 2) + (3 + 4)
+   │     ^^^^^^^^^^^^^^^^^ $x
