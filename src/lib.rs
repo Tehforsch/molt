@@ -280,7 +280,8 @@ mod tests {
             return_,
             array_len,
             assign_lhs,
-            assign_rhs
+            assign_rhs,
+            await_,
         )
     );
     test_match_pattern!(macros, (macros));

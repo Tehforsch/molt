@@ -4,9 +4,9 @@ expression: "super :: super :: match_pattern(stringify! (expr), stringify! (retu
 snapshot_kind: text
 ---
 note: Match
-   ┌─ "test_data/expr/main.rs":31:5
+   ┌─ "test_data/expr/main.rs":33:5
    │
-31 │     return Ok(foo);
+33 │     return Ok(foo);
    │     ^^^^^^^^^^^^^^ $e1
    │
    = $e2 = Ok(foo)

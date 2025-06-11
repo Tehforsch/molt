@@ -1,0 +1,12 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (expr), stringify! (await_))"
+snapshot_kind: text
+---
+note: Match
+   ┌─ "test_data/expr/main.rs":31:5
+   │
+31 │     bar().await;
+   │     ^^^^^^^^^^^ $expr
+   │
+   = $e = bar()

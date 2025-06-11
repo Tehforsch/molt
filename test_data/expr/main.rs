@@ -28,6 +28,8 @@ fn foo() {
         expr5
     }
 
+    bar().await;
+
     return Ok(foo);
 }
 

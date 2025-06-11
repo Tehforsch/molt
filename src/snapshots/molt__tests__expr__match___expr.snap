@@ -319,55 +319,73 @@ note: Match
    │ ╰─────^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":31:12
+   ┌─ "test_data/expr/main.rs":31:5
    │
-31 │     return Ok(foo);
-   │            ^^ $x
-
-note: Match
-   ┌─ "test_data/expr/main.rs":31:15
-   │
-31 │     return Ok(foo);
-   │               ^^^ $x
-
-note: Match
-   ┌─ "test_data/expr/main.rs":31:12
-   │
-31 │     return Ok(foo);
-   │            ^^^^^^^ $x
+31 │     bar().await;
+   │     ^^^ $x
 
 note: Match
    ┌─ "test_data/expr/main.rs":31:5
    │
-31 │     return Ok(foo);
+31 │     bar().await;
+   │     ^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":31:5
+   │
+31 │     bar().await;
+   │     ^^^^^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":33:12
+   │
+33 │     return Ok(foo);
+   │            ^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":33:15
+   │
+33 │     return Ok(foo);
+   │               ^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":33:12
+   │
+33 │     return Ok(foo);
+   │            ^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":33:5
+   │
+33 │     return Ok(foo);
    │     ^^^^^^^^^^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":34:18
+   ┌─ "test_data/expr/main.rs":36:18
    │
-34 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
+36 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
    │                  ^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":34:24
+   ┌─ "test_data/expr/main.rs":36:24
    │
-34 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
+36 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
    │                        ^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":34:29
+   ┌─ "test_data/expr/main.rs":36:29
    │
-34 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
+36 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
    │                             ^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":34:34
+   ┌─ "test_data/expr/main.rs":36:34
    │
-34 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
+36 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
    │                                  ^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":34:23
+   ┌─ "test_data/expr/main.rs":36:23
    │
-34 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
+36 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
    │                       ^^^^^^^^^^^^^^^ $x

@@ -103,5 +103,11 @@ note: Match
 note: Match
    ┌─ "test_data/expr/main.rs":31:5
    │
-31 │     return Ok(foo);
+31 │     bar().await;
+   │     ^^^^^^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":33:5
+   │
+33 │     return Ok(foo);
    │     ^^^^^^^^^^^^^^^ $x
