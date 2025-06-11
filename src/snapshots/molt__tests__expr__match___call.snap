@@ -1,0 +1,12 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (expr), stringify! (call))"
+snapshot_kind: text
+---
+note: Match
+   ┌─ "test_data/expr/main.rs":12:15
+   │
+12 │     let foo = bar.baz().bla().qux();
+   │               ^^^^^^^^^^^^^^^ $expr
+   │
+   = $e = bar.baz()

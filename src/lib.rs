@@ -283,6 +283,7 @@ mod tests {
             assign_rhs,
             await_,
             binary,
+            call,
         )
     );
     test_match_pattern!(macros, (macros));
