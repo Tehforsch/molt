@@ -189,6 +189,7 @@ use molt_lib::{
 };
 
 use crate::buffer::{Cursor, TokenBuffer};
+use crate::ext::IdentExt;
 use crate::node::Node;
 use crate::punctuated::Punctuated;
 use crate::token::{Paren, Token};
@@ -796,7 +797,7 @@ impl<'a> ParseBuffer<'a> {
             if ahead.peek(Token![$]) {
                 let marker = ahead.marker();
                 let _: Token![$] = ahead.parse()?;
-                let ident: Ident = ahead.parse()?;
+                let ident: Ident = Ident::parse_any(&ahead)?;
                 if !kind_matches(&ahead.ctx.borrow(), &ident, T::kind()) {
                     return Ok(None);
                 }
@@ -821,7 +822,7 @@ impl<'a> ParseBuffer<'a> {
     ) -> Result<PatNodeList<T, P>> {
         let _: Token![$] = self.parse()?;
         let lookahead = self.lookahead1();
-        if lookahead.peek(Ident) {
+        if lookahead.peek(Ident::peek_any) {
             // No need to check for the kind here, since that is
             // already done in peek_list_var
             todo!("Implement list kinds")
@@ -838,7 +839,7 @@ impl<'a> ParseBuffer<'a> {
 
     fn peek_list_var(&self, _: Kind) -> bool {
         if self.peek(Token![$]) {
-            if self.peek2(Ident) {
+            if self.peek2(Ident::peek_any) {
                 false
                 // todo!("Implement list kinds")
                 // return kind_matches(&ahead.ctx.borrow(), &ident, T::kind())

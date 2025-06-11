@@ -1,0 +1,18 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (expr), stringify! (if_))"
+---
+note: Match
+   ┌─ "test_data/expr/main.rs":28:12
+   │  
+28 │       } else if cond4 {
+   │ ╭────────────^
+29 │ │         expr4
+30 │ │     } else {
+31 │ │         expr5
+32 │ │     }
+   │ ╰─────^ $expr
+   │  
+   = $cond = cond4
+   = $else = expr5
+   = $then = expr4

@@ -1,0 +1,11 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (expr), stringify! (field_access))"
+---
+note: Match
+  ┌─ "test_data/expr/main.rs":6:5
+  │
+6 │     foo.bar;
+  │     ^^^^^^^ $expr
+  │
+  = $e = foo

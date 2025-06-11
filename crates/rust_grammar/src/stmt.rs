@@ -105,19 +105,18 @@ pub(crate) mod parsing {
         fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Target>>> {
             let mut stmts = Vec::new();
             loop {
-                while let semi @ Some(_) = input.parse()? {
+                let (span, semi) = input.parse_spanned::<Option<Token![;]>>()?.decompose();
+                if let Some(semi) = semi {
                     stmts.push(
                         input.add(
                             Stmt::Expr(
-                                input.add(
-                                    Expr::Verbatim(TokenStream::new())
-                                        .with_span(molt_lib::Span::fake()),
-                                ),
-                                semi,
+                                input.add(Expr::Verbatim(TokenStream::new()).with_span(span)),
+                                Some(semi),
                             )
-                            .with_span(molt_lib::Span::fake()),
+                            .with_span(span),
                         ),
                     );
+                    continue;
                 }
                 if input.is_empty() {
                     break;

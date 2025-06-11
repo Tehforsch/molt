@@ -2127,9 +2127,9 @@ pub(crate) mod parsing {
                 }
             }
 
-            while let Some(prev) = clauses.pop() {
+            while let Some(mut prev) = clauses.pop() {
                 let marker = markers.pop().unwrap();
-                prev.else_branch.unwrap().1 =
+                prev.else_branch.as_mut().unwrap().1 =
                     input.add(Expr::If(expr).with_span(input.span_from_marker(marker)));
                 expr = prev;
             }

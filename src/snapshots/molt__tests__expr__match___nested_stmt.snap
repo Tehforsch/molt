@@ -1,14 +1,13 @@
 ---
 source: src/lib.rs
 expression: "super :: super :: match_pattern(stringify! (expr), stringify! (nested_stmt))"
-snapshot_kind: text
 ---
 note: Match
-   ┌─ "test_data/expr/main.rs":15:5
+   ┌─ "test_data/expr/main.rs":18:5
    │  
-15 │ ╭     fn inner() {
-16 │ │         foo();
-17 │ │     }
+18 │ ╭     fn inner() {
+19 │ │         foo();
+20 │ │     }
    │ ╰─────^ $fn
    │  
    = $stmt = foo();

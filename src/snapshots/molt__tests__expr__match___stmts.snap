@@ -1,7 +1,6 @@
 ---
 source: src/lib.rs
 expression: "super :: super :: match_pattern(stringify! (expr), stringify! (stmts))"
-snapshot_kind: text
 ---
 note: Match
   ┌─ "test_data/expr/main.rs":2:5
@@ -22,104 +21,123 @@ note: Match
   │     ^^^^^^^^^^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":5:5
+  ┌─ "test_data/expr/main.rs":6:5
+  │
+6 │     foo.bar;
+  │     ^^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":8:5
    │  
- 5 │ ╭     match x {
- 6 │ │         foo..bar => {},
- 7 │ │         ..bar => {},
- 8 │ │         .. => {},
- 9 │ │         'a' => {},
-10 │ │     }
+ 8 │ ╭     match x {
+ 9 │ │         foo..bar => {},
+10 │ │         ..bar => {},
+11 │ │         .. => {},
+12 │ │         'a' => {},
+13 │ │     }
    │ ╰─────^ $x
-
-note: Match
-   ┌─ "test_data/expr/main.rs":12:5
-   │
-12 │     let foo = bar.baz().bla().qux();
-   │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $x
-
-note: Match
-   ┌─ "test_data/expr/main.rs":13:5
-   │
-13 │     foo = 10;
-   │     ^^^^^^^^^ $x
-
-note: Match
-   ┌─ "test_data/expr/main.rs":16:9
-   │
-16 │         foo();
-   │         ^^^^^^ $x
 
 note: Match
    ┌─ "test_data/expr/main.rs":15:5
+   │
+15 │     let foo = bar.baz().bla().qux();
+   │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":16:5
+   │
+16 │     foo = 10;
+   │     ^^^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":19:9
+   │
+19 │         foo();
+   │         ^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":18:5
    │  
-15 │ ╭     fn inner() {
-16 │ │         foo();
-17 │ │     }
+18 │ ╭     fn inner() {
+19 │ │         foo();
+20 │ │     }
    │ ╰─────^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":20:9
+   ┌─ "test_data/expr/main.rs":23:9
    │
-20 │         expr1
+23 │         expr1
    │         ^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":22:9
+   ┌─ "test_data/expr/main.rs":25:9
    │
-22 │         expr2
+25 │         expr2
    │         ^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":24:9
+   ┌─ "test_data/expr/main.rs":27:9
    │
-24 │         expr3
+27 │         expr3
    │         ^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":26:9
+   ┌─ "test_data/expr/main.rs":29:9
    │
-26 │         expr4
+29 │         expr4
    │         ^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":28:9
+   ┌─ "test_data/expr/main.rs":31:9
    │
-28 │         expr5
+31 │         expr5
    │         ^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":19:5
+   ┌─ "test_data/expr/main.rs":22:5
    │  
-19 │ ╭     if cond1 {
-20 │ │         expr1
-21 │ │     } else if cond2 {
-22 │ │         expr2
+22 │ ╭     if cond1 {
+23 │ │         expr1
+24 │ │     } else if cond2 {
+25 │ │         expr2
    · │
-28 │ │         expr5
-29 │ │     }
+31 │ │         expr5
+32 │ │     }
    │ ╰─────^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":31:5
+   ┌─ "test_data/expr/main.rs":34:5
    │
-31 │     bar().await;
+34 │     bar().await;
    │     ^^^^^^^^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":33:5
+   ┌─ "test_data/expr/main.rs":36:5
    │
-33 │     return Ok(foo);
+36 │     return Ok(foo);
    │     ^^^^^^^^^^^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":39:5
+   ┌─ "test_data/expr/main.rs":38:5
+   │  
+38 │ ╭     for foo in bar.baz() {
+39 │ │     }
+   │ ╰─────^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":45:5
    │
-39 │     (1 + 2) + (3 + 4);
+45 │     (1 + 2) + (3 + 4);
    │     ^^^^^^^^^^^^^^^^^^ $x
 
 note: Match
-   ┌─ "test_data/expr/main.rs":41:5
+   ┌─ "test_data/expr/main.rs":47:5
    │
-41 │     (1 + 2) as usize
-   │     ^^^^^^^^^^^^^^^^ $x
+47 │     (1 + 2) as usize;
+   │     ^^^^^^^^^^^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/expr/main.rs":49:5
+   │
+49 │     let x = |bar| bar + 1;
+   │     ^^^^^^^^^^^^^^^^^^^^^^ $x

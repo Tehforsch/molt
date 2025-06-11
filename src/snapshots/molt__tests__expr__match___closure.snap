@@ -1,0 +1,11 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (expr), stringify! (closure))"
+---
+note: Match
+   ┌─ "test_data/expr/main.rs":49:13
+   │
+49 │     let x = |bar| bar + 1;
+   │             ^^^^^^^^^^^^^ $expr
+   │
+   = $e = bar + 1

@@ -1,12 +1,11 @@
 ---
 source: src/lib.rs
 expression: "super :: super :: match_pattern(stringify! (expr), stringify! (array_len))"
-snapshot_kind: text
 ---
 note: Match
-   ┌─ "test_data/expr/main.rs":36:12
+   ┌─ "test_data/expr/main.rs":42:12
    │
-36 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
+42 │ const FOO: [Foo; 3] = [Foo, Foo, Foo];
    │            ^^^^^^^^ $ty
    │
    = $e = 3

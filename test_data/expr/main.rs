@@ -2,6 +2,9 @@ fn foo() {
     (x+1);
     foo.0.0.0.0;
     foo.0.0.0.0.0;
+
+    foo.bar;
+
     match x {
         foo..bar => {},
         ..bar => {},
@@ -31,6 +34,9 @@ fn foo() {
     bar().await;
 
     return Ok(foo);
+
+    for foo in bar.baz() {
+    }
 }
 
 const FOO: [Foo; 3] = [Foo, Foo, Foo];
@@ -38,5 +44,7 @@ const FOO: [Foo; 3] = [Foo, Foo, Foo];
 fn bar() {
     (1 + 2) + (3 + 4);
 
-    (1 + 2) as usize
+    (1 + 2) as usize;
+
+    let x = |bar| bar + 1;
 }

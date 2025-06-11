@@ -285,6 +285,10 @@ mod tests {
             binary,
             call,
             cast,
+            closure,
+            field_access,
+            for_loop,
+            if_
         )
     );
     test_match_pattern!(macros, (macros));
@@ -317,8 +321,8 @@ mod tests {
 
     molt_test_err!(
         molt_grammar,
-        (undefined_var, non_inferable_command, early_boundary_rule,)
+        (undefined_var, non_inferable_command, early_boundary_rule)
     );
 
-    molt_test_ok!(molt_grammar, (trailing_brace));
+    molt_test_ok!(molt_grammar, (trailing_brace, unnecessary_semicolon));
 }

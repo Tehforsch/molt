@@ -1,7 +1,6 @@
 ---
 source: src/lib.rs
 expression: "super :: super :: match_pattern(stringify! (expr), stringify! (binary))"
-snapshot_kind: text
 ---
 note: Match
   ┌─ "test_data/expr/main.rs":2:6
@@ -13,37 +12,46 @@ note: Match
   = $e2 = 1
 
 note: Match
-   ┌─ "test_data/expr/main.rs":39:6
+   ┌─ "test_data/expr/main.rs":45:6
    │
-39 │     (1 + 2) + (3 + 4);
+45 │     (1 + 2) + (3 + 4);
    │      ^^^^^ $expr
    │
    = $e1 = 1
    = $e2 = 2
 
 note: Match
-   ┌─ "test_data/expr/main.rs":39:16
+   ┌─ "test_data/expr/main.rs":45:16
    │
-39 │     (1 + 2) + (3 + 4);
+45 │     (1 + 2) + (3 + 4);
    │                ^^^^^ $expr
    │
    = $e1 = 3
    = $e2 = 4
 
 note: Match
-   ┌─ "test_data/expr/main.rs":39:5
+   ┌─ "test_data/expr/main.rs":45:5
    │
-39 │     (1 + 2) + (3 + 4);
+45 │     (1 + 2) + (3 + 4);
    │     ^^^^^^^^^^^^^^^^^ $expr
    │
    = $e1 = (1 + 2)
    = $e2 = (3 + 4)
 
 note: Match
-   ┌─ "test_data/expr/main.rs":41:6
+   ┌─ "test_data/expr/main.rs":47:6
    │
-41 │     (1 + 2) as usize
+47 │     (1 + 2) as usize;
    │      ^^^^^ $expr
    │
    = $e1 = 1
    = $e2 = 2
+
+note: Match
+   ┌─ "test_data/expr/main.rs":49:19
+   │
+49 │     let x = |bar| bar + 1;
+   │                   ^^^^^^^ $expr
+   │
+   = $e1 = bar
+   = $e2 = 1

@@ -1,12 +1,11 @@
 ---
 source: src/lib.rs
 expression: "super :: super :: match_pattern(stringify! (expr), stringify! (assign_lhs))"
-snapshot_kind: text
 ---
 note: Match
-   ┌─ "test_data/expr/main.rs":13:5
+   ┌─ "test_data/expr/main.rs":16:5
    │
-13 │     foo = 10;
+16 │     foo = 10;
    │     ^^^^^^^^ $expr
    │
    = $e = foo

@@ -1,0 +1,13 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (expr), stringify! (for_loop))"
+---
+note: Match
+   ┌─ "test_data/expr/main.rs":38:5
+   │  
+38 │ ╭     for foo in bar.baz() {
+39 │ │     }
+   │ ╰─────^ $expr
+   │  
+   = $e = bar.baz()
+   = $ident = foo

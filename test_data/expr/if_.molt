@@ -1,0 +1,8 @@
+let cond, then, else: Expr;
+let expr: Expr = {
+    if $cond {
+        $then
+    } else {
+        $else
+    }
+};

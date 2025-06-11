@@ -3,9 +3,9 @@ source: src/lib.rs
 expression: "super :: super ::\nmatch_pattern(stringify! (expr), stringify! (function_chain))"
 ---
 note: Match
-   ┌─ "test_data/expr/main.rs":12:15
+   ┌─ "test_data/expr/main.rs":15:15
    │
-12 │     let foo = bar.baz().bla().qux();
+15 │     let foo = bar.baz().bla().qux();
    │               ^^^^^^^^^^^^^^^^^^^^^ $x
    │
    = $e = bar.baz()
