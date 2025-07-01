@@ -285,7 +285,7 @@ pub(crate) mod parsing {
             let expr: NodeId<Expr> = input.parse()?;
 
             let diverge = {
-                if !classify::expr_trailing_brace(&input, expr) && input.peek(Token![else]) {
+                if !classify::expr_trailing_brace(input, expr) && input.peek(Token![else]) {
                     let else_token: Token![else] = input.parse()?;
                     let block: Spanned<Block> = input.parse_spanned()?;
                     let diverge = block.map(|block| {
@@ -411,12 +411,12 @@ pub(crate) mod parsing {
             Pattern::Real(Expr::Macro(ExprMacro { attrs, mac }))
                 if semi_token.is_some() || mac.delimiter.is_brace() =>
             {
-                return Ok(Stmt::Macro(StmtMacro {
-                    attrs: attrs,
-                    mac: mac,
+                Ok(Stmt::Macro(StmtMacro {
+                    attrs,
+                    mac,
                     semi_token,
                 })
-                .pattern_with_span(stmt_span));
+                .pattern_with_span(stmt_span))
             }
             _ => {
                 let e = input.add_pat(e.with_span(expr_span));

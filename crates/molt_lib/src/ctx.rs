@@ -240,7 +240,7 @@ impl<Real, Pat> Pattern<Real, Pat> {
 impl<Real, Pat: Copy> Pattern<Real, Pat> {
     pub fn as_ref(&self) -> Pattern<&Real, Pat> {
         match self {
-            Pattern::Real(real) => Pattern::Real(&real),
+            Pattern::Real(real) => Pattern::Real(real),
             Pattern::Pat(var) => Pattern::Pat(*var),
         }
     }

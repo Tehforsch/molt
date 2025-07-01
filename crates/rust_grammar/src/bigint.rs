@@ -10,6 +10,7 @@ impl BigInt {
         BigInt { digits: Vec::new() }
     }
 
+    #[allow(clippy::inherent_to_string)]
     pub(crate) fn to_string(&self) -> String {
         let mut repr = String::with_capacity(self.digits.len());
 

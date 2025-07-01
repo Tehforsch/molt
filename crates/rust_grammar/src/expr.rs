@@ -1307,10 +1307,7 @@ pub(crate) mod parsing {
             } else if Precedence::Assign >= base
                 && input.peek(Token![=])
                 && !input.peek(Token![=>])
-                && match lhs.real() {
-                    Some(Expr::Range(_)) => false,
-                    _ => true,
-                }
+                && !matches!(lhs.real(), Some(Expr::Range(_)))
             {
                 let eq_token: Token![=] = input.parse()?;
                 let right = parse_binop_rhs(input, allow_struct, Precedence::Assign)?;
@@ -1558,10 +1555,7 @@ pub(crate) mod parsing {
                 e = e2.pattern_with_span(span);
             } else if input.peek(Token![.])
                 && !input.peek(Token![..])
-                && match e.real() {
-                    Some(Expr::Range(_)) => false,
-                    _ => true,
-                }
+                && !matches!(e.real(), Some(Expr::Range(_)))
             {
                 let mut dot_token: Token![.] = input.parse()?;
 
@@ -1628,12 +1622,7 @@ pub(crate) mod parsing {
                 });
                 let span = input.span_from_marker(marker).join(orig_span);
                 e = e2.pattern_with_span(span);
-            } else if input.peek(Token![?])
-                && match e.real() {
-                    Some(Expr::Range(_)) => false,
-                    _ => true,
-                }
-            {
+            } else if input.peek(Token![?]) && !matches!(e.real(), Some(Expr::Range(_))) {
                 let e2 = Expr::Try(ExprTry {
                     attrs: Vec::new(),
                     expr: input.add_pat(e),
@@ -1797,13 +1786,13 @@ pub(crate) mod parsing {
     ) -> Result<Expr> {
         let expr_style = true;
         let (qself, path) = path::parsing::qpath(input, expr_style)?;
-        Ok(rest_of_path_or_macro_or_struct(
+        rest_of_path_or_macro_or_struct(
             qself,
             path,
             input,
             #[cfg(feature = "full")]
             allow_struct,
-        )?)
+        )
     }
 
     fn rest_of_path_or_macro_or_struct(
@@ -1923,7 +1912,7 @@ pub(crate) mod parsing {
                     bracket_token,
                     expr: content.add_pat(expr),
                     semi_token,
-                    len: len,
+                    len,
                 }))
             }
         }
@@ -2615,7 +2604,7 @@ pub(crate) mod parsing {
                     Expr::Path(ExprPath {
                         attrs: Vec::new(),
                         qself: None,
-                        path: Path::from(ident.clone()),
+                        path: Path::from(*ident),
                     })
                     .with_span(span),
                 );

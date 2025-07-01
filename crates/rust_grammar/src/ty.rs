@@ -279,7 +279,7 @@ pub(crate) mod parsing {
 
         fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
             let allow_plus = true;
-            Ok(ambig_ty(input, allow_plus)?)
+            ambig_ty(input, allow_plus)
         }
     }
 
@@ -294,7 +294,7 @@ pub(crate) mod parsing {
 
         fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
             let allow_plus = false;
-            Ok(ambig_ty(input, allow_plus)?)
+            ambig_ty(input, allow_plus)
         }
     }
 
@@ -385,6 +385,8 @@ pub(crate) mod parsing {
 
             let (span, mut first) = first.decompose();
             if allow_plus && input.peek(Token![+]) {
+                // False positive, as far as I can tell
+                #[allow(clippy::never_loop)]
                 loop {
                     let first = match first {
                         Pattern::Real(Type::Path(TypePath { qself: None, path })) => {

@@ -295,7 +295,7 @@ pub fn peek_var(cursor: Cursor, ctx: &Ctx<Node>, kind: Kind) -> bool {
     if let Some((punct, _)) = cursor.punct() {
         if punct.as_char() == '$' {
             if let Some((ident, _)) = cursor.skip().and_then(|cursor| cursor.ident()) {
-                return kind_matches(&ctx, &ident, kind);
+                return kind_matches(ctx, &ident, kind);
             }
         }
     }
@@ -484,9 +484,9 @@ impl<'c, 'a> Deref for StepCursor<'c, 'a> {
 impl<'c, 'a> Clone for StepCursor<'c, 'a> {
     fn clone(&self) -> Self {
         Self {
-            scope: self.scope.clone(),
-            cursor: self.cursor.clone(),
-            marker: self.marker.clone(),
+            scope: self.scope,
+            cursor: self.cursor,
+            marker: self.marker,
             ctx: self.ctx.clone(),
         }
     }
@@ -529,16 +529,12 @@ pub(crate) fn new_parse_buffer(
     }
 }
 
+#[derive(Default)]
 pub(crate) enum Unexpected {
+    #[default]
     None,
     Some(Span, Delimiter),
     Chain(Rc<Cell<Unexpected>>),
-}
-
-impl Default for Unexpected {
-    fn default() -> Self {
-        Unexpected::None
-    }
 }
 
 impl Clone for Unexpected {
@@ -612,7 +608,7 @@ impl<'a> ParseBuffer<'a> {
 
     pub fn peek2<T: Peek>(&self, token: T) -> bool {
         fn peek2(buffer: &ParseBuffer, peek: fn(Cursor) -> bool) -> bool {
-            buffer.cursor().skip().map_or(false, peek)
+            buffer.cursor().skip().is_some_and(peek)
         }
 
         let _ = token;
@@ -625,7 +621,7 @@ impl<'a> ParseBuffer<'a> {
                 .cursor()
                 .skip()
                 .and_then(Cursor::skip)
-                .map_or(false, peek)
+                .is_some_and(peek)
         }
 
         let _ = token;
@@ -759,7 +755,7 @@ impl<'a> ParseBuffer<'a> {
         Ok(item.with_span(span))
     }
 
-    pub fn parse_span_with<'b, T: Parse, S: ToNode<Node>>(
+    pub fn parse_span_with<T: Parse, S: ToNode<Node>>(
         &self,
         f: impl Fn(T) -> S,
     ) -> Result<Spanned<Pattern<S, Id>>> {
@@ -1062,8 +1058,7 @@ pub fn parse_with_ctx<T>(
     tokens: TokenStream,
     mode: ParsingMode,
 ) -> Result<T> {
-    let t = parse2_impl(ctx.clone(), f, tokens, mode);
-    t
+    parse2_impl(ctx.clone(), f, tokens, mode)
 }
 
 fn err_unexpected_token(span: Span, delimiter: Delimiter) -> Error {

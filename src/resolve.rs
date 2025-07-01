@@ -87,8 +87,7 @@ impl UnresolvedMoltFile {
         for deps in map.values() {
             if let Some(dep) = deps
                 .iter()
-                .filter(|referenced| !map.contains_key(&referenced.name))
-                .next()
+                .find(|referenced| !map.contains_key(&referenced.name))
             {
                 return Err(
                     ResolveError::UndefinedVar(dep.span, dep.name.to_string()).in_file(file_id)

@@ -37,7 +37,7 @@ impl<T1: CmpSyn, T2: CmpSyn, T3: CmpSyn> CmpSyn for (T1, T2, T3) {
 
 impl<T: CmpSyn> CmpSyn for Box<T> {
     fn cmp_syn(&self, ctx: &mut Match, pat: &Self) {
-        ctx.cmp_syn(&*self, &*pat);
+        ctx.cmp_syn(self, pat);
     }
 }
 

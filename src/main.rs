@@ -41,9 +41,9 @@ pub(crate) fn get_cargo_toml(mut path: PathBuf) -> Result<PathBuf> {
 fn get_cargo_source_files(path: &Path) -> Result<Vec<PathBuf>> {
     let mut src_files = vec![];
     for entry in WalkDir::new(path.parent().unwrap()) {
-        let entry = entry.map_err(|e| e)?;
+        let entry = entry?;
         let path = entry.path();
-        let is_rust_src = path.extension().map_or(false, |ext| ext == "rs");
+        let is_rust_src = path.extension().is_some_and(|ext| ext == "rs");
         if is_rust_src {
             src_files.push(path.to_owned());
         }

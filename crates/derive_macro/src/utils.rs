@@ -20,7 +20,7 @@ fn is_nested_type(ty: &Type, outer: &str, inner: &str) -> bool {
                 return false;
             };
             if let GenericArgument::Type(generic_ty) = &generics.args[0] {
-                return type_path_matches(&generic_ty, inner);
+                return type_path_matches(generic_ty, inner);
             }
         }
     }
@@ -40,8 +40,5 @@ pub(crate) fn is_box(ty: &Type) -> bool {
 }
 
 pub(crate) fn is_token(ty: &Type) -> bool {
-    match ty {
-        Type::Macro(_) => true,
-        _ => false,
-    }
+    matches!(ty, Type::Macro(_))
 }

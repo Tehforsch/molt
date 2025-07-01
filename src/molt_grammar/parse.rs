@@ -64,7 +64,7 @@ impl Parse for UnresolvedVarDecls {
             vars.into_iter()
                 .map(|var| UnresolvedVarDecl {
                     var,
-                    kind: kind.into(),
+                    kind,
                     tokens: tokens.clone(),
                 })
                 .collect(),

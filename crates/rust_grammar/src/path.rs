@@ -62,18 +62,14 @@ where
 ///
 /// The `(A, B) -> C` in `Fn(A, B) -> C`.
 #[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+#[derive(Default)]
 pub enum PathArguments {
+    #[default]
     None,
     /// The `<'a, T>` in `std::slice::iter<'a, T>`.
     AngleBracketed(AngleBracketedGenericArguments),
     /// The `(A, B) -> C` in `Fn(A, B) -> C`.
     Parenthesized(ParenthesizedGenericArguments),
-}
-
-impl Default for PathArguments {
-    fn default() -> Self {
-        PathArguments::None
-    }
 }
 
 impl PathArguments {

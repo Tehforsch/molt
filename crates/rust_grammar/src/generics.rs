@@ -15,7 +15,7 @@ use std::fmt::{self, Debug};
 #[cfg(all(feature = "printing", feature = "extra-traits"))]
 use std::hash::{Hash, Hasher};
 
-#[derive(Debug, CmpSyn)]
+#[derive(Debug, CmpSyn, Default)]
 /// Lifetimes and type parameters attached to a declaration of a function,
 /// enum, trait, etc.
 ///
@@ -87,17 +87,6 @@ pub struct ConstParam {
     pub ty: NodeId<Type>,
     pub eq_token: Option<Token![=]>,
     pub default: Option<Expr>,
-}
-
-impl Default for Generics {
-    fn default() -> Self {
-        Generics {
-            lt_token: None,
-            params: Punctuated::new(),
-            gt_token: None,
-            where_clause: None,
-        }
-    }
 }
 
 #[derive(Debug, CmpSyn)]

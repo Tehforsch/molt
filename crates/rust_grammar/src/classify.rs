@@ -230,7 +230,7 @@ pub(crate) fn expr_trailing_brace(input: ParseStream, mut expr: NodeId<Expr>) ->
                     None => return false,
                 },
                 Expr::Unary(e) => expr = e.expr,
-                Expr::Verbatim(e) => return tokens_trailing_brace(&e),
+                Expr::Verbatim(e) => return tokens_trailing_brace(e),
                 Expr::Yield(e) => match e.expr {
                     Some(e) => expr = e,
                     None => return false,

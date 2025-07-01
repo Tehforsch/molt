@@ -577,7 +577,7 @@ pub(crate) mod parsing {
                 attrs: Vec::new(),
                 by_ref,
                 mutability,
-                ident: ident.clone(),
+                ident,
                 subpat: None,
             })
         };

@@ -49,7 +49,7 @@ impl Comparison {
         Comparison {
             ast: ast.into(),
             pat: pat.into(),
-            pat_type: pat_type,
+            pat_type,
         }
     }
 }

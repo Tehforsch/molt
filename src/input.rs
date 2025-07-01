@@ -95,7 +95,7 @@ impl Input {
     pub fn new(molt_src: MoltSource) -> Self {
         Self {
             rust_src: vec![],
-            molt_src: molt_src,
+            molt_src,
         }
     }
 
@@ -107,7 +107,7 @@ impl Input {
         })
     }
 
-    pub fn with_rust_src_files<'a, P: AsRef<Path>>(
+    pub fn with_rust_src_files<P: AsRef<Path>>(
         mut self,
         files: impl Iterator<Item = P>,
     ) -> Result<Self, crate::Error> {
@@ -124,7 +124,7 @@ impl Input {
         match id {
             FileId::Rust(idx) => &self.rust_src[idx].0.contents,
             FileId::Molt => match &self.molt_src {
-                MoltSource::FromCli(s) => &s,
+                MoltSource::FromCli(s) => s,
                 MoltSource::File(file) => &file.0.contents,
             },
         }

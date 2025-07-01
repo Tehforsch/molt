@@ -2091,6 +2091,7 @@ pub(crate) mod parsing {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn parse_rest_of_trait(
         input: ParseStream,
         mut attrs: Vec<Attribute>,
@@ -2155,6 +2156,7 @@ pub(crate) mod parsing {
         }
     }
 
+    #[allow(clippy::type_complexity)]
     fn parse_start_of_trait_alias(
         input: ParseStream,
     ) -> Result<(
@@ -2815,10 +2817,7 @@ pub(crate) mod parsing {
 
     impl Visibility {
         fn is_inherited(&self) -> bool {
-            match self {
-                Visibility::Inherited => true,
-                _ => false,
-            }
+            matches!(self, Visibility::Inherited)
         }
     }
 

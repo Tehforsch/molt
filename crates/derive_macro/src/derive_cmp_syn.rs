@@ -36,13 +36,11 @@ fn impl_struct(data_struct: syn::DataStruct) -> TokenStream {
 }
 
 fn cmp_ty(field_name: &Ident, ty: &Type) -> Option<TokenStream> {
-    if is_node_list(&ty) {
+    if is_node_list(ty) {
         Some(quote! { ctx.cmp_lists(&self. #field_name, &pat. #field_name ); })
-    } else if is_vec_attribute(ty) {
+    } else if is_vec_attribute(ty) || is_token(ty) {
         None
-    } else if is_token(&ty) {
-        None
-    } else if is_box(&ty) {
+    } else if is_box(ty) {
         Some(quote! { ctx.cmp_syn(&*self. #field_name, &*pat. #field_name ); })
     } else {
         Some(quote! { ctx.cmp_syn(&self. #field_name, &pat. #field_name ); })

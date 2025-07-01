@@ -49,7 +49,7 @@ impl MoltFile {
         config: Config,
     ) -> MatchResult<'a> {
         let debug_print = config.debug_print;
-        let ctx = MatchCtx::new(&pat_ctx, &ast_ctx, rust_src, molt_src, config);
+        let ctx = MatchCtx::new(pat_ctx, ast_ctx, rust_src, molt_src, config);
         if debug_print {
             ctx.dump();
         }
@@ -62,15 +62,11 @@ impl MoltFile {
                 if pat_kind != kind {
                     vec![]
                 } else {
-                    molt_lib::match_pattern(&ctx, &self.vars, var.clone(), item)
+                    molt_lib::match_pattern(&ctx, &self.vars, var, item)
                 }
             })
             .collect();
-        MatchResult {
-            matches,
-            ctx,
-            var: var.clone(),
-        }
+        MatchResult { matches, ctx, var }
     }
 }
 
@@ -118,15 +114,14 @@ impl<'a> MatchResult<'a> {
 
 pub fn run(input: &Input, config: crate::Config) -> Result<Vec<Diagnostic>, Error> {
     let mut diagnostics = vec![];
-    let (mut molt_file, pat_ctx) = MoltFile::new(&input)?;
+    let (mut molt_file, pat_ctx) = MoltFile::new(input)?;
     for rust_file_id in input.iter_rust_src() {
-        let (_, ast_ctx) = RustFile::new(&input, rust_file_id)?;
+        let (_, ast_ctx) = RustFile::new(input, rust_file_id)?;
         match molt_file.command() {
             Command::Match(MatchCommand {
                 match_: pat_var,
                 print,
             }) => {
-                let pat_var = pat_var;
                 let match_result = molt_file.match_pattern(
                     &ast_ctx,
                     &pat_ctx,

@@ -98,7 +98,7 @@ impl<'a> Iterator for Members<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         let field = self.fields.next()?;
         let member = match &field.ident {
-            Some(ident) => Member::Named(ident.clone()),
+            Some(ident) => Member::Named(*ident),
             None => {
                 #[cfg(all(feature = "parsing", feature = "printing"))]
                 let span = crate::spanned::Spanned::span(&field.ty);
