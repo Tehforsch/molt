@@ -1,0 +1,20 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(stringify! (lists), stringify! (all))"
+---
+note: Match
+  ┌─ "test_data/lists/main.rs":4:5
+  │  
+4 │ ╭     match foo {
+5 │ │         Foo::A => Ok(val_a),
+6 │ │         Foo::B => Ok(val_b),
+7 │ │         Foo::C => Ok(val_c),
+8 │ │     }
+  │ ╰─────^ $x
+  │  
+  = $expr = val_a
+  = $expr = val_b
+  = $expr = val_c
+  = $ident = A
+  = $ident = B
+  = $ident = C

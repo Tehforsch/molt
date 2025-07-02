@@ -15,7 +15,7 @@ use molt_grammar::{Command, MoltFile, UnresolvedMoltFile};
 
 use molt_lib::Config;
 use molt_lib::ParsingMode;
-use molt_lib::{Id, Match, MatchCtx};
+use molt_lib::{Id, MatchCtx, MatchRe};
 use rust_grammar::Node;
 
 pub struct RustFile;
@@ -25,7 +25,7 @@ pub type PatCtx = Ctx;
 pub type AstCtx = Ctx;
 
 pub(crate) struct MatchResult<'a> {
-    pub matches: Vec<Match>,
+    pub matches: Vec<MatchRe>,
     pub ctx: MatchCtx<'a, Node>,
     pub var: Id,
 }
@@ -86,7 +86,7 @@ impl<'a> MatchResult<'a> {
             .map(|match_| {
                 let match_var = print.unwrap_or(self.var);
                 let binding = match_.get_binding(match_var);
-                let span = self.ctx.ast_ctx.get_span(binding.ast.unwrap());
+                let span = self.ctx.ast_ctx.get_span(*binding.ast.first().unwrap());
                 let var_name = |var| format!("${}", self.ctx.get_var(var).name());
                 let mut diagnostic = Diagnostic::note().with_message("Match").with_labels(vec![
                     Label::primary(file_id, span.byte_range()).with_message(var_name(match_var)),
@@ -98,11 +98,11 @@ impl<'a> MatchResult<'a> {
                     if key == match_var {
                         continue;
                     }
-                    if let Some(node) = binding.ast {
+                    for node in binding.ast.iter() {
                         diagnostic = diagnostic.with_note(format!(
                             "{} = {}",
                             var_name(key),
-                            self.ctx.print_ast(node),
+                            self.ctx.print_ast(*node),
                         ));
                     }
                 }

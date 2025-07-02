@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 
 use crate::node_list::{List, Set};
 use crate::{
@@ -9,33 +10,7 @@ use crate::{
 use crate::cmp_syn::CmpSyn;
 use crate::match_ctx::MatchCtx;
 
-pub fn match_pattern<N: GetKind + CmpSyn>(
-    ctx: &MatchCtx<N>,
-    vars: &[VarDecl],
-    var: Id,
-    ast: Id,
-) -> Vec<Match> {
-    let mut match_ = Match::new(vars);
-    match_.add_binding(ctx, var, ast);
-    let mut current = vec![match_];
-    let mut matches = vec![];
-    while let Some(mut match_) = current.pop() {
-        while let Some(cmp) = match_.cmps.pop() {
-            match_.cmp_ids(ctx, cmp.ast, cmp.pat, cmp.pat_type);
-            if !match_.valid {
-                break;
-            }
-        }
-        if match_.forks.is_empty() {
-            if match_.valid {
-                matches.push(match_);
-            }
-        } else {
-            current.extend(match_.make_forks());
-        }
-    }
-    matches
-}
+pub type MatchId = usize;
 
 #[derive(Clone, Debug)]
 struct Comparison {
@@ -57,15 +32,19 @@ impl Comparison {
 #[derive(Clone, Debug)]
 struct Fork {
     cmps: Vec<Comparison>,
+    make_multi_match: bool,
 }
 
 impl Fork {
-    fn new(cmps: Vec<Comparison>) -> Fork {
-        Self { cmps }
+    fn new(cmps: Vec<Comparison>, make_multi_match: bool) -> Fork {
+        Self {
+            cmps,
+            make_multi_match,
+        }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Binding {
     pub pat: Option<Id>,
     pub ast: Option<Id>,
@@ -75,6 +54,12 @@ impl Binding {
     fn new(pat: Option<Id>) -> Self {
         Self { pat, ast: None }
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct MultiBinding {
+    pub pat: Option<Id>,
+    pub ast: Vec<Id>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -90,10 +75,17 @@ pub struct Match {
     forks: Vec<Fork>,
     valid: bool,
     pat_type: PatType,
+    id: MatchId,
+    multi_match_id: Option<MatchId>,
+}
+
+#[derive(Debug)]
+pub struct MatchRe {
+    bindings: HashMap<Id, MultiBinding>,
 }
 
 impl Match {
-    fn new(vars: &[VarDecl]) -> Self {
+    fn new_root(vars: &[VarDecl]) -> Self {
         Self {
             bindings: vars
                 .iter()
@@ -103,6 +95,8 @@ impl Match {
             forks: vec![],
             valid: true,
             pat_type: PatType::FromPat,
+            id: 0,
+            multi_match_id: None,
         }
     }
 
@@ -168,7 +162,10 @@ impl Match {
         }
     }
 
-    fn make_forks(mut self) -> impl Iterator<Item = Match> {
+    fn make_forks(
+        mut self,
+        next_id: &mut (impl FnOnce() -> MatchId + Copy),
+    ) -> impl Iterator<Item = Match> {
         assert!(self.cmps.is_empty());
         assert!(self.valid);
         let fork = self.forks.pop().unwrap();
@@ -178,15 +175,13 @@ impl Match {
             cmps: vec![cmp],
             valid: true,
             pat_type: self.pat_type,
+            id: (*next_id)(),
+            multi_match_id: if fork.make_multi_match {
+                Some(self.id)
+            } else {
+                None
+            },
         })
-    }
-
-    pub fn iter_vars(&self) -> impl Iterator<Item = Id> {
-        self.bindings.keys().cloned()
-    }
-
-    pub fn get_binding(&self, var: Id) -> &Binding {
-        &self.bindings[&var]
     }
 
     pub fn cmp_lists<T: CmpSyn, P>(&mut self, ts1: &NodeList<T, P>, ts2: &NodeList<T, P>) {
@@ -211,19 +206,16 @@ impl Match {
     }
 
     fn cmp_lists_single<T: CmpSyn, P>(&mut self, ts1: &RealNodeList<T, P>, ts2: &Single<T, P>) {
+        let cmps = ts1
+            .iter()
+            .map(|item1| Comparison::new(*item1, ts2.item(), self.pat_type))
+            .collect();
         match ts2.mode() {
             SingleMatchingMode::Any => {
-                let fork = Fork::new(
-                    ts1.iter()
-                        .map(|item1| Comparison::new(*item1, ts2.item(), self.pat_type))
-                        .collect(),
-                );
-                self.fork(fork);
+                self.fork(Fork::new(cmps, false));
             }
             SingleMatchingMode::All => {
-                for item in ts1.iter() {
-                    self.cmp_syn(item, &ts2.item())
-                }
+                self.fork(Fork::new(cmps, true));
             }
         }
     }
@@ -239,6 +231,7 @@ impl Match {
                         ts1.iter()
                             .map(|item1| Comparison::new(*item1, *item2, self.pat_type))
                             .collect(),
+                        false,
                     );
                     self.fork(fork);
                 } else {
@@ -277,5 +270,134 @@ impl Match {
     // This exists purely to make the calls look symmetrical
     pub fn cmp_syn<T: CmpSyn>(&mut self, t1: &T, t2: &T) {
         t1.cmp_syn(self, t2)
+    }
+}
+
+impl MatchRe {
+    pub fn get_binding(&self, var: Id) -> &MultiBinding {
+        &self.bindings[&var]
+    }
+
+    pub fn iter_vars(&self) -> impl Iterator<Item = Id> {
+        self.bindings.keys().cloned()
+    }
+}
+
+pub fn match_pattern<N: GetKind + CmpSyn>(
+    ctx: &MatchCtx<N>,
+    vars: &[VarDecl],
+    var: Id,
+    ast: Id,
+) -> Vec<MatchRe> {
+    let mut match_ = Match::new_root(vars);
+    match_.add_binding(ctx, var, ast);
+    let mut current = vec![match_];
+    let mut matches = vec![];
+    let mut id = 0;
+    let mut next_id = move || {
+        id += 1;
+        id
+    };
+    while let Some(mut match_) = current.pop() {
+        while let Some(cmp) = match_.cmps.pop() {
+            match_.cmp_ids(ctx, cmp.ast, cmp.pat, cmp.pat_type);
+            if !match_.valid {
+                break;
+            }
+        }
+        if match_.forks.is_empty() {
+            // Remember the match if it is
+            // 1. Valid and not part of a multi match
+            // 2. Part of a multi match
+            if match_.valid || match_.multi_match_id.is_some() {
+                matches.push(match_)
+            }
+        } else {
+            current.extend(match_.make_forks(&mut next_id));
+        }
+    }
+    merge_matches(matches)
+}
+
+fn merge_matches(matches: Vec<Match>) -> Vec<MatchRe> {
+    let mut no_parents = vec![];
+    let mut by_parent: HashMap<MatchId, Vec<Match>> = HashMap::default();
+    for m in matches.into_iter() {
+        match m.multi_match_id {
+            Some(parent) => match by_parent.entry(parent) {
+                Entry::Occupied(mut ms) => ms.get_mut().push(m),
+                Entry::Vacant(entry) => {
+                    entry.insert(vec![m]);
+                }
+            },
+            None => {
+                no_parents.push(m);
+            }
+        }
+    }
+    no_parents
+        .into_iter()
+        .map(|match_| MatchRe {
+            bindings: match_
+                .bindings
+                .into_iter()
+                .map(|(id, bind)| (id, make_single_binding(bind)))
+                .collect(),
+        })
+        .chain(by_parent.into_values().filter_map(|matches| {
+            if matches.iter().any(|match_| !match_.valid) {
+                return None;
+            }
+            let mut bindings_by_id: HashMap<Id, Vec<Binding>> = HashMap::default();
+            let num = matches.len();
+            for m in matches.into_iter() {
+                for (id, binding) in m.bindings.into_iter() {
+                    match bindings_by_id.entry(id) {
+                        Entry::Occupied(mut bs) => {
+                            let bs = bs.get_mut();
+                            if *bs.first().unwrap() != binding {
+                                bs.push(binding);
+                            }
+                        }
+                        Entry::Vacant(entry) => {
+                            entry.insert(vec![binding]);
+                        }
+                    }
+                }
+            }
+            let bindings = bindings_by_id
+                .into_iter()
+                .map(|(id, mut bindings)| {
+                    if bindings.len() == 1 {
+                        (id, make_single_binding(bindings.remove(0)))
+                    } else {
+                        assert_eq!(bindings.len(), num);
+                        (id, make_multi_binding(bindings))
+                    }
+                })
+                .collect();
+            Some(MatchRe { bindings })
+        }))
+        .collect()
+}
+
+fn make_single_binding(bind: Binding) -> MultiBinding {
+    MultiBinding {
+        pat: bind.pat,
+        ast: vec![bind.ast.unwrap()],
+    }
+}
+
+fn make_multi_binding(bindings: Vec<Binding>) -> MultiBinding {
+    assert!(bindings.iter().all(|bind| bind.pat.is_none()));
+    MultiBinding {
+        pat: None,
+        // The previous .pop() operations will reverse the order, so
+        // to restore the original order, we reverse here
+        ast: bindings
+            .into_iter()
+            .rev()
+            .map(|bind| bind.ast.unwrap())
+            .collect(),
     }
 }

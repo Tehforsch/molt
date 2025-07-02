@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use codespan_reporting::files::Files;
-use molt_lib::{Id, Match, MatchCtx, Span};
+use molt_lib::{Id, MatchCtx, MatchRe, Span};
 use rust_grammar::{Node, TokenStream};
 
 use crate::{
@@ -76,11 +76,11 @@ fn check_overlap(transformations: &[Transformation]) -> Result<(), Error> {
 
 fn make_transformation(
     ctx: &MatchCtx<Node>,
-    match_: &Match,
+    match_: &MatchRe,
     input: Id,
     output: Id,
 ) -> Transformation {
-    let ast = match_.get_binding(input).ast.unwrap();
+    let ast = *match_.get_binding(input).ast.first().unwrap();
     let ast_span = ctx.ast_ctx.get_span(ast);
     Transformation {
         span: ast_span,
@@ -88,10 +88,10 @@ fn make_transformation(
     }
 }
 
-fn get_transformed_code(ctx: &MatchCtx<Node>, match_: &Match, output: Id) -> String {
+fn get_transformed_code(ctx: &MatchCtx<Node>, match_: &MatchRe, output: Id) -> String {
     let binding = match_.get_binding(output);
-    let mut code = if let Some(ast_binding) = binding.ast {
-        ctx.print_ast(ast_binding).to_string()
+    let mut code = if let Some(ast_binding) = binding.ast.first() {
+        ctx.print_ast(*ast_binding).to_string()
     } else {
         let pat_id = binding.pat.unwrap();
         if pat_id.is_pat() {
@@ -112,7 +112,7 @@ fn get_transformed_code(ctx: &MatchCtx<Node>, match_: &Match, output: Id) -> Str
 
 fn replace_first_variable(
     ctx: &MatchCtx<Node>,
-    match_: &Match,
+    match_: &MatchRe,
     sc: &mut String,
     mut vars: Vec<TokenVar>,
 ) {
