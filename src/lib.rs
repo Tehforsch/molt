@@ -146,7 +146,6 @@ pub fn run(input: &Input, config: crate::Config) -> Result<Vec<Diagnostic>, Erro
                     config.clone(),
                 );
                 transform::transform(input, rust_file_id, match_result, input_var, output_var)?;
-                // diagnostics.extend(match_result.make_diagnostics(rust_file_id));
             }
         };
     }
@@ -157,10 +156,11 @@ pub fn run(input: &Input, config: crate::Config) -> Result<Vec<Diagnostic>, Erro
 mod tests {
     use std::path::Path;
 
+    use codespan_reporting::files::Files;
     use molt_lib::Config;
 
     use crate::{
-        Error, MoltFile, RustFile,
+        Command, Error, MoltFile, RustFile,
         error::{emit_diagnostic_str, make_error_diagnostic},
         input::{Contents, Input, MoltSource},
     };
@@ -181,12 +181,17 @@ mod tests {
         (input, map)
     }
 
-    fn match_pattern(path: &str, fname: &str) -> String {
+    fn make_input(path: &str, fname: &str) -> Input {
         let rust_path = Path::new("test_data").join(format!("{}/main.rs", path));
         let molt_path = Path::new("test_data").join(format!("{}/{}.molt", path, fname));
-        let input = Input::new(MoltSource::file(molt_path).unwrap())
+
+        Input::new(MoltSource::file(molt_path).unwrap())
             .with_rust_src_file(&rust_path)
-            .unwrap();
+            .unwrap()
+    }
+
+    fn match_pattern(path: &str, fname: &str) -> String {
+        let input = make_input(path, fname);
         let diagnostics = super::run(&input, Config::default());
         match diagnostics {
             Ok(diagnostics) => diagnostics
@@ -196,6 +201,33 @@ mod tests {
                 .join(""),
             Err(err) => emit_diagnostic_str(&input, make_error_diagnostic(&err)),
         }
+    }
+
+    fn transform(path: &str, fname: &str) -> String {
+        let input = make_input(path, fname);
+        let (molt_file, pat_ctx) = MoltFile::new(&input).unwrap();
+        let rust_file_id = input.iter_rust_src().next().unwrap();
+        let (_, ast_ctx) = RustFile::new(&input, rust_file_id).unwrap();
+        let config = Config::default();
+        let Command::Transform(ref tr) = molt_file.command else {
+            panic!()
+        };
+        let match_result = molt_file.match_pattern(
+            &ast_ctx,
+            &pat_ctx,
+            tr.match_.unwrap(),
+            input.source(rust_file_id).unwrap(),
+            input.source(input.molt_file_id()).unwrap(),
+            config.clone(),
+        );
+        crate::transform::get_transformed_contents(
+            &input,
+            rust_file_id,
+            match_result,
+            tr.input,
+            tr.output,
+        )
+        .unwrap()
     }
 
     macro_rules! test_match_pattern {
@@ -218,7 +250,27 @@ mod tests {
         };
     }
 
-    macro_rules! molt_test_err {
+    macro_rules! test_transform {
+        ($dir_name: ident, ($($test_name: ident),* $(,)?)) => {
+            mod $dir_name {
+                mod match_ {
+                    $(
+                        #[test]
+                        fn $test_name() {
+                            insta::assert_snapshot!(super::super::transform(stringify!($dir_name), stringify!($test_name)));
+                        }
+                    )*
+                }
+
+                #[test]
+                fn parse() {
+                    super::parse_rust(stringify!($dir_name));
+                }
+            }
+        };
+    }
+
+    macro_rules! molt_grammar_test_err {
         ($dir_name: ident, ($($test_name: ident),* $(,)?)) => {
             $(
                 #[test]
@@ -239,7 +291,7 @@ mod tests {
         };
     }
 
-    macro_rules! molt_test_ok {
+    macro_rules! molt_grammar_test_ok {
         ($dir_name: ident, ($($test_name: ident),* $(,)?)) => {
             $(
                 #[test]
@@ -313,11 +365,12 @@ mod tests {
     );
     test_match_pattern!(fields, (fields, field_var));
     test_match_pattern!(lists, (single, all));
+    test_transform!(transform, (rename));
 
-    molt_test_err!(
+    molt_grammar_test_err!(
         molt_grammar,
         (undefined_var, non_inferable_command, early_boundary_rule)
     );
 
-    molt_test_ok!(molt_grammar, (trailing_brace, unnecessary_semicolon));
+    molt_grammar_test_ok!(molt_grammar, (trailing_brace, unnecessary_semicolon));
 }

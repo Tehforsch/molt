@@ -1,3 +1,4 @@
+use std::process::Command;
 use std::str::FromStr;
 
 use codespan_reporting::files::Files;
@@ -19,6 +20,7 @@ struct Transformation {
     span: Span,
     new_code: String,
 }
+
 impl Transformation {
     fn apply(&self, code: &mut String) {
         let range = self.span.byte_range();
@@ -37,21 +39,57 @@ pub fn transform(
     input_var: Id,
     output_var: Id,
 ) -> Result<(), Error> {
+    let code = get_transformed_contents(input, rust_file_id, match_result, input_var, output_var)?;
+    write_to_file(input, rust_file_id, code)?;
+    Ok(())
+}
+
+pub fn get_transformed_contents(
+    input: &Input,
+    rust_file_id: FileId,
+    match_result: MatchResult<'_>,
+    input_var: Id,
+    output_var: Id,
+) -> Result<String, Error> {
     let transformations: Vec<_> = match_result
         .matches
         .iter()
         .map(|match_| make_transformation(&match_result.ctx, match_, input_var, output_var))
         .collect();
-    // TODO: assert spans are ascending
     check_overlap(&transformations)?;
     let mut code = input.source(rust_file_id).unwrap().to_owned();
-    // revert to make sure we don't invalidate the
-    // spans higher up in the file.
     for transformation in transformations.into_iter().rev() {
         transformation.apply(&mut code);
     }
-    write_to_file(input, rust_file_id, code)?;
-    Ok(())
+    format_code(code)
+}
+
+fn format_code(code: String) -> Result<String, Error> {
+    let mut cmd = Command::new("rustfmt")
+        .arg("--emit=stdout")
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()?;
+
+    if let Some(stdin) = cmd.stdin.take() {
+        use std::io::Write;
+        let mut stdin = stdin;
+        stdin.write_all(code.as_bytes())?;
+    }
+
+    let output = cmd.wait_with_output()?;
+
+    if !output.status.success() {
+        // If rustfmt fails, return the original code
+        eprintln!(
+            "rustfmt failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        return Ok(code);
+    }
+
+    Ok(String::from_utf8(output.stdout).unwrap_or(code))
 }
 
 fn write_to_file(input: &Input, rust_file_id: FileId, code: String) -> Result<(), Error> {

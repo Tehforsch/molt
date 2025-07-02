@@ -384,7 +384,7 @@ fn merge_matches(matches: Vec<Match>) -> Vec<MatchRe> {
 fn make_single_binding(bind: Binding) -> MultiBinding {
     MultiBinding {
         pat: bind.pat,
-        ast: vec![bind.ast.unwrap()],
+        ast: bind.ast.into_iter().collect(),
     }
 }
 

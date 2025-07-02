@@ -1,0 +1,4 @@
+let input: Ident = { old_name };
+let output: Ident = { new_name };
+
+transform input -> output;

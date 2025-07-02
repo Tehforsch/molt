@@ -1,0 +1,12 @@
+---
+source: src/lib.rs
+expression: "super :: super :: transform(stringify! (transform), stringify! (rename))"
+---
+fn main() {
+    let new_name = 42;
+    let result = new_name + 1;
+
+    // intentionally misformatted code to make sure rustfmt is
+    // run on the code.
+    let new_name = 10;
+}
