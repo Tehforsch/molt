@@ -4,7 +4,7 @@ use lsp_types::{
     InitializeResult, InitializedParams, Range, TextDocumentItem, Url, WorkDoneProgressParams,
     WorkspaceFolder,
 };
-use molt_lib::{NodeId, ParsingMode};
+use molt_lib::{NodeId, ParsingMode, Pattern};
 use rust_grammar::parse::ParsePat;
 use rust_grammar::{Field, FieldNamed, Pat, Stmt, Type};
 use serde::de::DeserializeOwned;
@@ -301,21 +301,21 @@ impl RealLspClient {
 
 fn try_parse_as<T: ParsePat>(
     line: &str,
-    f: impl Fn(&<T as ParsePat>::Target) -> Option<NodeId<Type>>,
+    f: impl Fn(&Ctx, &<T as ParsePat>::Target) -> Option<NodeId<Type>>,
 ) -> Option<(NodeId<Type>, Ctx)> {
     let (id, ctx) =
         rust_grammar::parse_ctx(|input| input.parse_id::<T>(), line, ParsingMode::Real).ok()?;
-    f(ctx.get(id).unwrap_real()).map(|item| (item, ctx))
+    f(&ctx, ctx.get(id).unwrap_real()).map(|item| (item, ctx))
 }
 
 fn parse_type_from_str(line: &str) -> Option<LspType> {
-    let result = try_parse_as::<FieldNamed>(&line, |field: &Field| Some(field.ty))
+    let result = try_parse_as::<FieldNamed>(&line, |_, field: &Field| Some(field.ty))
         .or_else(|| {
             // Ugly: Add a semicolon to allow parsing into a statement.
             let line = format!("{line};");
-            try_parse_as::<Stmt>(&line, |stmt: &Stmt| match stmt {
-                Stmt::Local(local) => match &local.pat {
-                    Pat::Type(type_) => Some(type_.ty),
+            try_parse_as::<Stmt>(&line, |ctx: &Ctx, stmt: &Stmt| match stmt {
+                Stmt::Local(local) => match ctx.get(local.pat) {
+                    Pattern::Real(Pat::Type(type_)) => Some(type_.ty),
                     _ => None,
                 },
                 _ => None,

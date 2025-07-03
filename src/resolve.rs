@@ -170,10 +170,14 @@ fn get_command(
 ) -> Result<UnresolvedCommand, Error> {
     if commands.is_empty() {
         Ok(Command::Match(MatchCommand {
-            match_: Some(infer_var(vars, map, None, file_id)?),
+            match_: Some(infer_var(vars, map, vec![], file_id)?),
             print: None,
         }))
-    } else if commands.len() > 1 {
+    } else if commands.len() > 1
+        && commands
+            .iter()
+            .any(|command| matches!(command, Command::Match(_)))
+    {
         Err(ResolveError::MultipleCommandGiven.in_file(file_id))
     } else {
         let command = commands.remove(0);
@@ -189,17 +193,20 @@ fn get_command(
                 match_: None,
                 print,
             }) => Command::Match(MatchCommand {
-                match_: Some(infer_var(vars, map, None, file_id)?),
+                match_: Some(infer_var(vars, map, vec![], file_id)?),
                 print,
             }),
             Command::Transform(TransformCommand {
-                input,
-                output,
+                transforms,
                 match_: None,
             }) => Command::Transform(TransformCommand {
-                match_: Some(infer_var(vars, map, Some(&output), file_id)?),
-                input,
-                output,
+                match_: Some(infer_var(
+                    vars,
+                    map,
+                    transforms.iter().map(|(_, output)| output).collect(),
+                    file_id,
+                )?),
+                transforms,
             }),
             _ => unreachable!(),
         })
@@ -209,17 +216,15 @@ fn get_command(
 fn infer_var(
     vars: &[UnresolvedVarDecl],
     map: &HashMap<&String, Vec<TokenVar>>,
-    exclude: Option<&TokenVar>,
+    exclude: Vec<&TokenVar>,
     file_id: FileId,
 ) -> Result<TokenVar, Error> {
     // infer the command
     let unreferenced_vars: Vec<_> = vars
         .iter()
         .filter(|var| {
-            if let Some(exclude) = exclude {
-                if var.var.name == exclude.name {
-                    return false;
-                }
+            if exclude.iter().any(|exclude| var.var.name == exclude.name) {
+                return false;
             }
             !map.iter()
                 .any(|(_, deps)| deps.iter().any(|v| v.name == var.var.name))

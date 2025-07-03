@@ -65,8 +65,7 @@ pub struct MatchCommand<T> {
 
 #[derive(Clone, Debug)]
 pub struct TransformCommand<T> {
-    pub input: T,
-    pub output: T,
+    pub transforms: Vec<(T, T)>, // Vec of (input, output) pairs
     pub match_: Option<T>,
 }
 
@@ -77,28 +76,25 @@ impl<T> Command<T> {
                 match_: match_.map(f.clone()),
                 print: print.map(f),
             }),
-            Command::Transform(TransformCommand {
-                input,
-                output,
-                match_,
-            }) => Command::Transform(TransformCommand {
-                input: f(input),
-                output: f(output),
-                match_: match_.map(f),
-            }),
+            Command::Transform(TransformCommand { transforms, match_ }) => {
+                Command::Transform(TransformCommand {
+                    transforms: transforms
+                        .into_iter()
+                        .map(|(input, output)| (f.clone()(input), f.clone()(output)))
+                        .collect(),
+                    match_: match_.map(f),
+                })
+            }
         }
     }
 
     pub(crate) fn iter_var_names(&self) -> Box<dyn Iterator<Item = &T> + '_> {
         match self {
             Command::Match(MatchCommand { match_, print }) => Box::new(match_.iter().chain(print)),
-            Command::Transform(TransformCommand {
-                input,
-                output,
-                match_,
-            }) => Box::new(
-                std::iter::once(input)
-                    .chain(std::iter::once(output))
+            Command::Transform(TransformCommand { transforms, match_ }) => Box::new(
+                transforms
+                    .iter()
+                    .flat_map(|(input, output)| [input, output])
                     .chain(match_),
             ),
         }

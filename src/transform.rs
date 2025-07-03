@@ -36,10 +36,9 @@ pub fn transform(
     input: &Input,
     rust_file_id: FileId,
     match_result: MatchResult,
-    input_var: Id,
-    output_var: Id,
+    transforms: Vec<(Id, Id)>,
 ) -> Result<(), Error> {
-    let code = get_transformed_contents(input, rust_file_id, match_result, input_var, output_var)?;
+    let code = get_transformed_contents(input, rust_file_id, match_result, &transforms)?;
     write_to_file(input, rust_file_id, code)?;
     Ok(())
 }
@@ -48,17 +47,26 @@ pub fn get_transformed_contents(
     input: &Input,
     rust_file_id: FileId,
     match_result: MatchResult<'_>,
-    input_var: Id,
-    output_var: Id,
+    transforms: &[(Id, Id)],
 ) -> Result<String, Error> {
-    let transformations: Vec<_> = match_result
-        .matches
-        .iter()
-        .map(|match_| make_transformation(&match_result.ctx, match_, input_var, output_var))
-        .collect();
-    check_overlap(&transformations)?;
+    let mut all_transformations = Vec::new();
+
+    // Generate transformations for each input->output pair
+    for (input_var, output_var) in transforms {
+        let transformations: Vec<_> = match_result
+            .matches
+            .iter()
+            .map(|match_| make_transformation(&match_result.ctx, match_, *input_var, *output_var))
+            .collect();
+        all_transformations.extend(transformations);
+    }
+
+    // Sort transformations by their spans to ensure proper ordering
+    all_transformations.sort_by_key(|t| t.span.byte_range().start);
+
+    check_overlap(&all_transformations)?;
     let mut code = input.source(rust_file_id).unwrap().to_owned();
-    for transformation in transformations.into_iter().rev() {
+    for transformation in all_transformations.into_iter().rev() {
         transformation.apply(&mut code);
     }
     format_code(code)

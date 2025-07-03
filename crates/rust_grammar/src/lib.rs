@@ -60,7 +60,7 @@ mod op;
 pub mod parse;
 
 mod pat;
-pub use pat::Pat;
+pub use pat::{Pat, PatMulti};
 
 mod path;
 

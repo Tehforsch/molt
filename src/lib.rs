@@ -166,11 +166,7 @@ pub fn run(input: &Input, config: crate::Config) -> Result<Vec<Diagnostic>, Erro
                 );
                 diagnostics.extend(match_result.make_diagnostics(rust_file_id, print));
             }
-            Command::Transform(TransformCommand {
-                input: input_var,
-                output: output_var,
-                match_,
-            }) => {
+            Command::Transform(TransformCommand { transforms, match_ }) => {
                 let match_result = molt_file.match_pattern(
                     &ast_ctx,
                     &pat_ctx,
@@ -181,7 +177,7 @@ pub fn run(input: &Input, config: crate::Config) -> Result<Vec<Diagnostic>, Erro
                     config.clone(),
                     &mut lsp_client,
                 );
-                transform::transform(input, rust_file_id, match_result, input_var, output_var)?;
+                transform::transform(input, rust_file_id, match_result, transforms)?;
             }
         };
     }
@@ -269,8 +265,7 @@ mod tests {
             &input,
             rust_file_id,
             match_result,
-            tr.input,
-            tr.output,
+            &tr.transforms,
         )
         .unwrap()
     }

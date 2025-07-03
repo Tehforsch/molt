@@ -100,8 +100,7 @@ impl Parse for Command<TokenVar> {
             let _: Token![->] = parser.parse()?;
             let output: TokenVar = parser.parse()?;
             Command::Transform(TransformCommand {
-                input,
-                output,
+                transforms: vec![(input, output)],
                 match_: None,
             })
         } else {
