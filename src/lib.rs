@@ -421,7 +421,7 @@ mod tests {
     );
     test_match_pattern!(fields, (fields, field_var));
     test_match_pattern!(lists, (single, all));
-    test_transform!(transform, (rename));
+    test_transform!(transform, (rename, example10));
 
     molt_grammar_test_err!(
         molt_grammar,

@@ -10,3 +10,11 @@ fn main() {
     // run on the code.
     let new_name = 10;
 }
+
+fn example10() {
+    let value = Some(42);
+    let result = match value {
+        Some(x) => Ok(x * 2),
+        None => Ok(0),
+    };
+}

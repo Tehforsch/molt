@@ -7,7 +7,7 @@ use crate::path::{Path, QSelf};
 use crate::punctuated::Punctuated;
 use crate::token;
 use crate::ty::Type;
-use molt_lib::NodeId;
+use molt_lib::{NodeId, NodeList};
 use proc_macro2::TokenStream;
 
 pub use crate::expr::{
@@ -102,6 +102,79 @@ pub enum Pat {
     // continue to compile and work for downstream users in the interim.
 }
 
+/// Parse a pattern that does _not_ involve `|` at the top level.
+///
+/// This parser matches the behavior of the `$:pat_param` macro_rules
+/// matcher, and on editions prior to Rust 2021, the behavior of
+/// `$:pat`.
+///
+/// In Rust syntax, some examples of where this syntax would occur are
+/// in the argument pattern of functions and closures. Patterns using
+/// `|` are not allowed to occur in these positions.
+///
+/// ```compile_fail
+/// fn f(Some(_) | None: Option<T>) {
+///     let _ = |Some(_) | None: Option<T>| {};
+///     //       ^^^^^^^^^^^^^^^^^^^^^^^^^??? :(
+/// }
+/// ```
+///
+/// ```console
+/// error: top-level or-patterns are not allowed in function parameters
+///  --> src/main.rs:1:6
+///   |
+/// 1 | fn f(Some(_) | None: Option<T>) {
+///   |      ^^^^^^^^^^^^^^ help: wrap the pattern in parentheses: `(Some(_) | None)`
+/// ```
+pub struct PatSingle;
+
+/// Parse a pattern, possibly involving `|`, but not a leading `|`.
+pub struct PatMulti;
+
+/// Parse a pattern, possibly involving `|`, possibly including a
+/// leading `|`.
+///
+/// This parser matches the behavior of the Rust 2021 edition's `$:pat`
+/// macro_rules matcher.
+///
+/// In Rust syntax, an example of where this syntax would occur is in
+/// the pattern of a `match` arm, where the language permits an optional
+/// leading `|`, although it is not idiomatic to write one there in
+/// handwritten code.
+///
+/// ```
+/// # let wat = None;
+/// match wat {
+///     | None | Some(false) => {}
+///     | Some(true) => {}
+/// }
+/// ```
+///
+/// The compiler accepts it only to facilitate some situations in
+/// macro-generated code where a macro author might need to write:
+///
+/// ```
+/// # macro_rules! doc {
+/// #     ($value:expr, ($($conditions1:pat),*), ($($conditions2:pat),*), $then:expr) => {
+/// match $value {
+///     $(| $conditions1)* $(| $conditions2)* => $then
+/// }
+/// #     };
+/// # }
+/// #
+/// # doc!(true, (true), (false), {});
+/// # doc!(true, (), (true, false), {});
+/// # doc!(true, (true, false), (), {});
+/// ```
+///
+/// Expressing the same thing correctly in the case that either one (but
+/// not both) of `$conditions1` and `$conditions2` might be empty,
+/// without leading `|`, is complex.
+///
+/// Use [`Pat::parse_multi`] instead if you are not intending to support
+/// macro-generated macro input.
+pub struct PatMultiLeadingVert;
+
 #[derive(Debug, CmpSyn)]
 /// A pattern that binds a new variable: `ref mut binding @ SUBPATTERN`.
 ///
@@ -113,7 +186,7 @@ pub struct PatIdent {
     pub by_ref: Option<Token![ref]>,
     pub mutability: Option<Token![mut]>,
     pub ident: NodeId<Ident>,
-    pub subpat: Option<(Token![@], Box<Pat>)>,
+    pub subpat: Option<(Token![@], NodeId<Pat>)>,
 }
 
 #[derive(Debug, CmpSyn)]
@@ -122,7 +195,7 @@ pub struct PatIdent {
 pub struct PatOr {
     pub attrs: Vec<Attribute>,
     pub leading_vert: Option<Token![|]>,
-    pub cases: Punctuated<Pat, Token![|]>,
+    pub cases: NodeList<Pat, Token![|]>,
 }
 
 #[derive(Debug, CmpSyn)]
@@ -131,7 +204,7 @@ pub struct PatOr {
 pub struct PatParen {
     pub attrs: Vec<Attribute>,
     pub paren_token: token::Paren,
-    pub pat: Box<Pat>,
+    pub pat: NodeId<Pat>,
 }
 
 #[derive(Debug, CmpSyn)]
@@ -141,7 +214,7 @@ pub struct PatReference {
     pub attrs: Vec<Attribute>,
     pub and_token: Token![&],
     pub mutability: Option<Token![mut]>,
-    pub pat: Box<Pat>,
+    pub pat: NodeId<Pat>,
 }
 
 #[derive(Debug, CmpSyn)]
@@ -190,7 +263,7 @@ pub struct PatTupleStruct {
     pub qself: Option<QSelf>,
     pub path: Path,
     pub paren_token: token::Paren,
-    pub elems: Punctuated<Pat, Token![,]>,
+    pub elems: NodeList<Pat, Token![,]>,
 }
 
 #[derive(Debug, CmpSyn)]
@@ -198,7 +271,7 @@ pub struct PatTupleStruct {
 #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct PatType {
     pub attrs: Vec<Attribute>,
-    pub pat: Box<Pat>,
+    pub pat: NodeId<Pat>,
     pub colon_token: Token![:],
     pub ty: NodeId<Type>,
 }
@@ -221,61 +294,47 @@ pub struct FieldPat {
     pub attrs: Vec<Attribute>,
     pub member: Member,
     pub colon_token: Option<Token![:]>,
-    pub pat: Box<Pat>,
+    pub pat: NodeId<Pat>,
 }
 
 #[cfg(feature = "parsing")]
 pub(crate) mod parsing {
     use crate::attr::Attribute;
-    use crate::error::{self, Result};
+    use crate::error::Result;
     use crate::expr::{
         Expr, ExprConst, ExprLit, ExprMacro, ExprPath, ExprRange, Member, RangeLimits,
     };
     use crate::ident::{AnyIdent, Ident};
     use crate::lit::Lit;
     use crate::mac::{self, Macro};
-    use crate::parse::{Parse, ParseBuffer, ParseStream, PosMarker};
+    use crate::parse::{
+        ListOrItem, Parse, ParseBuffer, ParseList, ParseListOrItem, ParsePat, ParseStream,
+        PosMarker,
+    };
     use crate::pat::{
-        FieldPat, Pat, PatIdent, PatOr, PatParen, PatReference, PatRest, PatSlice, PatStruct,
-        PatTuple, PatTupleStruct, PatType, PatWild,
+        FieldPat, Pat, PatIdent, PatOr, PatReference, PatRest, PatSlice, PatStruct, PatTupleStruct,
+        PatType, PatWild,
     };
     use crate::path::{self, Path, QSelf};
     use crate::punctuated::Punctuated;
     use crate::verbatim;
     use crate::{token, Stmt};
-    use molt_lib::{Pattern, WithSpan};
+    use molt_lib::{NodeList, Pattern, WithSpan};
     use proc_macro2::TokenStream;
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
-    impl Pat {
-        /// Parse a pattern that does _not_ involve `|` at the top level.
-        ///
-        /// This parser matches the behavior of the `$:pat_param` macro_rules
-        /// matcher, and on editions prior to Rust 2021, the behavior of
-        /// `$:pat`.
-        ///
-        /// In Rust syntax, some examples of where this syntax would occur are
-        /// in the argument pattern of functions and closures. Patterns using
-        /// `|` are not allowed to occur in these positions.
-        ///
-        /// ```compile_fail
-        /// fn f(Some(_) | None: Option<T>) {
-        ///     let _ = |Some(_) | None: Option<T>| {};
-        ///     //       ^^^^^^^^^^^^^^^^^^^^^^^^^??? :(
-        /// }
-        /// ```
-        ///
-        /// ```console
-        /// error: top-level or-patterns are not allowed in function parameters
-        ///  --> src/main.rs:1:6
-        ///   |
-        /// 1 | fn f(Some(_) | None: Option<T>) {
-        ///   |      ^^^^^^^^^^^^^^ help: wrap the pattern in parentheses: `(Some(_) | None)`
-        /// ```
-        pub fn parse_single(input: ParseStream) -> Result<Self> {
+    use super::{PatMulti, PatMultiLeadingVert, PatSingle};
+
+    impl ParsePat for PatSingle {
+        type Target = Pat;
+
+        fn parse_pat(input: ParseStream) -> Result<molt_lib::SpannedPat<Self::Target>> {
+            if let Some(var) = input.parse_var() {
+                return var;
+            }
+            let marker = input.marker();
             let begin = input.fork();
             let lookahead = input.lookahead1();
-            if lookahead.peek_pat::<Ident>()
+            let pat = if lookahead.peek_pat::<Ident>()
                 && (input.peek2(Token![::])
                     || input.peek2(Token![!])
                     || input.peek2(token::Brace)
@@ -314,59 +373,43 @@ pub(crate) mod parsing {
                 input.call(pat_const).map(Pat::Verbatim)
             } else {
                 Err(lookahead.error())
-            }
+            };
+            Ok(pat?.pattern_with_span(input.span_from_marker(marker)))
         }
+    }
 
-        /// Parse a pattern, possibly involving `|`, but not a leading `|`.
-        pub fn parse_multi(input: ParseStream) -> Result<Self> {
-            multi_pat_impl(input, None)
+    fn parse_pat_multi<T: ParseListOrItem<Target = Pat>>(
+        input: ParseStream,
+    ) -> Result<molt_lib::SpannedPat<Pat>> {
+        if let Some(var) = input.parse_var() {
+            return var;
         }
+        let marker = input.marker();
+        let pat = input.parse_list_or_item::<PatMultiLeadingVert>()?;
+        Ok(match pat {
+            ListOrItem::Item(item) => item,
+            ListOrItem::List(cases) => Pat::Or(PatOr {
+                attrs: Vec::new(),
+                leading_vert: None,
+                cases,
+            })
+            .pattern_with_span(input.span_from_marker(marker)),
+        })
+    }
 
-        /// Parse a pattern, possibly involving `|`, possibly including a
-        /// leading `|`.
-        ///
-        /// This parser matches the behavior of the Rust 2021 edition's `$:pat`
-        /// macro_rules matcher.
-        ///
-        /// In Rust syntax, an example of where this syntax would occur is in
-        /// the pattern of a `match` arm, where the language permits an optional
-        /// leading `|`, although it is not idiomatic to write one there in
-        /// handwritten code.
-        ///
-        /// ```
-        /// # let wat = None;
-        /// match wat {
-        ///     | None | Some(false) => {}
-        ///     | Some(true) => {}
-        /// }
-        /// ```
-        ///
-        /// The compiler accepts it only to facilitate some situations in
-        /// macro-generated code where a macro author might need to write:
-        ///
-        /// ```
-        /// # macro_rules! doc {
-        /// #     ($value:expr, ($($conditions1:pat),*), ($($conditions2:pat),*), $then:expr) => {
-        /// match $value {
-        ///     $(| $conditions1)* $(| $conditions2)* => $then
-        /// }
-        /// #     };
-        /// # }
-        /// #
-        /// # doc!(true, (true), (false), {});
-        /// # doc!(true, (), (true, false), {});
-        /// # doc!(true, (true, false), (), {});
-        /// ```
-        ///
-        /// Expressing the same thing correctly in the case that either one (but
-        /// not both) of `$conditions1` and `$conditions2` might be empty,
-        /// without leading `|`, is complex.
-        ///
-        /// Use [`Pat::parse_multi`] instead if you are not intending to support
-        /// macro-generated macro input.
-        pub fn parse_multi_with_leading_vert(input: ParseStream) -> Result<Self> {
-            let leading_vert: Option<Token![|]> = input.parse()?;
-            multi_pat_impl(input, leading_vert)
+    impl ParsePat for PatMulti {
+        type Target = Pat;
+
+        fn parse_pat(input: ParseStream) -> Result<molt_lib::SpannedPat<Self::Target>> {
+            parse_pat_multi::<Self>(input)
+        }
+    }
+
+    impl ParsePat for PatMultiLeadingVert {
+        type Target = Pat;
+
+        fn parse_pat(input: ParseStream) -> Result<molt_lib::SpannedPat<Self::Target>> {
+            parse_pat_multi::<Self>(input)
         }
     }
 
@@ -375,33 +418,56 @@ pub(crate) mod parsing {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(PatType {
                 attrs: Vec::new(),
-                pat: Box::new(Pat::parse_single(input)?),
+                pat: PatSingle::parse_id(input)?,
                 colon_token: input.parse()?,
                 ty: input.parse()?,
             })
         }
     }
 
-    fn multi_pat_impl(input: ParseStream, leading_vert: Option<Token![|]>) -> Result<Pat> {
-        let mut pat = Pat::parse_single(input)?;
+    impl ParseListOrItem for PatMulti {
+        type Punct = Token![|];
+
+        type Target = Pat;
+
+        fn parse_list_or_item(input: ParseStream) -> Result<ListOrItem<Self::Target, Self::Punct>> {
+            let leading_vert: Option<Token![|]> = input.parse()?;
+            multi_pat_impl(input, leading_vert)
+        }
+    }
+
+    impl ParseListOrItem for PatMultiLeadingVert {
+        type Punct = Token![|];
+
+        type Target = Pat;
+
+        fn parse_list_or_item(input: ParseStream) -> Result<ListOrItem<Self::Target, Self::Punct>> {
+            multi_pat_impl(input, None)
+        }
+    }
+
+    fn multi_pat_impl(
+        input: ParseStream,
+        leading_vert: Option<Token![|]>,
+    ) -> Result<ListOrItem<Pat, Token![|]>> {
+        let pat = PatSingle::parse_pat(input)?;
         if leading_vert.is_some()
             || input.peek(Token![|]) && !input.peek(Token![||]) && !input.peek(Token![|=])
         {
             let mut cases = Punctuated::new();
-            cases.push_value(pat);
+            cases.push_value(input.add_pat(pat));
             while input.peek(Token![|]) && !input.peek(Token![||]) && !input.peek(Token![|=]) {
-                let punct = input.parse()?;
+                let punct: Token![|] = input.parse()?;
                 cases.push_punct(punct);
-                let pat = Pat::parse_single(input)?;
+                let pat = PatSingle::parse_id(input)?;
                 cases.push_value(pat);
             }
-            pat = Pat::Or(PatOr {
-                attrs: Vec::new(),
-                leading_vert,
-                cases,
-            });
+            Ok(ListOrItem::List(NodeList::Real(
+                cases.into_iter().collect(),
+            )))
+        } else {
+            Ok(ListOrItem::Item(pat))
         }
-        Ok(pat)
     }
 
     fn pat_path_or_macro_or_struct_or_range(input: ParseStream) -> Result<Pat> {
@@ -451,7 +517,7 @@ pub(crate) mod parsing {
 
     fn pat_box(begin: ParseBuffer, input: ParseStream) -> Result<Pat> {
         input.parse::<Token![box]>()?;
-        Pat::parse_single(input)?;
+        PatSingle::parse_id(input)?;
         Ok(Pat::Verbatim(verbatim::between(&begin, input)))
     }
 
@@ -470,13 +536,33 @@ pub(crate) mod parsing {
             subpat: {
                 if input.peek(Token![@]) {
                     let at_token: Token![@] = input.parse()?;
-                    let subpat = Pat::parse_single(input)?;
-                    Some((at_token, Box::new(subpat)))
+                    let subpat = PatSingle::parse_id(input)?;
+                    Some((at_token, subpat))
                 } else {
                     None
                 }
             },
         })
+    }
+
+    impl ParseList for PatMultiLeadingVert {
+        type Punct = Token![,];
+
+        fn parse_list_real(
+            input: ParseStream,
+        ) -> Result<Vec<molt_lib::NodeId<<Self as ParsePat>::Target>>> {
+            let mut elems = Punctuated::new();
+            while !input.is_empty() {
+                let value = PatMultiLeadingVert::parse_id(&input)?;
+                elems.push_value(value);
+                if input.is_empty() {
+                    break;
+                }
+                let punct: Token![,] = input.parse()?;
+                elems.push_punct(punct);
+            }
+            Ok(elems.into_iter().collect())
+        }
     }
 
     fn pat_tuple_struct(
@@ -487,16 +573,7 @@ pub(crate) mod parsing {
         let content;
         let paren_token = parenthesized!(content in input);
 
-        let mut elems = Punctuated::new();
-        while !content.is_empty() {
-            let value = Pat::parse_multi_with_leading_vert(&content)?;
-            elems.push_value(value);
-            if content.is_empty() {
-                break;
-            }
-            let punct = content.parse()?;
-            elems.push_punct(punct);
-        }
+        let elems = content.parse_list::<PatMultiLeadingVert>()?;
 
         Ok(PatTupleStruct {
             attrs: Vec::new(),
@@ -543,6 +620,7 @@ pub(crate) mod parsing {
     }
 
     fn field_pat(input: ParseStream) -> Result<FieldPat> {
+        let marker = input.marker();
         let begin = input.fork();
         let boxed: Option<Token![box]> = input.parse()?;
         let by_ref: Option<Token![ref]> = input.parse()?;
@@ -561,7 +639,7 @@ pub(crate) mod parsing {
                 attrs: Vec::new(),
                 member,
                 colon_token: Some(input.parse()?),
-                pat: Box::new(Pat::parse_multi_with_leading_vert(input)?),
+                pat: PatMultiLeadingVert::parse_id(input)?,
             });
         }
 
@@ -580,13 +658,15 @@ pub(crate) mod parsing {
                 ident,
                 subpat: None,
             })
-        };
+        }
+        .with_span(input.span_from_marker(marker));
+        let pat = input.add(pat);
 
         Ok(FieldPat {
             attrs: Vec::new(),
             member: Member::Named(ident),
             colon_token: None,
-            pat: Box::new(pat),
+            pat,
         })
     }
 
@@ -643,34 +723,35 @@ pub(crate) mod parsing {
         }
     }
 
-    fn pat_paren_or_tuple(input: ParseStream) -> Result<Pat> {
-        let content;
-        let paren_token = parenthesized!(content in input);
+    fn pat_paren_or_tuple(_: ParseStream) -> Result<Pat> {
+        todo!()
+        // let content;
+        // let paren_token = parenthesized!(content in input);
 
-        let mut elems = Punctuated::new();
-        while !content.is_empty() {
-            let value = Pat::parse_multi_with_leading_vert(&content)?;
-            if content.is_empty() {
-                if elems.is_empty() && !matches!(value, Pat::Rest(_)) {
-                    return Ok(Pat::Paren(PatParen {
-                        attrs: Vec::new(),
-                        paren_token,
-                        pat: Box::new(value),
-                    }));
-                }
-                elems.push_value(value);
-                break;
-            }
-            elems.push_value(value);
-            let punct = content.parse()?;
-            elems.push_punct(punct);
-        }
+        // let mut elems = Punctuated::new();
+        // while !content.is_empty() {
+        //     let value = PatMultiLeadingVert::parse_pat(&content)?;
+        //     if content.is_empty() {
+        //         if elems.is_empty() && !matches!(&*value, Pattern::Real(Pat::Rest(_))) {
+        //             return Ok(Pat::Paren(PatParen {
+        //                 attrs: Vec::new(),
+        //                 paren_token,
+        //                 pat: input.add_pat(value),
+        //             }));
+        //         }
+        //         elems.push_value(value);
+        //         break;
+        //     }
+        //     elems.push_value(value);
+        //     let punct = content.parse()?;
+        //     elems.push_punct(punct);
+        // }
 
-        Ok(Pat::Tuple(PatTuple {
-            attrs: Vec::new(),
-            paren_token,
-            elems,
-        }))
+        // Ok(Pat::Tuple(PatTuple {
+        //     attrs: Vec::new(),
+        //     paren_token,
+        //     elems,
+        // }))
     }
 
     fn pat_reference(input: ParseStream) -> Result<PatReference> {
@@ -678,7 +759,7 @@ pub(crate) mod parsing {
             attrs: Vec::new(),
             and_token: input.parse()?,
             mutability: input.parse()?,
-            pat: Box::new(Pat::parse_single(input)?),
+            pat: PatSingle::parse_id(input)?,
         })
     }
 
@@ -760,38 +841,39 @@ pub(crate) mod parsing {
     }
 
     fn pat_slice(input: ParseStream) -> Result<PatSlice> {
-        let content;
-        let bracket_token = bracketed!(content in input);
+        todo!()
+        // let content;
+        // let bracket_token = bracketed!(content in input);
 
-        let mut elems = Punctuated::new();
-        while !content.is_empty() {
-            let value = Pat::parse_multi_with_leading_vert(&content)?;
-            match value {
-                Pat::Range(pat) if pat.start.is_none() || pat.end.is_none() => {
-                    let (start, end) = match pat.limits {
-                        RangeLimits::HalfOpen(dot_dot) => (dot_dot.spans[0], dot_dot.spans[1]),
-                        RangeLimits::Closed(dot_dot_eq) => {
-                            (dot_dot_eq.spans[0], dot_dot_eq.spans[2])
-                        }
-                    };
-                    let msg = "range pattern is not allowed unparenthesized inside slice pattern";
-                    return Err(error::new2(start, end, msg));
-                }
-                _ => {}
-            }
-            elems.push_value(value);
-            if content.is_empty() {
-                break;
-            }
-            let punct = content.parse()?;
-            elems.push_punct(punct);
-        }
+        // let mut elems = Punctuated::new();
+        // while !content.is_empty() {
+        //     let value = PatMultiLeadingVert::parse_pat(&content)?;
+        //     match &*value {
+        //         Pattern::Real(Pat::Range(pat)) if pat.start.is_none() || pat.end.is_none() => {
+        //             let (start, end) = match pat.limits {
+        //                 RangeLimits::HalfOpen(dot_dot) => (dot_dot.spans[0], dot_dot.spans[1]),
+        //                 RangeLimits::Closed(dot_dot_eq) => {
+        //                     (dot_dot_eq.spans[0], dot_dot_eq.spans[2])
+        //                 }
+        //             };
+        //             let msg = "range pattern is not allowed unparenthesized inside slice pattern";
+        //             return Err(error::new2(start, end, msg));
+        //         }
+        //         _ => {}
+        //     }
+        //     elems.push_value(value);
+        //     if content.is_empty() {
+        //         break;
+        //     }
+        //     let punct = content.parse()?;
+        //     elems.push_punct(punct);
+        // }
 
-        Ok(PatSlice {
-            attrs: Vec::new(),
-            bracket_token,
-            elems,
-        })
+        // Ok(PatSlice {
+        //     attrs: Vec::new(),
+        //     bracket_token,
+        //     elems,
+        // })
     }
 
     fn pat_const(input: ParseStream) -> Result<TokenStream> {

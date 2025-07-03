@@ -504,7 +504,7 @@ pub struct ExprClosure {
     pub asyncness: Option<Token![async]>,
     pub capture: Option<Token![move]>,
     pub or1_token: Token![|],
-    pub inputs: Punctuated<Pat, Token![,]>,
+    pub inputs: NodeList<Pat, Token![,]>,
     pub or2_token: Token![|],
     pub output: ReturnType,
     pub body: NodeId<Expr>,
@@ -546,7 +546,7 @@ pub struct ExprForLoop {
     pub attrs: Vec<Attribute>,
     pub label: Option<Label>,
     pub for_token: Token![for],
-    pub pat: Box<Pat>,
+    pub pat: NodeId<Pat>,
     pub in_token: Token![in],
     pub expr: NodeId<Expr>,
     pub body: Block,
@@ -604,7 +604,7 @@ pub struct ExprInfer {
 pub struct ExprLet {
     pub attrs: Vec<Attribute>,
     pub let_token: Token![let],
-    pub pat: Box<Pat>,
+    pub pat: NodeId<Pat>,
     pub eq_token: Token![=],
     pub expr: NodeId<Expr>,
 }
@@ -1080,7 +1080,7 @@ pub struct Label {
 #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct Arm {
     pub attrs: Vec<Attribute>,
-    pub pat: Pat,
+    pub pat: NodeId<Pat>,
     pub guard: Option<(Token![if], NodeId<Expr>)>,
     pub fat_arrow_token: Token![=>],
     pub body: NodeId<Expr>,
@@ -1138,6 +1138,7 @@ pub(crate) mod parsing {
     #[cfg(feature = "full")]
     use crate::parse::ParseBuffer;
     use crate::parse::{ListOrItem, Parse, ParseList, ParseListOrItem, ParsePat, ParseStream};
+    use crate::pat::PatMultiLeadingVert;
     #[cfg(feature = "full")]
     use crate::pat::{Pat, PatType};
     use crate::path::{self, AngleBracketedGenericArguments, Path, QSelf};
@@ -2055,10 +2056,12 @@ pub(crate) mod parsing {
 
     #[cfg(feature = "full")]
     fn expr_let(input: ParseStream, allow_struct: AllowStruct) -> Result<ExprLet> {
+        use crate::pat::PatMultiLeadingVert;
+
         Ok(ExprLet {
             attrs: Vec::new(),
             let_token: input.parse()?,
-            pat: Box::new(Pat::parse_multi_with_leading_vert(input)?),
+            pat: PatMultiLeadingVert::parse_id(input)?,
             eq_token: input.parse()?,
             expr: {
                 let lhs = unary_expr(input, allow_struct)?;
@@ -2146,7 +2149,7 @@ pub(crate) mod parsing {
             let label: Option<Label> = input.parse()?;
             let for_token: Token![for] = input.parse()?;
 
-            let pat = Pat::parse_multi_with_leading_vert(input)?;
+            let pat = PatMultiLeadingVert::parse_id(input)?;
 
             let in_token: Token![in] = input.parse()?;
             let expr = input.parse_id::<ExprNoEagerBrace>()?;
@@ -2160,7 +2163,7 @@ pub(crate) mod parsing {
                 attrs,
                 label,
                 for_token,
-                pat: Box::new(pat),
+                pat,
                 in_token,
                 expr,
                 body: Block { brace_token, stmts },
@@ -2366,6 +2369,73 @@ pub(crate) mod parsing {
         }
     }
 
+    struct ClosureInput;
+
+    impl ParsePat for ClosureInput {
+        type Target = Pat;
+
+        fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
+            use crate::pat::PatSingle;
+
+            let marker = input.marker();
+            let attrs = input.call(Attribute::parse_outer)?;
+            let mut pat = PatSingle::parse_pat(input)?;
+
+            if input.peek(Token![:]) {
+                Ok(Pat::Type(PatType {
+                    attrs,
+                    pat: input.add_pat(pat),
+                    colon_token: input.parse()?,
+                    ty: input.parse()?,
+                })
+                .pattern_with_span(input.span_from_marker(marker)))
+            } else {
+                match &mut *pat {
+                    Pattern::Pat(_) => {}
+                    Pattern::Real(Pat::Const(pat)) => pat.attrs = attrs,
+                    Pattern::Real(Pat::Ident(pat)) => pat.attrs = attrs,
+                    Pattern::Real(Pat::Lit(pat)) => pat.attrs = attrs,
+                    Pattern::Real(Pat::Macro(pat)) => pat.attrs = attrs,
+                    Pattern::Real(Pat::Or(pat)) => pat.attrs = attrs,
+                    Pattern::Real(Pat::Paren(pat)) => pat.attrs = attrs,
+                    Pattern::Real(Pat::Path(pat)) => pat.attrs = attrs,
+                    Pattern::Real(Pat::Range(pat)) => pat.attrs = attrs,
+                    Pattern::Real(Pat::Reference(pat)) => pat.attrs = attrs,
+                    Pattern::Real(Pat::Rest(pat)) => pat.attrs = attrs,
+                    Pattern::Real(Pat::Slice(pat)) => pat.attrs = attrs,
+                    Pattern::Real(Pat::Struct(pat)) => pat.attrs = attrs,
+                    Pattern::Real(Pat::Tuple(pat)) => pat.attrs = attrs,
+                    Pattern::Real(Pat::TupleStruct(pat)) => pat.attrs = attrs,
+                    Pattern::Real(Pat::Type(_)) => unreachable!(),
+                    Pattern::Real(Pat::Verbatim(_)) => {}
+                    Pattern::Real(Pat::Wild(pat)) => pat.attrs = attrs,
+                }
+                Ok(pat)
+            }
+        }
+    }
+
+    impl ParseList for ClosureInput {
+        type Punct = Token![,];
+
+        fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<<Self as ParsePat>::Target>>> {
+            let mut inputs = Punctuated::new();
+            loop {
+                if input.peek(Token![|]) {
+                    break;
+                }
+                let value = input.parse_id::<ClosureInput>()?;
+                inputs.push_value(value);
+                if input.peek(Token![|]) {
+                    break;
+                }
+                let punct: Token![,] = input.parse()?;
+                inputs.push_punct(punct);
+            }
+            Ok(inputs.into_iter().collect())
+        }
+    }
+
     #[cfg(feature = "full")]
     fn expr_closure(input: ParseStream, allow_struct: AllowStruct) -> Result<ExprClosure> {
         let lifetimes: Option<BoundLifetimes> = input.parse()?;
@@ -2375,19 +2445,7 @@ pub(crate) mod parsing {
         let capture: Option<Token![move]> = input.parse()?;
         let or1_token: Token![|] = input.parse()?;
 
-        let mut inputs = Punctuated::new();
-        loop {
-            if input.peek(Token![|]) {
-                break;
-            }
-            let value = closure_arg(input)?;
-            inputs.push_value(value);
-            if input.peek(Token![|]) {
-                break;
-            }
-            let punct: Token![,] = input.parse()?;
-            inputs.push_punct(punct);
-        }
+        let inputs = input.parse_list::<ClosureInput>()?;
 
         let or2_token: Token![|] = input.parse()?;
 
@@ -2438,42 +2496,6 @@ pub(crate) mod parsing {
                 capture: input.parse()?,
                 block: input.parse()?,
             })
-        }
-    }
-
-    #[cfg(feature = "full")]
-    fn closure_arg(input: ParseStream) -> Result<Pat> {
-        let attrs = input.call(Attribute::parse_outer)?;
-        let mut pat = Pat::parse_single(input)?;
-
-        if input.peek(Token![:]) {
-            Ok(Pat::Type(PatType {
-                attrs,
-                pat: Box::new(pat),
-                colon_token: input.parse()?,
-                ty: input.parse()?,
-            }))
-        } else {
-            match &mut pat {
-                Pat::Const(pat) => pat.attrs = attrs,
-                Pat::Ident(pat) => pat.attrs = attrs,
-                Pat::Lit(pat) => pat.attrs = attrs,
-                Pat::Macro(pat) => pat.attrs = attrs,
-                Pat::Or(pat) => pat.attrs = attrs,
-                Pat::Paren(pat) => pat.attrs = attrs,
-                Pat::Path(pat) => pat.attrs = attrs,
-                Pat::Range(pat) => pat.attrs = attrs,
-                Pat::Reference(pat) => pat.attrs = attrs,
-                Pat::Rest(pat) => pat.attrs = attrs,
-                Pat::Slice(pat) => pat.attrs = attrs,
-                Pat::Struct(pat) => pat.attrs = attrs,
-                Pat::Tuple(pat) => pat.attrs = attrs,
-                Pat::TupleStruct(pat) => pat.attrs = attrs,
-                Pat::Type(_) => unreachable!(),
-                Pat::Verbatim(_) => {}
-                Pat::Wild(pat) => pat.attrs = attrs,
-            }
-            Ok(pat)
         }
     }
 
@@ -2848,11 +2870,14 @@ pub(crate) mod parsing {
         type Target = Arm;
 
         fn parse_pat(input: ParseStream) -> Result<SpannedPat<Arm>> {
+            if let Some(var) = input.parse_var() {
+                return var;
+            }
             input.call_spanned(|input| {
                 let requires_comma;
                 Ok(Arm {
                     attrs: input.call(Attribute::parse_outer)?,
-                    pat: Pat::parse_multi_with_leading_vert(input)?,
+                    pat: PatMultiLeadingVert::parse_id(input)?,
                     guard: {
                         if input.peek(Token![if]) {
                             let if_token: Token![if] = input.parse()?;

@@ -30,7 +30,7 @@ mod error;
 pub use crate::error::{Error, Result};
 
 mod expr;
-pub use crate::expr::Expr;
+pub use crate::expr::{Arm, Expr};
 
 pub mod ext;
 

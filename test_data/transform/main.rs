@@ -9,3 +9,11 @@ fn main() {
         =
         10;
 }
+
+fn example10() {
+    let value = Some(42);
+    let result = match value {
+        Some(x) => Ok(x * 2),
+        None => Ok(0),
+    };
+}

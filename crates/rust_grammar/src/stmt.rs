@@ -46,7 +46,7 @@ pub enum Stmt {
 pub struct Local {
     pub attrs: Vec<Attribute>,
     pub let_token: Token![let],
-    pub pat: Pat,
+    pub pat: NodeId<Pat>,
     pub init: Option<LocalInit>,
     pub semi_token: Token![;],
 }
@@ -88,7 +88,7 @@ pub(crate) mod parsing {
     use crate::mac::{self, Macro};
     use crate::parse::discouraged::Speculative as _;
     use crate::parse::{Parse, ParseList, ParsePat, ParseStream};
-    use crate::pat::{Pat, PatType};
+    use crate::pat::{Pat, PatSingle, PatType};
     use crate::path::Path;
     use crate::stmt::{Block, Local, LocalInit, Stmt, StmtMacro};
     use crate::token;
@@ -268,16 +268,19 @@ pub(crate) mod parsing {
         let marker = input.marker();
         let let_token: Token![let] = input.parse()?;
 
-        let mut pat = Pat::parse_single(input)?;
+        let mut pat = PatSingle::parse_id(input)?;
         if input.peek(Token![:]) {
             let colon_token: Token![:] = input.parse()?;
             let ty = input.parse()?;
-            pat = Pat::Type(PatType {
-                attrs: Vec::new(),
-                pat: Box::new(pat),
-                colon_token,
-                ty,
-            });
+            pat = input.add(
+                Pat::Type(PatType {
+                    attrs: Vec::new(),
+                    pat,
+                    colon_token,
+                    ty,
+                })
+                .with_span(input.span_from_marker(marker)),
+            );
         }
 
         let init = if let Some(eq_token) = input.parse()? {

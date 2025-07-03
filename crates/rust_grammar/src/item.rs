@@ -747,7 +747,7 @@ impl Receiver {
 #[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct Variadic {
     pub attrs: Vec<Attribute>,
-    pub pat: Option<(Box<Pat>, Token![:])>,
+    pub pat: Option<(NodeId<Pat>, Token![:])>,
     pub dots: Token![...],
     pub comma: Option<Token![,]>,
 }
@@ -796,7 +796,7 @@ pub(crate) mod parsing {
     use crate::mac::{self, Macro};
     use crate::parse::discouraged::Speculative as _;
     use crate::parse::{Parse, ParseBuffer, ParsePat, ParseStream};
-    use crate::pat::{Pat, PatType, PatWild};
+    use crate::pat::{PatSingle, PatType};
     use crate::path::Path;
     use crate::punctuated::Punctuated;
     use crate::restriction::Visibility;
@@ -1499,23 +1499,7 @@ pub(crate) mod parsing {
             return Ok(FnArgOrVariadic::FnArg(FnArg::Receiver(receiver)));
         }
 
-        // Hack to parse pre-2018 syntax in
-        // test/ui/rfc-2565-param-attrs/param-attrs-pretty.rs
-        // because the rest of the test case is valuable.
-        if input.peek_pat::<Ident>() && input.peek2(Token![<]) {
-            let span = input.fork().parse::<Ident>()?.span();
-            return Ok(FnArgOrVariadic::FnArg(FnArg::Typed(PatType {
-                attrs,
-                pat: Box::new(Pat::Wild(PatWild {
-                    attrs: Vec::new(),
-                    underscore_token: Token![_](span),
-                })),
-                colon_token: Token![:](span),
-                ty: input.parse()?,
-            })));
-        }
-
-        let pat = Box::new(Pat::parse_single(input)?);
+        let pat = PatSingle::parse_id(input)?;
         let colon_token: Token![:] = input.parse()?;
 
         if allow_variadic {
