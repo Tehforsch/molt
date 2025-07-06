@@ -22,6 +22,10 @@ walkdir = "2.5.0"
 thiserror = "2.0.12"
 rust_grammar = { path = "crates/rust_grammar", features = ["full", "parsing"] }
 molt_lib = { path = "crates/molt_lib" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.0", features = ["v4"] }
+lsp-types = "0.95.0" # 0.96 introduces a different URI type which makes life hell
 
 [features]
 debug-print = []

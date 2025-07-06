@@ -427,6 +427,14 @@ impl<Node: GetKind> Ctx<Node> {
         }
     }
 
+    pub fn remove<T: ToNode<Node>>(mut self, id: impl Into<Id>) -> Pattern<T, Id> {
+        let id = id.into();
+        match id.0 {
+            InternalId::Real(idx) => Pattern::Real(T::from_node(self.nodes.remove(idx)).unwrap()),
+            InternalId::Pat(_) => Pattern::Pat(id),
+        }
+    }
+
     pub fn get_mut<T: ToNode<Node>>(&mut self, id: NodeId<T>) -> Pattern<&mut T, Id> {
         let id: Id = id.into();
         match id.0 {
