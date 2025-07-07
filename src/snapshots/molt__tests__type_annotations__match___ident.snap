@@ -1,0 +1,9 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(& name, stringify! (ident))"
+---
+note: Match
+   ┌─ "test_data/type_annotations/src/main.rs":14:9
+   │
+14 │     let foo: usize = foo as usize;
+   │         ^^^ $x

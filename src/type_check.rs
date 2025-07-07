@@ -1,5 +1,6 @@
 use crate::lsp::LspClient;
 use crate::molt_grammar::TypeAnnotation;
+use lsp_types::{Position, Range};
 use molt_lib::{Ctx, Match, NodeId};
 use rust_grammar::{Node, Type};
 use std::path::Path;
@@ -21,20 +22,17 @@ impl LspClient {
         rust_path: &Path,
         match_: &Match,
     ) -> bool {
-        // If there are no type annotations, always return true
-        if type_annotations.is_empty() {
-            return true;
-        }
-
         for type_annotation in type_annotations {
             let var_id = pat_ctx.get_id_by_name(&type_annotation.var_name);
             let binding = match_.get_binding(var_id);
-            if let Some(ast_node) = binding.ast.first() {
+            for ast_node in binding.ast.iter() {
                 let span = ast_ctx.get_span(*ast_node);
-                let (line, column) = get_line_column(rust_src, span.byte_range());
-                let type_ = self
-                    .query_type_at_position(&rust_path, line, column)
-                    .unwrap();
+                let range = get_range_from_span(rust_src, span);
+                let type_ = self.query_type(&rust_path, range).unwrap();
+                dbg!(ast_ctx.print(*ast_node, rust_src));
+                if let Some(ref type_) = type_ {
+                    dbg!(type_.ctx.print(type_.type_.into(), &type_.src));
+                }
                 match type_ {
                     Some(type_) => {
                         if !compare_types(
@@ -55,28 +53,34 @@ impl LspClient {
         true
     }
 
-    fn query_type_at_position(
+    fn query_type(
         &mut self,
         file_path: &Path,
-        line: u32,
-        character: u32,
+        range: Range,
     ) -> Result<Option<LspType>, Box<dyn std::error::Error>> {
         let content = std::fs::read_to_string(file_path)?;
         self.did_open(file_path, &content)?;
-        self.get_type_at_position(file_path, line, character)
+        self.get_type_at_position(file_path, range)
     }
 }
 
-fn get_line_column(rust_src: &str, byte_range: std::ops::Range<usize>) -> (u32, u32) {
+fn get_range_from_span(rust_src: &str, span: molt_lib::Span) -> Range {
+    let start = get_position_from_byte_offset(rust_src, span.byte_range().start);
+    let end = get_position_from_byte_offset(rust_src, span.byte_range().end);
+    Range { start, end }
+}
+
+fn get_position_from_byte_offset(rust_src: &str, byte_index: usize) -> Position {
     let line_starts: Vec<usize> = crate::input::line_starts(rust_src).collect();
-    let byte_index = byte_range.start;
     let line = line_starts
         .binary_search(&byte_index)
         .unwrap_or_else(|next_line| next_line - 1);
     let line_start = line_starts[line];
     let column = byte_index - line_start;
-    let (line, column) = (line as u32, column as u32);
-    (line, column)
+    Position {
+        line: line as u32,
+        character: column as u32,
+    }
 }
 
 fn compare_types(

@@ -7,6 +7,7 @@ use std::{
 pub type Diagnostic = codespan_reporting::diagnostic::Diagnostic<FileId>;
 
 pub struct Input {
+    root: Option<PathBuf>,
     rust_src: Vec<RustSourceFile>,
     molt_src: MoltSource,
 }
@@ -94,16 +95,25 @@ impl<'a> Files<'a> for Input {
 impl Input {
     pub fn new(molt_src: MoltSource) -> Self {
         Self {
+            root: None,
             rust_src: vec![],
             molt_src,
         }
     }
 
+    pub fn with_root(self, root: PathBuf) -> Self {
+        Self {
+            root: Some(root),
+            rust_src: self.rust_src,
+            molt_src: self.molt_src,
+        }
+    }
     pub fn with_rust_src_file<P: AsRef<Path>>(mut self, file: P) -> Result<Self, crate::Error> {
         self.rust_src.push(RustSourceFile::new(file)?);
         Ok(Self {
             molt_src: self.molt_src,
             rust_src: self.rust_src,
+            root: self.root,
         })
     }
 
@@ -117,6 +127,7 @@ impl Input {
         Ok(Self {
             molt_src: self.molt_src,
             rust_src: self.rust_src,
+            root: self.root,
         })
     }
 
@@ -139,6 +150,10 @@ impl Input {
             .iter()
             .enumerate()
             .map(|(i, _)| FileId::Rust(i))
+    }
+
+    pub fn root(&self) -> Option<&PathBuf> {
+        self.root.as_ref()
     }
 }
 

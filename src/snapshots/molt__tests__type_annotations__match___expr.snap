@@ -1,0 +1,21 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(& name, stringify! (expr))"
+---
+note: Match
+  ┌─ "test_data/type_annotations/src/main.rs":8:23
+  │
+8 │         Config { foo, timeout }
+  │                       ^^^^^^^ $e
+
+note: Match
+   ┌─ "test_data/type_annotations/src/main.rs":14:22
+   │
+14 │     let foo: usize = foo as usize;
+   │                      ^^^^^^^^^^^^ $e
+
+note: Match
+   ┌─ "test_data/type_annotations/src/main.rs":17:37
+   │
+17 │     let config = Config::new(false, 5);
+   │                                     ^ $e
