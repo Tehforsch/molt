@@ -28,7 +28,16 @@ impl LspClient {
             for ast_node in binding.ast.iter() {
                 let span = ast_ctx.get_span(*ast_node);
                 let range = get_range_from_span(rust_src, span);
-                let type_ = self.query_type(&rust_path, range).unwrap();
+                let type_ = loop {
+                    match self.query_type(&rust_path, range) {
+                        Ok(type_) => break type_,
+                        Err(e) if e.to_string().contains("content modified") => {
+                            // Retry if content was modified
+                            continue;
+                        }
+                        Err(e) => panic!("Failed to query type: {}", e),
+                    }
+                };
                 dbg!(ast_ctx.print(*ast_node, rust_src));
                 if let Some(ref type_) = type_ {
                     dbg!(type_.ctx.print(type_.type_.into(), &type_.src));
@@ -58,9 +67,18 @@ impl LspClient {
         file_path: &Path,
         range: Range,
     ) -> Result<Option<LspType>, Box<dyn std::error::Error>> {
-        let content = std::fs::read_to_string(file_path)?;
-        self.did_open(file_path, &content)?;
-        self.get_type_at_position(file_path, range)
+        loop {
+            let content = std::fs::read_to_string(file_path)?;
+            self.did_open(file_path, &content)?;
+            let type_ = self.get_type_at_position(file_path, range);
+            match type_ {
+                Ok(type_) => return Ok(type_),
+                Err(e) if e.to_string().contains("content modified") => {
+                    continue;
+                }
+                Err(e) => return Err(e),
+            }
+        }
     }
 }
 
