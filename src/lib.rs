@@ -4,9 +4,11 @@ mod lsp;
 pub(crate) mod molt_grammar;
 mod resolve;
 mod transform;
+mod type_check;
 
 pub use error::Error;
 pub use error::emit_error;
+use input::FilePath;
 pub use input::{Diagnostic, FileId, Input, MoltSource};
 
 use codespan_reporting::{diagnostic::Label, files::Files};
@@ -18,8 +20,7 @@ use molt_lib::Config;
 use molt_lib::ParsingMode;
 use molt_lib::{Id, MatchCtx, MatchRe};
 use rust_grammar::Node;
-use rust_grammar::Type;
-use std::path::Path;
+use type_check::check_type_annotations;
 
 pub struct RustFile;
 
@@ -47,10 +48,12 @@ impl MoltFile {
         ast_ctx: &'a Ctx,
         pat_ctx: &'a Ctx,
         var: Id,
+        rust_path: FilePath<'a>,
         rust_src: &'a str,
         molt_src: &'a str,
         config: Config,
     ) -> MatchResult<'a> {
+        let rust_path = rust_path.unwrap_path();
         let debug_print = config.debug_print;
         let ctx = MatchCtx::new(pat_ctx, ast_ctx, rust_src, molt_src, config);
         if debug_print {
@@ -67,6 +70,17 @@ impl MoltFile {
                 } else {
                     molt_lib::match_pattern(&ctx, &self.vars, var, item)
                 }
+            })
+            .filter(|match_re| {
+                check_type_annotations(
+                    &self.type_annotations,
+                    ast_ctx,
+                    pat_ctx,
+                    rust_src,
+                    molt_src,
+                    rust_path,
+                    match_re,
+                )
             })
             .collect();
         MatchResult { matches, ctx, var }
@@ -116,71 +130,45 @@ impl<'a> MatchResult<'a> {
 }
 
 pub fn run(input: &Input, config: crate::Config) -> Result<Vec<Diagnostic>, Error> {
-    if true {
-        dbg!(query_type_at_position(Path::new("src/lib.rs"), 31, 9).unwrap());
-        Ok(vec![])
-    } else {
-        let mut diagnostics = vec![];
-        let (mut molt_file, pat_ctx) = MoltFile::new(input)?;
-        for rust_file_id in input.iter_rust_src() {
-            let (_, ast_ctx) = RustFile::new(input, rust_file_id)?;
-            match molt_file.command() {
-                Command::Match(MatchCommand {
-                    match_: pat_var,
-                    print,
-                }) => {
-                    let match_result = molt_file.match_pattern(
-                        &ast_ctx,
-                        &pat_ctx,
-                        pat_var.unwrap(),
-                        input.source(rust_file_id).unwrap(),
-                        input.source(input.molt_file_id()).unwrap(),
-                        config.clone(),
-                    );
-                    diagnostics.extend(match_result.make_diagnostics(rust_file_id, print));
-                }
-                Command::Transform(TransformCommand {
-                    input: input_var,
-                    output: output_var,
-                    match_,
-                }) => {
-                    let match_result = molt_file.match_pattern(
-                        &ast_ctx,
-                        &pat_ctx,
-                        match_.unwrap(),
-                        input.source(rust_file_id).unwrap(),
-                        input.source(input.molt_file_id()).unwrap(),
-                        config.clone(),
-                    );
-                    transform::transform(input, rust_file_id, match_result, input_var, output_var)?;
-                }
-            };
-        }
-        Ok(diagnostics)
+    let mut diagnostics = vec![];
+    let (mut molt_file, pat_ctx) = MoltFile::new(input)?;
+    for rust_file_id in input.iter_rust_src() {
+        let (_, ast_ctx) = RustFile::new(input, rust_file_id)?;
+        match molt_file.command() {
+            Command::Match(MatchCommand {
+                match_: pat_var,
+                print,
+            }) => {
+                let match_result = molt_file.match_pattern(
+                    &ast_ctx,
+                    &pat_ctx,
+                    pat_var.unwrap(),
+                    input.name(rust_file_id).unwrap(),
+                    input.source(rust_file_id).unwrap(),
+                    input.source(input.molt_file_id()).unwrap(),
+                    config.clone(),
+                );
+                diagnostics.extend(match_result.make_diagnostics(rust_file_id, print));
+            }
+            Command::Transform(TransformCommand {
+                input: input_var,
+                output: output_var,
+                match_,
+            }) => {
+                let match_result = molt_file.match_pattern(
+                    &ast_ctx,
+                    &pat_ctx,
+                    match_.unwrap(),
+                    input.name(rust_file_id).unwrap(),
+                    input.source(rust_file_id).unwrap(),
+                    input.source(input.molt_file_id()).unwrap(),
+                    config.clone(),
+                );
+                transform::transform(input, rust_file_id, match_result, input_var, output_var)?;
+            }
+        };
     }
-}
-
-pub fn query_type_at_position(
-    file_path: &Path,
-    line: u32,
-    character: u32,
-) -> Result<Option<Type>, Box<dyn std::error::Error>> {
-    let mut lsp_client = lsp::LspClient::new()?;
-
-    // Get the current directory as the workspace root
-    let current_dir = std::env::current_dir()?;
-
-    // Initialize the LSP client
-    lsp_client.initialize(&current_dir)?;
-
-    // Read the file content to sync with LSP server
-    let content = std::fs::read_to_string(file_path)?;
-    lsp_client.did_open(file_path, &content)?;
-
-    // Query hover information
-    let hover_result = lsp_client.get_type_at_position(file_path, line, character)?;
-
-    Ok(hover_result)
+    Ok(diagnostics)
 }
 
 #[cfg(test)]
@@ -247,6 +235,7 @@ mod tests {
             &ast_ctx,
             &pat_ctx,
             tr.match_.unwrap(),
+            input.name(rust_file_id).unwrap(),
             input.source(rust_file_id).unwrap(),
             input.source(input.molt_file_id()).unwrap(),
             config.clone(),

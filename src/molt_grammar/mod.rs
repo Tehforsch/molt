@@ -13,9 +13,22 @@ pub struct TokenVar {
     pub name: String,
 }
 
+#[derive(Debug)]
+pub struct UnresolvedTypeAnnotation {
+    pub var_name: String,
+    pub type_: TokenStream,
+}
+
+#[derive(Debug)]
+pub struct TypeAnnotation {
+    pub var_name: String,
+    pub type_: NodeId<Type>,
+}
+
 pub(crate) struct UnresolvedMoltFile {
     pub vars: Vec<UnresolvedVarDecl>,
     pub commands: Vec<Command<TokenVar>>,
+    pub type_annotations: Vec<UnresolvedTypeAnnotation>,
 }
 
 #[derive(Debug)]
@@ -28,12 +41,14 @@ pub struct UnresolvedVarDecl {
 pub(crate) enum Decl {
     VarDecl(UnresolvedVarDecls),
     Command(Command<TokenVar>),
+    TypeAnnotation(UnresolvedTypeAnnotation),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub(crate) struct MoltFile {
     pub vars: Vec<VarDecl>,
     pub command: Command<Id>,
+    pub type_annotations: Vec<TypeAnnotation>,
 }
 
 #[derive(Debug, Clone)]

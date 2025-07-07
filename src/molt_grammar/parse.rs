@@ -1,10 +1,11 @@
 use rust_grammar::ext::IdentExt;
-use rust_grammar::{Ident, Token, TokenStream};
+use rust_grammar::token::Brace;
+use rust_grammar::{Ident, Token, TokenStream, TokenTree};
 use rust_grammar::{Result, braced, parse::Parse, parse::ParseStream};
 
 use super::{
-    Command, Decl, MatchCommand, TokenVar, TransformCommand, UnresolvedMoltFile, UnresolvedVarDecl,
-    UserKind,
+    Command, Decl, MatchCommand, TokenVar, TransformCommand, UnresolvedMoltFile,
+    UnresolvedTypeAnnotation, UnresolvedVarDecl, UserKind,
 };
 
 mod kw {
@@ -15,13 +16,19 @@ impl Parse for UnresolvedMoltFile {
     fn parse(parser: ParseStream) -> Result<Self> {
         let mut commands = vec![];
         let mut vars = vec![];
+        let mut type_annotations = vec![];
         while !parser.is_empty() {
             match parser.parse()? {
                 Decl::VarDecl(new_vars) => vars.extend(new_vars.0.into_iter()),
                 Decl::Command(command) => commands.push(command),
+                Decl::TypeAnnotation(type_annotation) => type_annotations.push(type_annotation),
             }
         }
-        Ok(UnresolvedMoltFile { vars, commands })
+        Ok(UnresolvedMoltFile {
+            vars,
+            commands,
+            type_annotations,
+        })
     }
 }
 
@@ -29,6 +36,8 @@ impl Parse for Decl {
     fn parse(parser: ParseStream) -> Result<Self> {
         if parser.peek(Token![match]) || parser.peek(kw::transform) {
             Ok(Self::Command(parser.parse()?))
+        } else if parser.peek(Token![type]) {
+            Ok(Self::TypeAnnotation(parser.parse()?))
         } else {
             Ok(Self::VarDecl(parser.parse()?))
         }
@@ -57,9 +66,7 @@ impl Parse for UnresolvedVarDecls {
         } else {
             None
         };
-        if input.peek(Token![;]) {
-            let _: Token![;] = input.parse()?;
-        }
+        let _: Token![;] = input.parse()?;
         Ok(Self(
             vars.into_iter()
                 .map(|var| UnresolvedVarDecl {
@@ -105,9 +112,41 @@ impl Parse for Command<TokenVar> {
                 print: Some(print),
             })
         };
-        if parser.peek(Token![;]) {
-            let _: Token![;] = parser.parse()?;
-        }
+        let _: Token![;] = parser.parse()?;
         Ok(command)
     }
+}
+
+impl Parse for UnresolvedTypeAnnotation {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let _: Token![type] = input.parse()?;
+        let var_name: Ident = input.parse()?;
+        let _: Token![=] = input.parse()?;
+        let type_ = if input.peek(Brace) {
+            let content;
+            braced!(content in input);
+            content.parse()?
+        } else {
+            parse_until_semicolon(input)?
+        };
+        let _: Token![;] = input.parse()?;
+        Ok(UnresolvedTypeAnnotation {
+            var_name: var_name.to_string(),
+            type_,
+        })
+    }
+}
+
+fn parse_until_semicolon(input: ParseStream) -> Result<TokenStream> {
+    let mut collected = TokenStream::new();
+    while !input.is_empty() {
+        let tt: TokenTree = input.parse()?;
+        collected.extend(std::iter::once(tt));
+
+        if input.peek(Token![;]) || input.is_empty() {
+            break;
+        }
+    }
+
+    Ok(collected)
 }

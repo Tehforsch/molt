@@ -1,13 +1,13 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use molt_lib::{Id, ParsingMode, Span, Var, VarDecl};
-use rust_grammar::{Node, TokenStream, TokenTree};
+use rust_grammar::{Node, TokenStream, TokenTree, Type};
 
 use crate::{
     Command, Error, FileId, MoltFile, PatCtx,
     molt_grammar::{
-        MatchCommand, TokenVar, TransformCommand, UnresolvedMoltFile, UnresolvedVarDecl,
-        parse_node_with_kind,
+        MatchCommand, TokenVar, TransformCommand, TypeAnnotation, UnresolvedMoltFile,
+        UnresolvedVarDecl, parse_node_with_kind,
     },
 };
 
@@ -135,10 +135,27 @@ impl UnresolvedMoltFile {
                 Ok(VarDecl { id, node })
             })
             .collect();
+        let type_annotations: Result<Vec<_>, Error> = self
+            .type_annotations
+            .into_iter()
+            .map(|ann| {
+                Ok(TypeAnnotation {
+                    var_name: ann.var_name,
+                    type_: rust_grammar::parse_with_ctx(
+                        pat_ctx.clone(),
+                        |input| input.parse_id::<Type>(),
+                        ann.type_,
+                        ParsingMode::Pat,
+                    )
+                    .map_err(|e| Error::parse(e, file_id))?,
+                })
+            })
+            .collect();
         Ok((
             MoltFile {
                 vars: vars?,
                 command,
+                type_annotations: type_annotations?,
             },
             pat_ctx.take(),
         ))

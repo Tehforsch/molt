@@ -4,8 +4,9 @@ use lsp_types::{
     InitializeParams, InitializeResult, InitializedParams, Position, TextDocumentIdentifier,
     TextDocumentItem, TextDocumentPositionParams, Url, WorkDoneProgressParams, WorkspaceFolder,
 };
-use molt_lib::ParsingMode;
-use rust_grammar::{FieldNamed, Type};
+use molt_lib::{NodeId, ParsingMode};
+use rust_grammar::parse::ParsePat;
+use rust_grammar::{Field, FieldNamed, Pat, Stmt, Type};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -15,6 +16,9 @@ use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 use uuid::Uuid;
+
+use crate::Ctx;
+use crate::type_check::LspType;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -172,7 +176,6 @@ impl LspClient {
     fn wait_for_publish_diagnostics(&mut self, timeout: Duration) -> Result<()> {
         let start_time = Instant::now();
         while start_time.elapsed() < timeout {
-            // Process any pending notifications
             self.read_single_response()?;
             for notification in self.drain_notifications() {
                 if notification.method == PublishDiagnostics::METHOD {
@@ -188,9 +191,32 @@ impl LspClient {
     pub fn initialize(&mut self, root_path: &Path) -> Result<()> {
         let root_uri = Url::from_file_path(root_path.canonicalize().unwrap())
             .map_err(|_| "Invalid file path")?;
+        let initialization_options = serde_json::json!({
+            "hover": {
+                "documentation": {
+                    "enable": false
+                },
+                "dropGlue": {
+                    "enable": false
+                },
+                "memoryLayout": {
+                    "enable": false
+                },
+                "links": {
+                    "enable": false
+                },
+                "show": {
+                    "enumVariants": null,
+                    "fields": null,
+                    "traitAssocItems": null,
+                },
+                "maxSubstitutionLength": null,
+
+            }
+        });
         let params = InitializeParams {
             process_id: None,
-            initialization_options: None,
+            initialization_options: Some(initialization_options),
             capabilities: ClientCapabilities::default(),
             trace: None,
             workspace_folders: Some(vec![WorkspaceFolder {
@@ -230,7 +256,7 @@ impl LspClient {
         file_path: &Path,
         line: u32,
         character: u32,
-    ) -> Result<Option<Type>> {
+    ) -> Result<Option<LspType>> {
         let uri = Url::from_file_path(file_path.canonicalize().unwrap())
             .map_err(|_| "Invalid file path")?;
         let params = HoverParams {
@@ -247,29 +273,48 @@ impl LspClient {
             .transpose()
     }
 
-    fn extract_type_from_hover(&self, hover: Hover) -> Result<Option<Type>> {
-        // The type is contained in the third line.
+    fn extract_type_from_hover(&self, hover: Hover) -> Result<Option<LspType>> {
         if let HoverContents::Markup(str) = hover.contents {
             let mut lines = str.value.lines();
-            lines.next().ok_or_else(|| "Expected line")?;
-            lines.next().ok_or_else(|| "Expected line")?;
             let line = lines.next().ok_or_else(|| "Expected line")?;
-            // The third line reads like a field (e.g. `pub ident: Type`), so
-            // let's make use of what we already have.
-            let (field, ctx) = rust_grammar::parse_ctx(
-                |input| {
-                    let item = input.parse_pat::<FieldNamed>()?;
-                    Ok(item.take().unwrap_real())
-                },
-                line,
-                ParsingMode::Real,
-            )
-            .map_err(|_| "Failed to parse type in LSP response.")?;
-            Ok(Some(ctx.remove::<Type>(field.ty).unwrap_real()))
+            Ok(parse_type_from_str(line))
         } else {
             Err("Unexpected hover contents format.".into())
         }
     }
+}
+
+fn try_parse_as<T: ParsePat>(
+    line: &str,
+    f: impl Fn(&<T as ParsePat>::Target) -> Option<NodeId<Type>>,
+) -> Option<(NodeId<Type>, Ctx)> {
+    let (id, ctx) =
+        rust_grammar::parse_ctx(|input| input.parse_id::<T>(), line, ParsingMode::Real).ok()?;
+    f(ctx.get(id).unwrap_real()).map(|item| (item, ctx))
+}
+
+fn parse_type_from_str(line: &str) -> Option<LspType> {
+    // Ugly: Add a semicolon to allow parsing into a statement.
+    let line = format!("{line};");
+    let result = try_parse_as::<FieldNamed>(&line, |field: &Field| Some(field.ty)).or_else(|| {
+        try_parse_as::<Stmt>(&line, |stmt: &Stmt| match stmt {
+            Stmt::Local(local) => match &local.pat {
+                Pat::Type(type_) => Some(type_.ty),
+                _ => None,
+            },
+            _ => None,
+        })
+    });
+    if result.is_none() {
+        println!("Failed to parse type in LSP response. LSP response: {line}");
+        return None;
+    }
+    let (type_, ctx) = result.unwrap();
+    Some(LspType {
+        ctx,
+        type_,
+        src: line.to_string(),
+    })
 }
 
 impl Drop for LspClient {
