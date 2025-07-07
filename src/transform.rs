@@ -2,7 +2,7 @@ use std::process::Command;
 use std::str::FromStr;
 
 use codespan_reporting::files::Files;
-use molt_lib::{Id, MatchCtx, MatchRe, Span};
+use molt_lib::{Id, Match, MatchCtx, Span};
 use rust_grammar::{Node, TokenStream};
 
 use crate::{
@@ -114,7 +114,7 @@ fn check_overlap(transformations: &[Transformation]) -> Result<(), Error> {
 
 fn make_transformation(
     ctx: &MatchCtx<Node>,
-    match_: &MatchRe,
+    match_: &Match,
     input: Id,
     output: Id,
 ) -> Transformation {
@@ -126,7 +126,7 @@ fn make_transformation(
     }
 }
 
-fn get_transformed_code(ctx: &MatchCtx<Node>, match_: &MatchRe, output: Id) -> String {
+fn get_transformed_code(ctx: &MatchCtx<Node>, match_: &Match, output: Id) -> String {
     let binding = match_.get_binding(output);
     let mut code = if let Some(ast_binding) = binding.ast.first() {
         ctx.print_ast(*ast_binding).to_string()
@@ -150,7 +150,7 @@ fn get_transformed_code(ctx: &MatchCtx<Node>, match_: &MatchRe, output: Id) -> S
 
 fn replace_first_variable(
     ctx: &MatchCtx<Node>,
-    match_: &MatchRe,
+    match_: &Match,
     sc: &mut String,
     mut vars: Vec<TokenVar>,
 ) {

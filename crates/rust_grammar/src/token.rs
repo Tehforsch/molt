@@ -1108,7 +1108,7 @@ pub(crate) mod printing {
 macro_rules! impl_zst_cmp_syn {
     ($ty: ty) => {
         impl molt_lib::CmpSyn for $ty {
-            fn cmp_syn(&self, _: &mut molt_lib::Match, _: &Self) {}
+            fn cmp_syn(&self, _: &mut molt_lib::Matcher, _: &Self) {}
         }
     };
 }

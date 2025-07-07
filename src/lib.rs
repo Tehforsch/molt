@@ -16,11 +16,11 @@ use molt_grammar::MatchCommand;
 use molt_grammar::TransformCommand;
 use molt_grammar::{Command, MoltFile, UnresolvedMoltFile};
 
+use lsp::LspClient;
 use molt_lib::Config;
 use molt_lib::ParsingMode;
-use molt_lib::{Id, MatchCtx, MatchRe};
+use molt_lib::{Id, Match, MatchCtx};
 use rust_grammar::Node;
-use type_check::check_type_annotations;
 
 pub struct RustFile;
 
@@ -29,7 +29,7 @@ pub type PatCtx = Ctx;
 pub type AstCtx = Ctx;
 
 pub(crate) struct MatchResult<'a> {
-    pub matches: Vec<MatchRe>,
+    pub matches: Vec<Match>,
     pub ctx: MatchCtx<'a, Node>,
     pub var: Id,
 }
@@ -52,6 +52,7 @@ impl MoltFile {
         rust_src: &'a str,
         molt_src: &'a str,
         config: Config,
+        lsp_client: &mut LspClient,
     ) -> MatchResult<'a> {
         let rust_path = rust_path.unwrap_path();
         let debug_print = config.debug_print;
@@ -72,7 +73,7 @@ impl MoltFile {
                 }
             })
             .filter(|match_re| {
-                check_type_annotations(
+                lsp_client.check_type_annotations(
                     &self.type_annotations,
                     ast_ctx,
                     pat_ctx,
@@ -132,6 +133,16 @@ impl<'a> MatchResult<'a> {
 pub fn run(input: &Input, config: crate::Config) -> Result<Vec<Diagnostic>, Error> {
     let mut diagnostics = vec![];
     let (mut molt_file, pat_ctx) = MoltFile::new(input)?;
+
+    // Initialize LSP client once for the entire run
+    let mut lsp_client =
+        LspClient::new().map_err(|e| Error::Misc(format!("Failed to create LSP client: {}", e)))?;
+    let current_dir = std::env::current_dir()
+        .map_err(|e| Error::Misc(format!("Failed to get current directory: {}", e)))?;
+    lsp_client
+        .initialize(&current_dir)
+        .map_err(|e| Error::Misc(format!("Failed to initialize LSP client: {}", e)))?;
+
     for rust_file_id in input.iter_rust_src() {
         let (_, ast_ctx) = RustFile::new(input, rust_file_id)?;
         match molt_file.command() {
@@ -147,6 +158,7 @@ pub fn run(input: &Input, config: crate::Config) -> Result<Vec<Diagnostic>, Erro
                     input.source(rust_file_id).unwrap(),
                     input.source(input.molt_file_id()).unwrap(),
                     config.clone(),
+                    &mut lsp_client,
                 );
                 diagnostics.extend(match_result.make_diagnostics(rust_file_id, print));
             }
@@ -163,6 +175,7 @@ pub fn run(input: &Input, config: crate::Config) -> Result<Vec<Diagnostic>, Erro
                     input.source(rust_file_id).unwrap(),
                     input.source(input.molt_file_id()).unwrap(),
                     config.clone(),
+                    &mut lsp_client,
                 );
                 transform::transform(input, rust_file_id, match_result, input_var, output_var)?;
             }
@@ -182,6 +195,7 @@ mod tests {
         Command, Error, MoltFile, RustFile,
         error::{emit_diagnostic_str, make_error_diagnostic},
         input::{Contents, Input, MoltSource},
+        lsp::LspClient,
     };
 
     fn parse_rust(path: &str) {
@@ -231,6 +245,12 @@ mod tests {
         let Command::Transform(ref tr) = molt_file.command else {
             panic!()
         };
+
+        // Initialize LSP client for tests
+        let mut lsp_client = LspClient::new().unwrap();
+        let current_dir = std::env::current_dir().unwrap();
+        lsp_client.initialize(&current_dir).unwrap();
+
         let match_result = molt_file.match_pattern(
             &ast_ctx,
             &pat_ctx,
@@ -239,6 +259,7 @@ mod tests {
             input.source(rust_file_id).unwrap(),
             input.source(input.molt_file_id()).unwrap(),
             config.clone(),
+            &mut lsp_client,
         );
         crate::transform::get_transformed_contents(
             &input,
