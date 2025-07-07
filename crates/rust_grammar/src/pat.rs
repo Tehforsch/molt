@@ -319,7 +319,7 @@ pub(crate) mod parsing {
     use crate::punctuated::Punctuated;
     use crate::verbatim;
     use crate::{token, Stmt};
-    use molt_lib::{NodeList, Pattern, WithSpan};
+    use molt_lib::{NodeId, NodeList, Pattern, WithSpan};
     use proc_macro2::TokenStream;
 
     use super::{PatMulti, PatMultiLeadingVert, PatSingle};
@@ -546,11 +546,10 @@ pub(crate) mod parsing {
     }
 
     impl ParseList for PatMultiLeadingVert {
+        type Item = Pat;
         type Punct = Token![,];
 
-        fn parse_list_real(
-            input: ParseStream,
-        ) -> Result<Vec<molt_lib::NodeId<<Self as ParsePat>::Target>>> {
+        fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Pat>>> {
             let mut elems = Punctuated::new();
             while !input.is_empty() {
                 let value = PatMultiLeadingVert::parse_id(&input)?;

@@ -1137,7 +1137,10 @@ pub(crate) mod parsing {
     use crate::parse::discouraged::Speculative as _;
     #[cfg(feature = "full")]
     use crate::parse::ParseBuffer;
-    use crate::parse::{ListOrItem, Parse, ParseList, ParseListOrItem, ParsePat, ParseStream};
+    use crate::parse::{
+        parse_punctuated_list_real, ListOrItem, Parse, ParseList, ParseListOrItem, ParsePat,
+        ParseStream,
+    };
     use crate::pat::PatMultiLeadingVert;
     #[cfg(feature = "full")]
     use crate::pat::{Pat, PatType};
@@ -1172,7 +1175,12 @@ pub(crate) mod parsing {
     }
 
     impl ParseList for Expr {
+        type Item = Expr;
         type Punct = Token![,];
+
+        fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
+            parse_punctuated_list_real::<Expr, Self::Punct>(input)
+        }
     }
 
     impl ParsePat for ExprNoEagerBrace {
@@ -2417,6 +2425,7 @@ pub(crate) mod parsing {
 
     impl ParseList for ClosureInput {
         type Punct = Token![,];
+        type Item = Pat;
 
         fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<<Self as ParsePat>::Target>>> {
             let mut inputs = Punctuated::new();
@@ -2854,6 +2863,7 @@ pub(crate) mod parsing {
 
     impl ParseList for Arm {
         type Punct = Token![,];
+        type Item = Arm;
 
         fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Arm>>> {
             let mut arms = Vec::new();

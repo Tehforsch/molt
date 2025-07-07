@@ -100,9 +100,10 @@ pub(crate) mod parsing {
     struct AllowNoSemi(bool);
 
     impl ParseList for Stmt {
+        type Item = Stmt;
         type Punct = Token![;];
 
-        fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Target>>> {
+        fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Stmt>>> {
             let mut stmts = Vec::new();
             loop {
                 let (span, semi) = input.parse_spanned::<Option<Token![;]>>()?.decompose();
