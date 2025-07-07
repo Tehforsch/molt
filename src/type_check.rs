@@ -20,27 +20,26 @@ pub fn check_type_annotations(
     match_re: &MatchRe,
 ) -> bool {
     for type_annotation in type_annotations {
-        if let Some(var_id) = pat_ctx.add_existing_var(&type_annotation.var_name) {
-            let binding = match_re.get_binding(var_id);
-            if let Some(ast_node) = binding.ast.first() {
-                let span = ast_ctx.get_span(*ast_node);
-                let (line, column) = get_line_column(rust_src, span.byte_range());
-                let type_ = query_type_at_position(&rust_path, line, column).unwrap();
-                match type_ {
-                    Some(type_) => {
-                        if !compare_types(
-                            &type_.ctx,
-                            pat_ctx,
-                            type_.type_,
-                            type_annotation.type_,
-                            &type_.src,
-                            molt_src,
-                        ) {
-                            return false;
-                        }
+        let var_id = pat_ctx.get_id_by_name(&type_annotation.var_name);
+        let binding = match_re.get_binding(var_id);
+        if let Some(ast_node) = binding.ast.first() {
+            let span = ast_ctx.get_span(*ast_node);
+            let (line, column) = get_line_column(rust_src, span.byte_range());
+            let type_ = query_type_at_position(&rust_path, line, column).unwrap();
+            match type_ {
+                Some(type_) => {
+                    if !compare_types(
+                        &type_.ctx,
+                        pat_ctx,
+                        type_.type_,
+                        type_annotation.type_,
+                        &type_.src,
+                        molt_src,
+                    ) {
+                        return false;
                     }
-                    None => return false,
                 }
+                None => return false,
             }
         }
     }

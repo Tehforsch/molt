@@ -396,7 +396,7 @@ impl<Node: GetKind> Ctx<Node> {
     }
 
     pub fn add_var<T: ToNode<Node>>(&mut self, var: Var<Node>) -> NodeId<T> {
-        let id = if let Some(id) = self.add_existing_var(&var.name) {
+        let id = if let Some((id, _)) = self.get_var_by_name(&var.name) {
             id
         } else {
             self.add_var_internal(var)
@@ -409,14 +409,6 @@ impl<Node: GetKind> Ctx<Node> {
             Pattern::Real(_) => self.add(item.unwrap_real()),
             Pattern::Pat(var) => var.typed(),
         }
-    }
-
-    pub fn add_existing_var(&self, var: &str) -> Option<Id> {
-        self.vars
-            .iter()
-            .enumerate()
-            .find(|(_, v)| var == v.name)
-            .map(|(i, _)| Id(InternalId::Pat(i)))
     }
 
     pub fn get<T: ToNode<Node>>(&self, id: impl Into<Id>) -> Pattern<&T, Id> {
@@ -473,26 +465,20 @@ impl<Node: GetKind> Ctx<Node> {
         }
     }
 
-    fn get_var_by_name(&self, name: &str) -> (Id, &Var<Node>) {
+    fn get_var_by_name(&self, name: &str) -> Option<(Id, &Var<Node>)> {
         self.vars
             .iter()
             .enumerate()
             .find(|(_, var)| var.name == name)
             .map(|(i, var)| (Id(InternalId::Pat(i)), var))
-            // Var resolution should take care of
-            // any undefined variables in any molt
-            // expression, so we will always find
-            // a matching variable for any identifier
-            // we encounter.
-            .unwrap()
     }
 
     pub fn get_kind_by_name(&self, name: &str) -> Node::Kind {
-        self.get_var_by_name(name).1.kind
+        self.get_var_by_name(name).unwrap().1.kind
     }
 
     pub fn get_id_by_name(&self, name: &str) -> Id {
-        self.get_var_by_name(name).0
+        self.get_var_by_name(name).unwrap().0
     }
 
     pub fn iter(&self) -> impl Iterator<Item = Id> {
