@@ -785,10 +785,6 @@ impl<'a> ParseBuffer<'a> {
         self.ctx.borrow_mut().add_var(var)
     }
 
-    pub fn add_existing_var(&self, var: &str) -> Option<Id> {
-        self.ctx.borrow_mut().add_existing_var(var)
-    }
-
     pub fn from_marker<T>(&self, marker: PosMarker, t: T) -> Spanned<T> {
         t.with_span(self.span_from_marker(marker))
     }

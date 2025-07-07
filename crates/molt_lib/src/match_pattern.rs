@@ -69,7 +69,7 @@ pub enum PatType {
 }
 
 #[derive(Debug)]
-pub struct Match {
+pub struct Matcher {
     bindings: HashMap<Id, Binding>,
     cmps: Vec<Comparison>,
     forks: Vec<Fork>,
@@ -80,11 +80,11 @@ pub struct Match {
 }
 
 #[derive(Debug)]
-pub struct MatchRe {
+pub struct Match {
     bindings: HashMap<Id, MultiBinding>,
 }
 
-impl Match {
+impl Matcher {
     fn new_root(vars: &[VarDecl]) -> Self {
         Self {
             bindings: vars
@@ -165,11 +165,11 @@ impl Match {
     fn make_forks(
         mut self,
         next_id: &mut (impl FnOnce() -> MatchId + Copy),
-    ) -> impl Iterator<Item = Match> {
+    ) -> impl Iterator<Item = Matcher> {
         assert!(self.cmps.is_empty());
         assert!(self.valid);
         let fork = self.forks.pop().unwrap();
-        fork.cmps.into_iter().map(move |cmp| Match {
+        fork.cmps.into_iter().map(move |cmp| Matcher {
             bindings: self.bindings.clone(),
             forks: self.forks.clone(),
             cmps: vec![cmp],
@@ -273,7 +273,7 @@ impl Match {
     }
 }
 
-impl MatchRe {
+impl Match {
     pub fn get_binding(&self, var: Id) -> &MultiBinding {
         &self.bindings[&var]
     }
@@ -288,8 +288,8 @@ pub fn match_pattern<N: GetKind + CmpSyn>(
     vars: &[VarDecl],
     var: Id,
     ast: Id,
-) -> Vec<MatchRe> {
-    let mut match_ = Match::new_root(vars);
+) -> Vec<Match> {
+    let mut match_ = Matcher::new_root(vars);
     match_.add_binding(ctx, var, ast);
     let mut current = vec![match_];
     let mut matches = vec![];
@@ -319,9 +319,9 @@ pub fn match_pattern<N: GetKind + CmpSyn>(
     merge_matches(matches)
 }
 
-fn merge_matches(matches: Vec<Match>) -> Vec<MatchRe> {
+fn merge_matches(matches: Vec<Matcher>) -> Vec<Match> {
     let mut no_parents = vec![];
-    let mut by_parent: HashMap<MatchId, Vec<Match>> = HashMap::default();
+    let mut by_parent: HashMap<MatchId, Vec<Matcher>> = HashMap::default();
     for m in matches.into_iter() {
         match m.multi_match_id {
             Some(parent) => match by_parent.entry(parent) {
@@ -337,7 +337,7 @@ fn merge_matches(matches: Vec<Match>) -> Vec<MatchRe> {
     }
     no_parents
         .into_iter()
-        .map(|match_| MatchRe {
+        .map(|match_| Match {
             bindings: match_
                 .bindings
                 .into_iter()
@@ -376,7 +376,7 @@ fn merge_matches(matches: Vec<Match>) -> Vec<MatchRe> {
                     }
                 })
                 .collect();
-            Some(MatchRe { bindings })
+            Some(Match { bindings })
         }))
         .collect()
 }

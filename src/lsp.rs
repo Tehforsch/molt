@@ -10,7 +10,7 @@ use rust_grammar::{Field, FieldNamed, Pat, Stmt, Type};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
@@ -79,6 +79,7 @@ pub struct LspClient {
     process: Child,
     reader: BufReader<std::process::ChildStdout>,
     notification_queue: VecDeque<LspNotification>,
+    opened_files: HashSet<std::path::PathBuf>,
 }
 
 impl LspClient {
@@ -95,6 +96,7 @@ impl LspClient {
             process,
             reader,
             notification_queue: VecDeque::new(),
+            opened_files: HashSet::new(),
         })
     }
 
@@ -235,8 +237,13 @@ impl LspClient {
     }
 
     pub fn did_open(&mut self, file_path: &Path, content: &str) -> Result<()> {
-        let uri =
-            Url::from_file_path(file_path.canonicalize()?).map_err(|_| "Invalid file path")?;
+        let canonical_path = file_path.canonicalize()?;
+
+        if self.opened_files.contains(&canonical_path) {
+            return Ok(());
+        }
+
+        let uri = Url::from_file_path(&canonical_path).map_err(|_| "Invalid file path")?;
         let params = DidOpenTextDocumentParams {
             text_document: TextDocumentItem {
                 uri: uri.clone(),
@@ -248,6 +255,8 @@ impl LspClient {
         self.send_notification("textDocument/didOpen", params)?;
         self.wait_for_publish_diagnostics(Duration::from_secs(RUST_ANALYZER_TIMEOUT))
             .unwrap();
+
+        self.opened_files.insert(canonical_path);
         Ok(())
     }
 

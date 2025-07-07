@@ -88,7 +88,7 @@ struct LitRepr {
 }
 
 impl CmpSyn for LitRepr {
-    fn cmp_syn(&self, ctx: &mut molt_lib::Match, pat: &Self) {
+    fn cmp_syn(&self, ctx: &mut molt_lib::Matcher, pat: &Self) {
         // TODO, suffix?
         ctx.cmp_syn(&self.token, &pat.token);
     }
@@ -108,7 +108,7 @@ struct LitIntRepr {
 }
 
 impl CmpSyn for LitIntRepr {
-    fn cmp_syn(&self, ctx: &mut molt_lib::Match, pat: &Self) {
+    fn cmp_syn(&self, ctx: &mut molt_lib::Matcher, pat: &Self) {
         // TODO, suffix/digits?
         ctx.cmp_syn(&self.token, &pat.token);
     }
@@ -130,7 +130,7 @@ struct LitFloatRepr {
 }
 
 impl CmpSyn for LitFloatRepr {
-    fn cmp_syn(&self, ctx: &mut molt_lib::Match, pat: &Self) {
+    fn cmp_syn(&self, ctx: &mut molt_lib::Matcher, pat: &Self) {
         // TODO, suffix/digits?
         ctx.cmp_syn(&self.token, &pat.token);
     }
