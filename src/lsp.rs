@@ -75,15 +75,19 @@ impl LspNotification {
     }
 }
 
-pub struct LspClient {
+struct RealLspClient {
     process: Child,
     reader: BufReader<std::process::ChildStdout>,
     notification_queue: VecDeque<LspNotification>,
     opened_files: HashSet<std::path::PathBuf>,
 }
 
-impl LspClient {
-    pub fn new() -> Result<Self> {
+pub struct LspClient {
+    inner: Option<RealLspClient>,
+}
+
+impl RealLspClient {
+    fn new() -> Result<Self> {
         let mut process = Command::new("rust-analyzer")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -92,7 +96,7 @@ impl LspClient {
         let stdout = process.stdout.take().unwrap();
         let reader = BufReader::new(stdout);
 
-        Ok(LspClient {
+        Ok(RealLspClient {
             process,
             reader,
             notification_queue: VecDeque::new(),
@@ -326,7 +330,42 @@ fn parse_type_from_str(line: &str) -> Option<LspType> {
     })
 }
 
-impl Drop for LspClient {
+impl LspClient {
+    pub(crate) fn uninitialized() -> Self {
+        Self { inner: None }
+    }
+
+    pub(crate) fn new() -> Result<Self> {
+        Ok(Self {
+            inner: Some(RealLspClient::new()?),
+        })
+    }
+
+    pub fn initialize(&mut self, root_path: &Path) -> Result<()> {
+        if let Some(ref mut inner) = self.inner {
+            inner.initialize(root_path)?;
+        }
+        Ok(())
+    }
+
+    pub fn did_open(&mut self, file_path: &Path, content: &str) -> Result<()> {
+        self.inner.as_mut().unwrap().did_open(file_path, content)
+    }
+
+    pub fn get_type_at_position(
+        &mut self,
+        file_path: &Path,
+        line: u32,
+        character: u32,
+    ) -> Result<Option<LspType>> {
+        self.inner
+            .as_mut()
+            .unwrap()
+            .get_type_at_position(file_path, line, character)
+    }
+}
+
+impl Drop for RealLspClient {
     fn drop(&mut self) {
         let _ = self.process.kill();
     }

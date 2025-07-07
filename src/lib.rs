@@ -134,9 +134,14 @@ pub fn run(input: &Input, config: crate::Config) -> Result<Vec<Diagnostic>, Erro
     let mut diagnostics = vec![];
     let (mut molt_file, pat_ctx) = MoltFile::new(input)?;
 
-    // Initialize LSP client once for the entire run
-    let mut lsp_client =
-        LspClient::new().map_err(|e| Error::Misc(format!("Failed to create LSP client: {}", e)))?;
+    let mut lsp_client = {
+        if molt_file.type_annotations.is_empty() {
+            LspClient::uninitialized()
+        } else {
+            LspClient::new()
+                .map_err(|e| Error::Misc(format!("Failed to create LSP client: {}", e)))?
+        }
+    };
     let current_dir = std::env::current_dir()
         .map_err(|e| Error::Misc(format!("Failed to get current directory: {}", e)))?;
     lsp_client
@@ -246,10 +251,7 @@ mod tests {
             panic!()
         };
 
-        // Initialize LSP client for tests
-        let mut lsp_client = LspClient::new().unwrap();
-        let current_dir = std::env::current_dir().unwrap();
-        lsp_client.initialize(&current_dir).unwrap();
+        let mut lsp_client = LspClient::uninitialized();
 
         let match_result = molt_file.match_pattern(
             &ast_ctx,
