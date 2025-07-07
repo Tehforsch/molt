@@ -138,15 +138,14 @@ pub fn run(input: &Input, config: crate::Config) -> Result<Vec<Diagnostic>, Erro
         if molt_file.type_annotations.is_empty() {
             LspClient::uninitialized()
         } else {
-            LspClient::new()
-                .map_err(|e| Error::Misc(format!("Failed to create LSP client: {}", e)))?
+            LspClient::new(
+                input
+                    .root()
+                    .unwrap_or_else(|| panic!("Required LSP but no root directory given.")),
+            )
+            .map_err(|e| Error::Misc(format!("Failed to create LSP client: {}", e)))?
         }
     };
-    let current_dir = std::env::current_dir()
-        .map_err(|e| Error::Misc(format!("Failed to get current directory: {}", e)))?;
-    lsp_client
-        .initialize(&current_dir)
-        .map_err(|e| Error::Misc(format!("Failed to initialize LSP client: {}", e)))?;
 
     for rust_file_id in input.iter_rust_src() {
         let (_, ast_ctx) = RustFile::new(input, rust_file_id)?;
@@ -204,7 +203,8 @@ mod tests {
     };
 
     fn parse_rust(path: &str) {
-        let rust_path = Path::new("test_data").join(format!("{}/main.rs", path));
+        let root = Path::new("test_data").join(path);
+        let rust_path = root.join("main.rs");
         let input = Input::new(MoltSource::FromCli(Contents::new("".to_string())))
             .with_rust_src_file(&rust_path)
             .unwrap();
@@ -220,10 +220,12 @@ mod tests {
     }
 
     fn make_input(path: &str, fname: &str) -> Input {
-        let rust_path = Path::new("test_data").join(format!("{}/main.rs", path));
-        let molt_path = Path::new("test_data").join(format!("{}/{}.molt", path, fname));
+        let root = Path::new("test_data").join(path);
+        let rust_path = root.join("main.rs");
+        let molt_path = root.join(format!("{}.molt", fname));
 
         Input::new(MoltSource::file(molt_path).unwrap())
+            .with_root(root)
             .with_rust_src_file(&rust_path)
             .unwrap()
     }
@@ -274,20 +276,30 @@ mod tests {
     }
 
     macro_rules! test_match_pattern {
-        ($dir_name: ident, ($($test_name: ident),* $(,)?)) => {
+        ($dir_name: ident, ($($test_name: ident),* $(,)?) $(,$add: literal)?) => {
             mod $dir_name {
+                fn get_dir_name() -> String {
+                    let name = stringify!($dir_name);
+                    $(
+                        let name = format!("{}{}", name, $add);
+                    )?
+                    name.to_string()
+                }
+
                 mod match_ {
                     $(
                         #[test]
                         fn $test_name() {
-                            insta::assert_snapshot!(super::super::match_pattern(stringify!($dir_name), stringify!($test_name)));
+                            let name = super::get_dir_name();
+                            insta::assert_snapshot!(super::super::match_pattern(&name, stringify!($test_name)));
                         }
                     )*
                 }
 
                 #[test]
                 fn parse() {
-                    super::parse_rust(stringify!($dir_name));
+                    let name = get_dir_name();
+                    super::parse_rust(&name);
                 }
             }
         };
@@ -360,6 +372,7 @@ mod tests {
     test_match_pattern!(control_flow, ());
     test_match_pattern!(arrays, (array));
     test_match_pattern!(ranges, ());
+    test_match_pattern!(type_annotations, (ident, expr), "/src");
     test_match_pattern!(
         expr,
         (

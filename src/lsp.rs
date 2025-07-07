@@ -1,8 +1,8 @@
 use lsp_types::notification::{Notification, PublishDiagnostics};
 use lsp_types::{
-    ClientCapabilities, DidOpenTextDocumentParams, Hover, HoverContents, HoverParams,
-    InitializeParams, InitializeResult, InitializedParams, Position, TextDocumentIdentifier,
-    TextDocumentItem, TextDocumentPositionParams, Url, WorkDoneProgressParams, WorkspaceFolder,
+    ClientCapabilities, DidOpenTextDocumentParams, Hover, HoverContents, InitializeParams,
+    InitializeResult, InitializedParams, Range, TextDocumentItem, Url, WorkDoneProgressParams,
+    WorkspaceFolder,
 };
 use molt_lib::{NodeId, ParsingMode};
 use rust_grammar::parse::ParsePat;
@@ -17,10 +17,10 @@ use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
-use crate::Ctx;
 use crate::type_check::LspType;
+use crate::{Ctx, Error};
 
-type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+type Result<T, E = Box<dyn std::error::Error>> = std::result::Result<T, E>;
 
 const RUST_ANALYZER_TIMEOUT: u64 = 10;
 
@@ -264,21 +264,23 @@ impl RealLspClient {
         Ok(())
     }
 
-    pub fn get_type_at_position(
-        &mut self,
-        file_path: &Path,
-        line: u32,
-        character: u32,
-    ) -> Result<Option<LspType>> {
+    pub fn get_type_at_range(&mut self, file_path: &Path, range: Range) -> Result<Option<LspType>> {
         let uri = Url::from_file_path(file_path.canonicalize().unwrap())
             .map_err(|_| "Invalid file path")?;
-        let params = HoverParams {
-            text_document_position_params: TextDocumentPositionParams {
-                text_document: TextDocumentIdentifier { uri },
-                position: Position { line, character },
+        // rust-analyzer supports passing ranges instead of
+        // just positions. However, this is an LSP extension
+        // and so it is not supported by the strongly typed
+        // lsp-types equivalent (HoverParams).
+        // Therefore, we create a custom json.
+        let params = serde_json::json!({
+            "textDocument": {
+                "uri": uri
             },
-            work_done_progress_params: Default::default(),
-        };
+            "position": {
+                "start": range.start,
+                "end": range.end
+            }
+        });
         let response =
             self.send_request::<_, Hover>("textDocument/hover", serde_json::to_value(params)?)?;
         response
@@ -307,17 +309,21 @@ fn try_parse_as<T: ParsePat>(
 }
 
 fn parse_type_from_str(line: &str) -> Option<LspType> {
-    // Ugly: Add a semicolon to allow parsing into a statement.
-    let line = format!("{line};");
-    let result = try_parse_as::<FieldNamed>(&line, |field: &Field| Some(field.ty)).or_else(|| {
-        try_parse_as::<Stmt>(&line, |stmt: &Stmt| match stmt {
-            Stmt::Local(local) => match &local.pat {
-                Pat::Type(type_) => Some(type_.ty),
+    let result = try_parse_as::<FieldNamed>(&line, |field: &Field| Some(field.ty))
+        .or_else(|| {
+            // Ugly: Add a semicolon to allow parsing into a statement.
+            let line = format!("{line};");
+            try_parse_as::<Stmt>(&line, |stmt: &Stmt| match stmt {
+                Stmt::Local(local) => match &local.pat {
+                    Pat::Type(type_) => Some(type_.ty),
+                    _ => None,
+                },
                 _ => None,
-            },
-            _ => None,
+            })
         })
-    });
+        .or_else(|| {
+            rust_grammar::parse_ctx(|input| input.parse_id::<Type>(), &line, ParsingMode::Real).ok()
+        });
     if result.is_none() {
         println!("Failed to parse type in LSP response. LSP response: {line}");
         return None;
@@ -335,17 +341,15 @@ impl LspClient {
         Self { inner: None }
     }
 
-    pub(crate) fn new() -> Result<Self> {
+    pub(crate) fn new(root: &Path) -> Result<Self, Error> {
+        let mut client = RealLspClient::new()
+            .map_err(|e| Error::Misc(format!("Failed to spawn LSP process: {}", e)))?;
+        client
+            .initialize(&root)
+            .map_err(|e| Error::Misc(format!("Failed to initialize LSP client: {}", e)))?;
         Ok(Self {
-            inner: Some(RealLspClient::new()?),
+            inner: Some(client),
         })
-    }
-
-    pub fn initialize(&mut self, root_path: &Path) -> Result<()> {
-        if let Some(ref mut inner) = self.inner {
-            inner.initialize(root_path)?;
-        }
-        Ok(())
     }
 
     pub fn did_open(&mut self, file_path: &Path, content: &str) -> Result<()> {
@@ -355,13 +359,12 @@ impl LspClient {
     pub fn get_type_at_position(
         &mut self,
         file_path: &Path,
-        line: u32,
-        character: u32,
+        range: Range,
     ) -> Result<Option<LspType>> {
         self.inner
             .as_mut()
             .unwrap()
-            .get_type_at_position(file_path, line, character)
+            .get_type_at_range(file_path, range)
     }
 }
 
