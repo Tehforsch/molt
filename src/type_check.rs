@@ -21,6 +21,11 @@ impl LspClient {
         rust_path: &Path,
         match_: &Match,
     ) -> bool {
+        // If there are no type annotations, always return true
+        if type_annotations.is_empty() {
+            return true;
+        }
+
         for type_annotation in type_annotations {
             let var_id = pat_ctx.get_id_by_name(&type_annotation.var_name);
             let binding = match_.get_binding(var_id);
