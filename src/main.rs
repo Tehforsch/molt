@@ -53,18 +53,26 @@ fn get_cargo_source_files(path: &Path) -> Result<Vec<PathBuf>> {
 
 fn main() -> Result<()> {
     let args = CliArgs::parse();
-    let source_files = if let Some(path) = args.input_file {
+    let from_cargo = |path| {
+        let cargo_toml = get_cargo_toml(path)?;
+        let root = cargo_toml.parent().unwrap();
+        Ok::<_, Error>((Some(root.to_owned()), get_cargo_source_files(&cargo_toml)?))
+    };
+    let (root, source_files) = if let Some(path) = args.input_file {
         if path.is_dir() {
-            get_cargo_source_files(&get_cargo_toml(path)?)?
+            from_cargo(path)?
         } else {
-            vec![path.to_owned()]
+            (None, vec![path.to_owned()])
         }
     } else {
-        get_cargo_source_files(&get_cargo_toml(std::env::current_dir()?)?)?
+        from_cargo(std::env::current_dir()?)?
     };
-    let input = Input::new(MoltSource::file(&args.transform_file).unwrap())
+    let mut input = Input::new(MoltSource::file(&args.transform_file).unwrap())
         .with_rust_src_files(source_files.iter())
         .unwrap();
+    if let Some(root) = root {
+        input = input.with_root(root);
+    }
     let config = molt_lib::Config::default();
     let diagnostics = emit_error(&input, run(&input, config))?;
     let writer = StandardStream::stderr(ColorChoice::Always);
