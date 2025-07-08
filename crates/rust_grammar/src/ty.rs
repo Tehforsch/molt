@@ -790,15 +790,7 @@ pub(crate) mod parsing {
                         last_nontrait_span = Some(lifetime.ident.span());
                     }
                     TypeParamBound::PreciseCapture(precise_capture) => {
-                        #[cfg(feature = "full")]
-                        {
-                            last_nontrait_span = Some(precise_capture.gt_token.span);
-                        }
-                        #[cfg(not(feature = "full"))]
-                        {
-                            _ = precise_capture;
-                            unreachable!();
-                        }
+                        last_nontrait_span = Some(precise_capture.gt_token.span);
                     }
                     TypeParamBound::Verbatim(_) => {
                         // ~const Trait

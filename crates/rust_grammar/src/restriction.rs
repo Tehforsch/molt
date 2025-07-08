@@ -126,7 +126,6 @@ pub(crate) mod parsing {
             Ok(Visibility::Public(pub_token))
         }
 
-        #[cfg(feature = "full")]
         pub(crate) fn is_some(&self) -> bool {
             !matches!(self, Visibility::Inherited)
         }

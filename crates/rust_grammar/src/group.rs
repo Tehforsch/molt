@@ -31,7 +31,6 @@ pub struct Brackets<'a> {
     pub content: ParseBuffer<'a>,
 }
 
-#[cfg(any(feature = "full"))]
 #[doc(hidden)]
 pub struct Group<'a> {
     #[doc(hidden)]
@@ -67,7 +66,6 @@ pub fn parse_brackets<'a>(input: &ParseBuffer<'a>) -> Result<Brackets<'a>> {
     })
 }
 
-#[cfg(any(feature = "full"))]
 pub(crate) fn parse_group<'a>(input: &ParseBuffer<'a>) -> Result<Group<'a>> {
     parse_delimited(input, Delimiter::None).map(|(span, content)| Group {
         token: token::Group(span.join()),

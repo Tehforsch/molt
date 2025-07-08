@@ -123,12 +123,8 @@ pub(crate) mod parsing {
     use crate::data::{Field, Fields, FieldsNamed, FieldsUnnamed, Variant};
     use crate::error::Result;
     use crate::ident::{AnyIdent, Ident};
-    #[cfg(not(feature = "full"))]
-    use crate::parse::discouraged::Speculative as _;
     use crate::parse::{parse_punctuated_list_real, Parse, ParseList, ParsePat, ParseStream};
     use crate::restriction::{FieldMutability, Visibility};
-    #[cfg(not(feature = "full"))]
-    use crate::scan_expr::scan_expr;
     use crate::token;
     use crate::ty::Type;
     use crate::verbatim;
@@ -149,20 +145,8 @@ pub(crate) mod parsing {
             };
             let discriminant = if input.peek(Token![=]) {
                 let eq_token: Token![=] = input.parse()?;
-                #[cfg(feature = "full")]
+
                 let discriminant = input.parse()?;
-                #[cfg(not(feature = "full"))]
-                let discriminant = {
-                    let begin = input.fork();
-                    let ahead = input.fork();
-                    let mut discriminant: Result<Expr> = ahead.parse();
-                    if discriminant.is_ok() {
-                        input.advance_to(&ahead);
-                    } else if scan_expr(input).is_ok() {
-                        discriminant = Ok(Expr::Verbatim(verbatim::between(&begin, input)));
-                    }
-                    discriminant?
-                };
                 Some((eq_token, discriminant))
             } else {
                 None
@@ -222,7 +206,7 @@ pub(crate) mod parsing {
                 let attrs = input.call(Attribute::parse_outer)?;
                 let vis: Visibility = input.parse()?;
 
-                let unnamed_field = cfg!(feature = "full") && input.peek(Token![_]);
+                let unnamed_field = input.peek(Token![_]);
                 let ident = if unnamed_field {
                     input.parse_id::<AnyIdent>()
                 } else {

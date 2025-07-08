@@ -188,16 +188,16 @@ pub(crate) mod parsing {
     use molt_lib::{NodeId, Pattern, WithSpan};
 
     use crate::error::Result;
-    #[cfg(feature = "full")]
+
     use crate::expr::ExprBlock;
     use crate::expr::{Expr, ExprPath};
-    #[cfg(feature = "full")]
+
     use crate::generics::TypeParamBound;
     use crate::ident::{AnyIdent, Ident};
     use crate::lifetime::Lifetime;
     use crate::lit::Lit;
     use crate::parse::{Parse, ParseStream};
-    #[cfg(feature = "full")]
+
     use crate::path::Constraint;
     use crate::path::{
         AngleBracketedGenericArguments, AssocConst, AssocType, GenericArgument,
@@ -206,8 +206,6 @@ pub(crate) mod parsing {
     use crate::punctuated::Punctuated;
     use crate::token;
     use crate::ty::{ReturnType, Type};
-    #[cfg(not(feature = "full"))]
-    use crate::verbatim;
 
     impl Parse for Path {
         fn parse(input: ParseStream) -> Result<Self> {
@@ -262,7 +260,6 @@ pub(crate) mod parsing {
                         };
                     }
 
-                    #[cfg(feature = "full")]
                     if let Some(colon_token) = input.parse::<Option<Token![:]>>()? {
                         let segment = ty.path.segments.pop().unwrap().into_value();
                         return Ok(GenericArgument::Constraint(Constraint {
@@ -328,20 +325,9 @@ pub(crate) mod parsing {
         }
 
         if input.peek(token::Brace) {
-            #[cfg(feature = "full")]
             {
                 let block: ExprBlock = input.parse()?;
                 return Ok(Expr::Block(block));
-            }
-
-            #[cfg(not(feature = "full"))]
-            {
-                let begin = input.fork();
-                let content;
-                braced!(content in input);
-                content.parse::<Expr>()?;
-                let verbatim = verbatim::between(&begin, input);
-                return Ok(Expr::Verbatim(verbatim));
             }
         }
 
@@ -353,7 +339,7 @@ pub(crate) mod parsing {
         ///
         /// The ordinary [`Parse`] impl for `AngleBracketedGenericArguments`
         /// parses optional leading `::`.
-        #[cfg(feature = "full")]
+
         pub fn parse_turbofish(input: ParseStream) -> Result<Self> {
             let colon2_token: Token![::] = input.parse()?;
             Self::do_parse(Some(colon2_token), input)
@@ -416,7 +402,7 @@ pub(crate) mod parsing {
             if input.peek(Token![super])
                 || input.peek(Token![self])
                 || input.peek(Token![crate])
-                || cfg!(feature = "full") && input.peek(Token![try])
+                || input.peek(Token![try])
             {
                 let ident = input.parse_id::<AnyIdent>()?;
                 return Ok(PathSegment::from(ident));

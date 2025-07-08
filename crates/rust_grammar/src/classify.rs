@@ -1,21 +1,19 @@
-#[cfg(feature = "full")]
 use crate::expr::Expr;
-#[cfg(any(feature = "full"))]
+
 use crate::generics::TypeParamBound;
 use crate::parse::ParseStream;
-#[cfg(any(feature = "full"))]
+
 use crate::path::{Path, PathArguments};
-#[cfg(any(feature = "full"))]
+
 use crate::punctuated::Punctuated;
-#[cfg(any(feature = "full"))]
+
 use crate::ty::{ReturnType, Type};
 use molt_lib::{NodeId, Pattern};
-#[cfg(feature = "full")]
+
 use proc_macro2::{Delimiter, TokenStream, TokenTree};
-#[cfg(any(feature = "full"))]
+
 use std::ops::ControlFlow;
 
-#[cfg(feature = "full")]
 pub(crate) fn requires_semi_to_be_stmt(input: ParseStream, expr: NodeId<Expr>) -> bool {
     match input.ctx().get(expr).real() {
         Some(Expr::Macro(expr)) => !expr.mac.delimiter.is_brace(),

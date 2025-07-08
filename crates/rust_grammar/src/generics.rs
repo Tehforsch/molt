@@ -196,7 +196,7 @@ pub(crate) mod parsing {
         PredicateType, TraitBound, TraitBoundModifier, TypeParam, TypeParamBound, WhereClause,
         WherePredicate,
     };
-    #[cfg(feature = "full")]
+
     use crate::generics::{CapturedParam, PreciseCapture};
     use crate::ident::{AnyIdent, Ident};
     use crate::lifetime::Lifetime;
@@ -436,7 +436,6 @@ pub(crate) mod parsing {
 
             let begin = input.fork();
 
-            #[cfg(feature = "full")]
             {
                 if input.peek(Token![use]) {
                     let precise_capture: PreciseCapture = input.parse()?;
@@ -460,8 +459,7 @@ pub(crate) mod parsing {
                 (None, input)
             };
 
-            let is_tilde_const =
-                cfg!(feature = "full") && content.peek(Token![~]) && content.peek2(Token![const]);
+            let is_tilde_const = content.peek(Token![~]) && content.peek2(Token![const]);
             if is_tilde_const {
                 let tilde_token: Token![~] = content.parse()?;
                 let const_token: Token![const] = content.parse()?;
@@ -674,7 +672,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     impl Parse for PreciseCapture {
         fn parse(input: ParseStream) -> Result<Self> {
             let use_token: Token![use] = input.parse()?;
@@ -713,7 +710,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     impl Parse for CapturedParam {
         fn parse(input: ParseStream) -> Result<Self> {
             let lookahead = input.lookahead1();

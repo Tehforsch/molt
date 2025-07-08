@@ -2,7 +2,7 @@ use derive_macro::CmpSyn;
 use molt_lib::{NodeId, NodeList};
 
 use crate::attr::Attribute;
-#[cfg(feature = "full")]
+
 use crate::generics::BoundLifetimes;
 use crate::ident::{AnyIdent, Ident};
 use crate::lifetime::Lifetime;
@@ -10,14 +10,14 @@ use crate::lit::Lit;
 use crate::mac::Macro;
 use crate::op::{BinOp, UnOp};
 use crate::parse::ParseStream;
-#[cfg(feature = "full")]
+
 use crate::pat::Pat;
 use crate::path::{AngleBracketedGenericArguments, Path, QSelf};
 use crate::punctuated::Punctuated;
-#[cfg(feature = "full")]
+
 use crate::stmt::Block;
 use crate::token;
-#[cfg(feature = "full")]
+
 use crate::ty::ReturnType;
 use crate::ty::Type;
 use proc_macro2::{Span, TokenStream};
@@ -167,9 +167,6 @@ pub struct ExprEarlierBoundaryRule;
 
 #[derive(Debug, CmpSyn)]
 /// A Rust expression.
-///
-/// *This type is available only if Syn is built with the `"derive"` or `"full"`
-/// feature, but most of the variants are not available unless "full" is enabled.*
 ///
 /// # Syntax tree enums
 ///
@@ -1023,13 +1020,13 @@ pub enum PointerMutability {
 }
 
 pub(crate) mod parsing {
-    #[cfg(feature = "full")]
+
     use crate::attr;
     use crate::attr::Attribute;
-    #[cfg(feature = "full")]
+
     use crate::classify;
     use crate::error::{Error, Result};
-    #[cfg(feature = "full")]
+
     use crate::expr::{
         Arm, ExprArray, ExprAssign, ExprAsync, ExprAwait, ExprBlock, ExprBreak, ExprClosure,
         ExprConst, ExprContinue, ExprForLoop, ExprIf, ExprInfer, ExprLet, ExprLoop, ExprMatch,
@@ -1041,31 +1038,31 @@ pub(crate) mod parsing {
         ExprMethodCall, ExprParen, ExprPath, ExprReference, ExprStruct, ExprTuple, ExprUnary,
         FieldValue, Index, Member,
     };
-    #[cfg(feature = "full")]
+
     use crate::generics::BoundLifetimes;
     use crate::ident::Ident;
-    #[cfg(feature = "full")]
+
     use crate::lifetime::Lifetime;
     use crate::lit::{Lit, LitFloat, LitInt};
     use crate::mac::{self, Macro};
     use crate::op::BinOp;
     use crate::parse::discouraged::Speculative as _;
-    #[cfg(feature = "full")]
+
     use crate::parse::ParseBuffer;
     use crate::parse::{
         parse_punctuated_list_real, ListOrItem, Parse, ParseList, ParseListOrItem, ParsePat,
         ParseStream,
     };
     use crate::pat::PatMultiLeadingVert;
-    #[cfg(feature = "full")]
+
     use crate::pat::{Pat, PatType};
     use crate::path::{self, AngleBracketedGenericArguments, Path, QSelf};
     use crate::precedence::Precedence;
     use crate::punctuated::Punctuated;
-    #[cfg(feature = "full")]
+
     use crate::stmt::Block;
     use crate::ty::parsing::NoPlus;
-    #[cfg(feature = "full")]
+
     use crate::ty::ReturnType;
     use crate::{token, Type};
     use crate::{verbatim, Stmt};
@@ -1204,10 +1201,8 @@ pub(crate) mod parsing {
         Ok(expr)
     }
 
-    #[cfg(feature = "full")]
     impl Copy for AllowStruct {}
 
-    #[cfg(feature = "full")]
     impl Clone for AllowStruct {
         fn clone(&self) -> Self {
             *self
@@ -1299,25 +1294,15 @@ pub(crate) mod parsing {
 
     fn parse_binop_rhs(
         input: ParseStream,
-        #[cfg(feature = "full")] allow_struct: AllowStruct,
+        allow_struct: AllowStruct,
         precedence: Precedence,
     ) -> Result<SpannedPat<Expr>> {
-        let mut rhs = unary_expr(
-            input,
-            #[cfg(feature = "full")]
-            allow_struct,
-        )?;
+        let mut rhs = unary_expr(input, allow_struct)?;
         loop {
             let next = peek_precedence(input);
             if next > precedence || next == precedence && precedence == Precedence::Assign {
                 let cursor = input.cursor();
-                rhs = parse_expr(
-                    input,
-                    rhs,
-                    #[cfg(feature = "full")]
-                    allow_struct,
-                    next,
-                )?;
+                rhs = parse_expr(input, rhs, allow_struct, next)?;
                 if cursor == input.cursor() {
                     // Bespoke grammar restrictions separate from precedence can
                     // cause parsing to not advance, such as `..a` being
@@ -1347,21 +1332,10 @@ pub(crate) mod parsing {
     }
 
     fn ambiguous_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedPat<Expr>> {
-        let lhs = unary_expr(
-            input,
-            #[cfg(feature = "full")]
-            allow_struct,
-        )?;
-        parse_expr(
-            input,
-            lhs,
-            #[cfg(feature = "full")]
-            allow_struct,
-            Precedence::MIN,
-        )
+        let lhs = unary_expr(input, allow_struct)?;
+        parse_expr(input, lhs, allow_struct, Precedence::MIN)
     }
 
-    #[cfg(feature = "full")]
     fn expr_attrs(input: ParseStream) -> Result<Vec<Attribute>> {
         let mut attrs = Vec::new();
         while !input.peek(token::Group) && input.peek(Token![#]) {
@@ -1374,7 +1348,7 @@ pub(crate) mod parsing {
     // & <trailer>
     // &mut <trailer>
     // box <trailer>
-    #[cfg(feature = "full")]
+
     fn unary_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedPat<Expr>> {
         let begin = input.fork();
         let marker = input.marker();
@@ -1435,33 +1409,13 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(not(feature = "full"))]
-    fn unary_expr(input: ParseStream) -> Result<Expr> {
-        if input.peek(Token![&]) {
-            Ok(Expr::Reference(ExprReference {
-                attrs: Vec::new(),
-                and_token: input.parse()?,
-                mutability: input.parse()?,
-                expr: Box::new(unary_expr(input)?),
-            }))
-        } else if input.peek(Token![*]) || input.peek(Token![!]) || input.peek(Token![-]) {
-            Ok(Expr::Unary(ExprUnary {
-                attrs: Vec::new(),
-                op: input.parse()?,
-                expr: Box::new(unary_expr(input)?),
-            }))
-        } else {
-            trailer_expr(input)
-        }
-    }
-
     // <atom> (..<args>) ...
     // <atom> . <ident> (..<args>) ...
     // <atom> . <ident> ...
     // <atom> . <lit> ...
     // <atom> [ <expr> ] ...
     // <atom> ? ...
-    #[cfg(feature = "full")]
+
     fn trailer_expr(
         begin: ParseBuffer,
         mut attrs: Vec<Attribute>,
@@ -1671,7 +1625,6 @@ pub(crate) mod parsing {
         Ok(real)
     }
 
-    #[cfg(feature = "full")]
     fn atom_labeled(input: ParseStream) -> Result<Expr> {
         let the_label: Label = input.parse()?;
         let mut expr = if input.peek(Token![while]) {
@@ -1695,60 +1648,17 @@ pub(crate) mod parsing {
         Ok(expr)
     }
 
-    #[cfg(not(feature = "full"))]
-    fn atom_expr(input: ParseStream) -> Result<Expr> {
-        if input.peek(token::Group) {
-            expr_group(input)
-        } else if input.peek(Lit) {
-            input.parse().map(Expr::Lit)
-        } else if input.peek(token::Paren) {
-            paren_or_tuple(input)
-        } else if input.peek_pat::<Ident>()
-            || input.peek(Token![::])
-            || input.peek(Token![<])
-            || input.peek(Token![self])
-            || input.peek(Token![Self])
-            || input.peek(Token![super])
-            || input.peek(Token![crate])
-        {
-            path_or_macro_or_struct(input)
-        } else if input.is_empty() {
-            Err(input.error("expected an expression"))
-        } else {
-            if input.peek(token::Brace) {
-                let scan = input.fork();
-                let content;
-                braced!(content in scan);
-                if content.parse::<Expr>().is_ok() && content.is_empty() {
-                    let expr_block = verbatim::between(input, &scan);
-                    input.advance_to(&scan);
-                    return Ok(Expr::Verbatim(expr_block));
-                }
-            }
-            Err(input.error("unsupported expression; enable syn's features=[\"full\"]"))
-        }
-    }
-
-    fn path_or_macro_or_struct(
-        input: ParseStream,
-        #[cfg(feature = "full")] allow_struct: AllowStruct,
-    ) -> Result<Expr> {
+    fn path_or_macro_or_struct(input: ParseStream, allow_struct: AllowStruct) -> Result<Expr> {
         let expr_style = true;
         let (qself, path) = path::parsing::qpath(input, expr_style)?;
-        rest_of_path_or_macro_or_struct(
-            qself,
-            path,
-            input,
-            #[cfg(feature = "full")]
-            allow_struct,
-        )
+        rest_of_path_or_macro_or_struct(qself, path, input, allow_struct)
     }
 
     fn rest_of_path_or_macro_or_struct(
         qself: Option<QSelf>,
         path: Path,
         input: ParseStream,
-        #[cfg(feature = "full")] allow_struct: AllowStruct,
+        allow_struct: AllowStruct,
     ) -> Result<Expr> {
         if qself.is_none()
             && input.peek(Token![!])
@@ -1768,8 +1678,6 @@ pub(crate) mod parsing {
             }));
         }
 
-        #[cfg(not(feature = "full"))]
-        let allow_struct = (true,);
         if allow_struct.0 && input.peek(token::Brace) {
             return expr_struct_helper(input, qself, path).map(Expr::Struct);
         }
@@ -1899,7 +1807,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     impl Parse for ExprRepeat {
         fn parse(input: ParseStream) -> Result<Self> {
             let content;
@@ -1913,7 +1820,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     fn continue_parsing_early(input: ParseStream, expr: &SpannedPat<Expr>) -> bool {
         let ctx = input.ctx();
         let mut expr: Option<&Expr> = expr.real();
@@ -1977,7 +1883,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     impl Parse for ExprParen {
         fn parse(input: ParseStream) -> Result<Self> {
             let content;
@@ -1989,7 +1894,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     impl Parse for ExprLet {
         fn parse(input: ParseStream) -> Result<Self> {
             let allow_struct = AllowStruct(true);
@@ -1997,7 +1901,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     fn expr_let(input: ParseStream, allow_struct: AllowStruct) -> Result<ExprLet> {
         use crate::pat::PatMultiLeadingVert;
 
@@ -2013,7 +1916,6 @@ pub(crate) mod parsing {
         })
     }
 
-    #[cfg(feature = "full")]
     impl Parse for ExprIf {
         fn parse(input: ParseStream) -> Result<Self> {
             let mut markers = vec![];
@@ -2072,7 +1974,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     impl Parse for ExprInfer {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(ExprInfer {
@@ -2082,7 +1983,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     impl Parse for ExprForLoop {
         fn parse(input: ParseStream) -> Result<Self> {
             let mut attrs = input.call(Attribute::parse_outer)?;
@@ -2111,7 +2011,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     impl Parse for ExprLoop {
         fn parse(input: ParseStream) -> Result<Self> {
             let mut attrs = input.call(Attribute::parse_outer)?;
@@ -2132,7 +2031,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     impl Parse for ExprMatch {
         fn parse(input: ParseStream) -> Result<Self> {
             let mut attrs = input.call(Attribute::parse_outer)?;
@@ -2155,7 +2053,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     fn expr_unary(
         input: ParseStream,
         attrs: Vec<Attribute>,
@@ -2174,7 +2071,6 @@ pub(crate) mod parsing {
             .as_pattern())
     }
 
-    #[cfg(feature = "full")]
     impl Parse for ExprRawAddr {
         fn parse(input: ParseStream) -> Result<Self> {
             let allow_struct = AllowStruct(true);
@@ -2188,7 +2084,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     impl Parse for ExprReference {
         fn parse(input: ParseStream) -> Result<Self> {
             let allow_struct = AllowStruct(true);
@@ -2201,7 +2096,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     impl Parse for ExprBreak {
         fn parse(input: ParseStream) -> Result<Self> {
             let allow_struct = AllowStruct(true);
@@ -2209,7 +2103,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     impl Parse for ExprReturn {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(ExprReturn {
@@ -2226,7 +2119,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     fn expr_become(input: ParseStream) -> Result<Expr> {
         let begin = input.fork();
         input.parse::<Token![become]>()?;
@@ -2234,7 +2126,6 @@ pub(crate) mod parsing {
         Ok(Expr::Verbatim(verbatim::between(&begin, input)))
     }
 
-    #[cfg(feature = "full")]
     impl Parse for ExprTryBlock {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(ExprTryBlock {
@@ -2245,7 +2136,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     impl Parse for ExprYield {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(ExprYield {
@@ -2330,7 +2220,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     fn expr_closure(input: ParseStream, allow_struct: AllowStruct) -> Result<ExprClosure> {
         let lifetimes: Option<BoundLifetimes> = input.parse()?;
         let constness: Option<Token![const]> = input.parse()?;
@@ -2380,7 +2269,6 @@ pub(crate) mod parsing {
         })
     }
 
-    #[cfg(feature = "full")]
     impl Parse for ExprAsync {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(ExprAsync {
@@ -2392,7 +2280,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     impl Parse for ExprWhile {
         fn parse(input: ParseStream) -> Result<Self> {
             let mut attrs = input.call(Attribute::parse_outer)?;
@@ -2415,7 +2302,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     impl Parse for ExprConst {
         fn parse(input: ParseStream) -> Result<Self> {
             let const_token: Token![const] = input.parse()?;
@@ -2433,7 +2319,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     impl Parse for Label {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(Label {
@@ -2443,7 +2328,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     impl Parse for Option<Label> {
         fn parse(input: ParseStream) -> Result<Self> {
             if input.peek(Lifetime) {
@@ -2454,7 +2338,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     impl Parse for ExprContinue {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(ExprContinue {
@@ -2465,7 +2348,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     fn expr_break(input: ParseStream, allow_struct: AllowStruct) -> Result<ExprBreak> {
         let break_token: Token![break] = input.parse()?;
 
@@ -2584,7 +2466,6 @@ pub(crate) mod parsing {
         })
     }
 
-    #[cfg(feature = "full")]
     impl Parse for ExprUnsafe {
         fn parse(input: ParseStream) -> Result<Self> {
             let unsafe_token: Token![unsafe] = input.parse()?;
@@ -2602,7 +2483,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     impl Parse for ExprBlock {
         fn parse(input: ParseStream) -> Result<Self> {
             let mut attrs = input.call(Attribute::parse_outer)?;
@@ -2621,7 +2501,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     fn expr_range(input: ParseStream, allow_struct: AllowStruct) -> Result<ExprRange> {
         let limits: RangeLimits = input.parse()?;
         let end = parse_range_end(input, &limits, allow_struct)?;
@@ -2633,7 +2512,6 @@ pub(crate) mod parsing {
         })
     }
 
-    #[cfg(feature = "full")]
     fn parse_range_end(
         input: ParseStream,
         limits: &RangeLimits,
@@ -2669,7 +2547,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     impl Parse for RangeLimits {
         fn parse(input: ParseStream) -> Result<Self> {
             let lookahead = input.lookahead1();
@@ -2686,7 +2563,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     impl RangeLimits {
         pub(crate) fn parse_obsolete(input: ParseStream) -> Result<Self> {
             let lookahead = input.lookahead1();
@@ -2709,9 +2585,6 @@ pub(crate) mod parsing {
 
     impl Parse for ExprPath {
         fn parse(input: ParseStream) -> Result<Self> {
-            #[cfg(not(feature = "full"))]
-            let attrs = Vec::new();
-            #[cfg(feature = "full")]
             let attrs = input.call(Attribute::parse_outer)?;
 
             let expr_style = true;
@@ -2746,7 +2619,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg(feature = "full")]
     impl ParsePat for Arm {
         type Target = Arm;
 
@@ -2844,7 +2716,6 @@ pub(crate) mod parsing {
         Ok(!trailing_dot)
     }
 
-    #[cfg(feature = "full")]
     impl Parse for PointerMutability {
         fn parse(input: ParseStream) -> Result<Self> {
             let lookahead = input.lookahead1();
