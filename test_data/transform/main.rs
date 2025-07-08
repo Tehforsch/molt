@@ -16,4 +16,6 @@ fn example10() {
         Some(x) => Ok(x * 2),
         None => Ok(0),
     };
+
+    bar.foo::<Foo1>()?;
 }

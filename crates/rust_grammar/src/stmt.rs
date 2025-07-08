@@ -82,7 +82,7 @@ pub struct StmtMacro {
 
 struct AllowNoSemi(bool);
 
-impl ParseList for Stmt {
+impl ParseList for Block {
     type Item = Stmt;
     type ParseItem = Stmt;
     type Punct = Token![;];
@@ -132,7 +132,7 @@ impl Parse for Block {
         let content;
         Ok(Block {
             brace_token: braced!(content in input),
-            stmts: content.parse_list::<Stmt>()?,
+            stmts: content.parse_list::<Block>()?,
         })
     }
 }

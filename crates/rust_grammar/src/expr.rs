@@ -28,7 +28,7 @@ use crate::precedence::Precedence;
 use crate::punctuated::Punctuated;
 use crate::stmt::Block;
 use crate::ty::{NoPlus, ReturnType, Type};
-use crate::{Stmt, attr, classify, token, verbatim};
+use crate::{attr, classify, token, verbatim};
 
 /// An alternative to the primary `Expr::parse` parser (from the [`Parse`]
 /// trait) for ambiguous syntactic positions in which a trailing brace
@@ -1859,7 +1859,7 @@ impl Parse for ExprForLoop {
         let content;
         let brace_token = braced!(content in input);
         attr::parse_inner(&content, &mut attrs)?;
-        let stmts = content.parse_list::<Stmt>()?;
+        let stmts = content.parse_list::<Block>()?;
 
         Ok(ExprForLoop {
             attrs,
@@ -1882,7 +1882,7 @@ impl Parse for ExprLoop {
         let content;
         let brace_token = braced!(content in input);
         attr::parse_inner(&content, &mut attrs)?;
-        let stmts = content.parse_list::<Stmt>()?;
+        let stmts = content.parse_list::<Block>()?;
 
         Ok(ExprLoop {
             attrs,
@@ -2157,7 +2157,7 @@ impl Parse for ExprWhile {
         let content;
         let brace_token = braced!(content in input);
         attr::parse_inner(&content, &mut attrs)?;
-        let stmts = content.parse_list::<Stmt>()?;
+        let stmts = content.parse_list::<Block>()?;
 
         Ok(ExprWhile {
             attrs,
@@ -2176,7 +2176,7 @@ impl Parse for ExprConst {
         let content;
         let brace_token = braced!(content in input);
         let inner_attrs = content.call(Attribute::parse_inner)?;
-        let stmts = content.parse_list::<Stmt>()?;
+        let stmts = content.parse_list::<Block>()?;
 
         Ok(ExprConst {
             attrs: inner_attrs,
@@ -2336,7 +2336,7 @@ impl Parse for ExprUnsafe {
         let content;
         let brace_token = braced!(content in input);
         let inner_attrs = content.call(Attribute::parse_inner)?;
-        let stmts = content.parse_list::<Stmt>()?;
+        let stmts = content.parse_list::<Block>()?;
 
         Ok(ExprUnsafe {
             attrs: inner_attrs,
@@ -2354,7 +2354,7 @@ impl Parse for ExprBlock {
         let content;
         let brace_token = braced!(content in input);
         attr::parse_inner(&content, &mut attrs)?;
-        let stmts = content.parse_list::<Stmt>()?;
+        let stmts = content.parse_list::<Block>()?;
 
         Ok(ExprBlock {
             attrs,

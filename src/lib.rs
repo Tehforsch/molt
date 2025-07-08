@@ -424,7 +424,7 @@ mod tests {
             slice_list,
         )
     );
-    test_transform!(transform, (rename));
+    test_transform!(transform, (rename, inner));
     test_match_pattern!(transform2, (example10)); // TODO: Make this a transform test once the functionality exists.
 
     molt_grammar_test_err!(

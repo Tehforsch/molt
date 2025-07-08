@@ -25,7 +25,7 @@ use crate::punctuated::Punctuated;
 use crate::restriction::Visibility;
 use crate::stmt::Block;
 use crate::ty::{Abi, ReturnType, Type, TypePath};
-use crate::{Stmt, derive, token, verbatim};
+use crate::{derive, token, verbatim};
 
 #[derive(Debug, CmpSyn)]
 /// Things that can appear directly inside of a module or scope.
@@ -1249,7 +1249,7 @@ fn parse_rest_of_fn(
     let content;
     let brace_token = braced!(content in input);
     attr::parse_inner(&content, &mut attrs)?;
-    let stmts = content.parse_list::<Stmt>()?;
+    let stmts = content.parse_list::<Block>()?;
 
     Ok(ItemFn {
         attrs,
@@ -1502,7 +1502,7 @@ impl Parse for ForeignItem {
                 let content;
                 braced!(content in input);
                 content.call(Attribute::parse_inner)?;
-                content.parse_list::<Stmt>()?;
+                content.parse_list::<Block>()?;
                 None
             } else {
                 Some(input.parse()?)
@@ -2096,7 +2096,7 @@ impl Parse for TraitItemFn {
             let content;
             let brace_token = braced!(content in input);
             attr::parse_inner(&content, &mut attrs)?;
-            let stmts = content.parse_list::<Stmt>()?;
+            let stmts = content.parse_list::<Block>()?;
             (Some(brace_token), stmts, None)
         } else if lookahead.peek(Token![;]) {
             let semi_token: Token![;] = input.parse()?;
@@ -2457,7 +2457,7 @@ fn parse_impl_item_fn(input: ParseStream, allow_omitted_body: bool) -> Result<Op
     attrs.extend(content.call(Attribute::parse_inner)?);
     let block = Block {
         brace_token,
-        stmts: content.parse_list::<Stmt>()?,
+        stmts: content.parse_list::<Block>()?,
     };
 
     Ok(Some(ImplItemFn {

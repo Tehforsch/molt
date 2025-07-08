@@ -17,8 +17,9 @@ use crate::parse::{
 };
 use crate::path::{self, Path, QSelf};
 use crate::punctuated::Punctuated;
+use crate::stmt::Block;
 use crate::ty::Type;
-use crate::{Stmt, token, verbatim};
+use crate::{token, verbatim};
 
 #[derive(Debug, CmpSyn)]
 /// A pattern in a local binding, function signature, match expression, or
@@ -835,7 +836,7 @@ fn pat_const(input: ParseStream) -> Result<TokenStream> {
     let content;
     braced!(content in input);
     content.call(Attribute::parse_inner)?;
-    content.parse_list::<Stmt>()?;
+    content.parse_list::<Block>()?;
 
     Ok(verbatim::between(&begin, input))
 }
