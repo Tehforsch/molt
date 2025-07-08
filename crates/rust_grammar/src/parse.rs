@@ -39,11 +39,11 @@ pub trait Parse: Sized {
 /// Parsing interface implemented by types that can be parsed in a default
 /// way from a token stream. This trait is for types that are represented
 /// as nodes.
-pub trait ParsePat {
+pub trait ParseNode {
     type Target: ToNode<Node>;
 
-    /// Parse a Self::Target given the input. todo!()
-    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>>;
+    /// Parse a Self::Target given the input. TODO: Fill this
+    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Self::Target>>;
 
     /// By default, the `parse_pat` function on `ParseStream` will
     /// automatically check if the input contains a variable and parse
@@ -73,7 +73,7 @@ pub trait ParseList {
     fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>>;
 }
 
-pub fn parse_punctuated_list_real<T: ParsePat, P: Parse>(
+pub fn parse_punctuated_list_real<T: ParseNode, P: Parse>(
     input: ParseStream,
 ) -> Result<Vec<NodeId<T::Target>>> {
     Ok(
@@ -125,7 +125,7 @@ pub fn peek_var(cursor: Cursor, ctx: &Ctx<Node>, kind: Kind) -> bool {
     false
 }
 
-impl<T: ToNode<Node> + ParsePat<Target = T>> Parse for NodeId<T> {
+impl<T: ToNode<Node> + ParseNode<Target = T>> Parse for NodeId<T> {
     fn parse(input: ParseStream) -> Result<NodeId<T>> {
         input.parse_id::<T>()
     }
@@ -563,16 +563,16 @@ impl<'a> ParseBuffer<'a> {
         self.ctx.borrow_mut()
     }
 
-    pub fn parse_pat<T: ParsePat + ?Sized>(&self) -> Result<SpannedPat<T::Target>> {
+    pub fn parse_pat<T: ParseNode + ?Sized>(&self) -> Result<SpannedPat<T::Target>> {
         if T::check_var_top_level() {
             if let Some(var) = self.parse_var() {
                 return var;
             }
         }
-        T::parse_pat(self)
+        T::parse_spanned(self)
     }
 
-    pub fn parse_id<T: ParsePat>(&self) -> Result<NodeId<T::Target>> {
+    pub fn parse_id<T: ParseNode>(&self) -> Result<NodeId<T::Target>> {
         let pat = self.parse_pat::<T>()?;
         Ok(self.add_pat(pat))
     }
@@ -696,7 +696,7 @@ impl<'a> ParseBuffer<'a> {
         }
     }
 
-    pub(crate) fn parse_list<T: ParseList + ParsePat<Target = <T as ParseList>::Item>>(
+    pub(crate) fn parse_list<T: ParseList + ParseNode<Target = <T as ParseList>::Item>>(
         &self,
     ) -> Result<NodeList<T::Item, T::Punct>>
     where

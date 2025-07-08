@@ -5,7 +5,7 @@ use crate::buffer::Cursor;
 use crate::error::Result;
 use crate::ext::IdentExt;
 use crate::lookahead;
-use crate::parse::{Parse, ParsePat, ParseStream, PeekPat};
+use crate::parse::{Parse, ParseNode, ParseStream, PeekPat};
 use crate::token::Token;
 
 pub struct AnyIdent;
@@ -90,10 +90,10 @@ impl Parse for Ident {
     }
 }
 
-impl ParsePat for Ident {
+impl ParseNode for Ident {
     type Target = Ident;
 
-    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Ident>> {
+    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Ident>> {
         input.call_spanned(parse_ident)
     }
 }
@@ -110,10 +110,10 @@ impl PeekPat for Ident {
     }
 }
 
-impl ParsePat for AnyIdent {
+impl ParseNode for AnyIdent {
     type Target = Ident;
 
-    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Ident>> {
+    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Ident>> {
         input.call_spanned(Ident::parse_any)
     }
 }
@@ -126,13 +126,13 @@ impl PeekPat for AnyIdent {
     }
 }
 
-impl<T: Token + Parse> ParsePat for TokenIdent<T>
+impl<T: Token + Parse> ParseNode for TokenIdent<T>
 where
     Ident: From<T>,
 {
     type Target = Ident;
 
-    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Ident>> {
+    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Ident>> {
         // We only enter this function if we already
         // peeked at this token, so there is no need to
         // check for variables.

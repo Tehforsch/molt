@@ -13,7 +13,7 @@ use crate::ident::{AnyIdent, Ident};
 use crate::lit::Lit;
 use crate::mac::{self, Macro};
 use crate::parse::{
-    ListOrItem, Parse, ParseBuffer, ParseList, ParseListOrItem, ParsePat, ParseStream, PosMarker,
+    ListOrItem, Parse, ParseBuffer, ParseList, ParseListOrItem, ParseNode, ParseStream, PosMarker,
 };
 use crate::path::{self, Path, QSelf};
 use crate::punctuated::Punctuated;
@@ -265,10 +265,10 @@ pub struct FieldPat {
     pub pat: NodeId<Pat>,
 }
 
-impl ParsePat for PatSingle {
+impl ParseNode for PatSingle {
     type Target = Pat;
 
-    fn parse_pat(input: ParseStream) -> Result<molt_lib::SpannedPat<Self::Target>> {
+    fn parse_spanned(input: ParseStream) -> Result<molt_lib::SpannedPat<Self::Target>> {
         let marker = input.marker();
         let begin = input.fork();
         let lookahead = input.lookahead1();
@@ -331,18 +331,18 @@ fn parse_pat_multi<T: ParseListOrItem<Target = Pat, Punct = token::Or>>(
     })
 }
 
-impl ParsePat for PatMulti {
+impl ParseNode for PatMulti {
     type Target = Pat;
 
-    fn parse_pat(input: ParseStream) -> Result<molt_lib::SpannedPat<Self::Target>> {
+    fn parse_spanned(input: ParseStream) -> Result<molt_lib::SpannedPat<Self::Target>> {
         parse_pat_multi::<Self>(input)
     }
 }
 
-impl ParsePat for PatMultiLeadingVert {
+impl ParseNode for PatMultiLeadingVert {
     type Target = Pat;
 
-    fn parse_pat(input: ParseStream) -> Result<molt_lib::SpannedPat<Self::Target>> {
+    fn parse_spanned(input: ParseStream) -> Result<molt_lib::SpannedPat<Self::Target>> {
         parse_pat_multi::<Self>(input)
     }
 }
@@ -383,7 +383,7 @@ fn multi_pat_impl(
     input: ParseStream,
     leading_vert: Option<Token![|]>,
 ) -> Result<ListOrItem<Pat, Token![|]>> {
-    let pat = PatSingle::parse_pat(input)?;
+    let pat = input.parse_pat::<PatSingle>()?;
     if leading_vert.is_some()
         || input.peek(Token![|]) && !input.peek(Token![||]) && !input.peek(Token![|=])
     {

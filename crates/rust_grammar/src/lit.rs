@@ -9,7 +9,7 @@ use molt_lib::{CmpSyn, ParsingMode, SpannedPat};
 use proc_macro2::{Literal, Punct, Span};
 
 use crate::buffer::Cursor;
-use crate::parse::{Parse, ParseCtx, ParsePat, ParseStream, Unexpected};
+use crate::parse::{Parse, ParseCtx, ParseNode, ParseStream, Unexpected};
 use crate::token::{self, Token};
 use crate::{Error, Ident, Result, lookahead};
 
@@ -551,10 +551,10 @@ impl Parse for Lit {
     }
 }
 
-impl ParsePat for Lit {
+impl ParseNode for Lit {
     type Target = Lit;
 
-    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Lit>> {
+    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Lit>> {
         input.call_spanned(Lit::parse)
     }
 }

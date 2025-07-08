@@ -5,7 +5,7 @@ use crate::attr::Attribute;
 use crate::error::Result;
 use crate::expr::{Expr, Index, Member};
 use crate::ident::{AnyIdent, Ident};
-use crate::parse::{Parse, ParseList, ParsePat, ParseStream, parse_punctuated_list_real};
+use crate::parse::{Parse, ParseList, ParseNode, ParseStream, parse_punctuated_list_real};
 use crate::punctuated::{self};
 use crate::restriction::{FieldMutability, Visibility};
 use crate::ty::Type;
@@ -179,10 +179,10 @@ impl ParseList for FieldUnnamed {
     }
 }
 
-impl ParsePat for FieldNamed {
+impl ParseNode for FieldNamed {
     type Target = Field;
 
-    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Field>> {
+    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Field>> {
         input.call_spanned(|input| {
             let attrs = input.call(Attribute::parse_outer)?;
             let vis: Visibility = input.parse()?;
@@ -223,11 +223,11 @@ impl ParsePat for FieldNamed {
     }
 }
 
-impl ParsePat for FieldUnnamed {
+impl ParseNode for FieldUnnamed {
     type Target = Field;
 
     /// Parses an unnamed (tuple struct) field.
-    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Field>> {
+    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Field>> {
         input.call_spanned(|input| {
             Ok(Field {
                 attrs: input.call(Attribute::parse_outer)?,

@@ -13,7 +13,7 @@ use crate::mac::{
     Macro, {self},
 };
 use crate::parse::{
-    ListOrItem, Parse, ParseList, ParseListOrItem, ParsePat, ParseStream,
+    ListOrItem, Parse, ParseList, ParseListOrItem, ParseNode, ParseStream,
     parse_punctuated_list_real,
 };
 use crate::path::{Path, QSelf};
@@ -217,10 +217,10 @@ pub enum ReturnType {
     Type(Token![->], NodeId<Type>),
 }
 
-impl ParsePat for Type {
+impl ParseNode for Type {
     type Target = Self;
 
-    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
+    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
         let allow_plus = true;
         ambig_ty(input, allow_plus)
     }
@@ -237,10 +237,10 @@ impl ParseList for Type {
 
 pub struct NoPlus;
 
-impl ParsePat for (Type, NoPlus) {
+impl ParseNode for (Type, NoPlus) {
     type Target = Type;
 
-    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
+    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
         let allow_plus = false;
         ambig_ty(input, allow_plus)
     }

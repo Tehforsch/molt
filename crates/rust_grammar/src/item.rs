@@ -18,7 +18,7 @@ use crate::mac::{
     Macro, {self},
 };
 use crate::parse::discouraged::Speculative as _;
-use crate::parse::{Parse, ParseBuffer, ParsePat, ParseStream};
+use crate::parse::{Parse, ParseBuffer, ParseNode, ParseStream};
 use crate::pat::{Pat, PatSingle, PatType};
 use crate::path::Path;
 use crate::punctuated::Punctuated;
@@ -644,10 +644,10 @@ impl Parse for Item {
     }
 }
 
-impl ParsePat for Item {
+impl ParseNode for Item {
     type Target = Item;
 
-    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Item>> {
+    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Item>> {
         input.call_spanned(Item::parse)
     }
 }

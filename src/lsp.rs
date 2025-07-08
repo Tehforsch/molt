@@ -11,7 +11,7 @@ use lsp_types::{
     WorkspaceFolder,
 };
 use molt_lib::{NodeId, ParsingMode, Pattern};
-use rust_grammar::parse::ParsePat;
+use rust_grammar::parse::ParseNode;
 use rust_grammar::{Field, FieldNamed, Pat, Stmt, Type};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -300,9 +300,9 @@ impl RealLspClient {
     }
 }
 
-fn try_parse_as<T: ParsePat>(
+fn try_parse_as<T: ParseNode>(
     line: &str,
-    f: impl Fn(&Ctx, &<T as ParsePat>::Target) -> Option<NodeId<Type>>,
+    f: impl Fn(&Ctx, &<T as ParseNode>::Target) -> Option<NodeId<Type>>,
 ) -> Option<(NodeId<Type>, Ctx)> {
     let (id, ctx) =
         rust_grammar::parse_ctx(|input| input.parse_id::<T>(), line, ParsingMode::Real).ok()?;

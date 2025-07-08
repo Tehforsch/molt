@@ -17,7 +17,7 @@ use crate::mac::{
 use crate::op::{BinOp, UnOp};
 use crate::parse::discouraged::Speculative as _;
 use crate::parse::{
-    ListOrItem, Parse, ParseBuffer, ParseList, ParseListOrItem, ParsePat, ParseStream,
+    ListOrItem, Parse, ParseBuffer, ParseList, ParseListOrItem, ParseNode, ParseStream,
     parse_punctuated_list_real,
 };
 use crate::pat::{Pat, PatMultiLeadingVert, PatType};
@@ -944,10 +944,10 @@ pub enum PointerMutability {
 // https://github.com/rust-lang/rfcs/pull/92
 pub(super) struct AllowStruct(pub bool);
 
-impl ParsePat for Expr {
+impl ParseNode for Expr {
     type Target = Expr;
 
-    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
+    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
         ambiguous_expr(input, AllowStruct(true))
     }
 
@@ -969,10 +969,10 @@ impl ParseList for Expr {
     }
 }
 
-impl ParsePat for ExprNoEagerBrace {
+impl ParseNode for ExprNoEagerBrace {
     type Target = Expr;
 
-    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
+    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
         ambiguous_expr(input, AllowStruct(false))
     }
 
@@ -985,10 +985,10 @@ impl ParsePat for ExprNoEagerBrace {
     }
 }
 
-impl ParsePat for ExprEarlierBoundaryRule {
+impl ParseNode for ExprEarlierBoundaryRule {
     type Target = Expr;
 
-    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
+    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
         parse_with_earlier_boundary_rule(input)
     }
 
@@ -2015,15 +2015,15 @@ impl Parse for ExprYield {
 
 struct ClosureInput;
 
-impl ParsePat for ClosureInput {
+impl ParseNode for ClosureInput {
     type Target = Pat;
 
-    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
+    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
         use crate::pat::PatSingle;
 
         let marker = input.marker();
         let attrs = input.call(Attribute::parse_outer)?;
-        let mut pat = PatSingle::parse_pat(input)?;
+        let mut pat = input.parse_pat::<PatSingle>()?;
 
         if input.peek(Token![:]) {
             Ok(Pat::Type(PatType {
@@ -2063,7 +2063,7 @@ impl ParseList for ClosureInput {
     type Punct = Token![,];
     type Item = Pat;
 
-    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<<Self as ParsePat>::Target>>> {
+    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<<Self as ParseNode>::Target>>> {
         let mut inputs = Punctuated::new();
         loop {
             if input.peek(Token![|]) {
@@ -2476,10 +2476,10 @@ impl ParseList for Arm {
     }
 }
 
-impl ParsePat for Arm {
+impl ParseNode for Arm {
     type Target = Arm;
 
-    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Arm>> {
+    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Arm>> {
         input.call_spanned(|input| {
             let requires_comma;
             Ok(Arm {

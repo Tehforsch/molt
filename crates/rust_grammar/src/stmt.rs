@@ -11,7 +11,7 @@ use crate::mac::{
     Macro, {self},
 };
 use crate::parse::discouraged::Speculative as _;
-use crate::parse::{Parse, ParseList, ParsePat, ParseStream};
+use crate::parse::{Parse, ParseList, ParseNode, ParseStream};
 use crate::pat::{Pat, PatSingle, PatType};
 use crate::path::Path;
 use crate::{classify, item, token};
@@ -136,18 +136,18 @@ impl Parse for Block {
     }
 }
 
-impl ParsePat for Stmt {
+impl ParseNode for Stmt {
     type Target = Stmt;
 
-    fn parse_pat(input: ParseStream) -> Result<molt_lib::SpannedPat<Self::Target>> {
+    fn parse_spanned(input: ParseStream) -> Result<molt_lib::SpannedPat<Self::Target>> {
         parse_stmt(input, AllowNoSemi(false))
     }
 }
 
-impl ParsePat for StmtAllowNoSemi {
+impl ParseNode for StmtAllowNoSemi {
     type Target = Stmt;
 
-    fn parse_pat(input: ParseStream) -> Result<molt_lib::SpannedPat<Self::Target>> {
+    fn parse_spanned(input: ParseStream) -> Result<molt_lib::SpannedPat<Self::Target>> {
         parse_stmt(input, AllowNoSemi(true))
     }
 }
