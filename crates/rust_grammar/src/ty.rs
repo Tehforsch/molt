@@ -16,7 +16,7 @@ use crate::parse::{
     ListOrItem, Parse, ParseList, ParseListOrItem, ParseNode, ParseStream,
     parse_punctuated_list_real,
 };
-use crate::path::{Path, QSelf};
+use crate::path::{ParenthesizedGenericArguments, Path, QSelf};
 use crate::punctuated::Punctuated;
 use crate::{path, token, verbatim};
 
@@ -226,7 +226,7 @@ impl ParseNode for Type {
     }
 }
 
-impl ParseList for Type {
+impl ParseList for ParenthesizedGenericArguments {
     type Item = Type;
     type ParseItem = Type;
     type Punct = Token![,];

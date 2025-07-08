@@ -360,7 +360,7 @@ impl Parse for ParenthesizedGenericArguments {
         let content;
         Ok(ParenthesizedGenericArguments {
             paren_token: parenthesized!(content in input),
-            inputs: content.parse_list::<Type>()?,
+            inputs: content.parse_list::<ParenthesizedGenericArguments>()?,
             output: input.call(ReturnType::without_plus)?,
         })
     }
