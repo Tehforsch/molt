@@ -493,7 +493,14 @@ mod tests {
 
     molt_grammar_test_err!(
         molt_grammar,
-        (undefined_var, non_inferable_command, early_boundary_rule)
+        (
+            undefined_var,
+            non_inferable_command,
+            early_boundary_rule,
+            syntax_error1,
+            syntax_error2,
+            syntax_error3
+        )
     );
 
     molt_grammar_test_ok!(molt_grammar, (trailing_brace, unnecessary_semicolon));

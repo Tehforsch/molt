@@ -1,0 +1,9 @@
+---
+source: src/lib.rs
+expression: "emit_diagnostic_str(& input, make_error_diagnostic(& err))"
+---
+error: expected expression
+  ┌─ "test_data/molt_grammar/syntax_error1.molt":1:15
+  │
+1 │ let x: Type = ;
+  │               ^ expected expression

@@ -1,0 +1,9 @@
+---
+source: src/lib.rs
+expression: "emit_diagnostic_str(& input, make_error_diagnostic(& err))"
+---
+error: expected one of: `match`, `transform`, `type`, `let`
+  ┌─ "test_data/molt_grammar/syntax_error3.molt":1:19
+  │
+1 │ let x: Type = Foo;;
+  │                   ^ expected one of: `match`, `transform`, `type`, `let`

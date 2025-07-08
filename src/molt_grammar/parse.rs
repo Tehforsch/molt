@@ -34,12 +34,15 @@ impl Parse for UnresolvedMoltFile {
 
 impl Parse for Decl {
     fn parse(parser: ParseStream) -> Result<Self> {
-        if parser.peek(Token![match]) || parser.peek(kw::transform) {
+        let lookahead = parser.lookahead1();
+        if lookahead.peek(Token![match]) || lookahead.peek(kw::transform) {
             Ok(Self::Command(parser.parse()?))
-        } else if parser.peek(Token![type]) {
+        } else if lookahead.peek(Token![type]) {
             Ok(Self::TypeAnnotation(parser.parse()?))
-        } else {
+        } else if lookahead.peek(Token![let]) {
             Ok(Self::Var(parser.parse()?))
+        } else {
+            Err(lookahead.error())
         }
     }
 }
@@ -138,6 +141,13 @@ impl Parse for UnresolvedTypeAnnotation {
 }
 
 fn parse_until_semicolon(input: ParseStream) -> Result<TokenStream> {
+    // Check if input is empty (like in "let x: Type = ;")
+    // This is necessary because an empty TokenStream will produce
+    // strange spans when an error occurs.
+    if input.peek(Token![;]) {
+        return Err(input.error("expected expression"));
+    }
+
     let mut collected = TokenStream::new();
     while !input.is_empty() {
         let tt: TokenTree = input.parse()?;

@@ -1,0 +1,9 @@
+---
+source: src/lib.rs
+expression: "emit_diagnostic_str(& input, make_error_diagnostic(& err))"
+---
+error: expected one of: `for`, parentheses, `fn`, `unsafe`, `extern`, `::`, `<`, `dyn`, square brackets, `*`, `&`, `!`, `impl`, `_`, lifetime
+  ┌─ "test_data/molt_grammar/syntax_error2.molt":1:17
+  │
+1 │ let x: Type = { 5 };
+  │                 ^ expected one of: `for`, parentheses, `fn`, `unsafe`, `extern`, `::`, `<`, `dyn`, square brackets, `*`, `&`, `!`, `impl`, `_`, lifetime
