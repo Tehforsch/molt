@@ -5,12 +5,10 @@ use crate::attr::Attribute;
 #[cfg(feature = "full")]
 use crate::generics::BoundLifetimes;
 use crate::ident::{AnyIdent, Ident};
-#[cfg(any(feature = "parsing", feature = "full"))]
 use crate::lifetime::Lifetime;
 use crate::lit::Lit;
 use crate::mac::Macro;
 use crate::op::{BinOp, UnOp};
-#[cfg(feature = "parsing")]
 use crate::parse::ParseStream;
 #[cfg(feature = "full")]
 use crate::pat::Pat;
@@ -24,7 +22,6 @@ use crate::ty::ReturnType;
 use crate::ty::Type;
 use proc_macro2::{Span, TokenStream};
 use std::hash::{Hash, Hasher};
-#[cfg(all(feature = "parsing", feature = "full"))]
 use std::mem;
 
 /// An alternative to the primary `Expr::parse` parser (from the [`Parse`]
@@ -826,7 +823,6 @@ impl Expr {
             || input.peek(Token![#]) // expression attributes
     }
 
-    #[cfg(all(feature = "parsing", feature = "full"))]
     pub(crate) fn replace_attrs(&mut self, new: Vec<Attribute>) -> Vec<Attribute> {
         match self {
             Expr::Array(ExprArray { attrs, .. })
@@ -922,7 +918,6 @@ impl Hash for Member {
     }
 }
 
-#[cfg(any(feature = "parsing"))]
 impl Member {
     pub(crate) fn is_named(&self) -> bool {
         match self {
@@ -1027,7 +1022,6 @@ pub enum PointerMutability {
     Mut(Token![mut]),
 }
 
-#[cfg(feature = "parsing")]
 pub(crate) mod parsing {
     #[cfg(feature = "full")]
     use crate::attr;

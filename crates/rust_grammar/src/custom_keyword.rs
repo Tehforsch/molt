@@ -121,7 +121,6 @@ macro_rules! custom_keyword {
 }
 
 // Not public API.
-#[cfg(feature = "parsing")]
 #[doc(hidden)]
 #[macro_export]
 macro_rules! impl_parse_for_custom_keyword {
@@ -158,14 +157,6 @@ macro_rules! impl_parse_for_custom_keyword {
             }
         }
     };
-}
-
-// Not public API.
-#[cfg(not(feature = "parsing"))]
-#[doc(hidden)]
-#[macro_export]
-macro_rules! impl_parse_for_custom_keyword {
-    ($ident:ident) => {};
 }
 
 // Not public API.

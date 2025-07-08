@@ -184,7 +184,6 @@ pub struct QSelf {
     pub gt_token: Token![>],
 }
 
-#[cfg(feature = "parsing")]
 pub(crate) mod parsing {
     use molt_lib::{NodeId, Pattern, WithSpan};
 

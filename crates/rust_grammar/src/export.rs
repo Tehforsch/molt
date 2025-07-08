@@ -29,17 +29,14 @@ pub type Span = proc_macro2::Span;
 #[doc(hidden)]
 pub type TokenStream2 = proc_macro2::TokenStream;
 
-#[cfg(feature = "parsing")]
 #[doc(hidden)]
 pub use crate::group::{parse_braces, parse_brackets, parse_parens};
 
 #[doc(hidden)]
 pub use crate::span::IntoSpans;
 
-#[cfg(feature = "parsing")]
 #[doc(hidden)]
 pub use crate::token::parsing::{peek_punct, punct as parse_punct};
 
-#[cfg(feature = "parsing")]
 #[doc(hidden)]
 pub use crate::token::private::CustomToken;

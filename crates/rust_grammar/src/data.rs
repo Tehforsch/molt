@@ -116,7 +116,6 @@ impl<'a> Clone for Members<'a> {
     }
 }
 
-#[cfg(feature = "parsing")]
 pub(crate) mod parsing {
     use molt_lib::{NodeId, SpannedPat, WithSpan};
 
@@ -136,7 +135,6 @@ pub(crate) mod parsing {
 
     use super::{FieldNamed, FieldUnnamed};
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for Variant {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = input.call(Attribute::parse_outer)?;
@@ -178,7 +176,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for FieldsNamed {
         fn parse(input: ParseStream) -> Result<Self> {
             let content;
@@ -189,7 +186,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for FieldsUnnamed {
         fn parse(input: ParseStream) -> Result<Self> {
             let content;

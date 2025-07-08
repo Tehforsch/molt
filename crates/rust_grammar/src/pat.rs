@@ -24,7 +24,6 @@ pub use crate::expr::{
 /// This type is a [syntax tree enum].
 ///
 /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 #[non_exhaustive]
 pub enum Pat {
     /// A const block: `const { ... }`.
@@ -86,7 +85,6 @@ pub enum Pat {
     // For testing exhaustiveness in downstream code, use the following idiom:
     //
     //     match pat {
-    //         #![cfg_attr(test, deny(non_exhaustive_omitted_patterns))]
     //
     //         Pat::Box(pat) => {...}
     //         Pat::Ident(pat) => {...}
@@ -180,7 +178,6 @@ pub struct PatMultiLeadingVert;
 ///
 /// It may also be a unit struct or struct variant (e.g. `None`), or a
 /// constant; these cannot be distinguished syntactically.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct PatIdent {
     pub attrs: Vec<Attribute>,
     pub by_ref: Option<Token![ref]>,
@@ -191,7 +188,6 @@ pub struct PatIdent {
 
 #[derive(Debug, CmpSyn)]
 /// A pattern that matches any one of a set of cases.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct PatOr {
     pub attrs: Vec<Attribute>,
     pub leading_vert: Option<Token![|]>,
@@ -200,7 +196,6 @@ pub struct PatOr {
 
 #[derive(Debug, CmpSyn)]
 /// A parenthesized pattern: `(A | B)`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct PatParen {
     pub attrs: Vec<Attribute>,
     pub paren_token: token::Paren,
@@ -209,7 +204,6 @@ pub struct PatParen {
 
 #[derive(Debug, CmpSyn)]
 /// A reference pattern: `&mut var`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct PatReference {
     pub attrs: Vec<Attribute>,
     pub and_token: Token![&],
@@ -219,7 +213,6 @@ pub struct PatReference {
 
 #[derive(Debug, CmpSyn)]
 /// The dots in a tuple or slice pattern: `[0, 1, ..]`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct PatRest {
     pub attrs: Vec<Attribute>,
     pub dot2_token: Token![..],
@@ -227,7 +220,6 @@ pub struct PatRest {
 
 #[derive(Debug, CmpSyn)]
 /// A dynamically sized slice pattern: `[a, b, ref i @ .., y, z]`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct PatSlice {
     pub attrs: Vec<Attribute>,
     pub bracket_token: token::Bracket,
@@ -236,7 +228,6 @@ pub struct PatSlice {
 
 #[derive(Debug, CmpSyn)]
 /// A struct or struct variant pattern: `Variant { x, y, .. }`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct PatStruct {
     pub attrs: Vec<Attribute>,
     pub qself: Option<QSelf>,
@@ -248,7 +239,6 @@ pub struct PatStruct {
 
 #[derive(Debug, CmpSyn)]
 /// A tuple pattern: `(a, b)`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct PatTuple {
     pub attrs: Vec<Attribute>,
     pub paren_token: token::Paren,
@@ -257,7 +247,6 @@ pub struct PatTuple {
 
 #[derive(Debug, CmpSyn)]
 /// A tuple struct or tuple variant pattern: `Variant(x, y, .., z)`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct PatTupleStruct {
     pub attrs: Vec<Attribute>,
     pub qself: Option<QSelf>,
@@ -268,7 +257,6 @@ pub struct PatTupleStruct {
 
 #[derive(Debug, CmpSyn)]
 /// A type ascription pattern: `foo: f64`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct PatType {
     pub attrs: Vec<Attribute>,
     pub pat: NodeId<Pat>,
@@ -278,7 +266,6 @@ pub struct PatType {
 
 #[derive(Debug, CmpSyn)]
 /// A pattern that matches any value: `_`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct PatWild {
     pub attrs: Vec<Attribute>,
     pub underscore_token: Token![_],
@@ -289,7 +276,6 @@ pub struct PatWild {
 ///
 /// Patterns like the fields of Foo `{ x, ref y, ref mut z }` are treated
 /// the same as `x: x, y: ref y, z: ref mut z` but there is no colon token.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct FieldPat {
     pub attrs: Vec<Attribute>,
     pub member: Member,
@@ -297,7 +283,6 @@ pub struct FieldPat {
     pub pat: NodeId<Pat>,
 }
 
-#[cfg(feature = "parsing")]
 pub(crate) mod parsing {
     use crate::attr::Attribute;
     use crate::error::Result;
@@ -407,7 +392,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for PatType {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(PatType {

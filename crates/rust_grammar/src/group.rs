@@ -143,7 +143,6 @@ fn parse_delimited<'a>(
 /// # }
 /// ```
 #[macro_export]
-#[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
 macro_rules! parenthesized {
     ($content:ident in $cursor:expr) => {
         match $crate::__private::parse_parens(&$cursor) {
@@ -221,7 +220,6 @@ macro_rules! parenthesized {
 /// # }
 /// ```
 #[macro_export]
-#[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
 macro_rules! braced {
     ($content:ident in $cursor:expr) => {
         match $crate::__private::parse_braces(&$cursor) {
@@ -276,7 +274,6 @@ macro_rules! braced {
 /// # }
 /// ```
 #[macro_export]
-#[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
 macro_rules! bracketed {
     ($content:ident in $cursor:expr) => {
         match $crate::__private::parse_brackets(&$cursor) {

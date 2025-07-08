@@ -16,7 +16,7 @@ use crate::token;
 use crate::ty::{Abi, ReturnType, Type};
 use molt_lib::NodeId;
 use proc_macro2::TokenStream;
-#[cfg(feature = "parsing")]
+
 use std::mem;
 
 #[derive(Debug, CmpSyn)]
@@ -27,7 +27,6 @@ use std::mem;
 /// This type is a [syntax tree enum].
 ///
 /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 #[non_exhaustive]
 pub enum Item {
     /// A constant item: `const MAX: u16 = 65535`.
@@ -82,8 +81,6 @@ pub enum Item {
     // For testing exhaustiveness in downstream code, use the following idiom:
     //
     //     match item {
-    //         #![cfg_attr(test, deny(non_exhaustive_omitted_patterns))]
-    //
     //         Item::Const(item) => {...}
     //         Item::Enum(item) => {...}
     //         ...
@@ -100,7 +97,6 @@ pub enum Item {
 
 #[derive(Debug, CmpSyn)]
 /// A constant item: `const MAX: u16 = 65535`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ItemConst {
     pub attrs: Vec<Attribute>,
     pub vis: Visibility,
@@ -116,7 +112,6 @@ pub struct ItemConst {
 
 #[derive(Debug, CmpSyn)]
 /// An enum definition: `enum Foo<A, B> { A(A), B(B) }`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ItemEnum {
     pub attrs: Vec<Attribute>,
     pub vis: Visibility,
@@ -129,7 +124,6 @@ pub struct ItemEnum {
 
 #[derive(Debug, CmpSyn)]
 /// An `extern crate` item: `extern crate serde`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ItemExternCrate {
     pub attrs: Vec<Attribute>,
     pub vis: Visibility,
@@ -142,7 +136,6 @@ pub struct ItemExternCrate {
 
 #[derive(Debug, CmpSyn)]
 /// A free-standing function: `fn process(n: usize) -> Result<()> { ... }`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ItemFn {
     pub attrs: Vec<Attribute>,
     pub vis: Visibility,
@@ -152,7 +145,6 @@ pub struct ItemFn {
 
 #[derive(Debug, CmpSyn)]
 /// A block of foreign items: `extern "C" { ... }`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ItemForeignMod {
     pub attrs: Vec<Attribute>,
     pub unsafety: Option<Token![unsafe]>,
@@ -164,7 +156,6 @@ pub struct ItemForeignMod {
 #[derive(Debug, CmpSyn)]
 /// An impl block providing trait or associated items: `impl<A> Trait
 /// for Data<A> { ... }`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ItemImpl {
     pub attrs: Vec<Attribute>,
     pub defaultness: Option<Token![default]>,
@@ -181,7 +172,6 @@ pub struct ItemImpl {
 
 #[derive(Debug, CmpSyn)]
 /// A macro invocation, which includes `macro_rules!` definitions.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ItemMacro {
     pub attrs: Vec<Attribute>,
     /// The `example` in `macro_rules! example { ... }`.
@@ -192,7 +182,6 @@ pub struct ItemMacro {
 
 #[derive(Debug, CmpSyn)]
 /// A module or module declaration: `mod m` or `mod m { ... }`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ItemMod {
     pub attrs: Vec<Attribute>,
     pub vis: Visibility,
@@ -205,7 +194,6 @@ pub struct ItemMod {
 
 #[derive(Debug, CmpSyn)]
 /// A static item: `static BIKE: Shed = Shed(42)`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ItemStatic {
     pub attrs: Vec<Attribute>,
     pub vis: Visibility,
@@ -221,7 +209,6 @@ pub struct ItemStatic {
 
 #[derive(Debug, CmpSyn)]
 /// A struct definition: `struct Foo<A> { x: A }`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ItemStruct {
     pub attrs: Vec<Attribute>,
     pub vis: Visibility,
@@ -234,7 +221,6 @@ pub struct ItemStruct {
 
 #[derive(Debug, CmpSyn)]
 /// A trait definition: `pub trait Iterator { ... }`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ItemTrait {
     pub attrs: Vec<Attribute>,
     pub vis: Visibility,
@@ -252,7 +238,6 @@ pub struct ItemTrait {
 
 #[derive(Debug, CmpSyn)]
 /// A trait alias: `pub trait SharableIterator = Iterator + Sync`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ItemTraitAlias {
     pub attrs: Vec<Attribute>,
     pub vis: Visibility,
@@ -266,7 +251,6 @@ pub struct ItemTraitAlias {
 
 #[derive(Debug, CmpSyn)]
 /// A type alias: `type Result<T> = std::result::Result<T, MyError>`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ItemType {
     pub attrs: Vec<Attribute>,
     pub vis: Visibility,
@@ -280,7 +264,6 @@ pub struct ItemType {
 
 #[derive(Debug, CmpSyn)]
 /// A union definition: `union Foo<A, B> { x: A, y: B }`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ItemUnion {
     pub attrs: Vec<Attribute>,
     pub vis: Visibility,
@@ -292,7 +275,6 @@ pub struct ItemUnion {
 
 #[derive(Debug, CmpSyn)]
 /// A use declaration: `use std::collections::HashMap`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ItemUse {
     pub attrs: Vec<Attribute>,
     pub vis: Visibility,
@@ -303,7 +285,6 @@ pub struct ItemUse {
 }
 
 impl Item {
-    #[cfg(feature = "parsing")]
     pub(crate) fn replace_attrs(&mut self, new: Vec<Attribute>) -> Vec<Attribute> {
         match self {
             Item::Const(ItemConst { attrs, .. })
@@ -334,7 +315,6 @@ impl Item {
 /// This type is a [syntax tree enum].
 ///
 /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub enum UseTree {
     /// A path prefix of imports in a `use` item: `std::...`.
     Path(UsePath),
@@ -354,7 +334,6 @@ pub enum UseTree {
 
 #[derive(Debug, CmpSyn)]
 /// A path prefix of imports in a `use` item: `std::...`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct UsePath {
     pub ident: NodeId<Ident>,
     pub colon2_token: Token![::],
@@ -363,14 +342,12 @@ pub struct UsePath {
 
 #[derive(Debug, CmpSyn)]
 /// An identifier imported by a `use` item: `HashMap`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct UseName {
     pub ident: NodeId<Ident>,
 }
 
 #[derive(Debug, CmpSyn)]
 /// An renamed identifier imported by a `use` item: `HashMap as Map`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct UseRename {
     pub ident: NodeId<Ident>,
     pub as_token: Token![as],
@@ -379,14 +356,12 @@ pub struct UseRename {
 
 #[derive(Debug, CmpSyn)]
 /// A glob import in a `use` item: `*`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct UseGlob {
     pub star_token: Token![*],
 }
 
 #[derive(Debug, CmpSyn)]
 /// A braced group of imports in a `use` item: `{A, B, C}`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct UseGroup {
     pub brace_token: token::Brace,
     pub items: Punctuated<UseTree, Token![,]>,
@@ -400,7 +375,6 @@ pub struct UseGroup {
 /// This type is a [syntax tree enum].
 ///
 /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 #[non_exhaustive]
 pub enum ForeignItem {
     /// A foreign function in an `extern` block.
@@ -420,7 +394,6 @@ pub enum ForeignItem {
     // For testing exhaustiveness in downstream code, use the following idiom:
     //
     //     match item {
-    //         #![cfg_attr(test, deny(non_exhaustive_omitted_patterns))]
     //
     //         ForeignItem::Fn(item) => {...}
     //         ForeignItem::Static(item) => {...}
@@ -438,7 +411,6 @@ pub enum ForeignItem {
 
 #[derive(Debug, CmpSyn)]
 /// A foreign function in an `extern` block.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ForeignItemFn {
     pub attrs: Vec<Attribute>,
     pub vis: Visibility,
@@ -448,7 +420,6 @@ pub struct ForeignItemFn {
 
 #[derive(Debug, CmpSyn)]
 /// A foreign static item in an `extern` block: `static ext: u8`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ForeignItemStatic {
     pub attrs: Vec<Attribute>,
     pub vis: Visibility,
@@ -462,7 +433,6 @@ pub struct ForeignItemStatic {
 
 #[derive(Debug, CmpSyn)]
 /// A foreign type in an `extern` block: `type void`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ForeignItemType {
     pub attrs: Vec<Attribute>,
     pub vis: Visibility,
@@ -474,7 +444,6 @@ pub struct ForeignItemType {
 
 #[derive(Debug, CmpSyn)]
 /// A macro invocation within an extern block.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ForeignItemMacro {
     pub attrs: Vec<Attribute>,
     pub mac: Macro,
@@ -489,7 +458,6 @@ pub struct ForeignItemMacro {
 /// This type is a [syntax tree enum].
 ///
 /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 #[non_exhaustive]
 pub enum TraitItem {
     /// An associated constant within the definition of a trait.
@@ -509,7 +477,6 @@ pub enum TraitItem {
     // For testing exhaustiveness in downstream code, use the following idiom:
     //
     //     match item {
-    //         #![cfg_attr(test, deny(non_exhaustive_omitted_patterns))]
     //
     //         TraitItem::Const(item) => {...}
     //         TraitItem::Fn(item) => {...}
@@ -527,7 +494,6 @@ pub enum TraitItem {
 
 #[derive(Debug, CmpSyn)]
 /// An associated constant within the definition of a trait.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct TraitItemConst {
     pub attrs: Vec<Attribute>,
     pub const_token: Token![const],
@@ -541,7 +507,6 @@ pub struct TraitItemConst {
 
 #[derive(Debug, CmpSyn)]
 /// An associated function within the definition of a trait.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct TraitItemFn {
     pub attrs: Vec<Attribute>,
     pub sig: Signature,
@@ -551,7 +516,6 @@ pub struct TraitItemFn {
 
 #[derive(Debug, CmpSyn)]
 /// An associated type within the definition of a trait.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct TraitItemType {
     pub attrs: Vec<Attribute>,
     pub type_token: Token![type],
@@ -565,7 +529,6 @@ pub struct TraitItemType {
 
 #[derive(Debug, CmpSyn)]
 /// A macro invocation within the definition of a trait.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct TraitItemMacro {
     pub attrs: Vec<Attribute>,
     pub mac: Macro,
@@ -580,7 +543,6 @@ pub struct TraitItemMacro {
 /// This type is a [syntax tree enum].
 ///
 /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 #[non_exhaustive]
 pub enum ImplItem {
     /// An associated constant within an impl block.
@@ -600,7 +562,6 @@ pub enum ImplItem {
     // For testing exhaustiveness in downstream code, use the following idiom:
     //
     //     match item {
-    //         #![cfg_attr(test, deny(non_exhaustive_omitted_patterns))]
     //
     //         ImplItem::Const(item) => {...}
     //         ImplItem::Fn(item) => {...}
@@ -618,7 +579,6 @@ pub enum ImplItem {
 
 #[derive(Debug, CmpSyn)]
 /// An associated constant within an impl block.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ImplItemConst {
     pub attrs: Vec<Attribute>,
     pub vis: Visibility,
@@ -635,7 +595,6 @@ pub struct ImplItemConst {
 
 #[derive(Debug, CmpSyn)]
 /// An associated function within an impl block.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ImplItemFn {
     pub attrs: Vec<Attribute>,
     pub vis: Visibility,
@@ -646,7 +605,6 @@ pub struct ImplItemFn {
 
 #[derive(Debug, CmpSyn)]
 /// An associated type within an impl block.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ImplItemType {
     pub attrs: Vec<Attribute>,
     pub vis: Visibility,
@@ -661,7 +619,6 @@ pub struct ImplItemType {
 
 #[derive(Debug, CmpSyn)]
 /// A macro invocation within an impl block.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ImplItemMacro {
     pub attrs: Vec<Attribute>,
     pub mac: Macro,
@@ -671,7 +628,6 @@ pub struct ImplItemMacro {
 #[derive(Debug, CmpSyn)]
 /// A function signature in a trait or implementation: `unsafe fn
 /// initialize(&self)`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct Signature {
     pub constness: Option<Token![const]>,
     pub asyncness: Option<Token![async]>,
@@ -699,7 +655,6 @@ impl Signature {
 
 #[derive(Debug, CmpSyn)]
 /// An argument in a function signature: the `n: usize` in `fn f(n: usize)`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub enum FnArg {
     /// The `self` argument of an associated method.
     Receiver(Receiver),
@@ -716,7 +671,6 @@ pub enum FnArg {
 /// is written in shorthand such as `self` or `&self` or `&mut self`. In the
 /// shorthand case, the type in `ty` is reconstructed as one of `Self`,
 /// `&Self`, or `&mut Self`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct Receiver {
     pub attrs: Vec<Attribute>,
     pub reference: Option<(Token![&], Option<Lifetime>)>,
@@ -744,7 +698,6 @@ impl Receiver {
 ///     //                               ^^^
 /// }
 /// ```
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct Variadic {
     pub attrs: Vec<Attribute>,
     pub pat: Option<(NodeId<Pat>, Token![:])>,
@@ -754,7 +707,6 @@ pub struct Variadic {
 
 #[derive(Debug, CmpSyn)]
 /// The mutability of an `Item::Static` or `ForeignItem::Static`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 #[non_exhaustive]
 pub enum StaticMutability {
     Mut(Token![mut]),
@@ -763,7 +715,6 @@ pub enum StaticMutability {
 
 #[derive(Debug, CmpSyn)]
 /// Unused, but reserved for RFC 3323 restrictions.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 #[non_exhaustive]
 pub enum ImplRestriction {}
 
@@ -776,7 +727,6 @@ pub enum ImplRestriction {}
 //     pub path: Box<Path>,
 // }
 
-#[cfg(feature = "parsing")]
 pub(crate) mod parsing {
     use crate::attr::{self, Attribute};
     use crate::error::{Error, Result};
@@ -807,7 +757,6 @@ pub(crate) mod parsing {
     use molt_lib::{NodeId, NodeList, Pattern, SpannedPat, WithSpan};
     use proc_macro2::TokenStream;
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for Item {
         fn parse(input: ParseStream) -> Result<Self> {
             let begin = input.fork();
@@ -1119,7 +1068,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ItemMacro {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = input.call(Attribute::parse_outer)?;
@@ -1173,7 +1121,6 @@ pub(crate) mod parsing {
         Ok(Item::Verbatim(verbatim::between(&begin, input)))
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ItemExternCrate {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(ItemExternCrate {
@@ -1206,7 +1153,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ItemUse {
         fn parse(input: ParseStream) -> Result<Self> {
             let allow_crate_root_in_path = false;
@@ -1240,7 +1186,6 @@ pub(crate) mod parsing {
         }))
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for UseTree {
         fn parse(input: ParseStream) -> Result<UseTree> {
             let allow_crate_root_in_path = false;
@@ -1324,7 +1269,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ItemStatic {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(ItemStatic {
@@ -1342,7 +1286,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ItemConst {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = input.call(Attribute::parse_outer)?;
@@ -1389,7 +1332,6 @@ pub(crate) mod parsing {
             && fork.peek(Token![fn])
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for Signature {
         fn parse(input: ParseStream) -> Result<Self> {
             let allow_safe = false;
@@ -1438,7 +1380,6 @@ pub(crate) mod parsing {
         })
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ItemFn {
         fn parse(input: ParseStream) -> Result<Self> {
             let outer_attrs = input.call(Attribute::parse_outer)?;
@@ -1467,7 +1408,6 @@ pub(crate) mod parsing {
         })
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for FnArg {
         fn parse(input: ParseStream) -> Result<Self> {
             let allow_variadic = false;
@@ -1518,7 +1458,6 @@ pub(crate) mod parsing {
         })))
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for Receiver {
         fn parse(input: ParseStream) -> Result<Self> {
             let reference = if input.peek(Token![&]) {
@@ -1624,7 +1563,6 @@ pub(crate) mod parsing {
         Ok((args, variadic))
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ItemMod {
         fn parse(input: ParseStream) -> Result<Self> {
             let mut attrs = input.call(Attribute::parse_outer)?;
@@ -1673,7 +1611,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ItemForeignMod {
         fn parse(input: ParseStream) -> Result<Self> {
             let mut attrs = input.call(Attribute::parse_outer)?;
@@ -1698,7 +1635,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ForeignItem {
         fn parse(input: ParseStream) -> Result<Self> {
             let begin = input.fork();
@@ -1797,7 +1733,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ForeignItemFn {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = input.call(Attribute::parse_outer)?;
@@ -1813,7 +1748,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ForeignItemStatic {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(ForeignItemStatic {
@@ -1829,7 +1763,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ForeignItemType {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(ForeignItemType {
@@ -1878,7 +1811,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ForeignItemMacro {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = input.call(Attribute::parse_outer)?;
@@ -1896,7 +1828,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ItemType {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(ItemType {
@@ -1950,7 +1881,6 @@ pub(crate) mod parsing {
         }))
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ItemStruct {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = input.call(Attribute::parse_outer)?;
@@ -1974,7 +1904,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ItemEnum {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = input.call(Attribute::parse_outer)?;
@@ -1998,7 +1927,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ItemUnion {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = input.call(Attribute::parse_outer)?;
@@ -2049,7 +1977,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ItemTrait {
         fn parse(input: ParseStream) -> Result<Self> {
             let outer_attrs = input.call(Attribute::parse_outer)?;
@@ -2129,7 +2056,6 @@ pub(crate) mod parsing {
         })
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ItemTraitAlias {
         fn parse(input: ParseStream) -> Result<Self> {
             let (attrs, vis, trait_token, ident, generics) = parse_start_of_trait_alias(input)?;
@@ -2196,7 +2122,6 @@ pub(crate) mod parsing {
         })
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for TraitItem {
         fn parse(input: ParseStream) -> Result<Self> {
             let begin = input.fork();
@@ -2282,7 +2207,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for TraitItemConst {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = input.call(Attribute::parse_outer)?;
@@ -2319,7 +2243,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for TraitItemFn {
         fn parse(input: ParseStream) -> Result<Self> {
             let mut attrs = input.call(Attribute::parse_outer)?;
@@ -2348,7 +2271,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for TraitItemType {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = input.call(Attribute::parse_outer)?;
@@ -2405,7 +2327,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for TraitItemMacro {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = input.call(Attribute::parse_outer)?;
@@ -2423,7 +2344,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ItemImpl {
         fn parse(input: ParseStream) -> Result<Self> {
             let allow_verbatim_impl = false;
@@ -2538,7 +2458,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ImplItem {
         fn parse(input: ParseStream) -> Result<Self> {
             let begin = input.fork();
@@ -2634,7 +2553,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ImplItemConst {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = input.call(Attribute::parse_outer)?;
@@ -2671,7 +2589,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ImplItemFn {
         fn parse(input: ParseStream) -> Result<Self> {
             let allow_omitted_body = false;
@@ -2712,7 +2629,6 @@ pub(crate) mod parsing {
         }))
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ImplItemType {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = input.call(Attribute::parse_outer)?;
@@ -2774,7 +2690,6 @@ pub(crate) mod parsing {
         }))
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ImplItemMacro {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = input.call(Attribute::parse_outer)?;
@@ -2798,7 +2713,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for StaticMutability {
         fn parse(input: ParseStream) -> Result<Self> {
             let mut_token: Option<Token![mut]> = input.parse()?;

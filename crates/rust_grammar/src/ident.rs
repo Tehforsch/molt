@@ -1,4 +1,3 @@
-#[cfg(feature = "parsing")]
 use crate::lookahead;
 
 pub use proc_macro2::Ident;
@@ -49,7 +48,6 @@ pub(crate) fn xid_ok(symbol: &str) -> bool {
     true
 }
 
-#[cfg(feature = "parsing")]
 mod parsing {
     use crate::buffer::Cursor;
     use crate::error::Result;

@@ -74,7 +74,6 @@ pub enum UnOp {
     Neg(Token![-]),
 }
 
-#[cfg(feature = "parsing")]
 pub(crate) mod parsing {
     use crate::error::Result;
     use crate::op::{BinOp, UnOp};

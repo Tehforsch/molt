@@ -1,16 +1,15 @@
 use derive_macro::CmpSyn;
 
-#[cfg(feature = "parsing")]
 use crate::error::Result;
-#[cfg(feature = "parsing")]
+
 use crate::parse::ParseStream;
 use crate::path::Path;
 use crate::token::{Brace, Bracket, Paren};
 use proc_macro2::extra::DelimSpan;
-#[cfg(feature = "parsing")]
+
 use proc_macro2::Delimiter;
 use proc_macro2::TokenStream;
-#[cfg(feature = "parsing")]
+
 use proc_macro2::TokenTree;
 
 #[derive(Debug, CmpSyn)]
@@ -47,7 +46,6 @@ impl MacroDelimiter {
     }
 }
 
-#[cfg(feature = "parsing")]
 pub(crate) fn parse_delimiter(input: ParseStream) -> Result<(MacroDelimiter, TokenStream)> {
     input.step(|cursor| {
         if let Some((TokenTree::Group(g), rest)) = cursor.token_tree() {
@@ -67,7 +65,6 @@ pub(crate) fn parse_delimiter(input: ParseStream) -> Result<(MacroDelimiter, Tok
     })
 }
 
-#[cfg(feature = "parsing")]
 pub(crate) mod parsing {
     use crate::error::Result;
     use crate::mac::{parse_delimiter, Macro};

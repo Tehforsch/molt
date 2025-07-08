@@ -10,7 +10,6 @@ use crate::token;
 
 #[derive(Debug, CmpSyn)]
 /// A braced block containing Rust statements.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct Block {
     pub brace_token: token::Brace,
     /// Statements in a block
@@ -21,7 +20,6 @@ pub struct StmtAllowNoSemi;
 
 #[derive(Debug, CmpSyn)]
 /// A statement, usually ending in a semicolon.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub enum Stmt {
     /// A local (let) binding.
     Local(Local),
@@ -42,7 +40,6 @@ pub enum Stmt {
 
 #[derive(Debug, CmpSyn)]
 /// A local `let` binding: `let x: u64 = s.parse()?;`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct Local {
     pub attrs: Vec<Attribute>,
     pub let_token: Token![let],
@@ -57,7 +54,6 @@ pub struct Local {
 ///
 /// `LocalInit` represents `= s.parse()?` in `let x: u64 = s.parse()?` and
 /// `= r else { return }` in `let Ok(x) = r else { return }`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct LocalInit {
     pub eq_token: Token![=],
     pub expr: NodeId<Expr>,
@@ -70,14 +66,12 @@ pub struct LocalInit {
 /// Syntactically it's ambiguous which other kind of statement this macro
 /// would expand to. It can be any of local variable (`let`), item, or
 /// expression.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct StmtMacro {
     pub attrs: Vec<Attribute>,
     pub mac: Macro,
     pub semi_token: Option<Token![;]>,
 }
 
-#[cfg(feature = "parsing")]
 pub(crate) mod parsing {
     use crate::attr::Attribute;
     use crate::classify;
@@ -147,7 +141,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for Block {
         fn parse(input: ParseStream) -> Result<Self> {
             let content;

@@ -234,7 +234,6 @@ pub enum ReturnType {
     Type(Token![->], NodeId<Type>),
 }
 
-#[cfg(feature = "parsing")]
 pub(crate) mod parsing {
     use crate::attr::Attribute;
     use crate::error::{self, Result};

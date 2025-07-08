@@ -77,14 +77,12 @@ use crate::{whitespace, Node};
 ///         ),
 /// ...
 /// ```
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct File {
     pub shebang: Option<String>,
     pub attrs: Vec<Attribute>,
     pub items: Vec<NodeId<Item>>,
 }
 
-#[cfg(feature = "parsing")]
 pub(crate) mod parsing {
     use molt_lib::NodeId;
 
@@ -94,7 +92,6 @@ pub(crate) mod parsing {
     use crate::parse::{Parse, ParseStream};
     use crate::Item;
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for File {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(File {

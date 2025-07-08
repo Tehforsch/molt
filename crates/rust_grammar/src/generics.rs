@@ -186,7 +186,6 @@ pub struct PredicateType {
     pub bounds: Punctuated<TypeParamBound, Token![+]>,
 }
 
-#[cfg(feature = "parsing")]
 pub(crate) mod parsing {
     use molt_lib::NodeId;
 
@@ -510,7 +509,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for TraitBound {
         fn parse(input: ParseStream) -> Result<Self> {
             let modifier: TraitBoundModifier = input.parse()?;
@@ -535,7 +533,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for TraitBoundModifier {
         fn parse(input: ParseStream) -> Result<Self> {
             if input.peek(Token![?]) {
@@ -546,7 +543,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ConstParam {
         fn parse(input: ParseStream) -> Result<Self> {
             let mut default = None;
@@ -570,7 +566,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for WhereClause {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(WhereClause {
@@ -601,7 +596,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for Option<WhereClause> {
         fn parse(input: ParseStream) -> Result<Self> {
             if input.peek(Token![where]) {
@@ -612,7 +606,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for WherePredicate {
         fn parse(input: ParseStream) -> Result<Self> {
             if input.peek(Lifetime) && input.peek2(Token![:]) {
@@ -682,7 +675,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for PreciseCapture {
         fn parse(input: ParseStream) -> Result<Self> {
             let use_token: Token![use] = input.parse()?;
@@ -722,7 +714,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for CapturedParam {
         fn parse(input: ParseStream) -> Result<Self> {
             let lookahead = input.lookahead1();

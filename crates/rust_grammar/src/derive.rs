@@ -1,4 +1,3 @@
-#[cfg(feature = "parsing")]
 pub(crate) mod parsing {
     use crate::data::{Fields, FieldsNamed, Variant};
     use crate::error::Result;

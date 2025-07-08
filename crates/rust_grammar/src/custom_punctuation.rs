@@ -109,7 +109,6 @@ macro_rules! custom_punctuation {
 }
 
 // Not public API.
-#[cfg(feature = "parsing")]
 #[doc(hidden)]
 #[macro_export]
 macro_rules! impl_parse_for_custom_punctuation {
@@ -132,14 +131,6 @@ macro_rules! impl_parse_for_custom_punctuation {
             }
         }
     };
-}
-
-// Not public API.
-#[cfg(not(feature = "parsing"))]
-#[doc(hidden)]
-#[macro_export]
-macro_rules! impl_parse_for_custom_punctuation {
-    ($ident:ident, $($tt:tt)+) => {};
 }
 
 // Not public API.

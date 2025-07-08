@@ -1,4 +1,3 @@
-#[cfg(feature = "parsing")]
 use crate::lookahead;
 use molt_lib::{CmpSyn, Matcher};
 use proc_macro2::{Ident, Span};
@@ -119,13 +118,11 @@ pub fn Lifetime(marker: lookahead::TokenMarker) -> Lifetime {
     match marker {}
 }
 
-#[cfg(feature = "parsing")]
 pub(crate) mod parsing {
     use crate::error::Result;
     use crate::lifetime::Lifetime;
     use crate::parse::{Parse, ParseStream};
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for Lifetime {
         fn parse(input: ParseStream) -> Result<Self> {
             input.step(|cursor| {

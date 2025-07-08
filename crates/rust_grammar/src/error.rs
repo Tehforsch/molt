@@ -1,4 +1,3 @@
-#[cfg(feature = "parsing")]
 use crate::buffer::Cursor;
 use crate::thread::ThreadBound;
 use proc_macro2::{
@@ -290,7 +289,6 @@ impl ErrorMessage {
     }
 }
 
-#[cfg(feature = "parsing")]
 pub(crate) fn new_at<T: Display>(scope: Span, cursor: Cursor, message: T) -> Error {
     if cursor.eof() {
         Error::new(scope, format!("unexpected end of input, {}", message))

@@ -7,10 +7,8 @@ license.workspace = true
 edition = "2021"
 
 [features]
-default = ["parsing", "proc-macro", "full"]
+default = ["proc-macro", "full"]
 full = []
-parsing = []
-fold = []
 proc-macro = ["proc-macro2/proc-macro"]
 
 [dependencies]

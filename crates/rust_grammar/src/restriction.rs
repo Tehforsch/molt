@@ -51,7 +51,6 @@ pub enum FieldMutability {
     // }
 }
 
-#[cfg(feature = "parsing")]
 pub(crate) mod parsing {
     use crate::error::Result;
     use crate::ident::AnyIdent;
@@ -61,7 +60,6 @@ pub(crate) mod parsing {
     use crate::restriction::{VisRestricted, Visibility};
     use crate::token;
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for Visibility {
         fn parse(input: ParseStream) -> Result<Self> {
             // Recognize an empty None-delimited group, as produced by a $:vis

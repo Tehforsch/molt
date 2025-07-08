@@ -1,12 +1,9 @@
 use derive_macro::CmpSyn;
 
-#[cfg(feature = "parsing")]
 use crate::error::Error;
-#[cfg(feature = "parsing")]
 use crate::error::Result;
 use crate::expr::Expr;
 use crate::mac::MacroDelimiter;
-#[cfg(feature = "parsing")]
 use crate::parse::ParseStream;
 use crate::path::Path;
 use crate::token;
@@ -166,7 +163,6 @@ use proc_macro2::TokenStream;
 /// };
 /// assert_eq!(doc, attr);
 /// ```
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full"))))]
 pub struct Attribute {
     pub pound_token: Token![#],
     pub style: AttrStyle,
@@ -181,8 +177,6 @@ impl Attribute {
     ///
     /// See
     /// [*Parsing from tokens to Attribute*](#parsing-from-tokens-to-attribute).
-    #[cfg(feature = "parsing")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     pub fn parse_outer(input: ParseStream) -> Result<Vec<Self>> {
         let mut attrs = Vec::new();
         while input.peek(Token![#]) {
@@ -197,8 +191,6 @@ impl Attribute {
     ///
     /// See
     /// [*Parsing from tokens to Attribute*](#parsing-from-tokens-to-attribute).
-    #[cfg(feature = "parsing")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     pub fn parse_inner(input: ParseStream) -> Result<Vec<Self>> {
         let mut attrs = Vec::new();
         parsing::parse_inner(input, &mut attrs)?;
@@ -221,7 +213,6 @@ impl Attribute {
 /// - `#![feature(proc_macro)]`
 /// - `//! # Example`
 /// - `/*! Please file an issue */`
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full"))))]
 pub enum AttrStyle {
     Outer,
     Inner(Token![!]),
@@ -248,7 +239,6 @@ pub enum AttrStyle {
 /// This type is a [syntax tree enum].
 ///
 /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full"))))]
 pub enum Meta {
     Path(Path),
 
@@ -289,8 +279,6 @@ impl Meta {
     }
 
     /// Error if this is a `Meta::List` or `Meta::NameValue`.
-    #[cfg(feature = "parsing")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     pub fn require_path_only(&self) -> Result<&Path> {
         let error_span = match self {
             Meta::Path(path) => return Ok(path),
@@ -319,7 +307,6 @@ impl From<MetaNameValue> for Meta {
     }
 }
 
-#[cfg(feature = "parsing")]
 pub(crate) mod parsing {
     use crate::attr::{AttrStyle, Attribute, Meta, MetaList, MetaNameValue};
     use crate::error::Result;
@@ -359,7 +346,6 @@ pub(crate) mod parsing {
         })
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for Meta {
         fn parse(input: ParseStream) -> Result<Self> {
             let path = parse_outermost_meta_path(input)?;
@@ -367,7 +353,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for MetaList {
         fn parse(input: ParseStream) -> Result<Self> {
             let path = parse_outermost_meta_path(input)?;
@@ -375,7 +360,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for MetaNameValue {
         fn parse(input: ParseStream) -> Result<Self> {
             let path = parse_outermost_meta_path(input)?;

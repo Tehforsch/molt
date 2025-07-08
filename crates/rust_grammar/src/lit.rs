@@ -1,6 +1,5 @@
 use derive_macro::CmpSyn;
 
-#[cfg(feature = "parsing")]
 use crate::lookahead;
 use crate::{Error, Ident, Result};
 use molt_lib::CmpSyn;
@@ -523,7 +522,6 @@ pub fn Lit(marker: lookahead::TokenMarker) -> Lit {
     match marker {}
 }
 
-#[cfg(feature = "parsing")]
 pub(crate) mod parsing {
     use crate::buffer::Cursor;
     use crate::error::Result;
@@ -539,7 +537,6 @@ pub(crate) mod parsing {
     use std::cell::Cell;
     use std::rc::Rc;
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for Lit {
         fn parse(input: ParseStream) -> Result<Self> {
             input.step(|cursor| {
@@ -618,7 +615,6 @@ pub(crate) mod parsing {
         ))
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for LitStr {
         fn parse(input: ParseStream) -> Result<Self> {
             let head = input.fork();
@@ -629,7 +625,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for LitByteStr {
         fn parse(input: ParseStream) -> Result<Self> {
             let head = input.fork();
@@ -640,7 +635,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for LitCStr {
         fn parse(input: ParseStream) -> Result<Self> {
             let head = input.fork();
@@ -651,7 +645,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for LitByte {
         fn parse(input: ParseStream) -> Result<Self> {
             let head = input.fork();
@@ -662,7 +655,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for LitChar {
         fn parse(input: ParseStream) -> Result<Self> {
             let head = input.fork();
@@ -673,7 +665,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for LitInt {
         fn parse(input: ParseStream) -> Result<Self> {
             let head = input.fork();
@@ -684,7 +675,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for LitFloat {
         fn parse(input: ParseStream) -> Result<Self> {
             let head = input.fork();
@@ -695,7 +685,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for LitBool {
         fn parse(input: ParseStream) -> Result<Self> {
             let head = input.fork();
