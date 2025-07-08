@@ -102,14 +102,10 @@ use crate::parse::{Parse, ParseStream};
 use crate::span::IntoSpans;
 use proc_macro2::extra::DelimSpan;
 use proc_macro2::Span;
-#[cfg(feature = "printing")]
-use proc_macro2::TokenStream;
-#[cfg(any(feature = "parsing", feature = "printing"))]
+#[cfg(any(feature = "parsing"))]
 use proc_macro2::{Delimiter, Ident};
 #[cfg(feature = "parsing")]
 use proc_macro2::{Literal, Punct, TokenTree};
-#[cfg(feature = "printing")]
-use quote::{ToTokens, TokenStreamExt};
 #[cfg(feature = "extra-traits")]
 use std::cmp;
 #[cfg(feature = "extra-traits")]
@@ -268,14 +264,6 @@ macro_rules! define_keywords {
                 fn hash<H: Hasher>(&self, _state: &mut H) {}
             }
 
-            #[cfg(feature = "printing")]
-            #[cfg_attr(docsrs, doc(cfg(feature = "printing")))]
-            impl ToTokens for $name {
-                fn to_tokens(&self, tokens: &mut TokenStream) {
-                    printing::keyword($token, self.span, tokens);
-                }
-            }
-
             #[cfg(feature = "parsing")]
             #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
             impl Parse for $name {
@@ -410,14 +398,6 @@ macro_rules! define_punctuation {
                 $token pub struct $name/$len #[doc = $usage]
             }
 
-            #[cfg(feature = "printing")]
-            #[cfg_attr(docsrs, doc(cfg(feature = "printing")))]
-            impl ToTokens for $name {
-                fn to_tokens(&self, tokens: &mut TokenStream) {
-                    printing::punct($token, &self.spans, tokens);
-                }
-            }
-
             #[cfg(feature = "parsing")]
             #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
             impl Parse for $name {
@@ -508,19 +488,6 @@ macro_rules! define_delimiters {
                 fn hash<H: Hasher>(&self, _state: &mut H) {}
             }
 
-            impl $name {
-                #[cfg(feature = "printing")]
-                #[cfg_attr(docsrs, doc(cfg(feature = "printing")))]
-                pub fn surround<F>(&self, tokens: &mut TokenStream, f: F)
-                where
-                    F: FnOnce(&mut TokenStream),
-                {
-                    let mut inner = TokenStream::new();
-                    f(&mut inner);
-                    printing::delim(Delimiter::$delim, self.span.join(), tokens, inner);
-                }
-            }
-
             #[cfg(feature = "parsing")]
             impl private::Sealed for $name {}
         )*
@@ -529,14 +496,6 @@ macro_rules! define_delimiters {
 
 define_punctuation_structs! {
     "_" pub struct Underscore/1 /// wildcard patterns, inferred types, unnamed items in constants, extern crates, use declarations, and destructuring assignment
-}
-
-#[cfg(feature = "printing")]
-#[cfg_attr(docsrs, doc(cfg(feature = "printing")))]
-impl ToTokens for Underscore {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        tokens.append(Ident::new("_", self.span));
-    }
 }
 
 #[cfg(feature = "parsing")]
@@ -637,19 +596,6 @@ impl PartialEq for Group {
 #[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
 impl Hash for Group {
     fn hash<H: Hasher>(&self, _state: &mut H) {}
-}
-
-impl Group {
-    #[cfg(feature = "printing")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "printing")))]
-    pub fn surround<F>(&self, tokens: &mut TokenStream, f: F)
-    where
-        F: FnOnce(&mut TokenStream),
-    {
-        let mut inner = TokenStream::new();
-        f(&mut inner);
-        printing::delim(Delimiter::None, self.span, tokens, inner);
-    }
 }
 
 #[cfg(feature = "parsing")]
@@ -1060,48 +1006,6 @@ pub(crate) mod parsing {
             }
         }
         false
-    }
-}
-
-// Not public API.
-#[doc(hidden)]
-#[cfg(feature = "printing")]
-pub(crate) mod printing {
-    use proc_macro2::{Delimiter, Group, Ident, Punct, Spacing, Span, TokenStream};
-    use quote::TokenStreamExt;
-
-    #[doc(hidden)]
-    pub fn punct(s: &str, spans: &[Span], tokens: &mut TokenStream) {
-        assert_eq!(s.len(), spans.len());
-
-        let mut chars = s.chars();
-        let mut spans = spans.iter();
-        let ch = chars.next_back().unwrap();
-        let span = spans.next_back().unwrap();
-        for (ch, span) in chars.zip(spans) {
-            let mut op = Punct::new(ch, Spacing::Joint);
-            op.set_span(*span);
-            tokens.append(op);
-        }
-
-        let mut op = Punct::new(ch, Spacing::Alone);
-        op.set_span(*span);
-        tokens.append(op);
-    }
-
-    pub(crate) fn keyword(s: &str, span: Span, tokens: &mut TokenStream) {
-        tokens.append(Ident::new(s, span));
-    }
-
-    pub(crate) fn delim(
-        delim: Delimiter,
-        span: Span,
-        tokens: &mut TokenStream,
-        inner: TokenStream,
-    ) {
-        let mut g = Group::new(delim, inner);
-        g.set_span(span);
-        tokens.append(g);
     }
 }
 

@@ -11,18 +11,16 @@ default = ["parsing", "clone-impls", "proc-macro", "full"]
 derive = []
 full = []
 parsing = []
-printing = ["dep:quote"]
 visit = []
 visit-mut = []
 fold = []
 clone-impls = []
 extra-traits = []
-proc-macro = ["proc-macro2/proc-macro", "quote?/proc-macro"]
+proc-macro = ["proc-macro2/proc-macro"]
 test = []
 
 [dependencies]
 proc-macro2 = { version = "1.0.91", default-features = false, features = ["span-locations"] }
-quote = { version = "1.0.35", optional = true, default-features = false }
 unicode-ident = "1"
 molt_lib = { path = "../molt_lib" }
 derive_macro = { path = "../derive_macro", default-features = false }

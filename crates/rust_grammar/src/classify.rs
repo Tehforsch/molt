@@ -1,18 +1,18 @@
 #[cfg(feature = "full")]
 use crate::expr::Expr;
-#[cfg(any(feature = "printing", feature = "full"))]
+#[cfg(any(feature = "full"))]
 use crate::generics::TypeParamBound;
 use crate::parse::ParseStream;
-#[cfg(any(feature = "printing", feature = "full"))]
+#[cfg(any(feature = "full"))]
 use crate::path::{Path, PathArguments};
-#[cfg(any(feature = "printing", feature = "full"))]
+#[cfg(any(feature = "full"))]
 use crate::punctuated::Punctuated;
-#[cfg(any(feature = "printing", feature = "full"))]
+#[cfg(any(feature = "full"))]
 use crate::ty::{ReturnType, Type};
 use molt_lib::{NodeId, Pattern};
 #[cfg(feature = "full")]
 use proc_macro2::{Delimiter, TokenStream, TokenTree};
-#[cfg(any(feature = "printing", feature = "full"))]
+#[cfg(any(feature = "full"))]
 use std::ops::ControlFlow;
 
 #[cfg(feature = "full")]
@@ -70,118 +70,6 @@ pub(crate) fn requires_comma_to_be_match_arm(input: ParseStream, expr: NodeId<Ex
         // A variable is like an atomic expression,
         // so we require a comma.
         None => true,
-    }
-}
-
-#[cfg(feature = "printing")]
-pub(crate) fn trailing_unparameterized_path(mut ty: &Type) -> bool {
-    loop {
-        match ty {
-            Type::BareFn(t) => match &t.output {
-                ReturnType::Default => return false,
-                ReturnType::Type(_, ret) => ty = ret,
-            },
-            Type::ImplTrait(t) => match last_type_in_bounds(&t.bounds) {
-                ControlFlow::Break(trailing_path) => return trailing_path,
-                ControlFlow::Continue(t) => ty = t,
-            },
-            Type::Path(t) => match last_type_in_path(&t.path) {
-                ControlFlow::Break(trailing_path) => return trailing_path,
-                ControlFlow::Continue(t) => ty = t,
-            },
-            Type::Ptr(t) => ty = &t.elem,
-            Type::Reference(t) => ty = &t.elem,
-            Type::TraitObject(t) => match last_type_in_bounds(&t.bounds) {
-                ControlFlow::Break(trailing_path) => return trailing_path,
-                ControlFlow::Continue(t) => ty = t,
-            },
-
-            Type::Array(_)
-            | Type::Group(_)
-            | Type::Infer(_)
-            | Type::Macro(_)
-            | Type::Never(_)
-            | Type::Paren(_)
-            | Type::Slice(_)
-            | Type::Tuple(_)
-            | Type::Verbatim(_) => return false,
-        }
-    }
-
-    fn last_type_in_path(path: &Path) -> ControlFlow<bool, &Type> {
-        match &path.segments.last().unwrap().arguments {
-            PathArguments::None => ControlFlow::Break(true),
-            PathArguments::AngleBracketed(_) => ControlFlow::Break(false),
-            PathArguments::Parenthesized(arg) => match &arg.output {
-                ReturnType::Default => ControlFlow::Break(false),
-                ReturnType::Type(_, ret) => ControlFlow::Continue(ret),
-            },
-        }
-    }
-
-    fn last_type_in_bounds(
-        bounds: &Punctuated<TypeParamBound, Token![+]>,
-    ) -> ControlFlow<bool, &Type> {
-        match bounds.last().unwrap() {
-            TypeParamBound::Trait(t) => last_type_in_path(&t.path),
-            TypeParamBound::Lifetime(_)
-            | TypeParamBound::PreciseCapture(_)
-            | TypeParamBound::Verbatim(_) => ControlFlow::Break(false),
-        }
-    }
-}
-
-/// Whether the expression's first token is the label of a loop/block.
-#[cfg(all(feature = "printing", feature = "full"))]
-pub(crate) fn expr_leading_label(mut expr: &Expr) -> bool {
-    loop {
-        match expr {
-            Expr::Block(e) => return e.label.is_some(),
-            Expr::ForLoop(e) => return e.label.is_some(),
-            Expr::Loop(e) => return e.label.is_some(),
-            Expr::While(e) => return e.label.is_some(),
-
-            Expr::Assign(e) => expr = &e.left,
-            Expr::Await(e) => expr = &e.base,
-            Expr::Binary(e) => expr = &e.left,
-            Expr::Call(e) => expr = &e.func,
-            Expr::Cast(e) => expr = &e.expr,
-            Expr::Field(e) => expr = &e.base,
-            Expr::Index(e) => expr = &e.expr,
-            Expr::MethodCall(e) => expr = &e.receiver,
-            Expr::Range(e) => match &e.start {
-                Some(start) => expr = start,
-                None => return false,
-            },
-            Expr::Try(e) => expr = &e.expr,
-
-            Expr::Array(_)
-            | Expr::Async(_)
-            | Expr::Break(_)
-            | Expr::Closure(_)
-            | Expr::Const(_)
-            | Expr::Continue(_)
-            | Expr::Group(_)
-            | Expr::If(_)
-            | Expr::Infer(_)
-            | Expr::Let(_)
-            | Expr::Lit(_)
-            | Expr::Macro(_)
-            | Expr::Match(_)
-            | Expr::Paren(_)
-            | Expr::Path(_)
-            | Expr::RawAddr(_)
-            | Expr::Reference(_)
-            | Expr::Repeat(_)
-            | Expr::Return(_)
-            | Expr::Struct(_)
-            | Expr::TryBlock(_)
-            | Expr::Tuple(_)
-            | Expr::Unary(_)
-            | Expr::Unsafe(_)
-            | Expr::Verbatim(_)
-            | Expr::Yield(_) => return false,
-        }
     }
 }
 

@@ -12,10 +12,6 @@ use crate::path::Path;
 use crate::token;
 use molt_lib::NodeId;
 use proc_macro2::TokenStream;
-#[cfg(feature = "printing")]
-use std::iter;
-#[cfg(feature = "printing")]
-use std::slice;
 
 #[derive(Debug, CmpSyn)]
 /// An attribute, like `#[repr(transparent)]`.
@@ -307,41 +303,6 @@ impl Meta {
     }
 }
 
-#[cfg(feature = "printing")]
-pub(crate) trait FilterAttrs<'a> {
-    type Ret: Iterator<Item = &'a Attribute>;
-
-    fn outer(self) -> Self::Ret;
-    #[cfg(feature = "full")]
-    fn inner(self) -> Self::Ret;
-}
-
-#[cfg(feature = "printing")]
-impl<'a> FilterAttrs<'a> for &'a [Attribute] {
-    type Ret = iter::Filter<slice::Iter<'a, Attribute>, fn(&&Attribute) -> bool>;
-
-    fn outer(self) -> Self::Ret {
-        fn is_outer(attr: &&Attribute) -> bool {
-            match attr.style {
-                AttrStyle::Outer => true,
-                AttrStyle::Inner(_) => false,
-            }
-        }
-        self.iter().filter(is_outer)
-    }
-
-    #[cfg(feature = "full")]
-    fn inner(self) -> Self::Ret {
-        fn is_inner(attr: &&Attribute) -> bool {
-            match attr.style {
-                AttrStyle::Inner(_) => true,
-                AttrStyle::Outer => false,
-            }
-        }
-        self.iter().filter(is_inner)
-    }
-}
-
 impl From<Path> for Meta {
     fn from(meta: Path) -> Meta {
         Meta::Path(meta)
@@ -478,55 +439,5 @@ pub(crate) mod parsing {
             eq_token,
             value,
         })
-    }
-}
-
-#[cfg(feature = "printing")]
-mod printing {
-    use crate::attr::{AttrStyle, Attribute, Meta, MetaList, MetaNameValue};
-    use crate::path;
-    use crate::path::printing::PathStyle;
-    use proc_macro2::TokenStream;
-    use quote::ToTokens;
-
-    #[cfg_attr(docsrs, doc(cfg(feature = "printing")))]
-    impl ToTokens for Attribute {
-        fn to_tokens(&self, tokens: &mut TokenStream) {
-            self.pound_token.to_tokens(tokens);
-            if let AttrStyle::Inner(b) = &self.style {
-                b.to_tokens(tokens);
-            }
-            self.bracket_token.surround(tokens, |tokens| {
-                self.meta.to_tokens(tokens);
-            });
-        }
-    }
-
-    #[cfg_attr(docsrs, doc(cfg(feature = "printing")))]
-    impl ToTokens for Meta {
-        fn to_tokens(&self, tokens: &mut TokenStream) {
-            match self {
-                Meta::Path(path) => path::printing::print_path(tokens, path, PathStyle::Mod),
-                Meta::List(meta_list) => meta_list.to_tokens(tokens),
-                Meta::NameValue(meta_name_value) => meta_name_value.to_tokens(tokens),
-            }
-        }
-    }
-
-    #[cfg_attr(docsrs, doc(cfg(feature = "printing")))]
-    impl ToTokens for MetaList {
-        fn to_tokens(&self, tokens: &mut TokenStream) {
-            path::printing::print_path(tokens, &self.path, PathStyle::Mod);
-            self.delimiter.surround(tokens, self.tokens.clone());
-        }
-    }
-
-    #[cfg_attr(docsrs, doc(cfg(feature = "printing")))]
-    impl ToTokens for MetaNameValue {
-        fn to_tokens(&self, tokens: &mut TokenStream) {
-            path::printing::print_path(tokens, &self.path, PathStyle::Mod);
-            self.eq_token.to_tokens(tokens);
-            self.value.to_tokens(tokens);
-        }
     }
 }

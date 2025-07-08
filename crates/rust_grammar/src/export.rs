@@ -24,10 +24,6 @@ pub type Formatter<'a> = std::fmt::Formatter<'a>;
 #[doc(hidden)]
 pub type FmtResult = std::fmt::Result;
 
-#[cfg(feature = "printing")]
-#[doc(hidden)]
-pub use quote;
-
 #[doc(hidden)]
 pub type Span = proc_macro2::Span;
 #[doc(hidden)]
@@ -40,22 +36,10 @@ pub use crate::group::{parse_braces, parse_brackets, parse_parens};
 #[doc(hidden)]
 pub use crate::span::IntoSpans;
 
-#[cfg(all(feature = "parsing", feature = "printing"))]
-#[doc(hidden)]
-pub use crate::parse_quote::parse as parse_quote;
-
 #[cfg(feature = "parsing")]
 #[doc(hidden)]
 pub use crate::token::parsing::{peek_punct, punct as parse_punct};
 
-#[cfg(feature = "printing")]
-#[doc(hidden)]
-pub use crate::token::printing::punct as print_punct;
-
 #[cfg(feature = "parsing")]
 #[doc(hidden)]
 pub use crate::token::private::CustomToken;
-
-#[cfg(feature = "printing")]
-#[doc(hidden)]
-pub use quote::{ToTokens, TokenStreamExt};

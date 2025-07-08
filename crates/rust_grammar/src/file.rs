@@ -140,19 +140,3 @@ pub fn parse_file(mut content: &str, mode: ParsingMode) -> Result<(File, Ctx<Nod
     file.shebang = shebang;
     Ok((file, ctx))
 }
-
-#[cfg(feature = "printing")]
-mod printing {
-    use crate::attr::FilterAttrs;
-    use crate::file::File;
-    use proc_macro2::TokenStream;
-    use quote::{ToTokens, TokenStreamExt};
-
-    #[cfg_attr(docsrs, doc(cfg(feature = "printing")))]
-    impl ToTokens for File {
-        fn to_tokens(&self, tokens: &mut TokenStream) {
-            tokens.append_all(self.attrs.inner());
-            tokens.append_all(&self.items);
-        }
-    }
-}

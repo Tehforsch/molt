@@ -171,22 +171,6 @@ macro_rules! impl_parse_for_custom_keyword {
 }
 
 // Not public API.
-#[cfg(feature = "printing")]
-#[doc(hidden)]
-#[macro_export]
-macro_rules! impl_to_tokens_for_custom_keyword {
-    ($ident:ident) => {
-        impl $crate::__private::ToTokens for $ident {
-            fn to_tokens(&self, tokens: &mut $crate::__private::TokenStream2) {
-                let ident = $crate::Ident::new($crate::__private::stringify!($ident), self.span);
-                $crate::__private::TokenStreamExt::append(tokens, ident);
-            }
-        }
-    };
-}
-
-// Not public API.
-#[cfg(not(feature = "printing"))]
 #[doc(hidden)]
 #[macro_export]
 macro_rules! impl_to_tokens_for_custom_keyword {

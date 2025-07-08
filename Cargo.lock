@@ -457,7 +457,6 @@ dependencies = [
  "derive_macro",
  "molt_lib",
  "proc-macro2",
- "quote",
  "unicode-ident",
 ]
 

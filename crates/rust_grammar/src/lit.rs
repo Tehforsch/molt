@@ -950,69 +950,6 @@ pub(crate) mod parsing {
     impl_token!("boolean literal" LitBool);
 }
 
-#[cfg(feature = "printing")]
-mod printing {
-    use crate::lit::{LitBool, LitByte, LitByteStr, LitCStr, LitChar, LitFloat, LitInt, LitStr};
-    use proc_macro2::TokenStream;
-    use quote::{ToTokens, TokenStreamExt};
-
-    #[cfg_attr(docsrs, doc(cfg(feature = "printing")))]
-    impl ToTokens for LitStr {
-        fn to_tokens(&self, tokens: &mut TokenStream) {
-            self.repr.token.to_tokens(tokens);
-        }
-    }
-
-    #[cfg_attr(docsrs, doc(cfg(feature = "printing")))]
-    impl ToTokens for LitByteStr {
-        fn to_tokens(&self, tokens: &mut TokenStream) {
-            self.repr.token.to_tokens(tokens);
-        }
-    }
-
-    #[cfg_attr(docsrs, doc(cfg(feature = "printing")))]
-    impl ToTokens for LitCStr {
-        fn to_tokens(&self, tokens: &mut TokenStream) {
-            self.repr.token.to_tokens(tokens);
-        }
-    }
-
-    #[cfg_attr(docsrs, doc(cfg(feature = "printing")))]
-    impl ToTokens for LitByte {
-        fn to_tokens(&self, tokens: &mut TokenStream) {
-            self.repr.token.to_tokens(tokens);
-        }
-    }
-
-    #[cfg_attr(docsrs, doc(cfg(feature = "printing")))]
-    impl ToTokens for LitChar {
-        fn to_tokens(&self, tokens: &mut TokenStream) {
-            self.repr.token.to_tokens(tokens);
-        }
-    }
-
-    #[cfg_attr(docsrs, doc(cfg(feature = "printing")))]
-    impl ToTokens for LitInt {
-        fn to_tokens(&self, tokens: &mut TokenStream) {
-            self.repr.token.to_tokens(tokens);
-        }
-    }
-
-    #[cfg_attr(docsrs, doc(cfg(feature = "printing")))]
-    impl ToTokens for LitFloat {
-        fn to_tokens(&self, tokens: &mut TokenStream) {
-            self.repr.token.to_tokens(tokens);
-        }
-    }
-
-    #[cfg_attr(docsrs, doc(cfg(feature = "printing")))]
-    impl ToTokens for LitBool {
-        fn to_tokens(&self, tokens: &mut TokenStream) {
-            tokens.append(self.token());
-        }
-    }
-}
-
 mod value {
     use crate::bigint::BigInt;
     use crate::lit::{

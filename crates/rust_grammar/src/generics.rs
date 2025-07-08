@@ -10,10 +10,6 @@ use crate::token;
 use crate::ty::Type;
 use molt_lib::NodeId;
 use proc_macro2::TokenStream;
-#[cfg(all(feature = "printing", feature = "extra-traits"))]
-use std::fmt::{self, Debug};
-#[cfg(all(feature = "printing", feature = "extra-traits"))]
-use std::hash::{Hash, Hasher};
 
 #[derive(Debug, CmpSyn, Default)]
 /// Lifetimes and type parameters attached to a declaration of a function,

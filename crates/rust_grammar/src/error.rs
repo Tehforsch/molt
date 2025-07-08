@@ -4,8 +4,6 @@ use crate::thread::ThreadBound;
 use proc_macro2::{
     Delimiter, Group, Ident, LexError, Literal, Punct, Spacing, Span, TokenStream, TokenTree,
 };
-#[cfg(feature = "printing")]
-use quote::ToTokens;
 use std::fmt::{self, Debug, Display};
 use std::slice;
 use std::vec;
@@ -165,37 +163,6 @@ impl Error {
                         start: span,
                         end: span,
                     }),
-                    message,
-                }],
-            }
-        }
-    }
-
-    /// Creates an error with the specified message spanning the given syntax
-    /// tree node.
-    ///
-    /// Unlike the `Error::new` constructor, this constructor takes an argument
-    /// `tokens` which is a syntax tree node. This allows the resulting `Error`
-    /// to attempt to span all tokens inside of `tokens`. While you would
-    /// typically be able to use the `Spanned` trait with the above `Error::new`
-    /// constructor, implementation limitations today mean that
-    /// `Error::new_spanned` may provide a higher-quality error message on
-    /// stable Rust.
-    ///
-    /// When in doubt it's recommended to stick to `Error::new` (or
-    /// `ParseStream::error`)!
-    #[cfg(feature = "printing")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "printing")))]
-    pub fn new_spanned<T: ToTokens, U: Display>(tokens: T, message: U) -> Self {
-        return new_spanned(tokens.into_token_stream(), message.to_string());
-
-        fn new_spanned(tokens: TokenStream, message: String) -> Error {
-            let mut iter = tokens.into_iter();
-            let start = iter.next().map_or_else(Span::call_site, |t| t.span());
-            let end = iter.last().map_or(start, |t| t.span());
-            Error {
-                messages: vec![ErrorMessage {
-                    span: ThreadBound::new(SpanRange { start, end }),
                     message,
                 }],
             }
