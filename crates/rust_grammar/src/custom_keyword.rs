@@ -106,7 +106,7 @@ macro_rules! custom_keyword {
         }
 
         const _: () = {
-            impl $crate::__private::Default for $ident {
+            impl Default for $ident {
                 fn default() -> Self {
                     $ident {
                         span: $crate::__private::Span::call_site(),
@@ -115,7 +115,6 @@ macro_rules! custom_keyword {
             }
 
             $crate::impl_parse_for_custom_keyword!($ident);
-            $crate::impl_to_tokens_for_custom_keyword!($ident);
         };
     };
 }
@@ -128,40 +127,33 @@ macro_rules! impl_parse_for_custom_keyword {
         // For peek.
         impl $crate::__private::CustomToken for $ident {
             fn peek(cursor: $crate::buffer::Cursor) -> bool {
-                if let $crate::__private::Some((ident, _rest)) = cursor.ident() {
-                    ident == $crate::__private::stringify!($ident)
+                if let Some((ident, _rest)) = cursor.ident() {
+                    ident == stringify!($ident)
                 } else {
                     false
                 }
             }
 
             fn display() -> &'static str {
-                $crate::__private::concat!("`", $crate::__private::stringify!($ident), "`")
+                $crate::__private::concat!("`", stringify!($ident), "`")
             }
         }
 
         impl $crate::parse::Parse for $ident {
             fn parse(input: $crate::parse::ParseStream) -> $crate::parse::Result<$ident> {
                 input.step(|cursor| {
-                    if let $crate::__private::Some((ident, rest)) = cursor.ident() {
-                        if ident == $crate::__private::stringify!($ident) {
-                            return $crate::__private::Ok(($ident { span: ident.span() }, rest));
+                    if let Some((ident, rest)) = cursor.ident() {
+                        if ident == stringify!($ident) {
+                            return Ok(($ident { span: ident.span() }, rest));
                         }
                     }
-                    $crate::__private::Err(cursor.error($crate::__private::concat!(
+                    Err(cursor.error($crate::__private::concat!(
                         "expected `",
-                        $crate::__private::stringify!($ident),
+                        stringify!($ident),
                         "`",
                     )))
                 })
             }
         }
     };
-}
-
-// Not public API.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! impl_to_tokens_for_custom_keyword {
-    ($ident:ident) => {};
 }

@@ -94,7 +94,7 @@ macro_rules! custom_punctuation {
         }
 
         const _: () = {
-            impl $crate::__private::Default for $ident {
+            impl Default for $ident {
                 fn default() -> Self {
                     $ident($crate::__private::Span::call_site())
                 }

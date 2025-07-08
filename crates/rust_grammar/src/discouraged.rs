@@ -4,11 +4,7 @@ use std::cell::Cell;
 use std::mem;
 use std::rc::Rc;
 
-use proc_macro2::Delimiter;
-use proc_macro2::extra::DelimSpan;
-
 use crate::buffer::Cursor;
-use crate::error::Result;
 use crate::parse::{ParseBuffer, Unexpected, inner_unexpected};
 
 /// Extensions to the `ParseStream` API to support speculative parsing.
@@ -199,35 +195,5 @@ impl<'a> Speculative for ParseBuffer<'a> {
         // See comment on `cell` in the struct definition.
         self.cell
             .set(unsafe { mem::transmute::<Cursor, Cursor<'static>>(fork.cursor()) });
-    }
-}
-
-/// Extensions to the `ParseStream` API to support manipulating invisible
-/// delimiters the same as if they were visible.
-pub trait AnyDelimiter {
-    /// Returns the delimiter, the span of the delimiter token, and the nested
-    /// contents for further parsing.
-    fn parse_any_delimiter(&self) -> Result<(Delimiter, DelimSpan, ParseBuffer)>;
-}
-
-impl<'a> AnyDelimiter for ParseBuffer<'a> {
-    fn parse_any_delimiter(&self) -> Result<(Delimiter, DelimSpan, ParseBuffer)> {
-        self.step(|cursor| {
-            if let Some((content, delimiter, span, rest)) = cursor.any_group() {
-                let scope = span.close();
-                let nested = crate::parse::advance_step_cursor(cursor, content);
-                let unexpected = crate::parse::get_unexpected(self);
-                let content = crate::parse::new_parse_buffer(
-                    scope,
-                    nested,
-                    unexpected,
-                    self.ctx.clone(),
-                    self.mode(),
-                );
-                Ok(((delimiter, span, content), rest))
-            } else {
-                Err(cursor.error("expected any delimiter"))
-            }
-        })
     }
 }

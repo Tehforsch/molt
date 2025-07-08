@@ -145,12 +145,12 @@ fn parse_delimited<'a>(
 macro_rules! parenthesized {
     ($content:ident in $cursor:expr) => {
         match $crate::__private::parse_parens(&$cursor) {
-            $crate::__private::Ok(parens) => {
+            Ok(parens) => {
                 $content = parens.content;
                 parens.token
             }
-            $crate::__private::Err(error) => {
-                return $crate::__private::Err(error);
+            Err(error) => {
+                return Err(error);
             }
         }
     };
@@ -222,12 +222,12 @@ macro_rules! parenthesized {
 macro_rules! braced {
     ($content:ident in $cursor:expr) => {
         match $crate::__private::parse_braces(&$cursor) {
-            $crate::__private::Ok(braces) => {
+            Ok(braces) => {
                 $content = braces.content;
                 braces.token
             }
-            $crate::__private::Err(error) => {
-                return $crate::__private::Err(error);
+            Err(error) => {
+                return Err(error);
             }
         }
     };
@@ -276,12 +276,12 @@ macro_rules! braced {
 macro_rules! bracketed {
     ($content:ident in $cursor:expr) => {
         match $crate::__private::parse_brackets(&$cursor) {
-            $crate::__private::Ok(brackets) => {
+            Ok(brackets) => {
                 $content = brackets.content;
                 brackets.token
             }
-            $crate::__private::Err(error) => {
-                return $crate::__private::Err(error);
+            Err(error) => {
+                return Err(error);
             }
         }
     };

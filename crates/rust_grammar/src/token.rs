@@ -764,8 +764,7 @@ pub(crate) fn peek_keyword(cursor: Cursor, token: &str) -> bool {
     }
 }
 
-#[doc(hidden)]
-pub fn punct<const N: usize>(input: ParseStream, token: &str) -> Result<[Span; N]> {
+pub(crate) fn punct<const N: usize>(input: ParseStream, token: &str) -> Result<[Span; N]> {
     let mut spans = [input.span(); N];
     punct_helper(input, token, &mut spans)?;
     Ok(spans)
@@ -797,8 +796,7 @@ fn punct_helper(input: ParseStream, token: &str, spans: &mut [Span]) -> Result<(
     })
 }
 
-#[doc(hidden)]
-pub fn peek_punct(mut cursor: Cursor, token: &str) -> bool {
+pub(crate) fn peek_punct(mut cursor: Cursor, token: &str) -> bool {
     for (i, ch) in token.chars().enumerate() {
         match cursor.punct() {
             Some((punct, rest)) => {
