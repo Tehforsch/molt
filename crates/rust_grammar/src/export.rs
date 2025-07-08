@@ -36,7 +36,4 @@ pub use crate::group::{parse_braces, parse_brackets, parse_parens};
 pub use crate::span::IntoSpans;
 
 #[doc(hidden)]
-pub use crate::token::parsing::{peek_punct, punct as parse_punct};
-
-#[doc(hidden)]
 pub use crate::token::private::CustomToken;

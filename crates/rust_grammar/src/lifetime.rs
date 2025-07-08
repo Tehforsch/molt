@@ -1,4 +1,6 @@
+use crate::error::Result;
 use crate::lookahead;
+use crate::parse::{Parse, ParseStream};
 use molt_lib::{CmpSyn, Matcher};
 use proc_macro2::{Ident, Span};
 use std::cmp::Ordering;
@@ -118,19 +120,13 @@ pub fn Lifetime(marker: lookahead::TokenMarker) -> Lifetime {
     match marker {}
 }
 
-pub(crate) mod parsing {
-    use crate::error::Result;
-    use crate::lifetime::Lifetime;
-    use crate::parse::{Parse, ParseStream};
-
-    impl Parse for Lifetime {
-        fn parse(input: ParseStream) -> Result<Self> {
-            input.step(|cursor| {
-                cursor
-                    .lifetime()
-                    .ok_or_else(|| cursor.error("expected lifetime"))
-            })
-        }
+impl Parse for Lifetime {
+    fn parse(input: ParseStream) -> Result<Self> {
+        input.step(|cursor| {
+            cursor
+                .lifetime()
+                .ok_or_else(|| cursor.error("expected lifetime"))
+        })
     }
 }
 

@@ -3,11 +3,18 @@ use derive_macro::CmpSyn;
 use crate::error::Error;
 use crate::error::Result;
 use crate::expr::Expr;
+use crate::expr::ExprLit;
+use crate::ident::TokenIdent;
+use crate::lit::Lit;
+use crate::mac;
 use crate::mac::MacroDelimiter;
+use crate::parse::Parse;
 use crate::parse::ParseStream;
+use crate::parse::discouraged::Speculative as _;
 use crate::path::Path;
 use crate::token;
 use molt_lib::NodeId;
+use molt_lib::WithSpan;
 use proc_macro2::TokenStream;
 
 #[derive(Debug, CmpSyn)]
@@ -180,7 +187,7 @@ impl Attribute {
     pub fn parse_outer(input: ParseStream) -> Result<Vec<Self>> {
         let mut attrs = Vec::new();
         while input.peek(Token![#]) {
-            attrs.push(input.call(parsing::single_parse_outer)?);
+            attrs.push(input.call(single_parse_outer)?);
         }
         Ok(attrs)
     }
@@ -193,7 +200,7 @@ impl Attribute {
     /// [*Parsing from tokens to Attribute*](#parsing-from-tokens-to-attribute).
     pub fn parse_inner(input: ParseStream) -> Result<Vec<Self>> {
         let mut attrs = Vec::new();
-        parsing::parse_inner(input, &mut attrs)?;
+        parse_inner(input, &mut attrs)?;
         Ok(attrs)
     }
 }
@@ -307,119 +314,106 @@ impl From<MetaNameValue> for Meta {
     }
 }
 
-pub(crate) mod parsing {
-    use crate::attr::{AttrStyle, Attribute, Meta, MetaList, MetaNameValue};
-    use crate::error::Result;
-    use crate::expr::{Expr, ExprLit};
-    use crate::ident::TokenIdent;
-    use crate::lit::Lit;
-    use crate::parse::discouraged::Speculative as _;
-    use crate::parse::{Parse, ParseStream};
-    use crate::path::Path;
-    use crate::{mac, token};
-    use molt_lib::{NodeId, WithSpan};
-
-    pub(crate) fn parse_inner(input: ParseStream, attrs: &mut Vec<Attribute>) -> Result<()> {
-        while input.peek(Token![#]) && input.peek2(Token![!]) {
-            attrs.push(input.call(single_parse_inner)?);
-        }
-        Ok(())
+pub(crate) fn parse_inner(input: ParseStream, attrs: &mut Vec<Attribute>) -> Result<()> {
+    while input.peek(Token![#]) && input.peek2(Token![!]) {
+        attrs.push(input.call(single_parse_inner)?);
     }
+    Ok(())
+}
 
-    pub(crate) fn single_parse_inner(input: ParseStream) -> Result<Attribute> {
-        let content;
-        Ok(Attribute {
-            pound_token: input.parse()?,
-            style: AttrStyle::Inner(input.parse()?),
-            bracket_token: bracketed!(content in input),
-            meta: content.parse()?,
-        })
-    }
+pub(crate) fn single_parse_inner(input: ParseStream) -> Result<Attribute> {
+    let content;
+    Ok(Attribute {
+        pound_token: input.parse()?,
+        style: AttrStyle::Inner(input.parse()?),
+        bracket_token: bracketed!(content in input),
+        meta: content.parse()?,
+    })
+}
 
-    pub(crate) fn single_parse_outer(input: ParseStream) -> Result<Attribute> {
-        let content;
-        Ok(Attribute {
-            pound_token: input.parse()?,
-            style: AttrStyle::Outer,
-            bracket_token: bracketed!(content in input),
-            meta: content.parse()?,
-        })
-    }
+pub(crate) fn single_parse_outer(input: ParseStream) -> Result<Attribute> {
+    let content;
+    Ok(Attribute {
+        pound_token: input.parse()?,
+        style: AttrStyle::Outer,
+        bracket_token: bracketed!(content in input),
+        meta: content.parse()?,
+    })
+}
 
-    impl Parse for Meta {
-        fn parse(input: ParseStream) -> Result<Self> {
-            let path = parse_outermost_meta_path(input)?;
-            parse_meta_after_path(path, input)
-        }
+impl Parse for Meta {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let path = parse_outermost_meta_path(input)?;
+        parse_meta_after_path(path, input)
     }
+}
 
-    impl Parse for MetaList {
-        fn parse(input: ParseStream) -> Result<Self> {
-            let path = parse_outermost_meta_path(input)?;
-            parse_meta_list_after_path(path, input)
-        }
+impl Parse for MetaList {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let path = parse_outermost_meta_path(input)?;
+        parse_meta_list_after_path(path, input)
     }
+}
 
-    impl Parse for MetaNameValue {
-        fn parse(input: ParseStream) -> Result<Self> {
-            let path = parse_outermost_meta_path(input)?;
-            parse_meta_name_value_after_path(path, input)
-        }
+impl Parse for MetaNameValue {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let path = parse_outermost_meta_path(input)?;
+        parse_meta_name_value_after_path(path, input)
     }
+}
 
-    // Unlike meta::parse_meta_path which accepts arbitrary keywords in the path,
-    // only the `unsafe` keyword is accepted as an attribute's outermost path.
-    fn parse_outermost_meta_path(input: ParseStream) -> Result<Path> {
-        if input.peek(Token![unsafe]) {
-            let unsafe_ident = input.parse_id::<TokenIdent<Token![unsafe]>>()?;
-            Ok(Path::from(unsafe_ident))
-        } else {
-            Path::parse_mod_style(input)
-        }
+// Unlike meta::parse_meta_path which accepts arbitrary keywords in the path,
+// only the `unsafe` keyword is accepted as an attribute's outermost path.
+fn parse_outermost_meta_path(input: ParseStream) -> Result<Path> {
+    if input.peek(Token![unsafe]) {
+        let unsafe_ident = input.parse_id::<TokenIdent<Token![unsafe]>>()?;
+        Ok(Path::from(unsafe_ident))
+    } else {
+        Path::parse_mod_style(input)
     }
+}
 
-    pub(crate) fn parse_meta_after_path(path: Path, input: ParseStream) -> Result<Meta> {
-        if input.peek(token::Paren) || input.peek(token::Bracket) || input.peek(token::Brace) {
-            parse_meta_list_after_path(path, input).map(Meta::List)
-        } else if input.peek(Token![=]) {
-            parse_meta_name_value_after_path(path, input).map(Meta::NameValue)
-        } else {
-            Ok(Meta::Path(path))
-        }
+pub(crate) fn parse_meta_after_path(path: Path, input: ParseStream) -> Result<Meta> {
+    if input.peek(token::Paren) || input.peek(token::Bracket) || input.peek(token::Brace) {
+        parse_meta_list_after_path(path, input).map(Meta::List)
+    } else if input.peek(Token![=]) {
+        parse_meta_name_value_after_path(path, input).map(Meta::NameValue)
+    } else {
+        Ok(Meta::Path(path))
     }
+}
 
-    fn parse_meta_list_after_path(path: Path, input: ParseStream) -> Result<MetaList> {
-        let (delimiter, tokens) = mac::parse_delimiter(input)?;
-        Ok(MetaList {
-            path,
-            delimiter,
-            tokens,
-        })
-    }
+fn parse_meta_list_after_path(path: Path, input: ParseStream) -> Result<MetaList> {
+    let (delimiter, tokens) = mac::parse_delimiter(input)?;
+    Ok(MetaList {
+        path,
+        delimiter,
+        tokens,
+    })
+}
 
-    fn parse_meta_name_value_after_path(path: Path, input: ParseStream) -> Result<MetaNameValue> {
-        let eq_token: Token![=] = input.parse()?;
-        let ahead = input.fork();
-        let lit: Option<NodeId<Lit>> = ahead.parse()?;
-        let value = if let (Some(lit), true) = (lit, ahead.is_empty()) {
-            input.advance_to(&ahead);
-            let span = input.ctx().get_span(lit);
-            input.add(
-                Expr::Lit(ExprLit {
-                    attrs: Vec::new(),
-                    lit,
-                })
-                .with_span(span),
-            )
-        } else if input.peek(Token![#]) && input.peek2(token::Bracket) {
-            return Err(input.error("unexpected attribute inside of attribute"));
-        } else {
-            input.parse()?
-        };
-        Ok(MetaNameValue {
-            path,
-            eq_token,
-            value,
-        })
-    }
+fn parse_meta_name_value_after_path(path: Path, input: ParseStream) -> Result<MetaNameValue> {
+    let eq_token: Token![=] = input.parse()?;
+    let ahead = input.fork();
+    let lit: Option<NodeId<Lit>> = ahead.parse()?;
+    let value = if let (Some(lit), true) = (lit, ahead.is_empty()) {
+        input.advance_to(&ahead);
+        let span = input.ctx().get_span(lit);
+        input.add(
+            Expr::Lit(ExprLit {
+                attrs: Vec::new(),
+                lit,
+            })
+            .with_span(span),
+        )
+    } else if input.peek(Token![#]) && input.peek2(token::Bracket) {
+        return Err(input.error("unexpected attribute inside of attribute"));
+    } else {
+        input.parse()?
+    };
+    Ok(MetaNameValue {
+        path,
+        eq_token,
+        value,
+    })
 }

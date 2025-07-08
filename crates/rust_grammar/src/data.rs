@@ -1,13 +1,18 @@
 use derive_macro::CmpSyn;
 use molt_lib::{NodeId, NodeList};
+use molt_lib::{SpannedPat, WithSpan};
 
 use crate::attr::Attribute;
+use crate::error::Result;
 use crate::expr::{Expr, Index, Member};
+use crate::ident::AnyIdent;
 use crate::ident::Ident;
+use crate::parse::{Parse, ParseList, ParsePat, ParseStream, parse_punctuated_list_real};
 use crate::punctuated::{self};
 use crate::restriction::{FieldMutability, Visibility};
 use crate::token;
 use crate::ty::Type;
+use crate::verbatim;
 
 #[derive(Debug, CmpSyn)]
 /// An enum variant.
@@ -116,147 +121,131 @@ impl<'a> Clone for Members<'a> {
     }
 }
 
-pub(crate) mod parsing {
-    use molt_lib::{NodeId, SpannedPat, WithSpan};
+impl Parse for Variant {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let attrs = input.call(Attribute::parse_outer)?;
+        let _visibility: Visibility = input.parse()?;
+        let ident: NodeId<Ident> = input.parse()?;
+        let fields = if input.peek(token::Brace) {
+            Fields::Named(input.parse()?)
+        } else if input.peek(token::Paren) {
+            Fields::Unnamed(input.parse()?)
+        } else {
+            Fields::Unit
+        };
+        let discriminant = if input.peek(Token![=]) {
+            let eq_token: Token![=] = input.parse()?;
 
-    use crate::attr::Attribute;
-    use crate::data::{Field, Fields, FieldsNamed, FieldsUnnamed, Variant};
-    use crate::error::Result;
-    use crate::ident::{AnyIdent, Ident};
-    use crate::parse::{Parse, ParseList, ParsePat, ParseStream, parse_punctuated_list_real};
-    use crate::restriction::{FieldMutability, Visibility};
-    use crate::token;
-    use crate::ty::Type;
-    use crate::verbatim;
+            let discriminant = input.parse()?;
+            Some((eq_token, discriminant))
+        } else {
+            None
+        };
+        Ok(Variant {
+            attrs,
+            ident,
+            fields,
+            discriminant,
+        })
+    }
+}
 
-    use super::{FieldNamed, FieldUnnamed};
+impl Parse for FieldsNamed {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let content;
+        Ok(FieldsNamed {
+            brace_token: braced!(content in input),
+            named: content.parse_list::<FieldNamed>()?,
+        })
+    }
+}
 
-    impl Parse for Variant {
-        fn parse(input: ParseStream) -> Result<Self> {
+impl Parse for FieldsUnnamed {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let content;
+        Ok(FieldsUnnamed {
+            paren_token: parenthesized!(content in input),
+            unnamed: content.parse_list::<FieldUnnamed>()?,
+        })
+    }
+}
+
+impl ParseList for FieldNamed {
+    type Item = Field;
+    type Punct = Token![,];
+
+    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
+        parse_punctuated_list_real::<FieldNamed, Self::Punct>(input)
+    }
+}
+
+impl ParseList for FieldUnnamed {
+    type Item = Field;
+    type Punct = Token![,];
+
+    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
+        parse_punctuated_list_real::<FieldUnnamed, Self::Punct>(input)
+    }
+}
+
+impl ParsePat for FieldNamed {
+    type Target = Field;
+
+    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Field>> {
+        input.call_spanned(|input| {
             let attrs = input.call(Attribute::parse_outer)?;
-            let _visibility: Visibility = input.parse()?;
-            let ident: NodeId<Ident> = input.parse()?;
-            let fields = if input.peek(token::Brace) {
-                Fields::Named(input.parse()?)
-            } else if input.peek(token::Paren) {
-                Fields::Unnamed(input.parse()?)
-            } else {
-                Fields::Unit
-            };
-            let discriminant = if input.peek(Token![=]) {
-                let eq_token: Token![=] = input.parse()?;
+            let vis: Visibility = input.parse()?;
 
-                let discriminant = input.parse()?;
-                Some((eq_token, discriminant))
+            let unnamed_field = input.peek(Token![_]);
+            let ident = if unnamed_field {
+                input.parse_id::<AnyIdent>()
             } else {
-                None
+                input.parse()
+            }?;
+
+            let colon_token: Token![:] = input.parse()?;
+
+            let ty: NodeId<Type> = if unnamed_field
+                && (input.peek(Token![struct])
+                    || input.peek(Token![union]) && input.peek2(token::Brace))
+            {
+                let begin = input.fork();
+                input.parse_id::<AnyIdent>()?;
+                input.parse::<FieldsNamed>()?;
+                input.add(
+                    Type::Verbatim(verbatim::between(&begin, input))
+                        .with_span(molt_lib::Span::fake()),
+                )
+            } else {
+                input.parse()?
             };
-            Ok(Variant {
+
+            Ok(Field {
                 attrs,
-                ident,
-                fields,
-                discriminant,
+                vis,
+                mutability: FieldMutability::None,
+                ident: Some(ident),
+                colon_token: Some(colon_token),
+                ty,
             })
-        }
+        })
     }
+}
 
-    impl Parse for FieldsNamed {
-        fn parse(input: ParseStream) -> Result<Self> {
-            let content;
-            Ok(FieldsNamed {
-                brace_token: braced!(content in input),
-                named: content.parse_list::<FieldNamed>()?,
+impl ParsePat for FieldUnnamed {
+    type Target = Field;
+
+    /// Parses an unnamed (tuple struct) field.
+    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Field>> {
+        input.call_spanned(|input| {
+            Ok(Field {
+                attrs: input.call(Attribute::parse_outer)?,
+                vis: input.parse()?,
+                mutability: FieldMutability::None,
+                ident: None,
+                colon_token: None,
+                ty: input.parse()?,
             })
-        }
-    }
-
-    impl Parse for FieldsUnnamed {
-        fn parse(input: ParseStream) -> Result<Self> {
-            let content;
-            Ok(FieldsUnnamed {
-                paren_token: parenthesized!(content in input),
-                unnamed: content.parse_list::<FieldUnnamed>()?,
-            })
-        }
-    }
-
-    impl ParseList for FieldNamed {
-        type Item = Field;
-        type Punct = Token![,];
-
-        fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
-            parse_punctuated_list_real::<FieldNamed, Self::Punct>(input)
-        }
-    }
-
-    impl ParseList for FieldUnnamed {
-        type Item = Field;
-        type Punct = Token![,];
-
-        fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
-            parse_punctuated_list_real::<FieldUnnamed, Self::Punct>(input)
-        }
-    }
-
-    impl ParsePat for FieldNamed {
-        type Target = Field;
-
-        fn parse_pat(input: ParseStream) -> Result<SpannedPat<Field>> {
-            input.call_spanned(|input| {
-                let attrs = input.call(Attribute::parse_outer)?;
-                let vis: Visibility = input.parse()?;
-
-                let unnamed_field = input.peek(Token![_]);
-                let ident = if unnamed_field {
-                    input.parse_id::<AnyIdent>()
-                } else {
-                    input.parse()
-                }?;
-
-                let colon_token: Token![:] = input.parse()?;
-
-                let ty: NodeId<Type> = if unnamed_field
-                    && (input.peek(Token![struct])
-                        || input.peek(Token![union]) && input.peek2(token::Brace))
-                {
-                    let begin = input.fork();
-                    input.parse_id::<AnyIdent>()?;
-                    input.parse::<FieldsNamed>()?;
-                    input.add(
-                        Type::Verbatim(verbatim::between(&begin, input))
-                            .with_span(molt_lib::Span::fake()),
-                    )
-                } else {
-                    input.parse()?
-                };
-
-                Ok(Field {
-                    attrs,
-                    vis,
-                    mutability: FieldMutability::None,
-                    ident: Some(ident),
-                    colon_token: Some(colon_token),
-                    ty,
-                })
-            })
-        }
-    }
-
-    impl ParsePat for FieldUnnamed {
-        type Target = Field;
-
-        /// Parses an unnamed (tuple struct) field.
-        fn parse_pat(input: ParseStream) -> Result<SpannedPat<Field>> {
-            input.call_spanned(|input| {
-                Ok(Field {
-                    attrs: input.call(Attribute::parse_outer)?,
-                    vis: input.parse()?,
-                    mutability: FieldMutability::None,
-                    ident: None,
-                    colon_token: None,
-                    ty: input.parse()?,
-                })
-            })
-        }
+        })
     }
 }

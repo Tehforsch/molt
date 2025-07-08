@@ -90,20 +90,16 @@
 
 pub use self::private::CustomToken;
 use self::private::WithSpan;
-
 use crate::buffer::Cursor;
-
+use crate::error::Error;
 use crate::error::Result;
-
 use crate::lifetime::Lifetime;
-
 use crate::parse::{Parse, ParseStream};
 use crate::span::IntoSpans;
+use proc_macro2::Spacing;
 use proc_macro2::Span;
 use proc_macro2::extra::DelimSpan;
-
 use proc_macro2::{Delimiter, Ident};
-
 use proc_macro2::{Literal, Punct, TokenTree};
 use std::ops::{Deref, DerefMut};
 
@@ -219,7 +215,7 @@ macro_rules! define_keywords {
             impl Parse for $name {
                 fn parse(input: ParseStream) -> Result<Self> {
                     Ok($name {
-                        span: parsing::keyword(input, $token)?,
+                        span: keyword(input, $token)?,
                     })
                 }
             }
@@ -227,7 +223,7 @@ macro_rules! define_keywords {
 
             impl Token for $name {
                 fn peek(cursor: Cursor) -> bool {
-                    parsing::peek_keyword(cursor, $token)
+                    peek_keyword(cursor, $token)
                 }
 
                 fn display() -> &'static str {
@@ -313,7 +309,7 @@ macro_rules! define_punctuation {
             impl Parse for $name {
                 fn parse(input: ParseStream) -> Result<Self> {
                     Ok($name {
-                        spans: parsing::punct(input, $token)?,
+                        spans: punct(input, $token)?,
                     })
                 }
             }
@@ -321,7 +317,7 @@ macro_rules! define_punctuation {
 
             impl Token for $name {
                 fn peek(cursor: Cursor) -> bool {
-                    parsing::peek_punct(cursor, $token)
+                    peek_punct(cursor, $token)
                 }
 
                 fn display() -> &'static str {
@@ -752,76 +748,45 @@ macro_rules! Token {
     [_]           => { $crate::token::Underscore };
 }
 
-// Not public API.
-#[doc(hidden)]
-
-pub(crate) mod parsing {
-    use crate::buffer::Cursor;
-    use crate::error::{Error, Result};
-    use crate::parse::ParseStream;
-    use proc_macro2::{Spacing, Span};
-
-    pub(crate) fn keyword(input: ParseStream, token: &str) -> Result<Span> {
-        input.step(|cursor| {
-            if let Some((ident, rest)) = cursor.ident() {
-                if ident == token {
-                    return Ok((ident.span(), rest));
-                }
+pub(crate) fn keyword(input: ParseStream, token: &str) -> Result<Span> {
+    input.step(|cursor| {
+        if let Some((ident, rest)) = cursor.ident() {
+            if ident == token {
+                return Ok((ident.span(), rest));
             }
-            Err(cursor.error(format!("expected `{}`", token)))
-        })
-    }
-
-    pub(crate) fn peek_keyword(cursor: Cursor, token: &str) -> bool {
-        if let Some((ident, _rest)) = cursor.ident() {
-            ident == token
-        } else {
-            false
         }
+        Err(cursor.error(format!("expected `{}`", token)))
+    })
+}
+
+pub(crate) fn peek_keyword(cursor: Cursor, token: &str) -> bool {
+    if let Some((ident, _rest)) = cursor.ident() {
+        ident == token
+    } else {
+        false
     }
+}
 
-    #[doc(hidden)]
-    pub fn punct<const N: usize>(input: ParseStream, token: &str) -> Result<[Span; N]> {
-        let mut spans = [input.span(); N];
-        punct_helper(input, token, &mut spans)?;
-        Ok(spans)
-    }
+#[doc(hidden)]
+pub fn punct<const N: usize>(input: ParseStream, token: &str) -> Result<[Span; N]> {
+    let mut spans = [input.span(); N];
+    punct_helper(input, token, &mut spans)?;
+    Ok(spans)
+}
 
-    fn punct_helper(input: ParseStream, token: &str, spans: &mut [Span]) -> Result<()> {
-        input.step(|cursor| {
-            let mut cursor = *cursor;
-            assert_eq!(token.len(), spans.len());
+fn punct_helper(input: ParseStream, token: &str, spans: &mut [Span]) -> Result<()> {
+    input.step(|cursor| {
+        let mut cursor = *cursor;
+        assert_eq!(token.len(), spans.len());
 
-            for (i, ch) in token.chars().enumerate() {
-                match cursor.punct() {
-                    Some((punct, rest)) => {
-                        spans[i] = punct.span();
-                        if punct.as_char() != ch {
-                            break;
-                        } else if i == token.len() - 1 {
-                            return Ok(((), rest));
-                        } else if punct.spacing() != Spacing::Joint {
-                            break;
-                        }
-                        cursor = rest;
-                    }
-                    None => break,
-                }
-            }
-
-            Err(Error::new(spans[0], format!("expected `{}`", token)))
-        })
-    }
-
-    #[doc(hidden)]
-    pub fn peek_punct(mut cursor: Cursor, token: &str) -> bool {
         for (i, ch) in token.chars().enumerate() {
             match cursor.punct() {
                 Some((punct, rest)) => {
+                    spans[i] = punct.span();
                     if punct.as_char() != ch {
                         break;
                     } else if i == token.len() - 1 {
-                        return true;
+                        return Ok(((), rest));
                     } else if punct.spacing() != Spacing::Joint {
                         break;
                     }
@@ -830,8 +795,29 @@ pub(crate) mod parsing {
                 None => break,
             }
         }
-        false
+
+        Err(Error::new(spans[0], format!("expected `{}`", token)))
+    })
+}
+
+#[doc(hidden)]
+pub fn peek_punct(mut cursor: Cursor, token: &str) -> bool {
+    for (i, ch) in token.chars().enumerate() {
+        match cursor.punct() {
+            Some((punct, rest)) => {
+                if punct.as_char() != ch {
+                    break;
+                } else if i == token.len() - 1 {
+                    return true;
+                } else if punct.spacing() != Spacing::Joint {
+                    break;
+                }
+                cursor = rest;
+            }
+            None => break,
+        }
     }
+    false
 }
 
 macro_rules! impl_zst_cmp_syn {

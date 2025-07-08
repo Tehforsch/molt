@@ -1,16 +1,13 @@
-use derive_macro::CmpSyn;
-
 use crate::error::Result;
-
+use crate::parse::Parse;
 use crate::parse::ParseStream;
 use crate::path::Path;
 use crate::token::{Brace, Bracket, Paren};
-use proc_macro2::extra::DelimSpan;
-
+use derive_macro::CmpSyn;
 use proc_macro2::Delimiter;
 use proc_macro2::TokenStream;
-
 use proc_macro2::TokenTree;
+use proc_macro2::extra::DelimSpan;
 
 #[derive(Debug, CmpSyn)]
 /// A macro invocation: `println!("{}", mac)`.
@@ -65,25 +62,18 @@ pub(crate) fn parse_delimiter(input: ParseStream) -> Result<(MacroDelimiter, Tok
     })
 }
 
-pub(crate) mod parsing {
-    use crate::error::Result;
-    use crate::mac::{Macro, parse_delimiter};
-    use crate::parse::{Parse, ParseStream};
-    use crate::path::Path;
-
-    impl Parse for Macro {
-        fn parse(input: ParseStream) -> Result<Self> {
-            let tokens;
-            Ok(Macro {
-                path: input.call(Path::parse_mod_style)?,
-                bang_token: input.parse()?,
-                delimiter: {
-                    let (delimiter, content) = parse_delimiter(input)?;
-                    tokens = content;
-                    delimiter
-                },
-                tokens,
-            })
-        }
+impl Parse for Macro {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let tokens;
+        Ok(Macro {
+            path: input.call(Path::parse_mod_style)?,
+            bang_token: input.parse()?,
+            delimiter: {
+                let (delimiter, content) = parse_delimiter(input)?;
+                tokens = content;
+                delimiter
+            },
+            tokens,
+        })
     }
 }

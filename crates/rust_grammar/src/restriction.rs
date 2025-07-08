@@ -1,5 +1,9 @@
 use derive_macro::CmpSyn;
 
+use crate::error::Result;
+use crate::ident::AnyIdent;
+use crate::parse::discouraged::Speculative as _;
+use crate::parse::{Parse, ParseStream};
 use crate::path::Path;
 use crate::token;
 
@@ -51,83 +55,73 @@ pub enum FieldMutability {
     // }
 }
 
-pub(crate) mod parsing {
-    use crate::error::Result;
-    use crate::ident::AnyIdent;
-    use crate::parse::discouraged::Speculative as _;
-    use crate::parse::{Parse, ParseStream};
-    use crate::path::Path;
-    use crate::restriction::{VisRestricted, Visibility};
-    use crate::token;
-
-    impl Parse for Visibility {
-        fn parse(input: ParseStream) -> Result<Self> {
-            // Recognize an empty None-delimited group, as produced by a $:vis
-            // matcher that matched no tokens.
-            if input.peek(token::Group) {
-                let ahead = input.fork();
-                let group = crate::group::parse_group(&ahead)?;
-                if group.content.is_empty() {
-                    input.advance_to(&ahead);
-                    return Ok(Visibility::Inherited);
-                }
-            }
-
-            if input.peek(Token![pub]) {
-                Self::parse_pub(input)
-            } else {
-                Ok(Visibility::Inherited)
+impl Parse for Visibility {
+    fn parse(input: ParseStream) -> Result<Self> {
+        // Recognize an empty None-delimited group, as produced by a $:vis
+        // matcher that matched no tokens.
+        if input.peek(token::Group) {
+            let ahead = input.fork();
+            let group = crate::group::parse_group(&ahead)?;
+            if group.content.is_empty() {
+                input.advance_to(&ahead);
+                return Ok(Visibility::Inherited);
             }
         }
+
+        if input.peek(Token![pub]) {
+            Self::parse_pub(input)
+        } else {
+            Ok(Visibility::Inherited)
+        }
     }
+}
 
-    impl Visibility {
-        fn parse_pub(input: ParseStream) -> Result<Self> {
-            let pub_token = input.parse::<Token![pub]>()?;
+impl Visibility {
+    fn parse_pub(input: ParseStream) -> Result<Self> {
+        let pub_token = input.parse::<Token![pub]>()?;
 
-            if input.peek(token::Paren) {
-                let ahead = input.fork();
+        if input.peek(token::Paren) {
+            let ahead = input.fork();
 
-                let content;
-                let paren_token = parenthesized!(content in ahead);
-                if content.peek(Token![crate])
-                    || content.peek(Token![self])
-                    || content.peek(Token![super])
-                {
-                    let path = content.parse_id::<AnyIdent>()?;
+            let content;
+            let paren_token = parenthesized!(content in ahead);
+            if content.peek(Token![crate])
+                || content.peek(Token![self])
+                || content.peek(Token![super])
+            {
+                let path = content.parse_id::<AnyIdent>()?;
 
-                    // Ensure there are no additional tokens within `content`.
-                    // Without explicitly checking, we may misinterpret a tuple
-                    // field as a restricted visibility, causing a parse error.
-                    // e.g. `pub (crate::A, crate::B)` (Issue #720).
-                    if content.is_empty() {
-                        input.advance_to(&ahead);
-                        return Ok(Visibility::Restricted(VisRestricted {
-                            pub_token,
-                            paren_token,
-                            in_token: None,
-                            path: Box::new(Path::from(path)),
-                        }));
-                    }
-                } else if content.peek(Token![in]) {
-                    let in_token: Token![in] = content.parse()?;
-                    let path = content.call(Path::parse_mod_style)?;
-
+                // Ensure there are no additional tokens within `content`.
+                // Without explicitly checking, we may misinterpret a tuple
+                // field as a restricted visibility, causing a parse error.
+                // e.g. `pub (crate::A, crate::B)` (Issue #720).
+                if content.is_empty() {
                     input.advance_to(&ahead);
                     return Ok(Visibility::Restricted(VisRestricted {
                         pub_token,
                         paren_token,
-                        in_token: Some(in_token),
-                        path: Box::new(path),
+                        in_token: None,
+                        path: Box::new(Path::from(path)),
                     }));
                 }
+            } else if content.peek(Token![in]) {
+                let in_token: Token![in] = content.parse()?;
+                let path = content.call(Path::parse_mod_style)?;
+
+                input.advance_to(&ahead);
+                return Ok(Visibility::Restricted(VisRestricted {
+                    pub_token,
+                    paren_token,
+                    in_token: Some(in_token),
+                    path: Box::new(path),
+                }));
             }
-
-            Ok(Visibility::Public(pub_token))
         }
 
-        pub(crate) fn is_some(&self) -> bool {
-            !matches!(self, Visibility::Inherited)
-        }
+        Ok(Visibility::Public(pub_token))
+    }
+
+    pub(crate) fn is_some(&self) -> bool {
+        !matches!(self, Visibility::Inherited)
     }
 }

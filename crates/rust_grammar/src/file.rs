@@ -6,6 +6,8 @@ use crate::item::Item;
 use crate::parse::parse_str_ctx;
 use crate::{Node, whitespace};
 
+use crate::parse::{Parse, ParseStream};
+
 #[derive(Debug)]
 /// A complete file of Rust source code.
 ///
@@ -83,29 +85,19 @@ pub struct File {
     pub items: Vec<NodeId<Item>>,
 }
 
-pub(crate) mod parsing {
-    use molt_lib::NodeId;
-
-    use crate::Item;
-    use crate::attr::Attribute;
-    use crate::error::Result;
-    use crate::file::File;
-    use crate::parse::{Parse, ParseStream};
-
-    impl Parse for File {
-        fn parse(input: ParseStream) -> Result<Self> {
-            Ok(File {
-                shebang: None,
-                attrs: input.call(Attribute::parse_inner)?,
-                items: {
-                    let mut items: Vec<NodeId<Item>> = Vec::new();
-                    while !input.is_empty() {
-                        items.push(input.parse()?);
-                    }
-                    items
-                },
-            })
-        }
+impl Parse for File {
+    fn parse(input: ParseStream) -> Result<Self> {
+        Ok(File {
+            shebang: None,
+            attrs: input.call(Attribute::parse_inner)?,
+            items: {
+                let mut items: Vec<NodeId<Item>> = Vec::new();
+                while !input.is_empty() {
+                    items.push(input.parse()?);
+                }
+                items
+            },
+        })
     }
 }
 

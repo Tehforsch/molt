@@ -1,5 +1,6 @@
 use derive_macro::CmpSyn;
 use molt_lib::{NodeId, NodeList};
+use molt_lib::{Pattern, WithSpan};
 
 use crate::expr::Expr;
 use crate::generics::TypeParamBound;
@@ -8,6 +9,15 @@ use crate::lifetime::Lifetime;
 use crate::punctuated::Punctuated;
 use crate::token;
 use crate::ty::{ReturnType, Type};
+
+use crate::error::Result;
+
+use crate::expr::ExprBlock;
+use crate::expr::ExprPath;
+
+use crate::ident::AnyIdent;
+use crate::lit::Lit;
+use crate::parse::{Parse, ParseStream};
 
 #[derive(Debug, CmpSyn)]
 /// A path at which a named item is exported (e.g. `std::collections::HashMap`).
@@ -184,399 +194,368 @@ pub struct QSelf {
     pub gt_token: Token![>],
 }
 
-pub(crate) mod parsing {
-    use molt_lib::{NodeId, Pattern, WithSpan};
-
-    use crate::error::Result;
-
-    use crate::expr::ExprBlock;
-    use crate::expr::{Expr, ExprPath};
-
-    use crate::generics::TypeParamBound;
-    use crate::ident::{AnyIdent, Ident};
-    use crate::lifetime::Lifetime;
-    use crate::lit::Lit;
-    use crate::parse::{Parse, ParseStream};
-
-    use crate::path::Constraint;
-    use crate::path::{
-        AngleBracketedGenericArguments, AssocConst, AssocType, GenericArgument,
-        ParenthesizedGenericArguments, Path, PathArguments, PathSegment, QSelf,
-    };
-    use crate::punctuated::Punctuated;
-    use crate::token;
-    use crate::ty::{ReturnType, Type};
-
-    impl Parse for Path {
-        fn parse(input: ParseStream) -> Result<Self> {
-            Self::parse_helper(input, false)
-        }
+impl Parse for Path {
+    fn parse(input: ParseStream) -> Result<Self> {
+        Self::parse_helper(input, false)
     }
+}
 
-    impl Parse for GenericArgument {
-        fn parse(input: ParseStream) -> Result<Self> {
-            if input.peek(Lifetime) && !input.peek2(Token![+]) {
-                return Ok(GenericArgument::Lifetime(input.parse()?));
-            }
+impl Parse for GenericArgument {
+    fn parse(input: ParseStream) -> Result<Self> {
+        if input.peek(Lifetime) && !input.peek2(Token![+]) {
+            return Ok(GenericArgument::Lifetime(input.parse()?));
+        }
 
-            if input.peek(Lit) || input.peek(token::Brace) {
-                return const_argument(input).map(GenericArgument::Const);
-            }
+        if input.peek(Lit) || input.peek(token::Brace) {
+            return const_argument(input).map(GenericArgument::Const);
+        }
 
-            let (span, mut argument) = input.parse_pat::<Type>()?.decompose();
+        let (span, mut argument) = input.parse_pat::<Type>()?.decompose();
 
-            match argument {
-                Pattern::Real(Type::Path(mut ty))
-                    if ty.qself.is_none()
-                        && ty.path.leading_colon.is_none()
-                        && ty.path.segments.len() == 1
-                        && match &ty.path.segments[0].arguments {
-                            PathArguments::None | PathArguments::AngleBracketed(_) => true,
-                            PathArguments::Parenthesized(_) => false,
-                        } =>
-                {
-                    if let Some(eq_token) = input.parse::<Option<Token![=]>>()? {
-                        let segment = ty.path.segments.pop().unwrap().into_value();
-                        let ident = segment.ident;
-                        let generics = match segment.arguments {
+        match argument {
+            Pattern::Real(Type::Path(mut ty))
+                if ty.qself.is_none()
+                    && ty.path.leading_colon.is_none()
+                    && ty.path.segments.len() == 1
+                    && match &ty.path.segments[0].arguments {
+                        PathArguments::None | PathArguments::AngleBracketed(_) => true,
+                        PathArguments::Parenthesized(_) => false,
+                    } =>
+            {
+                if let Some(eq_token) = input.parse::<Option<Token![=]>>()? {
+                    let segment = ty.path.segments.pop().unwrap().into_value();
+                    let ident = segment.ident;
+                    let generics = match segment.arguments {
+                        PathArguments::None => None,
+                        PathArguments::AngleBracketed(arguments) => Some(arguments),
+                        PathArguments::Parenthesized(_) => unreachable!(),
+                    };
+                    return if input.peek(Lit) || input.peek(token::Brace) {
+                        Ok(GenericArgument::AssocConst(AssocConst {
+                            ident,
+                            generics,
+                            eq_token,
+                            value: const_argument(input)?,
+                        }))
+                    } else {
+                        Ok(GenericArgument::AssocType(AssocType {
+                            ident,
+                            generics,
+                            eq_token,
+                            ty: input.parse()?,
+                        }))
+                    };
+                }
+
+                if let Some(colon_token) = input.parse::<Option<Token![:]>>()? {
+                    let segment = ty.path.segments.pop().unwrap().into_value();
+                    return Ok(GenericArgument::Constraint(Constraint {
+                        ident: segment.ident,
+                        generics: match segment.arguments {
                             PathArguments::None => None,
                             PathArguments::AngleBracketed(arguments) => Some(arguments),
                             PathArguments::Parenthesized(_) => unreachable!(),
-                        };
-                        return if input.peek(Lit) || input.peek(token::Brace) {
-                            Ok(GenericArgument::AssocConst(AssocConst {
-                                ident,
-                                generics,
-                                eq_token,
-                                value: const_argument(input)?,
-                            }))
-                        } else {
-                            Ok(GenericArgument::AssocType(AssocType {
-                                ident,
-                                generics,
-                                eq_token,
-                                ty: input.parse()?,
-                            }))
-                        };
-                    }
-
-                    if let Some(colon_token) = input.parse::<Option<Token![:]>>()? {
-                        let segment = ty.path.segments.pop().unwrap().into_value();
-                        return Ok(GenericArgument::Constraint(Constraint {
-                            ident: segment.ident,
-                            generics: match segment.arguments {
-                                PathArguments::None => None,
-                                PathArguments::AngleBracketed(arguments) => Some(arguments),
-                                PathArguments::Parenthesized(_) => unreachable!(),
-                            },
-                            colon_token,
-                            bounds: {
-                                let mut bounds = Punctuated::new();
-                                loop {
-                                    if input.peek(Token![,]) || input.peek(Token![>]) {
-                                        break;
-                                    }
-                                    bounds.push_value({
-                                        let allow_precise_capture = false;
-                                        let allow_tilde_const = true;
-                                        TypeParamBound::parse_single(
-                                            input,
-                                            allow_precise_capture,
-                                            allow_tilde_const,
-                                        )?
-                                    });
-                                    if !input.peek(Token![+]) {
-                                        break;
-                                    }
-                                    let punct: Token![+] = input.parse()?;
-                                    bounds.push_punct(punct);
+                        },
+                        colon_token,
+                        bounds: {
+                            let mut bounds = Punctuated::new();
+                            loop {
+                                if input.peek(Token![,]) || input.peek(Token![>]) {
+                                    break;
                                 }
-                                bounds
-                            },
-                        }));
-                    }
-
-                    argument = Pattern::Real(Type::Path(ty));
+                                bounds.push_value({
+                                    let allow_precise_capture = false;
+                                    let allow_tilde_const = true;
+                                    TypeParamBound::parse_single(
+                                        input,
+                                        allow_precise_capture,
+                                        allow_tilde_const,
+                                    )?
+                                });
+                                if !input.peek(Token![+]) {
+                                    break;
+                                }
+                                let punct: Token![+] = input.parse()?;
+                                bounds.push_punct(punct);
+                            }
+                            bounds
+                        },
+                    }));
                 }
-                _ => {}
-            }
 
-            Ok(GenericArgument::Type(
-                input.add_pat(argument.with_span(span)),
-            ))
+                argument = Pattern::Real(Type::Path(ty));
+            }
+            _ => {}
+        }
+
+        Ok(GenericArgument::Type(
+            input.add_pat(argument.with_span(span)),
+        ))
+    }
+}
+
+pub(crate) fn const_argument(input: ParseStream) -> Result<Expr> {
+    let lookahead = input.lookahead1();
+
+    if input.peek(Lit) {
+        let lit = input.parse()?;
+        return Ok(Expr::Lit(lit));
+    }
+
+    if input.peek_pat::<Ident>() {
+        let ident: NodeId<Ident> = input.parse()?;
+        return Ok(Expr::Path(ExprPath {
+            attrs: Vec::new(),
+            qself: None,
+            path: Path::from(ident),
+        }));
+    }
+
+    if input.peek(token::Brace) {
+        {
+            let block: ExprBlock = input.parse()?;
+            return Ok(Expr::Block(block));
         }
     }
 
-    pub(crate) fn const_argument(input: ParseStream) -> Result<Expr> {
-        let lookahead = input.lookahead1();
+    Err(lookahead.error())
+}
 
-        if input.peek(Lit) {
-            let lit = input.parse()?;
-            return Ok(Expr::Lit(lit));
-        }
+impl AngleBracketedGenericArguments {
+    /// Parse `::<…>` with mandatory leading `::`.
+    ///
+    /// The ordinary [`Parse`] impl for `AngleBracketedGenericArguments`
+    /// parses optional leading `::`.
 
-        if input.peek_pat::<Ident>() {
-            let ident: NodeId<Ident> = input.parse()?;
-            return Ok(Expr::Path(ExprPath {
-                attrs: Vec::new(),
-                qself: None,
-                path: Path::from(ident),
-            }));
-        }
-
-        if input.peek(token::Brace) {
-            {
-                let block: ExprBlock = input.parse()?;
-                return Ok(Expr::Block(block));
-            }
-        }
-
-        Err(lookahead.error())
+    pub fn parse_turbofish(input: ParseStream) -> Result<Self> {
+        let colon2_token: Token![::] = input.parse()?;
+        Self::do_parse(Some(colon2_token), input)
     }
 
-    impl AngleBracketedGenericArguments {
-        /// Parse `::<…>` with mandatory leading `::`.
-        ///
-        /// The ordinary [`Parse`] impl for `AngleBracketedGenericArguments`
-        /// parses optional leading `::`.
-
-        pub fn parse_turbofish(input: ParseStream) -> Result<Self> {
-            let colon2_token: Token![::] = input.parse()?;
-            Self::do_parse(Some(colon2_token), input)
-        }
-
-        pub(crate) fn do_parse(
-            colon2_token: Option<Token![::]>,
-            input: ParseStream,
-        ) -> Result<Self> {
-            Ok(AngleBracketedGenericArguments {
-                colon2_token,
-                lt_token: input.parse()?,
-                args: {
-                    let mut args = Punctuated::new();
-                    loop {
-                        if input.peek(Token![>]) {
-                            break;
-                        }
-                        let value: GenericArgument = input.parse()?;
-                        args.push_value(value);
-                        if input.peek(Token![>]) {
-                            break;
-                        }
-                        let punct: Token![,] = input.parse()?;
-                        args.push_punct(punct);
+    pub(crate) fn do_parse(colon2_token: Option<Token![::]>, input: ParseStream) -> Result<Self> {
+        Ok(AngleBracketedGenericArguments {
+            colon2_token,
+            lt_token: input.parse()?,
+            args: {
+                let mut args = Punctuated::new();
+                loop {
+                    if input.peek(Token![>]) {
+                        break;
                     }
-                    args
-                },
-                gt_token: input.parse()?,
-            })
-        }
-    }
-
-    impl Parse for AngleBracketedGenericArguments {
-        fn parse(input: ParseStream) -> Result<Self> {
-            let colon2_token: Option<Token![::]> = input.parse()?;
-            Self::do_parse(colon2_token, input)
-        }
-    }
-
-    impl Parse for ParenthesizedGenericArguments {
-        fn parse(input: ParseStream) -> Result<Self> {
-            let content;
-            Ok(ParenthesizedGenericArguments {
-                paren_token: parenthesized!(content in input),
-                inputs: content.parse_list::<Type>()?,
-                output: input.call(ReturnType::without_plus)?,
-            })
-        }
-    }
-
-    impl Parse for PathSegment {
-        fn parse(input: ParseStream) -> Result<Self> {
-            Self::parse_helper(input, false)
-        }
-    }
-
-    impl PathSegment {
-        fn parse_helper(input: ParseStream, expr_style: bool) -> Result<Self> {
-            if input.peek(Token![super])
-                || input.peek(Token![self])
-                || input.peek(Token![crate])
-                || input.peek(Token![try])
-            {
-                let ident = input.parse_id::<AnyIdent>()?;
-                return Ok(PathSegment::from(ident));
-            }
-
-            let ident = if input.peek(Token![Self]) {
-                input.parse_id::<AnyIdent>()?
-            } else {
-                input.parse_id::<Ident>()?
-            };
-
-            if !expr_style
-                && input.peek(Token![<])
-                && !input.peek(Token![<=])
-                && !input.peek(Token![<<=])
-                || input.peek(Token![::]) && input.peek3(Token![<])
-            {
-                Ok(PathSegment {
-                    ident,
-                    arguments: PathArguments::AngleBracketed(input.parse()?),
-                })
-            } else {
-                Ok(PathSegment::from(ident))
-            }
-        }
-    }
-
-    impl Path {
-        /// Parse a `Path` containing no path arguments on any of its segments.
-        ///
-        /// # Example
-        ///
-        /// ```
-        /// use syn::{Path, Result, Token};
-        /// use syn::parse::{Parse, ParseStream};
-        ///
-        /// // A simplified single `use` statement like:
-        /// //
-        /// //     use std::collections::HashMap;
-        /// //
-        /// // Note that generic parameters are not allowed in a `use` statement
-        /// // so the following must not be accepted.
-        /// //
-        /// //     use a::<b>::c;
-        /// struct SingleUse {
-        ///     use_token: Token![use],
-        ///     path: Path,
-        /// }
-        ///
-        /// impl Parse for SingleUse {
-        ///     fn parse(input: ParseStream) -> Result<Self> {
-        ///         Ok(SingleUse {
-        ///             use_token: input.parse()?,
-        ///             path: input.call(Path::parse_mod_style)?,
-        ///         })
-        ///     }
-        /// }
-        /// ```
-        pub fn parse_mod_style(input: ParseStream) -> Result<Self> {
-            Ok(Path {
-                leading_colon: input.parse()?,
-                segments: {
-                    let mut segments = Punctuated::new();
-                    loop {
-                        if !input.peek_pat::<Ident>()
-                            && !input.peek(Token![super])
-                            && !input.peek(Token![self])
-                            && !input.peek(Token![Self])
-                            && !input.peek(Token![crate])
-                        {
-                            break;
-                        }
-                        let ident = input.parse_id::<AnyIdent>()?;
-                        segments.push_value(PathSegment::from(ident));
-                        if !input.peek(Token![::]) {
-                            break;
-                        }
-                        let punct = input.parse()?;
-                        segments.push_punct(punct);
+                    let value: GenericArgument = input.parse()?;
+                    args.push_value(value);
+                    if input.peek(Token![>]) {
+                        break;
                     }
-                    if segments.is_empty() {
-                        return Err(input.parse_id::<Ident>().unwrap_err());
-                    } else if segments.trailing_punct() {
-                        return Err(input.error("expected path segment after `::`"));
-                    }
-                    segments
-                },
-            })
-        }
-
-        pub(crate) fn parse_helper(input: ParseStream, expr_style: bool) -> Result<Self> {
-            let mut path = Path {
-                leading_colon: input.parse()?,
-                segments: {
-                    let mut segments = Punctuated::new();
-                    let value = PathSegment::parse_helper(input, expr_style)?;
-                    segments.push_value(value);
-                    segments
-                },
-            };
-            Path::parse_rest(input, &mut path, expr_style)?;
-            Ok(path)
-        }
-
-        pub(crate) fn parse_rest(
-            input: ParseStream,
-            path: &mut Self,
-            expr_style: bool,
-        ) -> Result<()> {
-            while input.peek(Token![::]) && !input.peek3(token::Paren) {
-                let punct: Token![::] = input.parse()?;
-                path.segments.push_punct(punct);
-                let value = PathSegment::parse_helper(input, expr_style)?;
-                path.segments.push_value(value);
-            }
-            Ok(())
-        }
-
-        pub(crate) fn is_mod_style(&self) -> bool {
-            self.segments
-                .iter()
-                .all(|segment| segment.arguments.is_none())
-        }
+                    let punct: Token![,] = input.parse()?;
+                    args.push_punct(punct);
+                }
+                args
+            },
+            gt_token: input.parse()?,
+        })
     }
+}
 
-    pub(crate) fn qpath(input: ParseStream, expr_style: bool) -> Result<(Option<QSelf>, Path)> {
-        if input.peek(Token![<]) {
-            let lt_token: Token![<] = input.parse()?;
-            let this = input.parse()?;
-            let path = if input.peek(Token![as]) {
-                let as_token: Token![as] = input.parse()?;
-                let path: Path = input.parse()?;
-                Some((as_token, path))
-            } else {
-                None
-            };
-            let gt_token: Token![>] = input.parse()?;
-            let colon2_token: Token![::] = input.parse()?;
-            let mut rest = Punctuated::new();
-            loop {
-                let path = PathSegment::parse_helper(input, expr_style)?;
-                rest.push_value(path);
-                if !input.peek(Token![::]) {
-                    break;
-                }
-                let punct: Token![::] = input.parse()?;
-                rest.push_punct(punct);
-            }
-            let (position, as_token, path) = match path {
-                Some((as_token, mut path)) => {
-                    let pos = path.segments.len();
-                    path.segments.push_punct(colon2_token);
-                    path.segments.extend(rest.into_pairs());
-                    (pos, Some(as_token), path)
-                }
-                None => {
-                    let path = Path {
-                        leading_colon: Some(colon2_token),
-                        segments: rest,
-                    };
-                    (0, None, path)
-                }
-            };
-            let qself = QSelf {
-                lt_token,
-                ty: this,
-                position,
-                as_token,
-                gt_token,
-            };
-            Ok((Some(qself), path))
+impl Parse for AngleBracketedGenericArguments {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let colon2_token: Option<Token![::]> = input.parse()?;
+        Self::do_parse(colon2_token, input)
+    }
+}
+
+impl Parse for ParenthesizedGenericArguments {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let content;
+        Ok(ParenthesizedGenericArguments {
+            paren_token: parenthesized!(content in input),
+            inputs: content.parse_list::<Type>()?,
+            output: input.call(ReturnType::without_plus)?,
+        })
+    }
+}
+
+impl Parse for PathSegment {
+    fn parse(input: ParseStream) -> Result<Self> {
+        Self::parse_helper(input, false)
+    }
+}
+
+impl PathSegment {
+    fn parse_helper(input: ParseStream, expr_style: bool) -> Result<Self> {
+        if input.peek(Token![super])
+            || input.peek(Token![self])
+            || input.peek(Token![crate])
+            || input.peek(Token![try])
+        {
+            let ident = input.parse_id::<AnyIdent>()?;
+            return Ok(PathSegment::from(ident));
+        }
+
+        let ident = if input.peek(Token![Self]) {
+            input.parse_id::<AnyIdent>()?
         } else {
-            let path = Path::parse_helper(input, expr_style)?;
-            Ok((None, path))
+            input.parse_id::<Ident>()?
+        };
+
+        if !expr_style
+            && input.peek(Token![<])
+            && !input.peek(Token![<=])
+            && !input.peek(Token![<<=])
+            || input.peek(Token![::]) && input.peek3(Token![<])
+        {
+            Ok(PathSegment {
+                ident,
+                arguments: PathArguments::AngleBracketed(input.parse()?),
+            })
+        } else {
+            Ok(PathSegment::from(ident))
         }
+    }
+}
+
+impl Path {
+    /// Parse a `Path` containing no path arguments on any of its segments.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use syn::{Path, Result, Token};
+    /// use syn::parse::{Parse, ParseStream};
+    ///
+    /// // A simplified single `use` statement like:
+    /// //
+    /// //     use std::collections::HashMap;
+    /// //
+    /// // Note that generic parameters are not allowed in a `use` statement
+    /// // so the following must not be accepted.
+    /// //
+    /// //     use a::<b>::c;
+    /// struct SingleUse {
+    ///     use_token: Token![use],
+    ///     path: Path,
+    /// }
+    ///
+    /// impl Parse for SingleUse {
+    ///     fn parse(input: ParseStream) -> Result<Self> {
+    ///         Ok(SingleUse {
+    ///             use_token: input.parse()?,
+    ///             path: input.call(Path::parse_mod_style)?,
+    ///         })
+    ///     }
+    /// }
+    /// ```
+    pub fn parse_mod_style(input: ParseStream) -> Result<Self> {
+        Ok(Path {
+            leading_colon: input.parse()?,
+            segments: {
+                let mut segments = Punctuated::new();
+                loop {
+                    if !input.peek_pat::<Ident>()
+                        && !input.peek(Token![super])
+                        && !input.peek(Token![self])
+                        && !input.peek(Token![Self])
+                        && !input.peek(Token![crate])
+                    {
+                        break;
+                    }
+                    let ident = input.parse_id::<AnyIdent>()?;
+                    segments.push_value(PathSegment::from(ident));
+                    if !input.peek(Token![::]) {
+                        break;
+                    }
+                    let punct = input.parse()?;
+                    segments.push_punct(punct);
+                }
+                if segments.is_empty() {
+                    return Err(input.parse_id::<Ident>().unwrap_err());
+                } else if segments.trailing_punct() {
+                    return Err(input.error("expected path segment after `::`"));
+                }
+                segments
+            },
+        })
+    }
+
+    pub(crate) fn parse_helper(input: ParseStream, expr_style: bool) -> Result<Self> {
+        let mut path = Path {
+            leading_colon: input.parse()?,
+            segments: {
+                let mut segments = Punctuated::new();
+                let value = PathSegment::parse_helper(input, expr_style)?;
+                segments.push_value(value);
+                segments
+            },
+        };
+        Path::parse_rest(input, &mut path, expr_style)?;
+        Ok(path)
+    }
+
+    pub(crate) fn parse_rest(input: ParseStream, path: &mut Self, expr_style: bool) -> Result<()> {
+        while input.peek(Token![::]) && !input.peek3(token::Paren) {
+            let punct: Token![::] = input.parse()?;
+            path.segments.push_punct(punct);
+            let value = PathSegment::parse_helper(input, expr_style)?;
+            path.segments.push_value(value);
+        }
+        Ok(())
+    }
+
+    pub(crate) fn is_mod_style(&self) -> bool {
+        self.segments
+            .iter()
+            .all(|segment| segment.arguments.is_none())
+    }
+}
+
+pub(crate) fn qpath(input: ParseStream, expr_style: bool) -> Result<(Option<QSelf>, Path)> {
+    if input.peek(Token![<]) {
+        let lt_token: Token![<] = input.parse()?;
+        let this = input.parse()?;
+        let path = if input.peek(Token![as]) {
+            let as_token: Token![as] = input.parse()?;
+            let path: Path = input.parse()?;
+            Some((as_token, path))
+        } else {
+            None
+        };
+        let gt_token: Token![>] = input.parse()?;
+        let colon2_token: Token![::] = input.parse()?;
+        let mut rest = Punctuated::new();
+        loop {
+            let path = PathSegment::parse_helper(input, expr_style)?;
+            rest.push_value(path);
+            if !input.peek(Token![::]) {
+                break;
+            }
+            let punct: Token![::] = input.parse()?;
+            rest.push_punct(punct);
+        }
+        let (position, as_token, path) = match path {
+            Some((as_token, mut path)) => {
+                let pos = path.segments.len();
+                path.segments.push_punct(colon2_token);
+                path.segments.extend(rest.into_pairs());
+                (pos, Some(as_token), path)
+            }
+            None => {
+                let path = Path {
+                    leading_colon: Some(colon2_token),
+                    segments: rest,
+                };
+                (0, None, path)
+            }
+        };
+        let qself = QSelf {
+            lt_token,
+            ty: this,
+            position,
+            as_token,
+            gt_token,
+        };
+        Ok((Some(qself), path))
+    } else {
+        let path = Path::parse_helper(input, expr_style)?;
+        Ok((None, path))
     }
 }

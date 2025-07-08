@@ -1,6 +1,13 @@
 use crate::lookahead;
 
+use molt_lib::{Pattern, Spanned, SpannedPat};
 pub use proc_macro2::Ident;
+
+use crate::buffer::Cursor;
+use crate::error::Result;
+use crate::ext::IdentExt;
+use crate::parse::{Parse, ParsePat, ParseStream, PeekPat};
+use crate::token::Token;
 
 pub struct AnyIdent;
 pub struct TokenIdent<T>(T);
@@ -48,20 +55,8 @@ pub(crate) fn xid_ok(symbol: &str) -> bool {
     true
 }
 
-mod parsing {
-    use crate::buffer::Cursor;
-    use crate::error::Result;
-    use crate::ext::IdentExt;
-    use crate::parse::{Parse, ParsePat, ParseStream, PeekPat};
-    use crate::token::Token;
-    use molt_lib::{Pattern, Spanned, SpannedPat};
-    use proc_macro2::Ident;
-
-    use super::AnyIdent;
-    use super::TokenIdent;
-
-    fn accept_as_ident(ident: &Ident) -> bool {
-        match ident.to_string().as_str() {
+fn accept_as_ident(ident: &Ident) -> bool {
+    match ident.to_string().as_str() {
             "_" |
             // Based on https://doc.rust-lang.org/1.65.0/reference/keywords.html
             "abstract" | "as" | "async" | "await" | "become" | "box" | "break" |
@@ -74,93 +69,92 @@ mod parsing {
             "while" | "yield" => false,
             _ => true,
         }
-    }
+}
 
-    fn parse_ident(input: ParseStream) -> Result<Ident> {
-        input.step(|cursor| {
-            if let Some((ident, rest)) = cursor.ident() {
-                if accept_as_ident(&ident) {
-                    Ok((ident, rest))
-                } else {
-                    Err(cursor.error(format_args!(
-                        "expected identifier, found keyword `{}`",
-                        ident,
-                    )))
-                }
+fn parse_ident(input: ParseStream) -> Result<Ident> {
+    input.step(|cursor| {
+        if let Some((ident, rest)) = cursor.ident() {
+            if accept_as_ident(&ident) {
+                Ok((ident, rest))
             } else {
-                Err(cursor.error("expected identifier"))
+                Err(cursor.error(format_args!(
+                    "expected identifier, found keyword `{}`",
+                    ident,
+                )))
             }
-        })
-    }
-
-    impl Parse for Ident {
-        fn parse(input: ParseStream) -> Result<Self> {
-            parse_ident(input)
+        } else {
+            Err(cursor.error("expected identifier"))
         }
+    })
+}
+
+impl Parse for Ident {
+    fn parse(input: ParseStream) -> Result<Self> {
+        parse_ident(input)
     }
+}
 
-    impl ParsePat for Ident {
-        type Target = Ident;
+impl ParsePat for Ident {
+    type Target = Ident;
 
-        fn parse_pat(input: ParseStream) -> Result<SpannedPat<Ident>> {
-            input.call_spanned(parse_ident)
-        }
+    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Ident>> {
+        input.call_spanned(parse_ident)
     }
+}
 
-    impl PeekPat for Ident {
-        type Target = Ident;
+impl PeekPat for Ident {
+    type Target = Ident;
 
-        fn peek(cursor: Cursor) -> bool {
-            if let Some((ident, _rest)) = cursor.ident() {
-                accept_as_ident(&ident)
-            } else {
-                false
-            }
-        }
-    }
-
-    impl ParsePat for AnyIdent {
-        type Target = Ident;
-
-        fn parse_pat(input: ParseStream) -> Result<SpannedPat<Ident>> {
-            input.call_spanned(Ident::parse_any)
+    fn peek(cursor: Cursor) -> bool {
+        if let Some((ident, _rest)) = cursor.ident() {
+            accept_as_ident(&ident)
+        } else {
+            false
         }
     }
+}
 
-    impl PeekPat for AnyIdent {
-        type Target = Ident;
+impl ParsePat for AnyIdent {
+    type Target = Ident;
 
-        fn peek(cursor: Cursor) -> bool {
-            cursor.ident().is_some()
+    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Ident>> {
+        input.call_spanned(Ident::parse_any)
+    }
+}
+
+impl PeekPat for AnyIdent {
+    type Target = Ident;
+
+    fn peek(cursor: Cursor) -> bool {
+        cursor.ident().is_some()
+    }
+}
+
+impl<T: Token + Parse> ParsePat for TokenIdent<T>
+where
+    Ident: From<T>,
+{
+    type Target = Ident;
+
+    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Ident>> {
+        // We only enter this function if we already
+        // peeked at this token, so there is no need to
+        // check for variables.
+        let token: Spanned<T> = input.parse_spanned()?;
+        Ok(token.map(|token| Pattern::Real(Ident::from(token))))
+    }
+}
+
+impl Token for Ident {
+    fn peek(cursor: Cursor) -> bool {
+        if let Some((ident, _rest)) = cursor.ident() {
+            accept_as_ident(&ident)
+        } else {
+            false
         }
     }
 
-    impl<T: Token + Parse> ParsePat for TokenIdent<T>
-    where
-        Ident: From<T>,
-    {
-        type Target = Ident;
-
-        fn parse_pat(input: ParseStream) -> Result<SpannedPat<Ident>> {
-            // We only enter this function if we already
-            // peeked at this token, so there is no need to
-            // check for variables.
-            let token: Spanned<T> = input.parse_spanned()?;
-            Ok(token.map(|token| Pattern::Real(Ident::from(token))))
-        }
-    }
-
-    impl Token for Ident {
-        fn peek(cursor: Cursor) -> bool {
-            if let Some((ident, _rest)) = cursor.ident() {
-                accept_as_ident(&ident)
-            } else {
-                false
-            }
-        }
-
-        fn display() -> &'static str {
-            "identifier"
-        }
+    fn display() -> &'static str {
+        "identifier"
     }
 }
