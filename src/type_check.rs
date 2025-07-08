@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use lsp_types::{Position, Range};
-use molt_lib::{Ctx, Match, NodeId};
+use molt_lib::{Ctx, Match, MatchPatternData, NodeId};
 use rust_grammar::{Node, Type};
 
 use crate::lsp::LspClient;
@@ -19,9 +19,7 @@ impl LspClient {
         type_annotations: &[TypeAnnotation],
         ast_ctx: &molt_lib::Ctx<Node>,
         pat_ctx: &molt_lib::Ctx<Node>,
-        rust_src: &str,
-        molt_src: &str,
-        rust_path: &Path,
+        data: &MatchPatternData,
         match_: &Match,
     ) -> bool {
         for type_annotation in type_annotations {
@@ -29,18 +27,18 @@ impl LspClient {
             let binding = match_.get_binding(var_id);
             for ast_node in binding.ast.iter() {
                 let span = ast_ctx.get_span(*ast_node);
-                let range = get_range_from_span(rust_src, span);
+                let range = get_range_from_span(data.rust_src, span);
                 let type_ = loop {
-                    match self.query_type(&rust_path, range) {
+                    match self.query_type(data.rust_path, range) {
                         Ok(type_) => break type_,
                         Err(e) if e.to_string().contains("content modified") => {
                             // Retry if content was modified
                             continue;
                         }
-                        Err(e) => panic!("Failed to query type: {}", e),
+                        Err(e) => panic!("Failed to query type: {e}"),
                     }
                 };
-                dbg!(ast_ctx.print(*ast_node, rust_src));
+                dbg!(ast_ctx.print(*ast_node, data.rust_src));
                 if let Some(ref type_) = type_ {
                     dbg!(type_.ctx.print(type_.type_.into(), &type_.src));
                 }
@@ -52,7 +50,7 @@ impl LspClient {
                             type_.type_,
                             type_annotation.type_,
                             &type_.src,
-                            molt_src,
+                            data.molt_src,
                         ) {
                             return false;
                         }

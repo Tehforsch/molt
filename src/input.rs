@@ -23,7 +23,7 @@ pub enum FilePath<'a> {
 }
 
 impl<'a> FilePath<'a> {
-    pub fn unwrap_path(self) -> &'a Path {
+    pub fn unwrap_path(&self) -> &'a Path {
         match self {
             FilePath::Path(path) => path,
             FilePath::FromCli => panic!("unwrap_path called on FromCli variant."),
@@ -159,7 +159,7 @@ impl Input {
 impl<'a> std::fmt::Display for FilePath<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            FilePath::Path(path) => write!(f, "{:?}", path),
+            FilePath::Path(path) => write!(f, "{path:?}"),
             FilePath::FromCli => write!(f, "CLI input"),
         }
     }

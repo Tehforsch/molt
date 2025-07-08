@@ -324,7 +324,7 @@ impl LitInt {
     pub fn new(repr: &str, span: Span) -> Self {
         let (digits, suffix) = match value::parse_lit_int(repr) {
             Some(parse) => parse,
-            None => panic!("not an integer literal: `{}`", repr),
+            None => panic!("not an integer literal: `{repr}`"),
         };
 
         let mut token: Literal = repr.parse().unwrap();
@@ -403,7 +403,7 @@ impl From<Literal> for LitInt {
                 }),
             }
         } else {
-            panic!("not an integer literal: `{}`", repr);
+            panic!("not an integer literal: `{repr}`");
         }
     }
 }
@@ -418,7 +418,7 @@ impl LitFloat {
     pub fn new(repr: &str, span: Span) -> Self {
         let (digits, suffix) = match value::parse_lit_float(repr) {
             Some(parse) => parse,
-            None => panic!("not a float literal: `{}`", repr),
+            None => panic!("not a float literal: `{repr}`"),
         };
 
         let mut token: Literal = repr.parse().unwrap();
@@ -475,7 +475,7 @@ impl From<Literal> for LitFloat {
                 }),
             }
         } else {
-            panic!("not a float literal: `{}`", repr);
+            panic!("not a float literal: `{repr}`");
         }
     }
 }
@@ -820,7 +820,7 @@ mod value {
                 _ => {}
             }
 
-            panic!("unrecognized literal: `{}`", repr);
+            panic!("unrecognized literal: `{repr}`");
         }
 
         pub fn suffix(&self) -> &str {
@@ -1275,7 +1275,7 @@ mod value {
         if let Some(ch) = char::from_u32(ch) {
             (ch, s)
         } else {
-            panic!("character code {:x} is not a valid unicode character", ch);
+            panic!("character code {ch:x} is not a valid unicode character");
         }
     }
 

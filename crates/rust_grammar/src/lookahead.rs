@@ -150,7 +150,7 @@ impl<'a> Lookahead1<'a> {
             }
             _ => {
                 let join = comparisons.join(", ");
-                let message = format!("expected one of: {}", join);
+                let message = format!("expected one of: {join}");
                 error::new_at(self.scope, self.cursor, message)
             }
         }

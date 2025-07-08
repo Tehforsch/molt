@@ -19,7 +19,7 @@ impl Parse for UnresolvedMoltFile {
         let mut type_annotations = vec![];
         while !parser.is_empty() {
             match parser.parse()? {
-                Decl::VarDecl(new_vars) => vars.extend(new_vars.0.into_iter()),
+                Decl::Var(new_vars) => vars.extend(new_vars.0.into_iter()),
                 Decl::Command(command) => commands.push(command),
                 Decl::TypeAnnotation(type_annotation) => type_annotations.push(type_annotation),
             }
@@ -39,7 +39,7 @@ impl Parse for Decl {
         } else if parser.peek(Token![type]) {
             Ok(Self::TypeAnnotation(parser.parse()?))
         } else {
-            Ok(Self::VarDecl(parser.parse()?))
+            Ok(Self::Var(parser.parse()?))
         }
     }
 }

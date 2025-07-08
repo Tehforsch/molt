@@ -278,7 +278,6 @@ impl<T, P> Punctuated<T, P> {
     ///
     /// Parsing continues until the end of this parse stream. The entire content
     /// of this parse stream must consist of `T` and `P`.
-
     pub fn parse_terminated(input: ParseStream) -> Result<Self>
     where
         T: Parse,
@@ -295,7 +294,6 @@ impl<T, P> Punctuated<T, P> {
     /// to be parsed.
     ///
     /// [`parse_terminated`]: Punctuated::parse_terminated
-
     pub fn parse_terminated_with<'a>(
         input: ParseStream<'a>,
         parser: fn(ParseStream<'a>) -> Result<T>,
@@ -328,7 +326,6 @@ impl<T, P> Punctuated<T, P> {
     /// the stream. This method returns upon parsing a `T` and observing that it
     /// is not followed by a `P`, even if there are remaining tokens in the
     /// stream.
-
     pub fn parse_separated_nonempty(input: ParseStream) -> Result<Self>
     where
         T: Parse,
@@ -345,7 +342,6 @@ impl<T, P> Punctuated<T, P> {
     /// the entire content of this stream.
     ///
     /// [`parse_separated_nonempty`]: Punctuated::parse_separated_nonempty
-
     pub fn parse_separated_nonempty_with<'a>(
         input: ParseStream<'a>,
         parser: fn(ParseStream<'a>) -> Result<T>,

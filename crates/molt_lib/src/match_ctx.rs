@@ -1,30 +1,34 @@
+use std::path::Path;
+
 use crate::config::Config;
 use crate::match_pattern::PatType;
 use crate::{Ctx, GetKind, Id, Pattern, ToNode, Var};
 
+#[derive(Clone)]
+pub struct MatchPatternData<'a> {
+    pub rust_src: &'a str,
+    pub molt_src: &'a str,
+    pub rust_path: &'a Path,
+    pub config: &'a Config,
+}
+
 pub struct MatchCtx<'a, Node: GetKind> {
-    pub config: Config,
     pub pat_ctx: &'a Ctx<Node>,
     pub ast_ctx: &'a Ctx<Node>,
-    rust_src: String,
-    molt_src: String,
+    data: MatchPatternData<'a>,
 }
 
 impl<'a, Node: GetKind> MatchCtx<'a, Node> {
-    pub fn new(
-        pat_ctx: &'a Ctx<Node>,
-        ast_ctx: &'a Ctx<Node>,
-        rust_src: &'a str,
-        molt_src: &'a str,
-        config: Config,
-    ) -> Self {
+    pub fn new(pat_ctx: &'a Ctx<Node>, ast_ctx: &'a Ctx<Node>, data: MatchPatternData<'a>) -> Self {
         Self {
-            config,
             pat_ctx,
             ast_ctx,
-            rust_src: rust_src.to_owned(),
-            molt_src: molt_src.to_owned(),
+            data,
         }
+    }
+
+    pub fn config(&self) -> &Config {
+        self.data.config
     }
 
     pub fn dump(&self) {
@@ -57,14 +61,14 @@ impl<'a, Node: GetKind> MatchCtx<'a, Node> {
     }
 
     pub fn print_ast(&self, id: Id) -> &str {
-        self.ast_ctx.print(id, &self.rust_src)
+        self.ast_ctx.print(id, self.data.rust_src)
     }
 
     pub fn print_pat(&self, id: Id) -> &str {
         if id.is_pat() {
             self.pat_ctx.get_var(id).name()
         } else {
-            self.pat_ctx.print(id, &self.molt_src)
+            self.pat_ctx.print(id, self.data.molt_src)
         }
     }
 

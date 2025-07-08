@@ -42,10 +42,7 @@ impl Lifetime {
     /// ```
     pub fn new(symbol: &str, span: Span) -> Self {
         if !symbol.starts_with('\'') {
-            panic!(
-                "lifetime name must start with apostrophe as in \"'a\", got {:?}",
-                symbol
-            );
+            panic!("lifetime name must start with apostrophe as in \"'a\", got {symbol:?}",);
         }
 
         if symbol == "'" {
@@ -53,7 +50,7 @@ impl Lifetime {
         }
 
         if !crate::ident::xid_ok(&symbol[1..]) {
-            panic!("{:?} is not a valid lifetime name", symbol);
+            panic!("{symbol:?} is not a valid lifetime name");
         }
 
         Lifetime {

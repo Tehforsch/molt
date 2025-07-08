@@ -292,7 +292,7 @@ impl RealLspClient {
     fn extract_type_from_hover(&self, hover: Hover) -> Result<Option<LspType>> {
         if let HoverContents::Markup(str) = hover.contents {
             let mut lines = str.value.lines();
-            let line = lines.next().ok_or_else(|| "Expected line")?;
+            let line = lines.next().ok_or("Expected line")?;
             Ok(parse_type_from_str(line))
         } else {
             Err("Unexpected hover contents format.".into())
@@ -310,7 +310,7 @@ fn try_parse_as<T: ParsePat>(
 }
 
 fn parse_type_from_str(line: &str) -> Option<LspType> {
-    let result = try_parse_as::<FieldNamed>(&line, |_, field: &Field| Some(field.ty))
+    let result = try_parse_as::<FieldNamed>(line, |_, field: &Field| Some(field.ty))
         .or_else(|| {
             // Ugly: Add a semicolon to allow parsing into a statement.
             let line = format!("{line};");
@@ -323,7 +323,7 @@ fn parse_type_from_str(line: &str) -> Option<LspType> {
             })
         })
         .or_else(|| {
-            rust_grammar::parse_ctx(|input| input.parse_id::<Type>(), &line, ParsingMode::Real).ok()
+            rust_grammar::parse_ctx(|input| input.parse_id::<Type>(), line, ParsingMode::Real).ok()
         });
     if result.is_none() {
         println!("Failed to parse type in LSP response. LSP response: {line}");
@@ -344,10 +344,10 @@ impl LspClient {
 
     pub(crate) fn new(root: &Path) -> Result<Self, Error> {
         let mut client = RealLspClient::new()
-            .map_err(|e| Error::Misc(format!("Failed to spawn LSP process: {}", e)))?;
+            .map_err(|e| Error::Misc(format!("Failed to spawn LSP process: {e}")))?;
         client
-            .initialize(&root)
-            .map_err(|e| Error::Misc(format!("Failed to initialize LSP client: {}", e)))?;
+            .initialize(root)
+            .map_err(|e| Error::Misc(format!("Failed to initialize LSP client: {e}")))?;
         Ok(Self {
             inner: Some(client),
         })

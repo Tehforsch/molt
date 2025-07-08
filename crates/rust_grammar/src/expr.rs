@@ -2692,6 +2692,6 @@ fn check_cast(input: ParseStream) -> Result<()> {
     } else {
         return Ok(());
     };
-    let msg = format!("casts cannot be followed by {}", kind);
+    let msg = format!("casts cannot be followed by {kind}");
     Err(input.error(msg))
 }

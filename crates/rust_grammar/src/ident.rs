@@ -76,10 +76,7 @@ fn parse_ident(input: ParseStream) -> Result<Ident> {
             if accept_as_ident(&ident) {
                 Ok((ident, rest))
             } else {
-                Err(cursor.error(format_args!(
-                    "expected identifier, found keyword `{}`",
-                    ident,
-                )))
+                Err(cursor.error(format_args!("expected identifier, found keyword `{ident}`",)))
             }
         } else {
             Err(cursor.error("expected identifier"))

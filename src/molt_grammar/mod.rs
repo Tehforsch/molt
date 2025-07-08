@@ -40,7 +40,7 @@ pub struct UnresolvedVarDecl {
 }
 
 pub(crate) enum Decl {
-    VarDecl(UnresolvedVarDecls),
+    Var(UnresolvedVarDecls),
     Command(Command<TokenVar>),
     TypeAnnotation(UnresolvedTypeAnnotation),
 }

@@ -319,7 +319,6 @@ impl AngleBracketedGenericArguments {
     ///
     /// The ordinary [`Parse`] impl for `AngleBracketedGenericArguments`
     /// parses optional leading `::`.
-
     pub fn parse_turbofish(input: ParseStream) -> Result<Self> {
         let colon2_token: Token![::] = input.parse()?;
         Self::do_parse(Some(colon2_token), input)

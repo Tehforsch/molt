@@ -9,11 +9,10 @@ mod type_check;
 use codespan_reporting::diagnostic::Label;
 use codespan_reporting::files::Files;
 pub use error::{Error, emit_error};
-use input::FilePath;
 pub use input::{Diagnostic, FileId, Input, MoltSource};
 use lsp::LspClient;
 use molt_grammar::{Command, MatchCommand, MoltFile, TransformCommand, UnresolvedMoltFile};
-use molt_lib::{Config, Id, Match, MatchCtx, ParsingMode};
+use molt_lib::{Config, Id, Match, MatchCtx, MatchPatternData, ParsingMode};
 use rust_grammar::Node;
 
 pub struct RustFile;
@@ -21,6 +20,19 @@ pub struct RustFile;
 type Ctx = molt_lib::Ctx<Node>;
 pub type PatCtx = Ctx;
 pub type AstCtx = Ctx;
+
+fn match_pattern_data<'a>(
+    input: &'a Input,
+    rust_file_id: crate::FileId,
+    config: &'a Config,
+) -> MatchPatternData<'a> {
+    MatchPatternData {
+        rust_path: input.name(rust_file_id).unwrap().unwrap_path(),
+        rust_src: input.source(rust_file_id).unwrap(),
+        molt_src: input.source(input.molt_file_id()).unwrap(),
+        config,
+    }
+}
 
 pub(crate) struct MatchResult<'a> {
     pub matches: Vec<Match>,
@@ -42,16 +54,11 @@ impl MoltFile {
         ast_ctx: &'a Ctx,
         pat_ctx: &'a Ctx,
         var: Id,
-        rust_path: FilePath<'a>,
-        rust_src: &'a str,
-        molt_src: &'a str,
-        config: Config,
-        lsp_client: &mut LspClient,
+        data: MatchPatternData<'a>,
+        lsp_client: &'a mut LspClient,
     ) -> MatchResult<'a> {
-        let rust_path = rust_path.unwrap_path();
-        let debug_print = config.debug_print;
-        let ctx = MatchCtx::new(pat_ctx, ast_ctx, rust_src, molt_src, config);
-        if debug_print {
+        let ctx = MatchCtx::new(pat_ctx, ast_ctx, data.clone());
+        if ctx.config().debug_print {
             ctx.dump();
         }
         let pat_kind = ctx.pat_ctx.get_kind(var);
@@ -66,15 +73,13 @@ impl MoltFile {
                     molt_lib::match_pattern(&ctx, &self.vars, var, item)
                 }
             })
-            .filter(|match_re| {
+            .filter(|match_| {
                 lsp_client.check_type_annotations(
                     &self.type_annotations,
                     ast_ctx,
                     pat_ctx,
-                    rust_src,
-                    molt_src,
-                    rust_path,
-                    match_re,
+                    &data,
+                    match_,
                 )
             })
             .collect();
@@ -137,12 +142,13 @@ pub fn run(input: &Input, config: crate::Config) -> Result<Vec<Diagnostic>, Erro
                     .root()
                     .unwrap_or_else(|| panic!("Required LSP but no root directory given.")),
             )
-            .map_err(|e| Error::Misc(format!("Failed to create LSP client: {}", e)))?
+            .map_err(|e| Error::Misc(format!("Failed to create LSP client: {e}")))?
         }
     };
 
     for rust_file_id in input.iter_rust_src() {
         let (_, ast_ctx) = RustFile::new(input, rust_file_id)?;
+        let data = match_pattern_data(input, rust_file_id, &config);
         match molt_file.command() {
             Command::Match(MatchCommand {
                 match_: pat_var,
@@ -152,10 +158,7 @@ pub fn run(input: &Input, config: crate::Config) -> Result<Vec<Diagnostic>, Erro
                     &ast_ctx,
                     &pat_ctx,
                     pat_var.unwrap(),
-                    input.name(rust_file_id).unwrap(),
-                    input.source(rust_file_id).unwrap(),
-                    input.source(input.molt_file_id()).unwrap(),
-                    config.clone(),
+                    data,
                     &mut lsp_client,
                 );
                 diagnostics.extend(match_result.make_diagnostics(rust_file_id, print));
@@ -165,10 +168,7 @@ pub fn run(input: &Input, config: crate::Config) -> Result<Vec<Diagnostic>, Erro
                     &ast_ctx,
                     &pat_ctx,
                     match_.unwrap(),
-                    input.name(rust_file_id).unwrap(),
-                    input.source(rust_file_id).unwrap(),
-                    input.source(input.molt_file_id()).unwrap(),
-                    config.clone(),
+                    data,
                     &mut lsp_client,
                 );
                 transform::transform(input, rust_file_id, match_result, transforms)?;
@@ -182,13 +182,12 @@ pub fn run(input: &Input, config: crate::Config) -> Result<Vec<Diagnostic>, Erro
 mod tests {
     use std::path::Path;
 
-    use codespan_reporting::files::Files;
     use molt_lib::Config;
 
     use crate::error::{emit_diagnostic_str, make_error_diagnostic};
     use crate::input::{Contents, Input, MoltSource};
     use crate::lsp::LspClient;
-    use crate::{Command, Error, MoltFile, RustFile};
+    use crate::{Command, Error, MoltFile, RustFile, match_pattern_data};
 
     fn parse_rust(path: &str) {
         let root = Path::new("test_data").join(path);
@@ -210,7 +209,7 @@ mod tests {
     fn make_input(path: &str, fname: &str) -> Input {
         let root = Path::new("test_data").join(path);
         let rust_path = root.join("main.rs");
-        let molt_path = root.join(format!("{}.molt", fname));
+        let molt_path = root.join(format!("{fname}.molt"));
 
         Input::new(MoltSource::file(molt_path).unwrap())
             .with_root(root)
@@ -243,14 +242,13 @@ mod tests {
 
         let mut lsp_client = LspClient::uninitialized();
 
+        let data = match_pattern_data(&input, rust_file_id, &config);
+
         let match_result = molt_file.match_pattern(
             &ast_ctx,
             &pat_ctx,
             tr.match_.unwrap(),
-            input.name(rust_file_id).unwrap(),
-            input.source(rust_file_id).unwrap(),
-            input.source(input.molt_file_id()).unwrap(),
-            config.clone(),
+            data,
             &mut lsp_client,
         );
         crate::transform::get_transformed_contents(

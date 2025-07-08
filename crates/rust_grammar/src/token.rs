@@ -104,7 +104,6 @@ use crate::span::IntoSpans;
 /// Marker trait for types that represent single tokens.
 ///
 /// This trait is sealed and cannot be implemented for types outside of Syn.
-
 pub trait Token: private::Sealed {
     // Not public API.
     #[doc(hidden)]
@@ -133,7 +132,6 @@ pub(crate) mod private {
 
     // Not public API.
     #[doc(hidden)]
-
     pub trait CustomToken {
         fn peek(cursor: Cursor) -> bool;
         fn display() -> &'static str;
@@ -754,7 +752,7 @@ pub(crate) fn keyword(input: ParseStream, token: &str) -> Result<Span> {
                 return Ok((ident.span(), rest));
             }
         }
-        Err(cursor.error(format!("expected `{}`", token)))
+        Err(cursor.error(format!("expected `{token}`")))
     })
 }
 
@@ -795,7 +793,7 @@ fn punct_helper(input: ParseStream, token: &str, spans: &mut [Span]) -> Result<(
             }
         }
 
-        Err(Error::new(spans[0], format!("expected `{}`", token)))
+        Err(Error::new(spans[0], format!("expected `{token}`")))
     })
 }
 

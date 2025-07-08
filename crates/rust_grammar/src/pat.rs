@@ -338,11 +338,11 @@ impl ParsePat for PatSingle {
     }
 }
 
-fn parse_pat_multi<T: ParseListOrItem<Target = Pat>>(
+fn parse_pat_multi<T: ParseListOrItem<Target = Pat, Punct = token::Or>>(
     input: ParseStream,
 ) -> Result<molt_lib::SpannedPat<Pat>> {
     let marker = input.marker();
-    let pat = input.parse_list_or_item::<PatMultiLeadingVert>()?;
+    let pat = input.parse_list_or_item::<T>()?;
     Ok(match pat {
         ListOrItem::Item(item) => item,
         ListOrItem::List(cases) => Pat::Or(PatOr {

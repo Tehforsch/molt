@@ -34,7 +34,7 @@ impl Error {
 }
 
 pub(crate) fn make_error_diagnostic(err: &Error) -> Diagnostic<FileId> {
-    let message = format!("{}", err);
+    let message = format!("{err}");
     let mut diagnostic = Diagnostic::error().with_message(&message);
     if let Some((span, file)) = err.span_and_file_id() {
         diagnostic = diagnostic.with_labels(vec![
@@ -88,11 +88,11 @@ impl Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::Parse(error, _) => write!(f, "{}", error),
-            Error::Resolve(error, _) => write!(f, "{}", error),
-            Error::Misc(s) => write!(f, "{}", s),
-            Error::Transform(s) => write!(f, "{}", s),
-            Error::Io(s) => write!(f, "{}", s),
+            Error::Parse(error, _) => write!(f, "{error}"),
+            Error::Resolve(error, _) => write!(f, "{error}"),
+            Error::Misc(s) => write!(f, "{s}"),
+            Error::Transform(s) => write!(f, "{s}"),
+            Error::Io(s) => write!(f, "{s}"),
         }
     }
 }

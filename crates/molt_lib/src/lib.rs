@@ -11,7 +11,7 @@ pub use config::Config;
 pub use ctx::{
     Ctx, GetKind, Id, NodeId, Pattern, Span, Spanned, SpannedPat, ToNode, Var, VarDecl, WithSpan,
 };
-pub use match_ctx::MatchCtx;
+pub use match_ctx::{MatchCtx, MatchPatternData};
 pub use match_pattern::{Binding, Match, Matcher, PatType, match_pattern};
 pub use node_list::{
     List, ListMatchingMode, NoPunct, NodeList, PatNodeList, RealNodeList, Set, SetMatchingMode,
