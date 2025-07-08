@@ -10,4 +10,6 @@ pub struct CliArgs {
     pub transform_file: PathBuf,
     #[clap(short, long)]
     pub debug_print: bool,
+    #[clap(short, long)]
+    pub cargo_fmt: bool,
 }

@@ -6,6 +6,8 @@ mod resolve;
 mod transform;
 mod type_check;
 
+use std::path::{Path, PathBuf};
+
 use codespan_reporting::diagnostic::Label;
 use codespan_reporting::files::Files;
 pub use error::{Error, emit_error};
@@ -129,7 +131,11 @@ impl<'a> MatchResult<'a> {
     }
 }
 
-pub fn run(input: &Input, config: crate::Config) -> Result<Vec<Diagnostic>, Error> {
+pub fn run(
+    input: &Input,
+    config: crate::Config,
+    cargo_root: Option<&PathBuf>,
+) -> Result<Vec<Diagnostic>, Error> {
     let mut diagnostics = vec![];
     let (mut molt_file, pat_ctx) = MoltFile::new(input)?;
 
@@ -172,10 +178,31 @@ pub fn run(input: &Input, config: crate::Config) -> Result<Vec<Diagnostic>, Erro
                     &mut lsp_client,
                 );
                 transform::transform(input, rust_file_id, match_result, transforms)?;
+                if let Some(cargo_root) = cargo_root
+                    && config.cargo_fmt
+                {
+                    run_cargo_fmt(cargo_root)?;
+                }
             }
         };
     }
     Ok(diagnostics)
+}
+
+fn run_cargo_fmt(cargo_root: &Path) -> Result<(), Error> {
+    let status = std::process::Command::new("cargo")
+        .arg("fmt")
+        .current_dir(cargo_root)
+        .status()?;
+
+    if !status.success() {
+        return Err(Error::Misc(format!(
+            "cargo fmt failed with exit code: {}",
+            status
+        )));
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -220,7 +247,7 @@ mod tests {
 
     fn match_pattern(path: &str, fname: &str) -> String {
         let input = make_input(path, fname);
-        let diagnostics = super::run(&input, Config::test());
+        let diagnostics = super::run(&input, Config::test(), None);
         match diagnostics {
             Ok(diagnostics) => diagnostics
                 .into_iter()
