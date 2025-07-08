@@ -81,10 +81,7 @@ impl Parse for UnresolvedVarDecls {
 
 impl Parse for TokenVar {
     fn parse(input: ParseStream) -> Result<Self> {
-        let (span, name) = input
-            .call_spanned(Ident::parse_any)?
-            .unwrap_real()
-            .decompose();
+        let (span, name) = input.call_spanned(Ident::parse_any)?.decompose();
         Ok(TokenVar {
             span,
             name: name.to_string(),

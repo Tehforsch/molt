@@ -1,4 +1,4 @@
-use molt_lib::{Pattern, Spanned, SpannedPat};
+use molt_lib::Spanned;
 pub use proc_macro2::Ident;
 
 use crate::buffer::Cursor;
@@ -93,7 +93,7 @@ impl Parse for Ident {
 impl ParseNode for Ident {
     type Target = Ident;
 
-    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Ident>> {
+    fn parse_spanned(input: ParseStream) -> Result<Spanned<Ident>> {
         input.call_spanned(parse_ident)
     }
 }
@@ -113,7 +113,7 @@ impl PeekPat for Ident {
 impl ParseNode for AnyIdent {
     type Target = Ident;
 
-    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Ident>> {
+    fn parse_spanned(input: ParseStream) -> Result<Spanned<Ident>> {
         input.call_spanned(Ident::parse_any)
     }
 }
@@ -132,12 +132,12 @@ where
 {
     type Target = Ident;
 
-    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Ident>> {
+    fn parse_spanned(input: ParseStream) -> Result<Spanned<Ident>> {
         // We only enter this function if we already
         // peeked at this token, so there is no need to
         // check for variables.
         let token: Spanned<T> = input.parse_spanned()?;
-        Ok(token.map(|token| Pattern::Real(Ident::from(token))))
+        Ok(token.map(|token| Ident::from(token)))
     }
 }
 

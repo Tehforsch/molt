@@ -1,5 +1,5 @@
 use derive_macro::CmpSyn;
-use molt_lib::{NodeId, NodeList, Pattern, WithSpan};
+use molt_lib::{NodeId, NodeList, Spanned, SpannedPat, WithSpan};
 use proc_macro2::TokenStream;
 
 use crate::attr::Attribute;
@@ -268,7 +268,7 @@ pub struct FieldPat {
 impl ParseNode for PatSingle {
     type Target = Pat;
 
-    fn parse_spanned(input: ParseStream) -> Result<molt_lib::SpannedPat<Self::Target>> {
+    fn parse_spanned(input: ParseStream) -> Result<Spanned<Self::Target>> {
         let marker = input.marker();
         let begin = input.fork();
         let lookahead = input.lookahead1();
@@ -311,13 +311,13 @@ impl ParseNode for PatSingle {
         } else {
             Err(lookahead.error())
         };
-        Ok(pat?.pattern_with_span(input.span_from_marker(marker)))
+        Ok(pat?.with_span(input.span_from_marker(marker)))
     }
 }
 
 fn parse_pat_multi<T: ParseListOrItem<Target = Pat, Punct = token::Or>>(
     input: ParseStream,
-) -> Result<molt_lib::SpannedPat<Pat>> {
+) -> Result<SpannedPat<Pat>> {
     let marker = input.marker();
     let pat = input.parse_list_or_item::<T>()?;
     Ok(match pat {
@@ -333,8 +333,11 @@ fn parse_pat_multi<T: ParseListOrItem<Target = Pat, Punct = token::Or>>(
 
 impl ParseNode for PatMulti {
     type Target = Pat;
+    fn parse_spanned(_: ParseStream) -> Result<Spanned<Self::Target>> {
+        unreachable!()
+    }
 
-    fn parse_spanned(input: ParseStream) -> Result<molt_lib::SpannedPat<Self::Target>> {
+    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
         parse_pat_multi::<Self>(input)
     }
 }
@@ -342,7 +345,11 @@ impl ParseNode for PatMulti {
 impl ParseNode for PatMultiLeadingVert {
     type Target = Pat;
 
-    fn parse_spanned(input: ParseStream) -> Result<molt_lib::SpannedPat<Self::Target>> {
+    fn parse_spanned(_: ParseStream) -> Result<Spanned<Self::Target>> {
+        unreachable!()
+    }
+
+    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
         parse_pat_multi::<Self>(input)
     }
 }
@@ -607,12 +614,10 @@ fn pat_range(
     let start_span = input.span_from_marker(marker);
     let limits = RangeLimits::parse_obsolete(input)?;
     let end = input.call_spanned(pat_range_bound)?;
-    if let (RangeLimits::Closed(_), Pattern::Real(None)) = (&limits, &*end) {
+    if let (RangeLimits::Closed(_), None) = (&limits, &*end) {
         return Err(input.error("expected range upper bound"));
     }
-    let end = end
-        .map_real(|end| end.map(PatRangeBound::into_expr))
-        .transpose();
+    let end = end.map(|end| end.map(PatRangeBound::into_expr));
     Ok(Pat::Range(ExprRange {
         attrs: Vec::new(),
         start: Some(
@@ -626,7 +631,7 @@ fn pat_range(
             ),
         ),
         limits,
-        end: end.map(|end| input.add_pat(end)),
+        end: end.transpose().map(|end| input.add(end)),
     }))
 }
 
@@ -638,7 +643,7 @@ fn pat_range_half_open(input: ParseStream) -> Result<Pat> {
             attrs: Vec::new(),
             start: None,
             limits,
-            end: end.map(|end| input.add_pat(end.map_real(PatRangeBound::into_expr))),
+            end: end.map(|end| input.add(end.map(PatRangeBound::into_expr))),
         }))
     } else {
         match limits {
@@ -701,12 +706,12 @@ fn pat_lit_or_range(input: ParseStream) -> Result<Pat> {
         }
         Ok(Pat::Range(ExprRange {
             attrs: Vec::new(),
-            start: Some(input.add_pat(start.map_real(|start| start.into_expr()))),
+            start: Some(input.add(start.map(|start| start.into_expr()))),
             limits,
-            end: end.map(|end| input.add_pat(end.map_real(|end| end.into_expr()))),
+            end: end.map(|end| input.add(end.map(|end| end.into_expr()))),
         }))
     } else {
-        Ok(start.take().unwrap_real().into_pat())
+        Ok(start.take().into_pat())
     }
 }
 

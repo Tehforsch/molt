@@ -1,5 +1,5 @@
 use derive_macro::CmpSyn;
-use molt_lib::{NodeId, NodeList, Pattern, Spanned, SpannedPat, WithSpan};
+use molt_lib::{NodeId, NodeList, Pattern, Spanned, WithSpan};
 use proc_macro2::TokenStream;
 
 use crate::attr::Attribute;
@@ -139,7 +139,7 @@ impl Parse for Block {
 impl ParseNode for Stmt {
     type Target = Stmt;
 
-    fn parse_spanned(input: ParseStream) -> Result<molt_lib::SpannedPat<Self::Target>> {
+    fn parse_spanned(input: ParseStream) -> Result<molt_lib::Spanned<Self::Target>> {
         parse_stmt(input, AllowNoSemi(false))
     }
 }
@@ -147,12 +147,12 @@ impl ParseNode for Stmt {
 impl ParseNode for StmtAllowNoSemi {
     type Target = Stmt;
 
-    fn parse_spanned(input: ParseStream) -> Result<molt_lib::SpannedPat<Self::Target>> {
+    fn parse_spanned(input: ParseStream) -> Result<molt_lib::Spanned<Self::Target>> {
         parse_stmt(input, AllowNoSemi(true))
     }
 }
 
-fn parse_stmt(input: ParseStream, allow_nosemi: AllowNoSemi) -> Result<SpannedPat<Stmt>> {
+fn parse_stmt(input: ParseStream, allow_nosemi: AllowNoSemi) -> Result<Spanned<Stmt>> {
     let marker = input.marker();
     let begin = input.fork();
     let attrs = input.call(Attribute::parse_outer)?;
@@ -213,13 +213,13 @@ fn parse_stmt(input: ParseStream, allow_nosemi: AllowNoSemi) -> Result<SpannedPa
         || is_item_macro
     {
         let item = item::parse_rest_of_item(begin, attrs, input)?;
-        Ok(Stmt::Item(item).pattern_with_span(input.span_from_marker(marker)))
+        Ok(Stmt::Item(item).with_span(input.span_from_marker(marker)))
     } else {
         stmt_expr(input, allow_nosemi, attrs)
     }
 }
 
-fn stmt_mac(input: ParseStream, attrs: Vec<Attribute>, path: Path) -> Result<SpannedPat<Stmt>> {
+fn stmt_mac(input: ParseStream, attrs: Vec<Attribute>, path: Path) -> Result<Spanned<Stmt>> {
     let marker = input.marker();
     let bang_token: Token![!] = input.parse()?;
     let (delimiter, tokens) = mac::parse_delimiter(input)?;
@@ -235,10 +235,10 @@ fn stmt_mac(input: ParseStream, attrs: Vec<Attribute>, path: Path) -> Result<Spa
         },
         semi_token,
     })
-    .pattern_with_span(input.span_from_marker(marker)))
+    .with_span(input.span_from_marker(marker)))
 }
 
-fn stmt_local(input: ParseStream, attrs: Vec<Attribute>) -> Result<SpannedPat<Stmt>> {
+fn stmt_local(input: ParseStream, attrs: Vec<Attribute>) -> Result<Spanned<Stmt>> {
     let marker = input.marker();
     let let_token: Token![let] = input.parse()?;
 
@@ -296,14 +296,14 @@ fn stmt_local(input: ParseStream, attrs: Vec<Attribute>) -> Result<SpannedPat<St
         init,
         semi_token,
     })
-    .pattern_with_span(input.span_from_marker(marker)))
+    .with_span(input.span_from_marker(marker)))
 }
 
 fn stmt_expr(
     input: ParseStream,
     allow_nosemi: AllowNoSemi,
     mut attrs: Vec<Attribute>,
-) -> Result<SpannedPat<Stmt>> {
+) -> Result<Spanned<Stmt>> {
     let marker = input.marker();
     let e = input.parse_pat::<ExprEarlierBoundaryRule>()?;
 
@@ -393,14 +393,14 @@ fn stmt_expr(
                 mac,
                 semi_token,
             })
-            .pattern_with_span(stmt_span))
+            .with_span(stmt_span))
         }
         _ => {
             let e = input.add_pat(e.with_span(expr_span));
             if semi_token.is_some() {
-                Ok(Stmt::Expr(e, semi_token).pattern_with_span(stmt_span))
+                Ok(Stmt::Expr(e, semi_token).with_span(stmt_span))
             } else if allow_nosemi.0 || !classify::requires_semi_to_be_stmt(input, e) {
-                Ok(Stmt::Expr(e, None).pattern_with_span(stmt_span))
+                Ok(Stmt::Expr(e, None).with_span(stmt_span))
             } else {
                 Err(input.error("expected semicolon"))
             }

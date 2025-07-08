@@ -1,5 +1,5 @@
 use derive_macro::CmpSyn;
-use molt_lib::{NodeId, NodeList, SpannedPat, WithSpan};
+use molt_lib::{NodeId, NodeList, Spanned, WithSpan};
 
 use crate::attr::Attribute;
 use crate::error::Result;
@@ -182,7 +182,7 @@ impl ParseList for FieldUnnamed {
 impl ParseNode for FieldNamed {
     type Target = Field;
 
-    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Field>> {
+    fn parse_spanned(input: ParseStream) -> Result<Spanned<Field>> {
         input.call_spanned(|input| {
             let attrs = input.call(Attribute::parse_outer)?;
             let vis: Visibility = input.parse()?;
@@ -227,7 +227,7 @@ impl ParseNode for FieldUnnamed {
     type Target = Field;
 
     /// Parses an unnamed (tuple struct) field.
-    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Field>> {
+    fn parse_spanned(input: ParseStream) -> Result<Spanned<Field>> {
         input.call_spanned(|input| {
             Ok(Field {
                 attrs: input.call(Attribute::parse_outer)?,

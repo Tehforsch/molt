@@ -146,12 +146,12 @@ impl<T> SpannedPat<T> {
     }
 }
 
-impl<T> SpannedPat<Option<T>> {
-    pub fn transpose(self) -> Option<SpannedPat<T>> {
-        match self.item.transpose() {
-            Some(pat) => Some(Spanned {
+impl<T> Spanned<Option<T>> {
+    pub fn transpose(self) -> Option<Spanned<T>> {
+        match self.item {
+            Some(item) => Some(Spanned {
                 span: self.span,
-                item: pat,
+                item,
             }),
             None => None,
         }

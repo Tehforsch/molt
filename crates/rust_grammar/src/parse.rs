@@ -43,16 +43,13 @@ pub trait ParseNode {
     type Target: ToNode<Node>;
 
     /// Parse a Self::Target given the input. TODO: Fill this
-    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Self::Target>>;
+    fn parse_spanned(input: ParseStream) -> Result<Spanned<Self::Target>>;
 
-    /// By default, the `parse_pat` function on `ParseStream` will
-    /// automatically check if the input contains a variable and parse
-    /// it appropriately. However, for some types (for example
-    /// expressions), this is not the right behavior.  This method
-    /// exists so we can control this behavior without getting rid of
-    /// the useful default behavior or requiring a different trait.
-    fn check_var_top_level() -> bool {
-        true
+    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
+        if let Some(var) = input.parse_var() {
+            return var;
+        }
+        Ok(Self::parse_spanned(input)?.map(|item| Pattern::Real(item)))
     }
 }
 
@@ -564,12 +561,7 @@ impl<'a> ParseBuffer<'a> {
     }
 
     pub fn parse_pat<T: ParseNode + ?Sized>(&self) -> Result<SpannedPat<T::Target>> {
-        if T::check_var_top_level() {
-            if let Some(var) = self.parse_var() {
-                return var;
-            }
-        }
-        T::parse_spanned(self)
+        T::parse_pat(self)
     }
 
     pub fn parse_id<T: ParseNode>(&self) -> Result<NodeId<T::Target>> {
@@ -584,6 +576,10 @@ impl<'a> ParseBuffer<'a> {
         Ok(item.with_span(span))
     }
 
+    pub fn parse_spanned_pat<T: Parse>(&self) -> Result<SpannedPat<T>> {
+        Ok(self.parse_spanned::<T>()?.as_pattern())
+    }
+
     pub fn parse_span_with<T: Parse, S: ToNode<Node>>(
         &self,
         f: impl Fn(T) -> S,
@@ -595,19 +591,17 @@ impl<'a> ParseBuffer<'a> {
     pub fn call_spanned<T>(
         &self,
         f: impl for<'b> Fn(&'b ParseBuffer<'b>) -> Result<T>,
-    ) -> Result<Spanned<Pattern<T, Id>>> {
+    ) -> Result<Spanned<T>> {
         let marker = self.marker();
         let t = f(self)?;
-        Ok(t.pattern_with_span(self.span_from_marker(marker)))
+        Ok(t.with_span(self.span_from_marker(marker)))
     }
 
-    pub fn call_add<T: ToNode<Node>>(
+    pub fn call_spanned_pat<T>(
         &self,
         f: impl for<'b> Fn(&'b ParseBuffer<'b>) -> Result<T>,
-    ) -> Result<NodeId<T>> {
-        let marker = self.marker();
-        let t = f(self)?;
-        Ok(self.add_pat(t.pattern_with_span(self.span_from_marker(marker))))
+    ) -> Result<SpannedPat<T>> {
+        Ok(self.call_spanned::<T>(f)?.as_pattern())
     }
 
     pub fn add_var<T: ToNode<Node>>(&self, var: Var<Node>) -> NodeId<T> {

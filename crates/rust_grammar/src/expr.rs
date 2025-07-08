@@ -944,19 +944,50 @@ pub enum PointerMutability {
 // https://github.com/rust-lang/rfcs/pull/92
 pub(super) struct AllowStruct(pub bool);
 
+// By default, the `parse_pat` function on `ParseStream` will
+// automatically check if the input contains a variable and parse
+// it appropriately. However, for expressions, this is not the
+// right behavior.  This is because, While parsing an expression
+// like `$e + 5`, we cannot eagerly consume the variable, but
+// need to go down to the lowest level first. We only check for
+// variables at the level of atomic expressions (see
+// `atom_expr`).
+// This is why the following trait impls do not impl parse_spanned but
+// overwrites parse_pat instead.
+
 impl ParseNode for Expr {
     type Target = Expr;
 
-    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
-        ambiguous_expr(input, AllowStruct(true))
+    fn parse_spanned(_: ParseStream) -> Result<Spanned<Self::Target>> {
+        unreachable!()
     }
 
-    fn check_var_top_level() -> bool {
-        // While parsing an expression like `$e + 5`, we cannot eagerly
-        // consume the variable, but need to go down to the lowest level
-        // first. We only check for variables at the level of atomic
-        // expressions (see `atom_expr`).
-        false
+    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
+        ambiguous_expr(input, AllowStruct(true))
+    }
+}
+
+impl ParseNode for ExprNoEagerBrace {
+    type Target = Expr;
+
+    fn parse_spanned(_: ParseStream) -> Result<Spanned<Self::Target>> {
+        unreachable!()
+    }
+
+    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
+        ambiguous_expr(input, AllowStruct(false))
+    }
+}
+
+impl ParseNode for ExprEarlierBoundaryRule {
+    type Target = Expr;
+
+    fn parse_spanned(_: ParseStream) -> Result<Spanned<Self::Target>> {
+        unreachable!()
+    }
+
+    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
+        parse_with_earlier_boundary_rule(input)
     }
 }
 
@@ -969,43 +1000,11 @@ impl ParseList for Expr {
     }
 }
 
-impl ParseNode for ExprNoEagerBrace {
-    type Target = Expr;
-
-    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
-        ambiguous_expr(input, AllowStruct(false))
-    }
-
-    fn check_var_top_level() -> bool {
-        // While parsing an expression like `$e + 5`, we cannot eagerly
-        // consume the variable, but need to go down to the lowest level
-        // first. We only check for variables at the level of atomic
-        // expressions (see `atom_expr`).
-        false
-    }
-}
-
-impl ParseNode for ExprEarlierBoundaryRule {
-    type Target = Expr;
-
-    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
-        parse_with_earlier_boundary_rule(input)
-    }
-
-    fn check_var_top_level() -> bool {
-        // While parsing an expression like `$e + 5`, we cannot eagerly
-        // consume the variable, but need to go down to the lowest level
-        // first. We only check for variables at the level of atomic
-        // expressions (see `atom_expr`).
-        false
-    }
-}
-
 pub(super) fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<SpannedPat<Expr>> {
     let mut attrs = input.call(expr_attrs)?;
     let mut expr: SpannedPat<Expr> = if input.peek(token::Group) {
         let allow_struct = AllowStruct(true);
-        let atom = input.call_spanned(|input| expr_group(input, allow_struct))?;
+        let atom = input.call_spanned_pat(|input| expr_group(input, allow_struct))?;
         if continue_parsing_early(input, &atom) {
             trailer_helper(input, atom)?
         } else {
@@ -1032,7 +1031,7 @@ pub(super) fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<Spa
     } else if input.peek(token::Brace) {
         input.parse_span_with(Expr::Block)?
     } else if input.peek(Lifetime) {
-        input.call_spanned(atom_labeled)?
+        input.call_spanned_pat(atom_labeled)?
     } else {
         let allow_struct = AllowStruct(true);
         unary_expr(input, allow_struct)?
@@ -1415,7 +1414,7 @@ fn atom_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedPat
     }
 
     let real: SpannedPat<Expr> = if input.peek(token::Group) {
-        input.call_spanned(|input| expr_group(input, allow_struct))?
+        input.call_spanned_pat(|input| expr_group(input, allow_struct))?
     } else if input.peek(Lit) {
         input.parse_span_with(Expr::Lit)?
     } else if input.peek(Token![async])
@@ -1433,7 +1432,7 @@ fn atom_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedPat
         || input.peek(Token![static])
         || input.peek(Token![async]) && (input.peek2(Token![|]) || input.peek2(Token![move]))
     {
-        input.call_spanned(|input| expr_closure(input, allow_struct).map(Expr::Closure))?
+        input.call_spanned_pat(|input| expr_closure(input, allow_struct).map(Expr::Closure))?
     } else if token::peek_keyword(input.cursor(), "builtin") && input.peek2(Token![#]) {
         unimplemented!()
     } else if input.peek_pat::<Ident>()
@@ -1445,21 +1444,21 @@ fn atom_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedPat
         || input.peek(Token![crate])
         || input.peek(Token![try]) && (input.peek2(Token![!]) || input.peek2(Token![::]))
     {
-        input.call_spanned(|input| path_or_macro_or_struct(input, allow_struct))?
+        input.call_spanned_pat(|input| path_or_macro_or_struct(input, allow_struct))?
     } else if input.peek(token::Paren) {
-        input.call_spanned(paren_or_tuple)?
+        input.call_spanned_pat(paren_or_tuple)?
     } else if input.peek(Token![break]) {
-        input.call_spanned(|input| expr_break(input, allow_struct).map(Expr::Break))?
+        input.call_spanned_pat(|input| expr_break(input, allow_struct).map(Expr::Break))?
     } else if input.peek(Token![continue]) {
         input.parse_span_with(Expr::Continue)?
     } else if input.peek(Token![return]) {
         input.parse_span_with(Expr::Return)?
     } else if input.peek(Token![become]) {
-        input.call_spanned(expr_become)?
+        input.call_spanned_pat(expr_become)?
     } else if input.peek(token::Bracket) {
-        input.call_spanned(array_or_repeat)?
+        input.call_spanned_pat(array_or_repeat)?
     } else if input.peek(Token![let]) {
-        input.call_spanned(|input| expr_let(input, allow_struct).map(Expr::Let))?
+        input.call_spanned_pat(|input| expr_let(input, allow_struct).map(Expr::Let))?
     } else if input.peek(Token![if]) {
         input.parse_span_with(Expr::If)?
     } else if input.peek(Token![while]) {
@@ -1479,11 +1478,11 @@ fn atom_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedPat
     } else if input.peek(token::Brace) {
         input.parse_span_with(Expr::Block)?
     } else if input.peek(Token![..]) {
-        input.call_spanned(|input| expr_range(input, allow_struct).map(Expr::Range))?
+        input.call_spanned_pat(|input| expr_range(input, allow_struct).map(Expr::Range))?
     } else if input.peek(Token![_]) {
         input.parse_span_with(Expr::Infer)?
     } else if input.peek(Lifetime) {
-        input.call_spanned(atom_labeled)?
+        input.call_spanned_pat(atom_labeled)?
     } else {
         Err(input.error("expected an expression"))?
     };
@@ -2018,7 +2017,12 @@ struct ClosureInput;
 impl ParseNode for ClosureInput {
     type Target = Pat;
 
-    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
+    // TODO: check this logic
+    fn parse_spanned(_: ParseStream) -> Result<Spanned<Self::Target>> {
+        unreachable!()
+    }
+
+    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
         use crate::pat::PatSingle;
 
         let marker = input.marker();
@@ -2479,7 +2483,7 @@ impl ParseList for Arm {
 impl ParseNode for Arm {
     type Target = Arm;
 
-    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Arm>> {
+    fn parse_spanned(input: ParseStream) -> Result<Spanned<Arm>> {
         input.call_spanned(|input| {
             let requires_comma;
             Ok(Arm {

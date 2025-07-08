@@ -5,7 +5,7 @@ use std::rc::Rc;
 use std::str::{self, FromStr};
 
 use derive_macro::CmpSyn;
-use molt_lib::{CmpSyn, ParsingMode, SpannedPat};
+use molt_lib::{CmpSyn, ParsingMode, Spanned};
 use proc_macro2::{Literal, Punct, Span};
 
 use crate::buffer::Cursor;
@@ -554,7 +554,7 @@ impl Parse for Lit {
 impl ParseNode for Lit {
     type Target = Lit;
 
-    fn parse_spanned(input: ParseStream) -> Result<SpannedPat<Lit>> {
+    fn parse_spanned(input: ParseStream) -> Result<Spanned<Lit>> {
         input.call_spanned(Lit::parse)
     }
 }
