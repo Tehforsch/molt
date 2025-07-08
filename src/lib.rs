@@ -418,7 +418,6 @@ mod tests {
             reference_mut,
             or,
             paren,
-            type_,
             subpattern,
             nested,
         )

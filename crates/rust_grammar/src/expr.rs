@@ -2018,7 +2018,6 @@ struct ClosureInput;
 impl ParseNode for ClosureInput {
     type Target = Pat;
 
-    // TODO: check this logic
     fn parse_spanned(_: ParseStream) -> Result<Spanned<Self::Target>> {
         unreachable!()
     }

@@ -212,7 +212,6 @@ pub struct ItemTrait {
     pub vis: Visibility,
     pub unsafety: Option<Token![unsafe]>,
     pub auto_token: Option<Token![auto]>,
-    pub restriction: Option<ImplRestriction>,
     pub trait_token: Token![trait],
     pub ident: NodeId<Ident>,
     pub generics: Generics,
@@ -622,19 +621,6 @@ pub enum StaticMutability {
     Mut(Token![mut]),
     None,
 }
-
-#[derive(Debug, CmpSyn)]
-/// Unused, but reserved for RFC 3323 restrictions.
-pub enum ImplRestriction {}
-
-// TODO: https://rust-lang.github.io/rfcs/3323-restrictions.html
-//
-// pub struct ImplRestriction {
-//     pub impl_token: Token![impl],
-//     pub paren_token: token::Paren,
-//     pub in_token: Option<Token![in]>,
-//     pub path: Box<Path>,
-// }
 
 impl Parse for Item {
     fn parse(input: ParseStream) -> Result<Self> {
@@ -1903,7 +1889,6 @@ fn parse_rest_of_trait(
         vis,
         unsafety,
         auto_token,
-        restriction: None,
         trait_token,
         ident,
         generics,
