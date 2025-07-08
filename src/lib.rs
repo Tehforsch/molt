@@ -428,6 +428,10 @@ mod tests {
     test_match_pattern!(transform2, (example10)); // TODO: Make this a transform test once the functionality exists.
 
     test_match_pattern!(array_elements, (elements));
+    test_match_pattern!(function_args, (fn_));
+    test_match_pattern!(tuple_elements, (elements));
+    test_match_pattern!(tuple_types, (elements));
+    test_match_pattern!(struct_fields, (named, unnamed));
 
     molt_grammar_test_err!(
         molt_grammar,

@@ -1,0 +1,8 @@
+let field: Field;
+let x: Item = {
+    struct Point {
+        $(
+            $field
+        )*
+    }
+};

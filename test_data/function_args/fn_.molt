@@ -1,0 +1,6 @@
+let expr: Expr;
+let x: Expr = {
+    func($(
+        $expr
+    )*)
+};

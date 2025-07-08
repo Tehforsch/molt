@@ -1,0 +1,6 @@
+let field: Field;
+let x: Item = {
+    struct Multi($(
+        $field
+    )*);
+};

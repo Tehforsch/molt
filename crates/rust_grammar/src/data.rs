@@ -153,6 +153,7 @@ impl Parse for FieldsNamed {
 
 impl Parse for FieldsUnnamed {
     fn parse(input: ParseStream) -> Result<Self> {
+        dbg!(&input.cursor().token_stream().to_string());
         let content;
         Ok(FieldsUnnamed {
             paren_token: parenthesized!(content in input),

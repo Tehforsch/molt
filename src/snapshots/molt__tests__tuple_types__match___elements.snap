@@ -1,0 +1,54 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(& name, stringify! (elements))"
+---
+note: Match
+  ┌─ "test_data/tuple_types/main.rs":1:13
+  │
+1 │ fn foo() -> (i32, String) {
+  │             ^^^^^^^^^^^^^ $x
+  │
+  = $ty = i32
+  = $ty = String
+
+note: Match
+  ┌─ "test_data/tuple_types/main.rs":5:13
+  │
+5 │ fn bar() -> (i32, String, bool) {
+  │             ^^^^^^^^^^^^^^^^^^^ $x
+  │
+  = $ty = i32
+  = $ty = String
+  = $ty = bool
+
+note: Match
+  ┌─ "test_data/tuple_types/main.rs":9:13
+  │
+9 │ fn baz() -> (A, B, C, D) {
+  │             ^^^^^^^^^^^^ $x
+  │
+  = $ty = A
+  = $ty = B
+  = $ty = C
+  = $ty = D
+
+note: Match
+   ┌─ "test_data/tuple_types/main.rs":15:15
+   │
+15 │ type Coords = (f64, f64, f64);
+   │               ^^^^^^^^^^^^^^^ $x
+   │
+   = $ty = f64
+   = $ty = f64
+   = $ty = f64
+
+note: Match
+   ┌─ "test_data/tuple_types/main.rs":16:14
+   │
+16 │ type Mixed = (i32, &str, bool, Vec<i32>);
+   │              ^^^^^^^^^^^^^^^^^^^^^^^^^^^ $x
+   │
+   = $ty = i32
+   = $ty = &str
+   = $ty = bool
+   = $ty = Vec<i32>

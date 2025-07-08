@@ -1,0 +1,15 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(& name, stringify! (named))"
+---
+note: Match
+  ┌─ "test_data/struct_fields/main.rs":1:1
+  │  
+1 │ ╭ struct Point {
+2 │ │     x: f64,
+3 │ │     y: f64,
+4 │ │ }
+  │ ╰─^ $x
+  │  
+  = $field = x: f64
+  = $field = y: f64

@@ -1,0 +1,30 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(& name, stringify! (fn_))"
+---
+note: Match
+  ┌─ "test_data/function_args/main.rs":3:5
+  │
+3 │     func(a);
+  │     ^^^^^^^ $x
+  │
+  = $expr = a
+
+note: Match
+  ┌─ "test_data/function_args/main.rs":4:5
+  │
+4 │     func(a, b);
+  │     ^^^^^^^^^^ $x
+  │
+  = $expr = a
+  = $expr = b
+
+note: Match
+  ┌─ "test_data/function_args/main.rs":5:5
+  │
+5 │     func(x, y, z);
+  │     ^^^^^^^^^^^^^ $x
+  │
+  = $expr = x
+  = $expr = y
+  = $expr = z

@@ -1,0 +1,14 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(& name, stringify! (unnamed))"
+---
+note: Match
+   ┌─ "test_data/struct_fields/main.rs":24:1
+   │
+24 │ struct Multi(i32, String, bool, Vec<i32>);
+   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $x
+   │
+   = $field = i32
+   = $field = String
+   = $field = bool
+   = $field = Vec<i32>

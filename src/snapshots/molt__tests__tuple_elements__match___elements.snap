@@ -1,0 +1,52 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(& name, stringify! (elements))"
+---
+note: Match
+  ┌─ "test_data/tuple_elements/main.rs":3:18
+  │
+3 │     let single = (x,);
+  │                  ^^^^ $x
+  │
+  = $expr = x
+
+note: Match
+  ┌─ "test_data/tuple_elements/main.rs":4:16
+  │
+4 │     let pair = (a, b);
+  │                ^^^^^^ $x
+  │
+  = $expr = a
+  = $expr = b
+
+note: Match
+  ┌─ "test_data/tuple_elements/main.rs":5:18
+  │
+5 │     let triple = (x, y, z);
+  │                  ^^^^^^^^^ $x
+  │
+  = $expr = x
+  = $expr = y
+  = $expr = z
+
+note: Match
+  ┌─ "test_data/tuple_elements/main.rs":6:16
+  │
+6 │     let quad = (a, b, c, d);
+  │                ^^^^^^^^^^^^ $x
+  │
+  = $expr = a
+  = $expr = b
+  = $expr = c
+  = $expr = d
+
+note: Match
+  ┌─ "test_data/tuple_elements/main.rs":7:17
+  │
+7 │     let mixed = (1, "hello", true, vec![1, 2, 3]);
+  │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $x
+  │
+  = $expr = 1
+  = $expr = "hello"
+  = $expr = true
+  = $expr = vec![1, 2, 3]
