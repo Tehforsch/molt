@@ -1,6 +1,6 @@
 use crate::buffer::Cursor;
 use crate::error::{self, Error};
-use crate::parse::PeekPat;
+use crate::parse::{peek_pat, PeekPat};
 use crate::sealed::lookahead::Sealed;
 use crate::span::IntoSpans;
 use crate::token::{CustomToken, Token};
@@ -110,7 +110,7 @@ impl<'a> Lookahead1<'a> {
     }
 
     pub fn peek_pat<T: PeekPat>(&self) -> bool {
-        T::peek_pat(self.cursor, &self.ctx.borrow())
+        peek_pat::<T>(self.cursor, &self.ctx.borrow())
     }
 
     /// Triggers an error at the current position of the parse stream.

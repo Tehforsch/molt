@@ -56,7 +56,6 @@ mod parsing {
     use crate::ext::IdentExt;
     use crate::parse::{Parse, ParsePat, ParseStream, PeekPat};
     use crate::token::Token;
-    use crate::Kind;
     use molt_lib::{Pattern, Spanned, SpannedPat};
     use proc_macro2::Ident;
 
@@ -112,7 +111,6 @@ mod parsing {
 
     impl PeekPat for Ident {
         type Target = Ident;
-        const KIND: Kind = Kind::Ident;
 
         fn peek(cursor: Cursor) -> bool {
             if let Some((ident, _rest)) = cursor.ident() {
@@ -133,7 +131,6 @@ mod parsing {
 
     impl PeekPat for AnyIdent {
         type Target = Ident;
-        const KIND: Kind = Kind::Ident;
 
         fn peek(cursor: Cursor) -> bool {
             cursor.ident().is_some()

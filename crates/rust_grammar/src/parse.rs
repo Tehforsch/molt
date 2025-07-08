@@ -243,13 +243,12 @@ pub trait ParsePat {
 
 pub trait PeekPat {
     type Target: ToNode<Node>;
-    const KIND: Kind;
 
     fn peek(cursor: Cursor) -> bool;
+}
 
-    fn peek_pat(cursor: Cursor, ctx: &Ctx<Node>) -> bool {
-        Self::peek(cursor) || peek_var(cursor, ctx, <Self as PeekPat>::KIND)
-    }
+pub fn peek_pat<T: PeekPat>(cursor: Cursor, ctx: &Ctx<Node>) -> bool {
+    T::peek(cursor) || peek_var(cursor, ctx, T::Target::kind())
 }
 
 pub trait ParseList {
@@ -813,7 +812,7 @@ impl<'a> ParseBuffer<'a> {
     }
 
     pub fn peek_pat<T: PeekPat>(&self) -> bool {
-        T::peek_pat(self.cursor(), &self.ctx.borrow())
+        peek_pat::<T>(self.cursor(), &self.ctx.borrow())
     }
 
     pub fn parse_var<T: ToNode<Node>>(&self) -> Option<Result<SpannedPat<T>>> {
