@@ -220,18 +220,6 @@ macro_rules! define_keywords {
                 }
             }
 
-            #[cfg(feature = "clone-impls")]
-            #[cfg_attr(docsrs, doc(cfg(feature = "clone-impls")))]
-            impl Copy for $name {}
-
-            #[cfg(feature = "clone-impls")]
-            #[cfg_attr(docsrs, doc(cfg(feature = "clone-impls")))]
-            impl Clone for $name {
-                fn clone(&self) -> Self {
-                    *self
-                }
-            }
-
             #[cfg(feature = "parsing")]
             #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
             impl Parse for $name {
@@ -316,18 +304,6 @@ macro_rules! define_punctuation_structs {
                 }
             }
 
-            #[cfg(feature = "clone-impls")]
-            #[cfg_attr(docsrs, doc(cfg(feature = "clone-impls")))]
-            impl Copy for $name {}
-
-            #[cfg(feature = "clone-impls")]
-            #[cfg_attr(docsrs, doc(cfg(feature = "clone-impls")))]
-            impl Clone for $name {
-                fn clone(&self) -> Self {
-                    *self
-                }
-            }
-
             impl_deref_if_len_is_1!($name/$len);
         )*
     };
@@ -389,18 +365,6 @@ macro_rules! define_delimiters {
             impl std::default::Default for $name {
                 fn default() -> Self {
                     $name(Span::call_site())
-                }
-            }
-
-            #[cfg(feature = "clone-impls")]
-            #[cfg_attr(docsrs, doc(cfg(feature = "clone-impls")))]
-            impl Copy for $name {}
-
-            #[cfg(feature = "clone-impls")]
-            #[cfg_attr(docsrs, doc(cfg(feature = "clone-impls")))]
-            impl Clone for $name {
-                fn clone(&self) -> Self {
-                    *self
                 }
             }
 
@@ -473,18 +437,6 @@ impl std::default::Default for Group {
         Group {
             span: Span::call_site(),
         }
-    }
-}
-
-#[cfg(feature = "clone-impls")]
-#[cfg_attr(docsrs, doc(cfg(feature = "clone-impls")))]
-impl Copy for Group {}
-
-#[cfg(feature = "clone-impls")]
-#[cfg_attr(docsrs, doc(cfg(feature = "clone-impls")))]
-impl Clone for Group {
-    fn clone(&self) -> Self {
-        *self
     }
 }
 

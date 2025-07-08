@@ -505,53 +505,8 @@ impl LitBool {
     }
 }
 
-#[cfg(feature = "clone-impls")]
-#[cfg_attr(docsrs, doc(cfg(feature = "clone-impls")))]
-impl Clone for LitRepr {
-    fn clone(&self) -> Self {
-        LitRepr {
-            token: self.token.clone(),
-            suffix: self.suffix.clone(),
-        }
-    }
-}
-
-#[cfg(feature = "clone-impls")]
-#[cfg_attr(docsrs, doc(cfg(feature = "clone-impls")))]
-impl Clone for LitIntRepr {
-    fn clone(&self) -> Self {
-        LitIntRepr {
-            token: self.token.clone(),
-            digits: self.digits.clone(),
-            suffix: self.suffix.clone(),
-        }
-    }
-}
-
-#[cfg(feature = "clone-impls")]
-#[cfg_attr(docsrs, doc(cfg(feature = "clone-impls")))]
-impl Clone for LitFloatRepr {
-    fn clone(&self) -> Self {
-        LitFloatRepr {
-            token: self.token.clone(),
-            digits: self.digits.clone(),
-            suffix: self.suffix.clone(),
-        }
-    }
-}
-
 macro_rules! lit_extra_traits {
     ($ty:ident) => {
-        #[cfg(feature = "clone-impls")]
-        #[cfg_attr(docsrs, doc(cfg(feature = "clone-impls")))]
-        impl Clone for $ty {
-            fn clone(&self) -> Self {
-                $ty {
-                    repr: self.repr.clone(),
-                }
-            }
-        }
-
         #[allow(non_snake_case)]
         pub fn $ty(marker: lookahead::TokenMarker) -> $ty {
             match marker {}

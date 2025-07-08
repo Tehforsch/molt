@@ -150,31 +150,6 @@ macro_rules! impl_to_tokens_for_custom_punctuation {
 }
 
 // Not public API.
-#[cfg(feature = "clone-impls")]
-#[doc(hidden)]
-#[macro_export]
-macro_rules! impl_clone_for_custom_punctuation {
-    ($ident:ident, $($tt:tt)+) => {
-        impl $crate::__private::Copy for $ident {}
-
-        #[allow(clippy::expl_impl_clone_on_copy)]
-        impl $crate::__private::Clone for $ident {
-            fn clone(&self) -> Self {
-                *self
-            }
-        }
-    };
-}
-
-// Not public API.
-#[cfg(not(feature = "clone-impls"))]
-#[doc(hidden)]
-#[macro_export]
-macro_rules! impl_clone_for_custom_punctuation {
-    ($ident:ident, $($tt:tt)+) => {};
-}
-
-// Not public API.
 #[doc(hidden)]
 #[macro_export]
 macro_rules! custom_punctuation_repr {

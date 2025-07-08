@@ -377,26 +377,6 @@ impl<T, P> Punctuated<T, P> {
     }
 }
 
-#[cfg(feature = "clone-impls")]
-#[cfg_attr(docsrs, doc(cfg(feature = "clone-impls")))]
-impl<T, P> Clone for Punctuated<T, P>
-where
-    T: Clone,
-    P: Clone,
-{
-    fn clone(&self) -> Self {
-        Punctuated {
-            inner: self.inner.clone(),
-            last: self.last.clone(),
-        }
-    }
-
-    fn clone_from(&mut self, other: &Self) {
-        self.inner.clone_from(&other.inner);
-        self.last.clone_from(&other.last);
-    }
-}
-
 impl<T, P> FromIterator<T> for Punctuated<T, P>
 where
     P: Default,
@@ -958,45 +938,6 @@ impl<T, P> Pair<T, P> {
             Pair::End(t) => (t, None),
         }
     }
-}
-
-#[cfg(feature = "clone-impls")]
-#[cfg_attr(docsrs, doc(cfg(feature = "clone-impls")))]
-impl<T, P> Pair<&T, &P> {
-    pub fn cloned(self) -> Pair<T, P>
-    where
-        T: Clone,
-        P: Clone,
-    {
-        match self {
-            Pair::Punctuated(t, p) => Pair::Punctuated(t.clone(), p.clone()),
-            Pair::End(t) => Pair::End(t.clone()),
-        }
-    }
-}
-
-#[cfg(feature = "clone-impls")]
-#[cfg_attr(docsrs, doc(cfg(feature = "clone-impls")))]
-impl<T, P> Clone for Pair<T, P>
-where
-    T: Clone,
-    P: Clone,
-{
-    fn clone(&self) -> Self {
-        match self {
-            Pair::Punctuated(t, p) => Pair::Punctuated(t.clone(), p.clone()),
-            Pair::End(t) => Pair::End(t.clone()),
-        }
-    }
-}
-
-#[cfg(feature = "clone-impls")]
-#[cfg_attr(docsrs, doc(cfg(feature = "clone-impls")))]
-impl<T, P> Copy for Pair<T, P>
-where
-    T: Copy,
-    P: Copy,
-{
 }
 
 impl<T, P> Index<usize> for Punctuated<T, P> {

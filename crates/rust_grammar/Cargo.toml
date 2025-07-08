@@ -7,14 +7,13 @@ license.workspace = true
 edition = "2021"
 
 [features]
-default = ["parsing", "clone-impls", "proc-macro", "full"]
+default = ["parsing", "proc-macro", "full"]
 derive = []
 full = []
 parsing = []
 visit = []
 visit-mut = []
 fold = []
-clone-impls = []
 proc-macro = ["proc-macro2/proc-macro"]
 
 [dependencies]

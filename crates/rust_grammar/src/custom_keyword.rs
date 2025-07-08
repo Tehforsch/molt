@@ -116,7 +116,6 @@ macro_rules! custom_keyword {
 
             $crate::impl_parse_for_custom_keyword!($ident);
             $crate::impl_to_tokens_for_custom_keyword!($ident);
-            $crate::impl_clone_for_custom_keyword!($ident);
         };
     };
 }
@@ -173,30 +172,5 @@ macro_rules! impl_parse_for_custom_keyword {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! impl_to_tokens_for_custom_keyword {
-    ($ident:ident) => {};
-}
-
-// Not public API.
-#[cfg(feature = "clone-impls")]
-#[doc(hidden)]
-#[macro_export]
-macro_rules! impl_clone_for_custom_keyword {
-    ($ident:ident) => {
-        impl $crate::__private::Copy for $ident {}
-
-        #[allow(clippy::expl_impl_clone_on_copy)]
-        impl $crate::__private::Clone for $ident {
-            fn clone(&self) -> Self {
-                *self
-            }
-        }
-    };
-}
-
-// Not public API.
-#[cfg(not(feature = "clone-impls"))]
-#[doc(hidden)]
-#[macro_export]
-macro_rules! impl_clone_for_custom_keyword {
     ($ident:ident) => {};
 }

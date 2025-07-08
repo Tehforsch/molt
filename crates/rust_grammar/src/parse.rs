@@ -1117,15 +1117,3 @@ impl Parse for Nothing {
         Ok(Nothing)
     }
 }
-
-#[cfg(feature = "clone-impls")]
-#[cfg_attr(docsrs, doc(cfg(feature = "clone-impls")))]
-impl Clone for Nothing {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-#[cfg(feature = "clone-impls")]
-#[cfg_attr(docsrs, doc(cfg(feature = "clone-impls")))]
-impl Copy for Nothing {}
