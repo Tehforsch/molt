@@ -181,6 +181,7 @@ pub fn run(input: &Input, config: crate::Config) -> Result<Vec<Diagnostic>, Erro
 #[cfg(test)]
 mod tests {
     use std::path::Path;
+    use std::process::{self, Stdio};
 
     use molt_lib::Config;
 
@@ -230,6 +231,33 @@ mod tests {
         }
     }
 
+    fn format_code(code: String) -> Result<String, Error> {
+        let mut cmd = process::Command::new("rustfmt")
+            .arg("--emit=stdout")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()?;
+
+        if let Some(stdin) = cmd.stdin.take() {
+            use std::io::Write;
+            let mut stdin = stdin;
+            stdin.write_all(code.as_bytes())?;
+        }
+
+        let output = cmd.wait_with_output()?;
+
+        if !output.status.success() {
+            // If rustfmt fails, return the original code
+            eprintln!(
+                "rustfmt failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            return Ok(code);
+        }
+
+        Ok(String::from_utf8(output.stdout).unwrap_or(code))
+    }
+
     fn transform(path: &str, fname: &str) -> String {
         let input = make_input(path, fname);
         let (molt_file, pat_ctx) = MoltFile::new(&input).unwrap();
@@ -251,11 +279,14 @@ mod tests {
             data,
             &mut lsp_client,
         );
-        crate::transform::get_transformed_contents(
-            &input,
-            rust_file_id,
-            match_result,
-            &tr.transforms,
+        format_code(
+            crate::transform::get_transformed_contents(
+                &input,
+                rust_file_id,
+                match_result,
+                &tr.transforms,
+            )
+            .unwrap(),
         )
         .unwrap()
     }

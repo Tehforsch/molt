@@ -1,4 +1,3 @@
-use std::process::Command;
 use std::str::FromStr;
 
 use codespan_reporting::files::Files;
@@ -69,35 +68,7 @@ pub fn get_transformed_contents(
     for transformation in all_transformations.into_iter().rev() {
         transformation.apply(&mut code);
     }
-    format_code(code)
-}
-
-fn format_code(code: String) -> Result<String, Error> {
-    let mut cmd = Command::new("rustfmt")
-        .arg("--emit=stdout")
-        .stdin(std::process::Stdio::piped())
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()?;
-
-    if let Some(stdin) = cmd.stdin.take() {
-        use std::io::Write;
-        let mut stdin = stdin;
-        stdin.write_all(code.as_bytes())?;
-    }
-
-    let output = cmd.wait_with_output()?;
-
-    if !output.status.success() {
-        // If rustfmt fails, return the original code
-        eprintln!(
-            "rustfmt failed: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-        return Ok(code);
-    }
-
-    Ok(String::from_utf8(output.stdout).unwrap_or(code))
+    Ok(code)
 }
 
 fn write_to_file(input: &Input, rust_file_id: FileId, code: String) -> Result<(), Error> {
