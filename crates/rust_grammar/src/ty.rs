@@ -21,7 +21,6 @@ use proc_macro2::TokenStream;
 /// This type is a [syntax tree enum].
 ///
 /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 #[non_exhaustive]
 pub enum Type {
     /// A fixed size array type: `[T; n]`.
@@ -92,7 +91,6 @@ pub enum Type {
 
 #[derive(Debug, CmpSyn)]
 /// A fixed size array type: `[T; n]`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct TypeArray {
     pub bracket_token: token::Bracket,
     pub elem: NodeId<Type>,
@@ -102,7 +100,6 @@ pub struct TypeArray {
 
 #[derive(Debug, CmpSyn)]
 /// A bare function type: `fn(usize) -> bool`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct TypeBareFn {
     pub lifetimes: Option<BoundLifetimes>,
     pub unsafety: Option<Token![unsafe]>,
@@ -116,7 +113,6 @@ pub struct TypeBareFn {
 
 #[derive(Debug, CmpSyn)]
 /// A type contained within invisible delimiters.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct TypeGroup {
     pub group_token: token::Group,
     pub elem: NodeId<Type>,
@@ -125,7 +121,6 @@ pub struct TypeGroup {
 #[derive(Debug, CmpSyn)]
 /// An `impl Bound1 + Bound2 + Bound3` type where `Bound` is a trait or
 /// a lifetime.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct TypeImplTrait {
     pub impl_token: Token![impl],
     pub bounds: Punctuated<TypeParamBound, Token![+]>,
@@ -133,28 +128,24 @@ pub struct TypeImplTrait {
 
 #[derive(Debug, CmpSyn)]
 /// Indication that a type should be inferred by the compiler: `_`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct TypeInfer {
     pub underscore_token: Token![_],
 }
 
 #[derive(Debug, CmpSyn)]
 /// A macro in the type position.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct TypeMacro {
     pub mac: Macro,
 }
 
 #[derive(Debug, CmpSyn)]
 /// The never type: `!`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct TypeNever {
     pub bang_token: Token![!],
 }
 
 #[derive(Debug, CmpSyn)]
 /// A parenthesized type equivalent to the inner type.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct TypeParen {
     pub paren_token: token::Paren,
     pub elem: NodeId<Type>,
@@ -163,7 +154,6 @@ pub struct TypeParen {
 #[derive(Debug, CmpSyn)]
 /// A path like `std::slice::Iter`, optionally qualified with a
 /// self-type as in `<Vec<T> as SomeTrait>::Associated`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct TypePath {
     pub qself: Option<QSelf>,
     pub path: Path,
@@ -171,7 +161,6 @@ pub struct TypePath {
 
 #[derive(Debug, CmpSyn)]
 /// A raw pointer type: `*const T` or `*mut T`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct TypePtr {
     pub star_token: Token![*],
     pub const_token: Option<Token![const]>,
@@ -181,7 +170,6 @@ pub struct TypePtr {
 
 #[derive(Debug, CmpSyn)]
 /// A reference type: `&'a T` or `&'a mut T`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct TypeReference {
     pub and_token: Token![&],
     pub lifetime: Option<Lifetime>,
@@ -191,7 +179,6 @@ pub struct TypeReference {
 
 #[derive(Debug, CmpSyn)]
 /// A dynamically sized slice type: `[T]`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct TypeSlice {
     pub bracket_token: token::Bracket,
     pub elem: NodeId<Type>,
@@ -200,7 +187,6 @@ pub struct TypeSlice {
 #[derive(Debug, CmpSyn)]
 /// A trait object type `dyn Bound1 + Bound2 + Bound3` where `Bound` is a
 /// trait or a lifetime.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct TypeTraitObject {
     pub dyn_token: Option<Token![dyn]>,
     pub bounds: Punctuated<TypeParamBound, Token![+]>,
@@ -208,7 +194,6 @@ pub struct TypeTraitObject {
 
 #[derive(Debug, CmpSyn)]
 /// A tuple type: `(A, B, C, String)`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct TypeTuple {
     pub paren_token: token::Paren,
     pub elems: NodeList<Type, Token![,]>,
@@ -216,7 +201,6 @@ pub struct TypeTuple {
 
 #[derive(Debug, CmpSyn)]
 /// The binary interface of a function: `extern "C"`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct Abi {
     pub extern_token: Token![extern],
     pub name: Option<LitStr>,
@@ -224,7 +208,6 @@ pub struct Abi {
 
 #[derive(Debug, CmpSyn)]
 /// An argument in a function type: the `usize` in `fn(usize) -> bool`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct BareFnArg {
     pub attrs: Vec<Attribute>,
     pub name: Option<(NodeId<Ident>, Token![:])>,
@@ -233,7 +216,6 @@ pub struct BareFnArg {
 
 #[derive(Debug, CmpSyn)]
 /// The variadic argument of a function pointer like `fn(usize, ...)`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct BareVariadic {
     pub attrs: Vec<Attribute>,
     pub name: Option<(NodeId<Ident>, Token![:])>,
@@ -243,7 +225,6 @@ pub struct BareVariadic {
 
 #[derive(Debug, CmpSyn)]
 /// Return type of a function signature.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub enum ReturnType {
     /// Return type is not specified.
     ///
@@ -597,7 +578,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for TypePtr {
         fn parse(input: ParseStream) -> Result<Self> {
             let star_token: Token![*] = input.parse()?;
@@ -620,7 +600,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for TypeReference {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(TypeReference {
@@ -633,7 +612,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for TypeBareFn {
         fn parse(input: ParseStream) -> Result<Self> {
             let args;
@@ -680,7 +658,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for TypeNever {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(TypeNever {
@@ -689,7 +666,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for TypeInfer {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(TypeInfer {
@@ -698,7 +674,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for TypePath {
         fn parse(input: ParseStream) -> Result<Self> {
             let expr_style = false;
@@ -708,7 +683,6 @@ pub(crate) mod parsing {
     }
 
     impl ReturnType {
-        #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
         pub fn without_plus(input: ParseStream) -> Result<Self> {
             let allow_plus = false;
             Self::parse(input, allow_plus)
@@ -725,7 +699,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ReturnType {
         fn parse(input: ParseStream) -> Result<Self> {
             let allow_plus = true;
@@ -733,7 +706,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for TypeTraitObject {
         fn parse(input: ParseStream) -> Result<Self> {
             let allow_plus = true;
@@ -742,7 +714,6 @@ pub(crate) mod parsing {
     }
 
     impl TypeTraitObject {
-        #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
         pub fn without_plus(input: ParseStream) -> Result<Self> {
             let allow_plus = false;
             Self::parse(input, allow_plus)
@@ -915,7 +886,6 @@ pub(crate) mod parsing {
         })
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for Abi {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(Abi {
@@ -925,7 +895,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for Option<Abi> {
         fn parse(input: ParseStream) -> Result<Self> {
             if input.peek(Token![extern]) {

@@ -15,7 +15,6 @@ use proc_macro2::TokenTree;
 
 #[derive(Debug, CmpSyn)]
 /// A macro invocation: `println!("{}", mac)`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct Macro {
     pub path: Path,
     pub bang_token: Token![!],
@@ -25,7 +24,6 @@ pub struct Macro {
 
 #[derive(Debug, CmpSyn)]
 /// A grouping token that surrounds a macro body: `m!(...)` or `m!{...}` or `m![...]`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub enum MacroDelimiter {
     Paren(Paren),
     Brace(Brace),
@@ -76,7 +74,6 @@ pub(crate) mod parsing {
     use crate::parse::{Parse, ParseStream};
     use crate::path::Path;
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for Macro {
         fn parse(input: ParseStream) -> Result<Self> {
             let tokens;

@@ -2,7 +2,6 @@ use derive_macro::CmpSyn;
 
 #[derive(Debug, CmpSyn)]
 /// A binary operator: `+`, `+=`, `&`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 #[non_exhaustive]
 pub enum BinOp {
     /// The `+` operator (addition)
@@ -65,7 +64,6 @@ pub enum BinOp {
 
 #[derive(Debug, CmpSyn)]
 /// A unary operator: `*`, `!`, `-`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 #[non_exhaustive]
 pub enum UnOp {
     /// The `*` operator for dereferencing
@@ -82,7 +80,6 @@ pub(crate) mod parsing {
     use crate::op::{BinOp, UnOp};
     use crate::parse::{Parse, ParseStream};
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for BinOp {
         fn parse(input: ParseStream) -> Result<Self> {
             if input.peek(Token![+=]) {
@@ -147,7 +144,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for UnOp {
         fn parse(input: ParseStream) -> Result<Self> {
             let lookahead = input.lookahead1();

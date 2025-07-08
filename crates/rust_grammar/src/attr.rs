@@ -166,7 +166,7 @@ use proc_macro2::TokenStream;
 /// };
 /// assert_eq!(doc, attr);
 /// ```
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full"))))]
 pub struct Attribute {
     pub pound_token: Token![#],
     pub style: AttrStyle,
@@ -221,7 +221,7 @@ impl Attribute {
 /// - `#![feature(proc_macro)]`
 /// - `//! # Example`
 /// - `/*! Please file an issue */`
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full"))))]
 pub enum AttrStyle {
     Outer,
     Inner(Token![!]),
@@ -248,7 +248,7 @@ pub enum AttrStyle {
 /// This type is a [syntax tree enum].
 ///
 /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "full"))))]
 pub enum Meta {
     Path(Path),
 
@@ -261,7 +261,6 @@ pub enum Meta {
 
 #[derive(Debug, CmpSyn)]
 /// A structured list within an attribute, like `derive(Copy, Clone)`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct MetaList {
     pub path: Path,
     pub delimiter: MacroDelimiter,
@@ -270,7 +269,6 @@ pub struct MetaList {
 
 #[derive(Debug, CmpSyn)]
 /// A name-value pair within an attribute, like `feature = "nightly"`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct MetaNameValue {
     pub path: Path,
     pub eq_token: Token![=],

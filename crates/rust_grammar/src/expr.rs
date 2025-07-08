@@ -243,7 +243,6 @@ pub struct ExprEarlierBoundaryRule;
 /// A sign that you may not be choosing the right variable names is if you
 /// see names getting repeated in your code, like accessing
 /// `receiver.receiver` or `pat.pat` or `cond.cond`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 #[non_exhaustive]
 pub enum Expr {
     /// A slice literal expression: `[a, b, c, d]`.
@@ -402,7 +401,6 @@ pub enum Expr {
 
 #[derive(Debug, CmpSyn)]
 /// A slice literal expression: `[a, b, c, d]`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprArray {
     pub attrs: Vec<Attribute>,
     pub bracket_token: token::Bracket,
@@ -411,7 +409,6 @@ pub struct ExprArray {
 
 #[derive(Debug, CmpSyn)]
 /// An assignment expression: `a = compute()`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprAssign {
     pub attrs: Vec<Attribute>,
     pub left: NodeId<Expr>,
@@ -421,7 +418,6 @@ pub struct ExprAssign {
 
 #[derive(Debug, CmpSyn)]
 /// An async block: `async { ... }`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprAsync {
     pub attrs: Vec<Attribute>,
     pub async_token: Token![async],
@@ -431,7 +427,6 @@ pub struct ExprAsync {
 
 #[derive(Debug, CmpSyn)]
 /// An await expression: `fut.await`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprAwait {
     pub attrs: Vec<Attribute>,
     pub base: NodeId<Expr>,
@@ -441,7 +436,6 @@ pub struct ExprAwait {
 
 #[derive(Debug, CmpSyn)]
 /// A binary operation: `a + b`, `a += b`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct ExprBinary {
     pub attrs: Vec<Attribute>,
     pub left: NodeId<Expr>,
@@ -451,7 +445,6 @@ pub struct ExprBinary {
 
 #[derive(Debug, CmpSyn)]
 /// A blocked scope: `{ ... }`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprBlock {
     pub attrs: Vec<Attribute>,
     pub label: Option<Label>,
@@ -461,7 +454,6 @@ pub struct ExprBlock {
 #[derive(Debug, CmpSyn)]
 /// A `break`, with an optional label to break and an optional
 /// expression.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprBreak {
     pub attrs: Vec<Attribute>,
     pub break_token: Token![break],
@@ -471,7 +463,6 @@ pub struct ExprBreak {
 
 #[derive(Debug, CmpSyn)]
 /// A function call expression: `invoke(a, b)`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct ExprCall {
     pub attrs: Vec<Attribute>,
     pub func: NodeId<Expr>,
@@ -481,7 +472,6 @@ pub struct ExprCall {
 
 #[derive(Debug, CmpSyn)]
 /// A cast expression: `foo as f64`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct ExprCast {
     pub attrs: Vec<Attribute>,
     pub expr: NodeId<Expr>,
@@ -491,7 +481,6 @@ pub struct ExprCast {
 
 #[derive(Debug, CmpSyn)]
 /// A closure expression: `|a, b| a + b`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprClosure {
     pub attrs: Vec<Attribute>,
     pub lifetimes: Option<BoundLifetimes>,
@@ -508,7 +497,6 @@ pub struct ExprClosure {
 
 #[derive(Debug, CmpSyn)]
 /// A const block: `const { ... }`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprConst {
     pub attrs: Vec<Attribute>,
     pub const_token: Token![const],
@@ -517,7 +505,6 @@ pub struct ExprConst {
 
 #[derive(Debug, CmpSyn)]
 /// A `continue`, with an optional label.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprContinue {
     pub attrs: Vec<Attribute>,
     pub continue_token: Token![continue],
@@ -527,7 +514,6 @@ pub struct ExprContinue {
 #[derive(Debug, CmpSyn)]
 /// Access of a named struct field (`obj.k`) or unnamed tuple struct
 /// field (`obj.0`).
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct ExprField {
     pub attrs: Vec<Attribute>,
     pub base: NodeId<Expr>,
@@ -537,7 +523,6 @@ pub struct ExprField {
 
 #[derive(Debug, CmpSyn)]
 /// A for loop: `for pat in expr { ... }`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprForLoop {
     pub attrs: Vec<Attribute>,
     pub label: Option<Label>,
@@ -554,7 +539,6 @@ pub struct ExprForLoop {
 /// This variant is important for faithfully representing the precedence
 /// of expressions and is related to `None`-delimited spans in a
 /// `TokenStream`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprGroup {
     pub attrs: Vec<Attribute>,
     pub group_token: token::Group,
@@ -567,7 +551,6 @@ pub struct ExprGroup {
 ///
 /// The `else` branch expression may only be an `If` or `Block`
 /// expression, not any of the other types of expression.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprIf {
     pub attrs: Vec<Attribute>,
     pub if_token: Token![if],
@@ -578,7 +561,6 @@ pub struct ExprIf {
 
 #[derive(Debug, CmpSyn)]
 /// A square bracketed indexing expression: `vector[2]`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct ExprIndex {
     pub attrs: Vec<Attribute>,
     pub expr: NodeId<Expr>,
@@ -588,7 +570,6 @@ pub struct ExprIndex {
 
 #[derive(Debug, CmpSyn)]
 /// The inferred value of a const generic argument, denoted `_`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprInfer {
     pub attrs: Vec<Attribute>,
     pub underscore_token: Token![_],
@@ -596,7 +577,6 @@ pub struct ExprInfer {
 
 #[derive(Debug, CmpSyn)]
 /// A `let` guard: `let Some(x) = opt`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprLet {
     pub attrs: Vec<Attribute>,
     pub let_token: Token![let],
@@ -607,7 +587,6 @@ pub struct ExprLet {
 
 #[derive(Debug, CmpSyn)]
 /// A literal in place of an expression: `1`, `"foo"`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct ExprLit {
     pub attrs: Vec<Attribute>,
     pub lit: NodeId<Lit>,
@@ -615,7 +594,6 @@ pub struct ExprLit {
 
 #[derive(Debug, CmpSyn)]
 /// Conditionless loop: `loop { ... }`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprLoop {
     pub attrs: Vec<Attribute>,
     pub label: Option<Label>,
@@ -625,7 +603,6 @@ pub struct ExprLoop {
 
 #[derive(Debug, CmpSyn)]
 /// A macro invocation expression: `format!("{}", q)`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct ExprMacro {
     pub attrs: Vec<Attribute>,
     pub mac: Macro,
@@ -633,7 +610,6 @@ pub struct ExprMacro {
 
 #[derive(Debug, CmpSyn)]
 /// A `match` expression: `match n { Some(n) => {}, None => {} }`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprMatch {
     pub attrs: Vec<Attribute>,
     pub match_token: Token![match],
@@ -644,7 +620,6 @@ pub struct ExprMatch {
 
 #[derive(Debug, CmpSyn)]
 /// A method call expression: `x.foo::<T>(a, b)`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct ExprMethodCall {
     pub attrs: Vec<Attribute>,
     pub receiver: NodeId<Expr>,
@@ -657,7 +632,6 @@ pub struct ExprMethodCall {
 
 #[derive(Debug, CmpSyn)]
 /// A parenthesized expression: `(a + b)`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct ExprParen {
     pub attrs: Vec<Attribute>,
     pub paren_token: token::Paren,
@@ -669,7 +643,6 @@ pub struct ExprParen {
 /// parameters and a qualified self-type.
 ///
 /// A plain identifier like `x` is a path of length 1.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct ExprPath {
     pub attrs: Vec<Attribute>,
     pub qself: Option<QSelf>,
@@ -678,7 +651,6 @@ pub struct ExprPath {
 
 #[derive(Debug, CmpSyn)]
 /// A range expression: `1..2`, `1..`, `..2`, `1..=2`, `..=2`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprRange {
     pub attrs: Vec<Attribute>,
     pub start: Option<NodeId<Expr>>,
@@ -688,7 +660,6 @@ pub struct ExprRange {
 
 #[derive(Debug, CmpSyn)]
 /// Address-of operation: `&raw const place` or `&raw mut place`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprRawAddr {
     pub attrs: Vec<Attribute>,
     pub and_token: Token![&],
@@ -699,7 +670,6 @@ pub struct ExprRawAddr {
 
 #[derive(Debug, CmpSyn)]
 /// A referencing operation: `&a` or `&mut a`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct ExprReference {
     pub attrs: Vec<Attribute>,
     pub and_token: Token![&],
@@ -709,7 +679,6 @@ pub struct ExprReference {
 
 #[derive(Debug, CmpSyn)]
 /// An array literal constructed from one repeated element: `[0u8; N]`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprRepeat {
     pub attrs: Vec<Attribute>,
     pub bracket_token: token::Bracket,
@@ -720,7 +689,6 @@ pub struct ExprRepeat {
 
 #[derive(Debug, CmpSyn)]
 /// A `return`, with an optional value to be returned.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprReturn {
     pub attrs: Vec<Attribute>,
     pub return_token: Token![return],
@@ -732,7 +700,6 @@ pub struct ExprReturn {
 ///
 /// The `rest` provides the value of the remaining fields as in `S { a:
 /// 1, b: 1, ..rest }`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct ExprStruct {
     pub attrs: Vec<Attribute>,
     pub qself: Option<QSelf>,
@@ -745,7 +712,6 @@ pub struct ExprStruct {
 
 #[derive(Debug, CmpSyn)]
 /// A try-expression: `expr?`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprTry {
     pub attrs: Vec<Attribute>,
     pub expr: NodeId<Expr>,
@@ -754,7 +720,6 @@ pub struct ExprTry {
 
 #[derive(Debug, CmpSyn)]
 /// A try block: `try { ... }`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprTryBlock {
     pub attrs: Vec<Attribute>,
     pub try_token: Token![try],
@@ -763,7 +728,6 @@ pub struct ExprTryBlock {
 
 #[derive(Debug, CmpSyn)]
 /// A tuple expression: `(a, b, c, d)`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprTuple {
     pub attrs: Vec<Attribute>,
     pub paren_token: token::Paren,
@@ -772,7 +736,6 @@ pub struct ExprTuple {
 
 #[derive(Debug, CmpSyn)]
 /// A unary operation: `!x`, `*x`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct ExprUnary {
     pub attrs: Vec<Attribute>,
     pub op: UnOp,
@@ -781,7 +744,6 @@ pub struct ExprUnary {
 
 #[derive(Debug, CmpSyn)]
 /// An unsafe block: `unsafe { ... }`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprUnsafe {
     pub attrs: Vec<Attribute>,
     pub unsafe_token: Token![unsafe],
@@ -790,7 +752,6 @@ pub struct ExprUnsafe {
 
 #[derive(Debug, CmpSyn)]
 /// A while loop: `while expr { ... }`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprWhile {
     pub attrs: Vec<Attribute>,
     pub label: Option<Label>,
@@ -801,7 +762,6 @@ pub struct ExprWhile {
 
 #[derive(Debug, CmpSyn)]
 /// A yield expression: `yield expr`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct ExprYield {
     pub attrs: Vec<Attribute>,
     pub yield_token: Token![yield],
@@ -916,7 +876,6 @@ impl Expr {
 #[derive(Debug, CmpSyn)]
 /// A struct or tuple struct field accessed in a struct literal or field
 /// expression.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub enum Member {
     /// A named field like `self.x`.
     Named(NodeId<Ident>),
@@ -975,7 +934,6 @@ impl Member {
 
 #[derive(Debug, CmpSyn)]
 /// The index of an unnamed tuple struct field.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct Index {
     pub index: u32,
     pub span: Span,
@@ -1007,7 +965,6 @@ impl Hash for Index {
 
 #[derive(Debug, CmpSyn)]
 /// A field-value pair in a struct literal.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct FieldValue {
     pub attrs: Vec<Attribute>,
     pub member: Member,
@@ -1021,7 +978,6 @@ pub struct FieldValue {
 
 #[derive(Debug, CmpSyn)]
 /// A lifetime labeling a `for`, `while`, or `loop`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct Label {
     pub name: Lifetime,
     pub colon_token: Token![:],
@@ -1045,7 +1001,6 @@ pub struct Label {
 /// #   false
 /// # }
 /// ```
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct Arm {
     pub attrs: Vec<Attribute>,
     pub pat: NodeId<Pat>,
@@ -1057,7 +1012,6 @@ pub struct Arm {
 
 #[derive(Debug, CmpSyn)]
 /// Limit types of a range, inclusive or exclusive.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub enum RangeLimits {
     /// Inclusive at the beginning, exclusive at the end.
     HalfOpen(Token![..]),
@@ -1068,7 +1022,6 @@ pub enum RangeLimits {
 #[derive(Debug, CmpSyn)]
 /// Mutability of a raw pointer (`*const T`, `*mut T`), in which non-mutable
 /// isn't the implicit default.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub enum PointerMutability {
     Const(Token![const]),
     Mut(Token![mut]),
@@ -1834,7 +1787,6 @@ pub(crate) mod parsing {
         }))
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprMacro {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(ExprMacro {
@@ -1954,7 +1906,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprRepeat {
         fn parse(input: ParseStream) -> Result<Self> {
             let content;
@@ -1997,7 +1948,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprLit {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(ExprLit {
@@ -2034,7 +1984,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprParen {
         fn parse(input: ParseStream) -> Result<Self> {
             let content;
@@ -2047,7 +1996,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprLet {
         fn parse(input: ParseStream) -> Result<Self> {
             let allow_struct = AllowStruct(true);
@@ -2072,7 +2020,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprIf {
         fn parse(input: ParseStream) -> Result<Self> {
             let mut markers = vec![];
@@ -2132,7 +2079,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprInfer {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(ExprInfer {
@@ -2143,7 +2089,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprForLoop {
         fn parse(input: ParseStream) -> Result<Self> {
             let mut attrs = input.call(Attribute::parse_outer)?;
@@ -2173,7 +2118,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprLoop {
         fn parse(input: ParseStream) -> Result<Self> {
             let mut attrs = input.call(Attribute::parse_outer)?;
@@ -2195,7 +2139,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprMatch {
         fn parse(input: ParseStream) -> Result<Self> {
             let mut attrs = input.call(Attribute::parse_outer)?;
@@ -2238,7 +2181,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprRawAddr {
         fn parse(input: ParseStream) -> Result<Self> {
             let allow_struct = AllowStruct(true);
@@ -2253,7 +2195,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprReference {
         fn parse(input: ParseStream) -> Result<Self> {
             let allow_struct = AllowStruct(true);
@@ -2267,7 +2208,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprBreak {
         fn parse(input: ParseStream) -> Result<Self> {
             let allow_struct = AllowStruct(true);
@@ -2276,7 +2216,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprReturn {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(ExprReturn {
@@ -2302,7 +2241,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprTryBlock {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(ExprTryBlock {
@@ -2314,7 +2252,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprYield {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(ExprYield {
@@ -2450,7 +2387,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprAsync {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(ExprAsync {
@@ -2463,7 +2399,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprWhile {
         fn parse(input: ParseStream) -> Result<Self> {
             let mut attrs = input.call(Attribute::parse_outer)?;
@@ -2487,7 +2422,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprConst {
         fn parse(input: ParseStream) -> Result<Self> {
             let const_token: Token![const] = input.parse()?;
@@ -2506,7 +2440,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for Label {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(Label {
@@ -2517,7 +2450,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for Option<Label> {
         fn parse(input: ParseStream) -> Result<Self> {
             if input.peek(Lifetime) {
@@ -2529,7 +2461,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprContinue {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(ExprContinue {
@@ -2574,7 +2505,6 @@ pub(crate) mod parsing {
         })
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for FieldValue {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = input.call(Attribute::parse_outer)?;
@@ -2607,7 +2537,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprStruct {
         fn parse(input: ParseStream) -> Result<Self> {
             let expr_style = true;
@@ -2662,7 +2591,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprUnsafe {
         fn parse(input: ParseStream) -> Result<Self> {
             let unsafe_token: Token![unsafe] = input.parse()?;
@@ -2681,7 +2609,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprBlock {
         fn parse(input: ParseStream) -> Result<Self> {
             let mut attrs = input.call(Attribute::parse_outer)?;
@@ -2749,7 +2676,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for RangeLimits {
         fn parse(input: ParseStream) -> Result<Self> {
             let lookahead = input.lookahead1();
@@ -2787,7 +2713,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for ExprPath {
         fn parse(input: ParseStream) -> Result<Self> {
             #[cfg(not(feature = "full"))]
@@ -2802,7 +2727,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for Member {
         fn parse(input: ParseStream) -> Result<Self> {
             if input.peek_pat::<Ident>() {
@@ -2829,7 +2753,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl ParsePat for Arm {
         type Target = Arm;
 
@@ -2866,7 +2789,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for Index {
         fn parse(input: ParseStream) -> Result<Self> {
             let lit: LitInt = input.parse()?;
@@ -2929,7 +2851,6 @@ pub(crate) mod parsing {
     }
 
     #[cfg(feature = "full")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for PointerMutability {
         fn parse(input: ParseStream) -> Result<Self> {
             let lookahead = input.lookahead1();

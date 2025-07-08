@@ -21,7 +21,6 @@ use proc_macro2::TokenStream;
 ///
 /// [generic parameters]: https://doc.rust-lang.org/stable/reference/items/generics.html#generic-parameters
 /// [where clause]: https://doc.rust-lang.org/stable/reference/items/generics.html#where-clauses
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct Generics {
     pub lt_token: Option<Token![<]>,
     pub params: Punctuated<GenericParam, Token![,]>,
@@ -38,7 +37,6 @@ pub struct Generics {
 /// This type is a [syntax tree enum].
 ///
 /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub enum GenericParam {
     /// A lifetime parameter: `'a: 'b + 'c + 'd`.
     Lifetime(LifetimeParam),
@@ -52,7 +50,6 @@ pub enum GenericParam {
 
 #[derive(Debug, CmpSyn)]
 /// A lifetime definition: `'a: 'b + 'c + 'd`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct LifetimeParam {
     pub attrs: Vec<Attribute>,
     pub lifetime: Lifetime,
@@ -62,7 +59,6 @@ pub struct LifetimeParam {
 
 #[derive(Debug, CmpSyn)]
 /// A generic type parameter: `T: Into<String>`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct TypeParam {
     pub attrs: Vec<Attribute>,
     pub ident: NodeId<Ident>,
@@ -74,7 +70,6 @@ pub struct TypeParam {
 
 #[derive(Debug, CmpSyn)]
 /// A const generic parameter: `const LENGTH: usize`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct ConstParam {
     pub attrs: Vec<Attribute>,
     pub const_token: Token![const],
@@ -87,7 +82,6 @@ pub struct ConstParam {
 
 #[derive(Debug, CmpSyn)]
 /// A set of bound lifetimes: `for<'a, 'b, 'c>`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct BoundLifetimes {
     pub for_token: Token![for],
     pub lt_token: Token![<],
@@ -97,7 +91,6 @@ pub struct BoundLifetimes {
 
 #[derive(Debug, CmpSyn)]
 /// A trait used as a bound on a type parameter.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct TraitBound {
     pub paren_token: Option<token::Paren>,
     pub modifier: TraitBoundModifier,
@@ -109,7 +102,6 @@ pub struct TraitBound {
 
 #[derive(Debug, CmpSyn)]
 /// A trait or lifetime used as a bound on a type parameter.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 #[non_exhaustive]
 pub enum TypeParamBound {
     Trait(TraitBound),
@@ -121,7 +113,6 @@ pub enum TypeParamBound {
 #[derive(Debug, CmpSyn)]
 /// A modifier on a trait bound, currently only used for the `?` in
 /// `?Sized`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub enum TraitBoundModifier {
     None,
     Maybe(Token![?]),
@@ -130,7 +121,6 @@ pub enum TraitBoundModifier {
 #[derive(Debug, CmpSyn)]
 /// Precise capturing bound: the 'use&lt;&hellip;&gt;' in `impl Trait +
 /// use<'a, T>`.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 pub struct PreciseCapture {
     pub use_token: Token![use],
     pub lt_token: Token![<],
@@ -140,7 +130,6 @@ pub struct PreciseCapture {
 
 #[derive(Debug, CmpSyn)]
 /// Single parameter in a precise capturing bound.
-#[cfg_attr(docsrs, doc(cfg(feature = "full")))]
 #[non_exhaustive]
 pub enum CapturedParam {
     /// A lifetime parameter in precise capturing bound: `fn f<'a>() -> impl
@@ -155,7 +144,6 @@ pub enum CapturedParam {
 #[derive(Debug, CmpSyn)]
 /// A `where` clause in a definition: `where T: Deserialize<'de>, D:
 /// 'static`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct WhereClause {
     pub where_token: Token![where],
     pub predicates: Punctuated<WherePredicate, Token![,]>,
@@ -169,7 +157,6 @@ pub struct WhereClause {
 /// This type is a [syntax tree enum].
 ///
 /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 #[non_exhaustive]
 pub enum WherePredicate {
     /// A lifetime predicate in a `where` clause: `'a: 'b + 'c`.
@@ -181,7 +168,6 @@ pub enum WherePredicate {
 
 #[derive(Debug, CmpSyn)]
 /// A lifetime predicate in a `where` clause: `'a: 'b + 'c`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct PredicateLifetime {
     pub lifetime: Lifetime,
     pub colon_token: Token![:],
@@ -190,7 +176,6 @@ pub struct PredicateLifetime {
 
 #[derive(Debug, CmpSyn)]
 /// A type predicate in a `where` clause: `for<'c> Foo<'c>: Trait<'c>`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct PredicateType {
     /// Any lifetimes from a `for` binding
     pub lifetimes: Option<BoundLifetimes>,
@@ -222,7 +207,6 @@ pub(crate) mod parsing {
     use crate::token;
     use crate::verbatim;
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for Generics {
         fn parse(input: ParseStream) -> Result<Self> {
             if !input.peek(Token![<]) {
@@ -285,7 +269,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for GenericParam {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = input.call(Attribute::parse_outer)?;
@@ -312,7 +295,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for LifetimeParam {
         fn parse(input: ParseStream) -> Result<Self> {
             let has_colon;
@@ -350,7 +332,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for BoundLifetimes {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(BoundLifetimes {
@@ -379,7 +360,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for Option<BoundLifetimes> {
         fn parse(input: ParseStream) -> Result<Self> {
             if input.peek(Token![for]) {
@@ -390,7 +370,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for TypeParam {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = input.call(Attribute::parse_outer)?;
@@ -438,7 +417,6 @@ pub(crate) mod parsing {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
     impl Parse for TypeParamBound {
         fn parse(input: ParseStream) -> Result<Self> {
             let allow_precise_capture = true;
@@ -450,7 +428,7 @@ pub(crate) mod parsing {
     impl TypeParamBound {
         pub(crate) fn parse_single(
             input: ParseStream,
-            #[cfg_attr(not(feature = "full"), allow(unused_variables))] allow_precise_capture: bool,
+            allow_precise_capture: bool,
             allow_tilde_const: bool,
         ) -> Result<Self> {
             if input.peek(Lifetime) {

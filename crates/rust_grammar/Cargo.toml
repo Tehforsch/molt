@@ -8,11 +8,8 @@ edition = "2021"
 
 [features]
 default = ["parsing", "proc-macro", "full"]
-derive = []
 full = []
 parsing = []
-visit = []
-visit-mut = []
 fold = []
 proc-macro = ["proc-macro2/proc-macro"]
 

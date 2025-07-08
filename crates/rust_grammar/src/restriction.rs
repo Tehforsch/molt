@@ -12,7 +12,6 @@ use crate::token;
 /// This type is a [syntax tree enum].
 ///
 /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub enum Visibility {
     /// A public visibility level: `pub`.
     Public(Token![pub]),
@@ -28,7 +27,6 @@ pub enum Visibility {
 #[derive(Debug, CmpSyn)]
 /// A visibility level restricted to some path: `pub(self)` or
 /// `pub(super)` or `pub(crate)` or `pub(in some::module)`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct VisRestricted {
     pub pub_token: Token![pub],
     pub paren_token: token::Paren,
@@ -38,7 +36,6 @@ pub struct VisRestricted {
 
 #[derive(Debug, CmpSyn)]
 /// Unused, but reserved for RFC 3323 restrictions.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 #[non_exhaustive]
 pub enum FieldMutability {
     None,

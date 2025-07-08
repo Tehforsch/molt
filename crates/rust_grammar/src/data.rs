@@ -11,7 +11,6 @@ use crate::ty::Type;
 
 #[derive(Debug, CmpSyn)]
 /// An enum variant.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct Variant {
     pub attrs: Vec<Attribute>,
 
@@ -33,7 +32,6 @@ pub struct Variant {
 /// This type is a [syntax tree enum].
 ///
 /// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub enum Fields {
     /// Named fields of a struct or struct variant such as `Point { x: f64,
     /// y: f64 }`.
@@ -53,7 +51,6 @@ pub struct FieldUnnamed;
 #[derive(Debug, CmpSyn)]
 /// Named fields of a struct or struct variant such as `Point { x: f64,
 /// y: f64 }`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct FieldsNamed {
     pub brace_token: token::Brace,
     pub named: NodeList<Field, Token![,]>,
@@ -61,7 +58,6 @@ pub struct FieldsNamed {
 
 #[derive(Debug, CmpSyn)]
 /// Unnamed fields of a tuple struct or tuple variant such as `Some(T)`.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct FieldsUnnamed {
     pub paren_token: token::Paren,
     pub unnamed: NodeList<Field, Token![,]>,
@@ -69,7 +65,6 @@ pub struct FieldsUnnamed {
 
 #[derive(Debug, CmpSyn)]
 /// A field of a struct or enum variant.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "full", feature = "derive"))))]
 pub struct Field {
     pub attrs: Vec<Attribute>,
 
