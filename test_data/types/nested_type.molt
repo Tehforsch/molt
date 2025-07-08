@@ -1,2 +1,2 @@
 let t: Type;
-let type: Type = { (Foo, Bar, $t) };
+let type: Type = (Foo, Bar, $t);

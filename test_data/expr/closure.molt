@@ -1,4 +1,2 @@
 let e: Expr;
-let expr: Expr = {
-    |bar| $e
-};
+let expr: Expr = |bar| $e;

@@ -1,4 +1,2 @@
 let ty: Type;
-let item: Type = {
-    fn($ty) -> String
-};
+let item: Type = fn($ty) -> String;

@@ -1,3 +1,3 @@
-let x: Ident = { foo };
+let x: Ident = foo;
 type x = usize;
 match x;

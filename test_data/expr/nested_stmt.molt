@@ -1,6 +1,2 @@
 let stmt: Stmt;
-let fn: Stmt = {
-    fn inner() {
-        $stmt
-    }
-};
+let fn: Stmt = fn inner() { $stmt };

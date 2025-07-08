@@ -1,4 +1,2 @@
 let e: Expr;
-let expr: Expr = {
-    $e.bla()
-};
+let expr: Expr = $e.bla();

@@ -1,4 +1,2 @@
 let ty: Type;
-let item: Item = {
-    type Result<T, E=Default> = $ty;
-};
+let item: Item = { type Result<T, E=Default> = $ty; };

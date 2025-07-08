@@ -1,4 +1,2 @@
 let e: Expr;
-let ty: Type = {
-    [Foo; $e]
-};
+let ty: Type = [Foo; $e];

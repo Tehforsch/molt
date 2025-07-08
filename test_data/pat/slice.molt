@@ -1,4 +1,4 @@
 let pat1: Pat;
 let pat2: Pat;
 
-let target: Pat = { [$pat1, $pat2, ..] };
+let target: Pat = [$pat1, $pat2, ..];

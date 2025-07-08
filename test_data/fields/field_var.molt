@@ -1,8 +1,3 @@
 let x: Field;
 let y: Field;
-let struct: Item = {
-    struct Foo {
-        $x,
-        $y,
-    }
-};
+let struct: Item = struct Foo { $x, $y, };

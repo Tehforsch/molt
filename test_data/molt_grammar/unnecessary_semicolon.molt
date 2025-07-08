@@ -1,5 +1,4 @@
-let e: Item = {
+let e: Item =
     fn foo() {
         ;;;;
-    }
-};
+    };

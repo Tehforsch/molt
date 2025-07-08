@@ -1,4 +1,2 @@
 let e: Expr;
-let expr: Expr = {
-    $e = 10
-};
+let expr: Expr = $e = 10;

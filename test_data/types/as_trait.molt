@@ -1,4 +1,2 @@
 let ty: Type;
-let item: Type = {
-    <$ty as Trait>::Item
-};
+let item: Type = <$ty as Trait>::Item;

@@ -1,4 +1,4 @@
 let ident: Ident;
 let pat: Pat;
 
-let target: Pat = { $ident @ $pat };
+let target: Pat = $ident @ $pat;

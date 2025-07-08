@@ -1,6 +1,2 @@
 let expr: Expr;
-let x: Expr = {
-    func($(
-        $expr
-    )*)
-};
+let x: Expr = func($($expr)*);

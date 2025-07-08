@@ -1,4 +1,2 @@
 let pat: Pat;
-let x: Expr = {
-    |$($pat)*| {}
-};
+let x: Expr = |$($pat)*| {};

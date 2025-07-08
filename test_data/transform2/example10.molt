@@ -1,8 +1,4 @@
 let expr, val: Expr;
 let pat: Pat;
-let input: Expr = {
-    match $expr {
-        $($arm_in)*
-    }
-};
+let input: Expr = match $expr {$($arm_in)*};
 let arm_in: Arm = { $pat => Ok($val) };

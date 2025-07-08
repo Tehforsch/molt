@@ -1,2 +1,2 @@
 let expr: Expr;
-let x: Expr = { [$($expr)*] };
+let x: Expr = [$($expr)*];

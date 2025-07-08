@@ -1,4 +1,2 @@
 let ty: Type;
-let item: Type = {
-    [$ty; 3]
-};
+let item: Type = [$ty; 3];

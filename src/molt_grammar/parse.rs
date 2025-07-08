@@ -59,10 +59,14 @@ impl Parse for UnresolvedVarDecls {
         let kind: UserKind = input.parse()?;
         let tokens = if input.peek(Token![=]) {
             let _: Token![=] = input.parse()?;
-            let content;
-            braced!(content in input);
-            let tokens = content.parse::<TokenStream>()?;
-            Some(tokens)
+            if input.peek(Brace) {
+                let content;
+                braced!(content in input);
+                let tokens = content.parse::<TokenStream>()?;
+                Some(tokens)
+            } else {
+                Some(parse_until_semicolon(input)?)
+            }
         } else {
             None
         };

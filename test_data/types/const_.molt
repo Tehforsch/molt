@@ -1,4 +1,2 @@
 let ty: Type;
-let t: Item = {
-    pub const X: $ty = bar;
-};
+let t: Item = { pub const X: $ty = bar; };

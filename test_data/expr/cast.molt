@@ -1,4 +1,2 @@
 let e: Expr;
-let expr: Expr = {
-    $e as usize
-};
+let expr: Expr = $e as usize;

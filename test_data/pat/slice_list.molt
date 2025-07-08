@@ -1,2 +1,2 @@
 let pat: Pat;
-let target: Pat = { [$($pat)*] };
+let target: Pat = [$($pat)*];

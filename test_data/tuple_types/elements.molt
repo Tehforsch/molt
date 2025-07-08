@@ -1,2 +1,2 @@
 let ty: Type;
-let x: Type = {($($ty)*)};
+let x: Type = ($($ty)*);

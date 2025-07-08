@@ -2,4 +2,4 @@
 // implementation properly peeks at variables of kind
 // `Expr`. See the documentation on `Expr::peek` for why.
 let e2: Expr;
-let e1: Expr = { return $e2 };
+let e1: Expr = return $e2;

@@ -1,6 +1,3 @@
 let e: Expr;
 let ident: Ident;
-let expr: Expr = {
-    for $ident in $e {
-    }
-};
+let expr: Expr = for $ident in $e {};
