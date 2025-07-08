@@ -106,9 +106,6 @@ mod parsing {
         type Target = Ident;
 
         fn parse_pat(input: ParseStream) -> Result<SpannedPat<Ident>> {
-            if let Some(var) = input.parse_var() {
-                return var;
-            }
             input.call_spanned(parse_ident)
         }
     }
@@ -130,9 +127,6 @@ mod parsing {
         type Target = Ident;
 
         fn parse_pat(input: ParseStream) -> Result<SpannedPat<Ident>> {
-            if let Some(var) = input.parse_var() {
-                return var;
-            }
             input.call_spanned(Ident::parse_any)
         }
     }

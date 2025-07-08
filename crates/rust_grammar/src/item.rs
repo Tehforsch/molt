@@ -820,9 +820,6 @@ pub(crate) mod parsing {
         type Target = Item;
 
         fn parse_pat(input: ParseStream) -> Result<SpannedPat<Item>> {
-            if let Some(var) = input.parse_var() {
-                return var;
-            }
             input.call_spanned(Item::parse)
         }
     }
@@ -1499,7 +1496,7 @@ pub(crate) mod parsing {
             return Ok(FnArgOrVariadic::FnArg(FnArg::Receiver(receiver)));
         }
 
-        let pat = PatSingle::parse_id(input)?;
+        let pat = input.parse_id::<PatSingle>()?;
         let colon_token: Token![:] = input.parse()?;
 
         if allow_variadic {

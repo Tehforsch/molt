@@ -307,9 +307,6 @@ pub(crate) mod parsing {
     }
 
     pub(crate) fn ambig_ty(input: ParseStream, allow_plus: bool) -> Result<SpannedPat<Type>> {
-        if let Some(var) = input.parse_var() {
-            return var;
-        }
         input.call_spanned(|input| ambig_ty_inner(input, allow_plus))
     }
 

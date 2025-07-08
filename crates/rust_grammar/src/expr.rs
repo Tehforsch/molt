@@ -1172,6 +1172,14 @@ pub(crate) mod parsing {
         fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
             ambiguous_expr(input, AllowStruct(true))
         }
+
+        fn check_var_top_level() -> bool {
+            // While parsing an expression like `$e + 5`, we cannot eagerly
+            // consume the variable, but need to go down to the lowest level
+            // first. We only check for variables at the level of atomic
+            // expressions (see `atom_expr`).
+            false
+        }
     }
 
     impl ParseList for Expr {
@@ -1189,6 +1197,14 @@ pub(crate) mod parsing {
         fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
             ambiguous_expr(input, AllowStruct(false))
         }
+
+        fn check_var_top_level() -> bool {
+            // While parsing an expression like `$e + 5`, we cannot eagerly
+            // consume the variable, but need to go down to the lowest level
+            // first. We only check for variables at the level of atomic
+            // expressions (see `atom_expr`).
+            false
+        }
     }
 
     impl ParsePat for ExprEarlierBoundaryRule {
@@ -1196,6 +1212,14 @@ pub(crate) mod parsing {
 
         fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
             parse_with_earlier_boundary_rule(input)
+        }
+
+        fn check_var_top_level() -> bool {
+            // While parsing an expression like `$e + 5`, we cannot eagerly
+            // consume the variable, but need to go down to the lowest level
+            // first. We only check for variables at the level of atomic
+            // expressions (see `atom_expr`).
+            false
         }
     }
 
@@ -1654,6 +1678,7 @@ pub(crate) mod parsing {
         if let Some(var) = input.parse_var() {
             return var;
         }
+
         let real: SpannedPat<Expr> = if input.peek(token::Group) {
             input.call_spanned(|input| expr_group(input, allow_struct))?
         } else if input.peek(Lit) {
@@ -2069,7 +2094,7 @@ pub(crate) mod parsing {
         Ok(ExprLet {
             attrs: Vec::new(),
             let_token: input.parse()?,
-            pat: PatMultiLeadingVert::parse_id(input)?,
+            pat: input.parse_id::<PatMultiLeadingVert>()?,
             eq_token: input.parse()?,
             expr: {
                 let lhs = unary_expr(input, allow_struct)?;
@@ -2157,7 +2182,7 @@ pub(crate) mod parsing {
             let label: Option<Label> = input.parse()?;
             let for_token: Token![for] = input.parse()?;
 
-            let pat = PatMultiLeadingVert::parse_id(input)?;
+            let pat = input.parse_id::<PatMultiLeadingVert>()?;
 
             let in_token: Token![in] = input.parse()?;
             let expr = input.parse_id::<ExprNoEagerBrace>()?;
@@ -2880,14 +2905,11 @@ pub(crate) mod parsing {
         type Target = Arm;
 
         fn parse_pat(input: ParseStream) -> Result<SpannedPat<Arm>> {
-            if let Some(var) = input.parse_var() {
-                return var;
-            }
             input.call_spanned(|input| {
                 let requires_comma;
                 Ok(Arm {
                     attrs: input.call(Attribute::parse_outer)?,
-                    pat: PatMultiLeadingVert::parse_id(input)?,
+                    pat: input.parse_id::<PatMultiLeadingVert>()?,
                     guard: {
                         if input.peek(Token![if]) {
                             let if_token: Token![if] = input.parse()?;

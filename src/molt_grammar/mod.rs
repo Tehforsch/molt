@@ -4,7 +4,7 @@ use molt_lib::{Id, NodeId, Span, VarDecl};
 use parse::UnresolvedVarDecls;
 use rust_grammar::{
     Arm, Expr, FieldNamed, FieldUnnamed, Ident, Item, Kind, Lit, PatMulti, Stmt, TokenStream, Type,
-    parse::{ParsePat, ParseStream, discouraged::Speculative},
+    parse::{ParseStream, discouraged::Speculative},
 };
 
 #[derive(Debug, Clone)]
@@ -170,7 +170,7 @@ define_user_kind! {
     (Ident, Ident, Ident),
     (Arm, Arm, Arm),
     (Pat, Pat, Pat, |parser: ParseStream| {
-        PatMulti::parse_id(parser).map(|id| id.into())
+        parser.parse_id::<PatMulti>().map(|id| id.into())
     }),
     // Let's see how this works out in practice.
     // We speculatively parse a named field and

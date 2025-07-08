@@ -328,9 +328,6 @@ pub(crate) mod parsing {
         type Target = Pat;
 
         fn parse_pat(input: ParseStream) -> Result<molt_lib::SpannedPat<Self::Target>> {
-            if let Some(var) = input.parse_var() {
-                return var;
-            }
             let marker = input.marker();
             let begin = input.fork();
             let lookahead = input.lookahead1();
@@ -381,9 +378,6 @@ pub(crate) mod parsing {
     fn parse_pat_multi<T: ParseListOrItem<Target = Pat>>(
         input: ParseStream,
     ) -> Result<molt_lib::SpannedPat<Pat>> {
-        if let Some(var) = input.parse_var() {
-            return var;
-        }
         let marker = input.marker();
         let pat = input.parse_list_or_item::<PatMultiLeadingVert>()?;
         Ok(match pat {
@@ -418,7 +412,7 @@ pub(crate) mod parsing {
         fn parse(input: ParseStream) -> Result<Self> {
             Ok(PatType {
                 attrs: Vec::new(),
-                pat: PatSingle::parse_id(input)?,
+                pat: input.parse_id::<PatSingle>()?,
                 colon_token: input.parse()?,
                 ty: input.parse()?,
             })
@@ -459,7 +453,7 @@ pub(crate) mod parsing {
             while input.peek(Token![|]) && !input.peek(Token![||]) && !input.peek(Token![|=]) {
                 let punct: Token![|] = input.parse()?;
                 cases.push_punct(punct);
-                let pat = PatSingle::parse_id(input)?;
+                let pat = input.parse_id::<PatSingle>()?;
                 cases.push_value(pat);
             }
             Ok(ListOrItem::List(NodeList::Real(
@@ -517,7 +511,7 @@ pub(crate) mod parsing {
 
     fn pat_box(begin: ParseBuffer, input: ParseStream) -> Result<Pat> {
         input.parse::<Token![box]>()?;
-        PatSingle::parse_id(input)?;
+        input.parse_id::<PatSingle>()?;
         Ok(Pat::Verbatim(verbatim::between(&begin, input)))
     }
 
@@ -536,7 +530,7 @@ pub(crate) mod parsing {
             subpat: {
                 if input.peek(Token![@]) {
                     let at_token: Token![@] = input.parse()?;
-                    let subpat = PatSingle::parse_id(input)?;
+                    let subpat = input.parse_id::<PatSingle>()?;
                     Some((at_token, subpat))
                 } else {
                     None
@@ -552,7 +546,7 @@ pub(crate) mod parsing {
         fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Pat>>> {
             let mut elems = Punctuated::new();
             while !input.is_empty() {
-                let value = PatMultiLeadingVert::parse_id(&input)?;
+                let value = input.parse_id::<PatMultiLeadingVert>()?;
                 elems.push_value(value);
                 if input.is_empty() {
                     break;
@@ -638,7 +632,7 @@ pub(crate) mod parsing {
                 attrs: Vec::new(),
                 member,
                 colon_token: Some(input.parse()?),
-                pat: PatMultiLeadingVert::parse_id(input)?,
+                pat: input.parse_id::<PatMultiLeadingVert>()?,
             });
         }
 
@@ -758,7 +752,7 @@ pub(crate) mod parsing {
             attrs: Vec::new(),
             and_token: input.parse()?,
             mutability: input.parse()?,
-            pat: PatSingle::parse_id(input)?,
+            pat: input.parse_id::<PatSingle>()?,
         })
     }
 

@@ -175,9 +175,6 @@ pub(crate) mod parsing {
     }
 
     fn parse_stmt(input: ParseStream, allow_nosemi: AllowNoSemi) -> Result<SpannedPat<Stmt>> {
-        if let Some(var) = input.parse_var() {
-            return var;
-        }
         let marker = input.marker();
         let begin = input.fork();
         let attrs = input.call(Attribute::parse_outer)?;
@@ -269,7 +266,7 @@ pub(crate) mod parsing {
         let marker = input.marker();
         let let_token: Token![let] = input.parse()?;
 
-        let mut pat = PatSingle::parse_id(input)?;
+        let mut pat = input.parse_id::<PatSingle>()?;
         if input.peek(Token![:]) {
             let colon_token: Token![:] = input.parse()?;
             let ty = input.parse()?;

@@ -230,9 +230,6 @@ pub(crate) mod parsing {
         type Target = Field;
 
         fn parse_pat(input: ParseStream) -> Result<SpannedPat<Field>> {
-            if let Some(var) = input.parse_var() {
-                return var;
-            }
             input.call_spanned(|input| {
                 let attrs = input.call(Attribute::parse_outer)?;
                 let vis: Visibility = input.parse()?;
@@ -278,9 +275,6 @@ pub(crate) mod parsing {
 
         /// Parses an unnamed (tuple struct) field.
         fn parse_pat(input: ParseStream) -> Result<SpannedPat<Field>> {
-            if let Some(var) = input.parse_var() {
-                return var;
-            }
             input.call_spanned(|input| {
                 Ok(Field {
                     attrs: input.call(Attribute::parse_outer)?,

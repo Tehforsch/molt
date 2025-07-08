@@ -230,9 +230,14 @@ pub trait ParsePat {
 
     fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>>;
 
-    fn parse_id(input: ParseStream) -> Result<NodeId<Self::Target>> {
-        let p = Self::parse_pat(input)?;
-        Ok(input.add_pat(p))
+    /// By default, the `parse_pat` function on `ParseStream` will
+    /// automatically check if the input contains a variable and parse
+    /// it appropriately. However, for some types (for example
+    /// expressions), this is not the right behavior.  This method
+    /// exists so we can control this behavior without getting rid of
+    /// the useful default behavior or requiring a different trait.
+    fn check_var_top_level() -> bool {
+        true
     }
 }
 
@@ -258,9 +263,11 @@ pub fn parse_punctuated_list_real<T: ParsePat, P: Parse>(
     input: ParseStream,
 ) -> Result<Vec<NodeId<T::Target>>> {
     Ok(
-        Punctuated::<NodeId<T::Target>, P>::parse_terminated_with(input, T::parse_id)?
-            .into_iter()
-            .collect(),
+        Punctuated::<NodeId<T::Target>, P>::parse_terminated_with(input, |input| {
+            input.parse_id::<T>()
+        })?
+        .into_iter()
+        .collect(),
     )
 }
 
@@ -306,7 +313,7 @@ pub fn peek_var(cursor: Cursor, ctx: &Ctx<Node>, kind: Kind) -> bool {
 
 impl<T: ToNode<Node> + ParsePat<Target = T>> Parse for NodeId<T> {
     fn parse(input: ParseStream) -> Result<NodeId<T>> {
-        T::parse_id(input)
+        input.parse_id::<T>()
     }
 }
 
@@ -742,12 +749,18 @@ impl<'a> ParseBuffer<'a> {
         self.ctx.borrow_mut()
     }
 
-    pub fn parse_pat<T: ParsePat>(&self) -> Result<SpannedPat<T::Target>> {
+    pub fn parse_pat<T: ParsePat + ?Sized>(&self) -> Result<SpannedPat<T::Target>> {
+        if T::check_var_top_level() {
+            if let Some(var) = self.parse_var() {
+                return var;
+            }
+        }
         T::parse_pat(self)
     }
 
     pub fn parse_id<T: ParsePat>(&self) -> Result<NodeId<T::Target>> {
-        T::parse_id(self)
+        let pat = self.parse_pat::<T>()?;
+        Ok(self.add_pat(pat))
     }
 
     pub fn parse_spanned<T: Parse>(&self) -> Result<Spanned<T>> {
@@ -878,7 +891,7 @@ impl<'a> ParseBuffer<'a> {
         if self.peek_list_var(T::Item::kind()) {
             Ok(NodeList::Pat(self.parse_list_var::<T::Item, T::Punct>(
                 T::parse_list_real,
-                T::parse_id,
+                |input| input.parse_id::<T>(),
             )?))
         } else {
             let list = T::parse_list_real(self)?;

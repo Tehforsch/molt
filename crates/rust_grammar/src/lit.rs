@@ -775,9 +775,6 @@ pub(crate) mod parsing {
         type Target = Lit;
 
         fn parse_pat(input: ParseStream) -> Result<SpannedPat<Lit>> {
-            if let Some(var) = input.parse_var() {
-                return var;
-            }
             input.call_spanned(Lit::parse)
         }
     }
