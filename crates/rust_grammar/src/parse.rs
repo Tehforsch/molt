@@ -198,8 +198,6 @@ use crate::{lookahead, Kind};
 use proc_macro2::{Delimiter, Group, Literal, Punct, Span, TokenStream, TokenTree};
 use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::fmt::{self, Debug, Display};
-#[cfg(feature = "extra-traits")]
-use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 use std::mem;
 use std::ops::Deref;
@@ -1131,29 +1129,3 @@ impl Clone for Nothing {
 #[cfg(feature = "clone-impls")]
 #[cfg_attr(docsrs, doc(cfg(feature = "clone-impls")))]
 impl Copy for Nothing {}
-
-#[cfg(feature = "extra-traits")]
-#[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
-impl Debug for Nothing {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str("Nothing")
-    }
-}
-
-#[cfg(feature = "extra-traits")]
-#[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
-impl Eq for Nothing {}
-
-#[cfg(feature = "extra-traits")]
-#[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
-impl PartialEq for Nothing {
-    fn eq(&self, _other: &Self) -> bool {
-        true
-    }
-}
-
-#[cfg(feature = "extra-traits")]
-#[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
-impl Hash for Nothing {
-    fn hash<H: Hasher>(&self, _state: &mut H) {}
-}

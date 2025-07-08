@@ -175,40 +175,6 @@ macro_rules! impl_clone_for_custom_punctuation {
 }
 
 // Not public API.
-#[cfg(feature = "extra-traits")]
-#[doc(hidden)]
-#[macro_export]
-macro_rules! impl_extra_traits_for_custom_punctuation {
-    ($ident:ident, $($tt:tt)+) => {
-        impl $crate::__private::Debug for $ident {
-            fn fmt(&self, f: &mut $crate::__private::Formatter) -> $crate::__private::FmtResult {
-                $crate::__private::Formatter::write_str(f, $crate::__private::stringify!($ident))
-            }
-        }
-
-        impl $crate::__private::Eq for $ident {}
-
-        impl $crate::__private::PartialEq for $ident {
-            fn eq(&self, _other: &Self) -> $crate::__private::bool {
-                true
-            }
-        }
-
-        impl $crate::__private::Hash for $ident {
-            fn hash<__H: $crate::__private::Hasher>(&self, _state: &mut __H) {}
-        }
-    };
-}
-
-// Not public API.
-#[cfg(not(feature = "extra-traits"))]
-#[doc(hidden)]
-#[macro_export]
-macro_rules! impl_extra_traits_for_custom_punctuation {
-    ($ident:ident, $($tt:tt)+) => {};
-}
-
-// Not public API.
 #[doc(hidden)]
 #[macro_export]
 macro_rules! custom_punctuation_repr {

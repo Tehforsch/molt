@@ -29,10 +29,6 @@ use crate::error::Result;
 use crate::parse::{Parse, ParseStream};
 #[cfg(feature = "parsing")]
 use crate::token::Token;
-#[cfg(feature = "extra-traits")]
-use std::fmt::{self, Debug};
-#[cfg(feature = "extra-traits")]
-use std::hash::{Hash, Hasher};
 use std::ops::{Index, IndexMut};
 use std::option;
 use std::slice;
@@ -398,58 +394,6 @@ where
     fn clone_from(&mut self, other: &Self) {
         self.inner.clone_from(&other.inner);
         self.last.clone_from(&other.last);
-    }
-}
-
-#[cfg(feature = "extra-traits")]
-#[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
-impl<T, P> Eq for Punctuated<T, P>
-where
-    T: Eq,
-    P: Eq,
-{
-}
-
-#[cfg(feature = "extra-traits")]
-#[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
-impl<T, P> PartialEq for Punctuated<T, P>
-where
-    T: PartialEq,
-    P: PartialEq,
-{
-    fn eq(&self, other: &Self) -> bool {
-        let Punctuated { inner, last } = self;
-        *inner == other.inner && *last == other.last
-    }
-}
-
-#[cfg(feature = "extra-traits")]
-#[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
-impl<T, P> Hash for Punctuated<T, P>
-where
-    T: Hash,
-    P: Hash,
-{
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        let Punctuated { inner, last } = self;
-        inner.hash(state);
-        last.hash(state);
-    }
-}
-
-#[cfg(feature = "extra-traits")]
-#[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
-impl<T: Debug, P: Debug> Debug for Punctuated<T, P> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut list = f.debug_list();
-        for (t, p) in &self.inner {
-            list.entry(t);
-            list.entry(p);
-        }
-        if let Some(last) = &self.last {
-            list.entry(last);
-        }
-        list.finish()
     }
 }
 

@@ -106,12 +106,6 @@ use proc_macro2::Span;
 use proc_macro2::{Delimiter, Ident};
 #[cfg(feature = "parsing")]
 use proc_macro2::{Literal, Punct, TokenTree};
-#[cfg(feature = "extra-traits")]
-use std::cmp;
-#[cfg(feature = "extra-traits")]
-use std::fmt::{self, Debug};
-#[cfg(feature = "extra-traits")]
-use std::hash::{Hash, Hasher};
 use std::ops::{Deref, DerefMut};
 
 /// Marker trait for types that represent single tokens.
@@ -238,32 +232,6 @@ macro_rules! define_keywords {
                 }
             }
 
-            #[cfg(feature = "extra-traits")]
-            #[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
-            impl Debug for $name {
-                fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-                    f.write_str(stringify!($name))
-                }
-            }
-
-            #[cfg(feature = "extra-traits")]
-            #[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
-            impl cmp::Eq for $name {}
-
-            #[cfg(feature = "extra-traits")]
-            #[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
-            impl PartialEq for $name {
-                fn eq(&self, _other: &$name) -> bool {
-                    true
-                }
-            }
-
-            #[cfg(feature = "extra-traits")]
-            #[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
-            impl Hash for $name {
-                fn hash<H: Hasher>(&self, _state: &mut H) {}
-            }
-
             #[cfg(feature = "parsing")]
             #[cfg_attr(docsrs, doc(cfg(feature = "parsing")))]
             impl Parse for $name {
@@ -360,32 +328,6 @@ macro_rules! define_punctuation_structs {
                 }
             }
 
-            #[cfg(feature = "extra-traits")]
-            #[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
-            impl Debug for $name {
-                fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-                    f.write_str(stringify!($name))
-                }
-            }
-
-            #[cfg(feature = "extra-traits")]
-            #[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
-            impl cmp::Eq for $name {}
-
-            #[cfg(feature = "extra-traits")]
-            #[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
-            impl PartialEq for $name {
-                fn eq(&self, _other: &$name) -> bool {
-                    true
-                }
-            }
-
-            #[cfg(feature = "extra-traits")]
-            #[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
-            impl Hash for $name {
-                fn hash<H: Hasher>(&self, _state: &mut H) {}
-            }
-
             impl_deref_if_len_is_1!($name/$len);
         )*
     };
@@ -460,32 +402,6 @@ macro_rules! define_delimiters {
                 fn clone(&self) -> Self {
                     *self
                 }
-            }
-
-            #[cfg(feature = "extra-traits")]
-            #[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
-            impl Debug for $name {
-                fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-                    f.write_str(stringify!($name))
-                }
-            }
-
-            #[cfg(feature = "extra-traits")]
-            #[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
-            impl cmp::Eq for $name {}
-
-            #[cfg(feature = "extra-traits")]
-            #[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
-            impl PartialEq for $name {
-                fn eq(&self, _other: &$name) -> bool {
-                    true
-                }
-            }
-
-            #[cfg(feature = "extra-traits")]
-            #[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
-            impl Hash for $name {
-                fn hash<H: Hasher>(&self, _state: &mut H) {}
             }
 
             #[cfg(feature = "parsing")]
@@ -570,32 +486,6 @@ impl Clone for Group {
     fn clone(&self) -> Self {
         *self
     }
-}
-
-#[cfg(feature = "extra-traits")]
-#[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
-impl Debug for Group {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str("Group")
-    }
-}
-
-#[cfg(feature = "extra-traits")]
-#[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
-impl cmp::Eq for Group {}
-
-#[cfg(feature = "extra-traits")]
-#[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
-impl PartialEq for Group {
-    fn eq(&self, _other: &Group) -> bool {
-        true
-    }
-}
-
-#[cfg(feature = "extra-traits")]
-#[cfg_attr(docsrs, doc(cfg(feature = "extra-traits")))]
-impl Hash for Group {
-    fn hash<H: Hasher>(&self, _state: &mut H) {}
 }
 
 #[cfg(feature = "parsing")]

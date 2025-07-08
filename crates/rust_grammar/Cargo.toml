@@ -15,9 +15,7 @@ visit = []
 visit-mut = []
 fold = []
 clone-impls = []
-extra-traits = []
 proc-macro = ["proc-macro2/proc-macro"]
-test = []
 
 [dependencies]
 proc-macro2 = { version = "1.0.91", default-features = false, features = ["span-locations"] }
