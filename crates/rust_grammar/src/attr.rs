@@ -235,12 +235,6 @@ pub enum AttrStyle {
 ///
 /// A name-value meta is like the `path = "..."` in `#[path =
 /// "sys/windows.rs"]`.
-///
-/// # Syntax tree enum
-///
-/// This type is a [syntax tree enum].
-///
-/// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
 pub enum Meta {
     Path(Path),
 

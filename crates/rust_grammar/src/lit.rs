@@ -15,13 +15,6 @@ use crate::{Error, Ident, Result, lookahead};
 
 #[derive(Debug, CmpSyn)]
 /// A Rust literal such as a string or integer or boolean.
-///
-/// # Syntax tree enum
-///
-/// This type is a [syntax tree enum].
-///
-/// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-#[non_exhaustive]
 pub enum Lit {
     /// A UTF-8 string literal: `"foo"`.
     Str(LitStr),

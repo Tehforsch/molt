@@ -10,12 +10,6 @@ use crate::token;
 #[derive(Debug, CmpSyn)]
 /// The visibility level of an item: inherited or `pub` or
 /// `pub(restricted)`.
-///
-/// # Syntax tree enum
-///
-/// This type is a [syntax tree enum].
-///
-/// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
 pub enum Visibility {
     /// A public visibility level: `pub`.
     Public(Token![pub]),
@@ -40,7 +34,6 @@ pub struct VisRestricted {
 
 #[derive(Debug, CmpSyn)]
 /// Unused, but reserved for RFC 3323 restrictions.
-#[non_exhaustive]
 pub enum FieldMutability {
     None,
     // TODO: https://rust-lang.github.io/rfcs/3323-restrictions.html

@@ -29,13 +29,6 @@ use crate::{Stmt, derive, token, verbatim};
 
 #[derive(Debug, CmpSyn)]
 /// Things that can appear directly inside of a module or scope.
-///
-/// # Syntax tree enum
-///
-/// This type is a [syntax tree enum].
-///
-/// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-#[non_exhaustive]
 pub enum Item {
     /// A constant item: `const MAX: u16 = 65535`.
     Const(ItemConst),
@@ -84,23 +77,8 @@ pub enum Item {
     /// A use declaration: `use std::collections::HashMap`.
     Use(ItemUse),
 
-    /// Tokens forming an item not interpreted by Syn.
+    /// Tokens forming an item that cannot be parsed properly
     Verbatim(TokenStream),
-    // For testing exhaustiveness in downstream code, use the following idiom:
-    //
-    //     match item {
-    //         Item::Const(item) => {...}
-    //         Item::Enum(item) => {...}
-    //         ...
-    //         Item::Verbatim(item) => {...}
-    //
-    //         _ => { /* some sane fallback */ }
-    //     }
-    //
-    // This way we fail your tests but don't break your library when adding
-    // a variant. You will be notified by a test failure when a variant is
-    // added, so that you can add code to handle it, but your library will
-    // continue to compile and work for downstream users in the interim.
 }
 
 #[derive(Debug, CmpSyn)]
@@ -317,12 +295,6 @@ impl Item {
 
 #[derive(Debug, CmpSyn)]
 /// A suffix of an import tree in a `use` item: `Type as Renamed` or `*`.
-///
-/// # Syntax tree enum
-///
-/// This type is a [syntax tree enum].
-///
-/// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
 pub enum UseTree {
     /// A path prefix of imports in a `use` item: `std::...`.
     Path(UsePath),
@@ -377,13 +349,6 @@ pub struct UseGroup {
 
 #[derive(Debug, CmpSyn)]
 /// An item within an `extern` block.
-///
-/// # Syntax tree enum
-///
-/// This type is a [syntax tree enum].
-///
-/// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-#[non_exhaustive]
 pub enum ForeignItem {
     /// A foreign function in an `extern` block.
     Fn(ForeignItemFn),
@@ -399,22 +364,6 @@ pub enum ForeignItem {
 
     /// Tokens in an `extern` block not interpreted by Syn.
     Verbatim(TokenStream),
-    // For testing exhaustiveness in downstream code, use the following idiom:
-    //
-    //     match item {
-    //
-    //         ForeignItem::Fn(item) => {...}
-    //         ForeignItem::Static(item) => {...}
-    //         ...
-    //         ForeignItem::Verbatim(item) => {...}
-    //
-    //         _ => { /* some sane fallback */ }
-    //     }
-    //
-    // This way we fail your tests but don't break your library when adding
-    // a variant. You will be notified by a test failure when a variant is
-    // added, so that you can add code to handle it, but your library will
-    // continue to compile and work for downstream users in the interim.
 }
 
 #[derive(Debug, CmpSyn)]
@@ -460,13 +409,6 @@ pub struct ForeignItemMacro {
 
 #[derive(Debug, CmpSyn)]
 /// An item declaration within the definition of a trait.
-///
-/// # Syntax tree enum
-///
-/// This type is a [syntax tree enum].
-///
-/// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-#[non_exhaustive]
 pub enum TraitItem {
     /// An associated constant within the definition of a trait.
     Const(TraitItemConst),
@@ -482,22 +424,6 @@ pub enum TraitItem {
 
     /// Tokens within the definition of a trait not interpreted by Syn.
     Verbatim(TokenStream),
-    // For testing exhaustiveness in downstream code, use the following idiom:
-    //
-    //     match item {
-    //
-    //         TraitItem::Const(item) => {...}
-    //         TraitItem::Fn(item) => {...}
-    //         ...
-    //         TraitItem::Verbatim(item) => {...}
-    //
-    //         _ => { /* some sane fallback */ }
-    //     }
-    //
-    // This way we fail your tests but don't break your library when adding
-    // a variant. You will be notified by a test failure when a variant is
-    // added, so that you can add code to handle it, but your library will
-    // continue to compile and work for downstream users in the interim.
 }
 
 #[derive(Debug, CmpSyn)]
@@ -545,13 +471,6 @@ pub struct TraitItemMacro {
 
 #[derive(Debug, CmpSyn)]
 /// An item within an impl block.
-///
-/// # Syntax tree enum
-///
-/// This type is a [syntax tree enum].
-///
-/// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-#[non_exhaustive]
 pub enum ImplItem {
     /// An associated constant within an impl block.
     Const(ImplItemConst),
@@ -567,22 +486,6 @@ pub enum ImplItem {
 
     /// Tokens within an impl block not interpreted by Syn.
     Verbatim(TokenStream),
-    // For testing exhaustiveness in downstream code, use the following idiom:
-    //
-    //     match item {
-    //
-    //         ImplItem::Const(item) => {...}
-    //         ImplItem::Fn(item) => {...}
-    //         ...
-    //         ImplItem::Verbatim(item) => {...}
-    //
-    //         _ => { /* some sane fallback */ }
-    //     }
-    //
-    // This way we fail your tests but don't break your library when adding
-    // a variant. You will be notified by a test failure when a variant is
-    // added, so that you can add code to handle it, but your library will
-    // continue to compile and work for downstream users in the interim.
 }
 
 #[derive(Debug, CmpSyn)]
@@ -715,7 +618,6 @@ pub struct Variadic {
 
 #[derive(Debug, CmpSyn)]
 /// The mutability of an `Item::Static` or `ForeignItem::Static`.
-#[non_exhaustive]
 pub enum StaticMutability {
     Mut(Token![mut]),
     None,
@@ -723,7 +625,6 @@ pub enum StaticMutability {
 
 #[derive(Debug, CmpSyn)]
 /// Unused, but reserved for RFC 3323 restrictions.
-#[non_exhaustive]
 pub enum ImplRestriction {}
 
 // TODO: https://rust-lang.github.io/rfcs/3323-restrictions.html

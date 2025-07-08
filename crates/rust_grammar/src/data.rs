@@ -28,12 +28,6 @@ pub struct Variant {
 
 #[derive(Debug, CmpSyn)]
 /// Data stored within an enum variant or struct.
-///
-/// # Syntax tree enum
-///
-/// This type is a [syntax tree enum].
-///
-/// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
 pub enum Fields {
     /// Named fields of a struct or struct variant such as `Point { x: f64,
     /// y: f64 }`.

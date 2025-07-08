@@ -23,13 +23,6 @@ use crate::{Stmt, token, verbatim};
 #[derive(Debug, CmpSyn)]
 /// A pattern in a local binding, function signature, match expression, or
 /// various other places.
-///
-/// # Syntax tree enum
-///
-/// This type is a [syntax tree enum].
-///
-/// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-#[non_exhaustive]
 pub enum Pat {
     /// A const block: `const { ... }`.
     Const(PatConst),
@@ -87,22 +80,6 @@ pub enum Pat {
 
     /// A pattern that matches any value: `_`.
     Wild(PatWild),
-    // For testing exhaustiveness in downstream code, use the following idiom:
-    //
-    //     match pat {
-    //
-    //         Pat::Box(pat) => {...}
-    //         Pat::Ident(pat) => {...}
-    //         ...
-    //         Pat::Wild(pat) => {...}
-    //
-    //         _ => { /* some sane fallback */ }
-    //     }
-    //
-    // This way we fail your tests but don't break your library when adding
-    // a variant. You will be notified by a test failure when a variant is
-    // added, so that you can add code to handle it, but your library will
-    // continue to compile and work for downstream users in the interim.
 }
 
 /// Parse a pattern that does _not_ involve `|` at the top level.

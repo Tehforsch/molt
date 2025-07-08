@@ -173,77 +173,6 @@ pub struct ExprEarlierBoundaryRule;
 
 #[derive(Debug, CmpSyn)]
 /// A Rust expression.
-///
-/// # Syntax tree enums
-///
-/// This type is a syntax tree enum. In Syn this and other syntax tree enums
-/// are designed to be traversed using the following rebinding idiom.
-///
-/// ```
-/// # use syn::Expr;
-/// #
-/// # fn example(expr: Expr) {
-/// # const IGNORE: &str = stringify! {
-/// let expr: Expr = /* ... */;
-/// # };
-/// match expr {
-///     Expr::MethodCall(expr) => {
-///         /* ... */
-///     }
-///     Expr::Cast(expr) => {
-///         /* ... */
-///     }
-///     Expr::If(expr) => {
-///         /* ... */
-///     }
-///
-///     /* ... */
-///     # _ => {}
-/// # }
-/// # }
-/// ```
-///
-/// We begin with a variable `expr` of type `Expr` that has no fields
-/// (because it is an enum), and by matching on it and rebinding a variable
-/// with the same name `expr` we effectively imbue our variable with all of
-/// the data fields provided by the variant that it turned out to be. So for
-/// example above if we ended up in the `MethodCall` case then we get to use
-/// `expr.receiver`, `expr.args` etc; if we ended up in the `If` case we get
-/// to use `expr.cond`, `expr.then_branch`, `expr.else_branch`.
-///
-/// This approach avoids repeating the variant names twice on every line.
-///
-/// ```
-/// # use syn::{Expr, ExprMethodCall};
-/// #
-/// # fn example(expr: Expr) {
-/// // Repetitive; recommend not doing this.
-/// match expr {
-///     Expr::MethodCall(ExprMethodCall { method, args, .. }) => {
-/// # }
-/// # _ => {}
-/// # }
-/// # }
-/// ```
-///
-/// In general, the name to which a syntax tree enum variant is bound should
-/// be a suitable name for the complete syntax tree enum type.
-///
-/// ```
-/// # use syn::{Expr, ExprField};
-/// #
-/// # fn example(discriminant: ExprField) {
-/// // Binding is called `base` which is the name I would use if I were
-/// // assigning `*discriminant.base` without an `if let`.
-/// if let Expr::Tuple(base) = *discriminant.base {
-/// # }
-/// # }
-/// ```
-///
-/// A sign that you may not be choosing the right variable names is if you
-/// see names getting repeated in your code, like accessing
-/// `receiver.receiver` or `pat.pat` or `cond.cond`.
-#[non_exhaustive]
 pub enum Expr {
     /// A slice literal expression: `[a, b, c, d]`.
     Array(ExprArray),
@@ -380,23 +309,6 @@ pub enum Expr {
 
     /// A yield expression: `yield expr`.
     Yield(ExprYield),
-    // For testing exhaustiveness in downstream code, use the following idiom:
-    //
-    //     match expr {
-    //         #![cfg_attr(test, deny(non_exhaustive_omitted_patterns))]
-    //
-    //         Expr::Array(expr) => {...}
-    //         Expr::Assign(expr) => {...}
-    //         ...
-    //         Expr::Yield(expr) => {...}
-    //
-    //         _ => { /* some sane fallback */ }
-    //     }
-    //
-    // This way we fail your tests but don't break your library when adding
-    // a variant. You will be notified by a test failure when a variant is
-    // added, so that you can add code to handle it, but your library will
-    // continue to compile and work for downstream users in the interim.
 }
 
 #[derive(Debug, CmpSyn)]

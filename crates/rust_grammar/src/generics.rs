@@ -33,12 +33,6 @@ pub struct Generics {
 #[derive(Debug, CmpSyn)]
 /// A generic type parameter, lifetime, or const generic: `T: Into<String>`,
 /// `'a: 'b`, `const LEN: usize`.
-///
-/// # Syntax tree enum
-///
-/// This type is a [syntax tree enum].
-///
-/// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
 pub enum GenericParam {
     /// A lifetime parameter: `'a: 'b + 'c + 'd`.
     Lifetime(LifetimeParam),
@@ -104,7 +98,6 @@ pub struct TraitBound {
 
 #[derive(Debug, CmpSyn)]
 /// A trait or lifetime used as a bound on a type parameter.
-#[non_exhaustive]
 pub enum TypeParamBound {
     Trait(TraitBound),
     Lifetime(Lifetime),
@@ -132,7 +125,6 @@ pub struct PreciseCapture {
 
 #[derive(Debug, CmpSyn)]
 /// Single parameter in a precise capturing bound.
-#[non_exhaustive]
 pub enum CapturedParam {
     /// A lifetime parameter in precise capturing bound: `fn f<'a>() -> impl
     /// Trait + use<'a>`.
@@ -153,13 +145,6 @@ pub struct WhereClause {
 
 #[derive(Debug, CmpSyn)]
 /// A single predicate in a `where` clause: `T: Deserialize<'de>`.
-///
-/// # Syntax tree enum
-///
-/// This type is a [syntax tree enum].
-///
-/// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-#[non_exhaustive]
 pub enum WherePredicate {
     /// A lifetime predicate in a `where` clause: `'a: 'b + 'c`.
     Lifetime(PredicateLifetime),

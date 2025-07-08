@@ -5,7 +5,6 @@ use crate::parse::{Parse, ParseStream};
 
 #[derive(Debug, CmpSyn)]
 /// A binary operator: `+`, `+=`, `&`.
-#[non_exhaustive]
 pub enum BinOp {
     /// The `+` operator (addition)
     Add(Token![+]),
@@ -67,7 +66,6 @@ pub enum BinOp {
 
 #[derive(Debug, CmpSyn)]
 /// A unary operator: `*`, `!`, `-`.
-#[non_exhaustive]
 pub enum UnOp {
     /// The `*` operator for dereferencing
     Deref(Token![*]),

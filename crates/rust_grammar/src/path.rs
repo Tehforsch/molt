@@ -91,7 +91,6 @@ impl PathArguments {
 
 #[derive(Debug, CmpSyn)]
 /// An individual generic argument, like `'a`, `T`, or `Item = T`.
-#[non_exhaustive]
 pub enum GenericArgument {
     /// A lifetime argument.
     Lifetime(Lifetime),

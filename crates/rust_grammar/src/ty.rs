@@ -22,13 +22,6 @@ use crate::{path, token, verbatim};
 
 #[derive(Debug, CmpSyn)]
 /// The possible types that a Rust value could have.
-///
-/// # Syntax tree enum
-///
-/// This type is a [syntax tree enum].
-///
-/// [syntax tree enum]: crate::expr::Expr#syntax-tree-enums
-#[non_exhaustive]
 pub enum Type {
     /// A fixed size array type: `[T; n]`.
     Array(TypeArray),
@@ -77,23 +70,6 @@ pub enum Type {
 
     /// Tokens in type position not interpreted by Syn.
     Verbatim(TokenStream),
-    // For testing exhaustiveness in downstream code, use the following idiom:
-    //
-    //     match ty {
-    //         #![cfg_attr(test, deny(non_exhaustive_omitted_patterns))]
-    //
-    //         Type::Array(ty) => {...}
-    //         Type::BareFn(ty) => {...}
-    //         ...
-    //         Type::Verbatim(ty) => {...}
-    //
-    //         _ => { /* some sane fallback */ }
-    //     }
-    //
-    // This way we fail your tests but don't break your library when adding
-    // a variant. You will be notified by a test failure when a variant is
-    // added, so that you can add code to handle it, but your library will
-    // continue to compile and work for downstream users in the interim.
 }
 
 #[derive(Debug, CmpSyn)]
