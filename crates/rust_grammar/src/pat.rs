@@ -478,7 +478,7 @@ fn pat_ident(input: ParseStream) -> Result<PatIdent> {
     })
 }
 
-impl ParseList for PatMultiLeadingVert {
+impl ParseList for PatTupleStruct {
     type Item = Pat;
     type ParseItem = PatMultiLeadingVert;
     type Punct = Token![,];
@@ -506,7 +506,7 @@ fn pat_tuple_struct(
     let content;
     let paren_token = parenthesized!(content in input);
 
-    let elems = content.parse_list::<PatMultiLeadingVert>()?;
+    let elems = content.parse_list::<PatTupleStruct>()?;
 
     Ok(PatTupleStruct {
         attrs: Vec::new(),

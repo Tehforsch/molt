@@ -312,7 +312,9 @@ pub fn match_pattern<N: GetKind + CmpSyn>(
                 matches.push(match_)
             }
         } else {
-            current.extend(match_.make_forks(&mut next_id));
+            if match_.valid {
+                current.extend(match_.make_forks(&mut next_id));
+            }
         }
     }
     merge_matches(matches)

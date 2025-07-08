@@ -420,6 +420,7 @@ mod tests {
             paren,
             subpattern,
             nested,
+            tuple_list,
         )
     );
     test_transform!(transform, (rename, example10));
