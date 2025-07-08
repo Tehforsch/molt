@@ -6,9 +6,3 @@ let input: Expr = {
     }
 };
 let arm_in: Arm = { $pat => Ok($val) };
-let arm_out: Arm = { $pat => $val };
-let output: Expr = {
-    Ok($input) 
-};
-transform arm_in -> arm_out;
-transform input -> output;

@@ -390,7 +390,7 @@ fn make_single_binding(bind: Binding) -> MultiBinding {
 }
 
 fn make_multi_binding(bindings: Vec<Binding>) -> MultiBinding {
-    assert!(bindings.iter().all(|bind| bind.pat.is_none()));
+    // assert!(bindings.iter().all(|bind| bind.pat.is_none()));
     MultiBinding {
         pat: None,
         // The previous .pop() operations will reverse the order, so

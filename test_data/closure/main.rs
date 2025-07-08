@@ -1,3 +1,3 @@
 fn foo() {
-    |a, b| {};
+    |a: usize, b, c| {};
 }

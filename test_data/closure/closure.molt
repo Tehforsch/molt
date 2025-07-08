@@ -1,1 +1,2 @@
-let closure: Stmt = { |a, b| { }; };
+let arg1: Pat;
+let closure: Stmt = { |$arg1, b, c| { }; };

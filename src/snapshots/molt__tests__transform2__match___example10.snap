@@ -1,0 +1,20 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(& name, stringify! (example10))"
+---
+note: Match
+  ┌─ "test_data/transform2/main.rs":2:5
+  │  
+2 │ ╭     match value {
+3 │ │         Some(x) => Ok(x * 2),
+4 │ │         None => Ok(0),
+5 │ │     };
+  │ ╰─────^ $input
+  │  
+  = $arm_in = Some(x) => Ok(x * 2),
+  = $arm_in = None => Ok(0),
+  = $expr = value
+  = $pat = Some(x)
+  = $pat = None
+  = $val = x * 2
+  = $val = 0

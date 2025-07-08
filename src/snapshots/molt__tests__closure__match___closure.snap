@@ -1,9 +1,11 @@
 ---
 source: src/lib.rs
-expression: "super :: super :: match_pattern(stringify! (closure), stringify! (closure))"
+expression: "super :: super :: match_pattern(& name, stringify! (closure))"
 ---
 note: Match
   ┌─ "test_data/closure/main.rs":2:5
   │
-2 │     |a, b| {};
-  │     ^^^^^^^^^^ $closure
+2 │     |a: usize, b, c| {};
+  │     ^^^^^^^^^^^^^^^^^^^^ $closure
+  │
+  = $arg1 = a: usize

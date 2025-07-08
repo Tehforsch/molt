@@ -3,13 +3,13 @@ pub struct Config {
     pub debug_print: bool,
 }
 
-impl Default for Config {
-    #[cfg(test)]
-    fn default() -> Self {
+impl Config {
+    pub fn test() -> Self {
         Self { debug_print: true }
     }
+}
 
-    #[cfg(not(test))]
+impl Default for Config {
     fn default() -> Self {
         Self { debug_print: false }
     }

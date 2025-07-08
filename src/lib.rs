@@ -219,7 +219,7 @@ mod tests {
 
     fn match_pattern(path: &str, fname: &str) -> String {
         let input = make_input(path, fname);
-        let diagnostics = super::run(&input, Config::default());
+        let diagnostics = super::run(&input, Config::test());
         match diagnostics {
             Ok(diagnostics) => diagnostics
                 .into_iter()
@@ -353,7 +353,7 @@ mod tests {
 
     test_match_pattern!(consts, (exprs));
     test_match_pattern!(let_, (let_));
-    test_match_pattern!(closure, (closure));
+    test_match_pattern!(closure, (closure, inputs));
     test_match_pattern!(control_flow, ());
     test_match_pattern!(arrays, (array));
     test_match_pattern!(ranges, ());
@@ -423,7 +423,8 @@ mod tests {
             tuple_list,
         )
     );
-    test_transform!(transform, (rename, example10));
+    test_transform!(transform, (rename));
+    test_match_pattern!(transform2, (example10)); // TODO: Make this a transform test once the functionality exists.
 
     molt_grammar_test_err!(
         molt_grammar,

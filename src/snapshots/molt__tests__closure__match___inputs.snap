@@ -1,0 +1,13 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(& name, stringify! (inputs))"
+---
+note: Match
+  ┌─ "test_data/closure/main.rs":2:5
+  │
+2 │     |a: usize, b, c| {};
+  │     ^^^^^^^^^^^^^^^^^^^ $x
+  │
+  = $pat = a: usize
+  = $pat = b
+  = $pat = c

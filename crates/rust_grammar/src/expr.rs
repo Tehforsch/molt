@@ -917,7 +917,6 @@ pub struct Arm {
     pub guard: Option<(Token![if], NodeId<Expr>)>,
     pub fat_arrow_token: Token![=>],
     pub body: NodeId<Expr>,
-    pub comma: Option<Token![,]>,
 }
 
 #[derive(Debug, CmpSyn)]
@@ -991,7 +990,9 @@ impl ParseNode for ExprEarlierBoundaryRule {
     }
 }
 
-impl ParseList for Expr {
+struct FnArgs;
+
+impl ParseList for FnArgs {
     type Item = Expr;
     type ParseItem = Expr;
     type Punct = Token![,];
@@ -1317,7 +1318,7 @@ fn trailer_helper(input: ParseStream, mut e: SpannedPat<Expr>) -> Result<Spanned
                 attrs: Vec::new(),
                 func: input.add_pat(e),
                 paren_token: parenthesized!(content in input),
-                args: content.parse_list::<Expr>()?,
+                args: content.parse_list::<FnArgs>()?,
             });
             let span = input.span_from_marker(marker).join(orig_span);
             e = e2.pattern_with_span(span);
@@ -1364,7 +1365,7 @@ fn trailer_helper(input: ParseStream, mut e: SpannedPat<Expr>) -> Result<Spanned
                         method,
                         turbofish,
                         paren_token: parenthesized!(content in input),
-                        args: content.parse_list::<Expr>()?,
+                        args: content.parse_list::<FnArgs>()?,
                     });
                     let span = input.span_from_marker(marker).join(orig_span);
                     e = e2.pattern_with_span(span);
@@ -1902,7 +1903,7 @@ impl Parse for ExprMatch {
         let brace_token = braced!(content in input);
         attr::parse_inner(&content, &mut attrs)?;
 
-        let arms = content.parse_list::<Arm>()?;
+        let arms = content.parse_list::<Arms>()?;
 
         Ok(ExprMatch {
             attrs,
@@ -2468,7 +2469,9 @@ impl Parse for Member {
     }
 }
 
-impl ParseList for Arm {
+struct Arms;
+
+impl ParseList for Arms {
     type Punct = Token![,];
     type ParseItem = Arm;
     type Item = Arm;
@@ -2488,7 +2491,7 @@ impl ParseNode for Arm {
     fn parse_spanned(input: ParseStream) -> Result<Spanned<Arm>> {
         input.call_spanned(|input| {
             let requires_comma;
-            Ok(Arm {
+            let res = Ok(Arm {
                 attrs: input.call(Attribute::parse_outer)?,
                 pat: input.parse_id::<PatMultiLeadingVert>()?,
                 guard: {
@@ -2506,14 +2509,15 @@ impl ParseNode for Arm {
                     requires_comma = classify::requires_comma_to_be_match_arm(input, body);
                     body
                 },
-                comma: {
-                    if requires_comma && !input.is_empty() {
-                        Some(input.parse()?)
-                    } else {
-                        input.parse()?
-                    }
-                },
-            })
+            });
+            let _: Option<Token![,]> = {
+                if requires_comma && !input.is_empty() {
+                    Some(input.parse()?)
+                } else {
+                    input.parse()?
+                }
+            };
+            res
         })
     }
 }

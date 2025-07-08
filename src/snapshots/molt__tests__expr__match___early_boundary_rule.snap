@@ -1,9 +1,0 @@
----
-source: src/lib.rs
-expression: "super :: super ::\nmatch_pattern(stringify! (expr), stringify! (early_boundary_rule))"
----
-error: expected `,`
-   ┌─ "test_data/expr/early_boundary_rule.molt":18:19
-   │
-18 │         bar => $a {},
-   │                   ^ expected `,`

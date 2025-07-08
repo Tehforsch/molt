@@ -146,7 +146,7 @@ impl Parse for FieldsNamed {
         let content;
         Ok(FieldsNamed {
             brace_token: braced!(content in input),
-            named: content.parse_list::<FieldNamed>()?,
+            named: content.parse_list::<FieldsNamed>()?,
         })
     }
 }
@@ -156,12 +156,12 @@ impl Parse for FieldsUnnamed {
         let content;
         Ok(FieldsUnnamed {
             paren_token: parenthesized!(content in input),
-            unnamed: content.parse_list::<FieldUnnamed>()?,
+            unnamed: content.parse_list::<FieldsUnnamed>()?,
         })
     }
 }
 
-impl ParseList for FieldNamed {
+impl ParseList for FieldsNamed {
     type Item = Field;
     type ParseItem = FieldNamed;
     type Punct = Token![,];
@@ -171,7 +171,7 @@ impl ParseList for FieldNamed {
     }
 }
 
-impl ParseList for FieldUnnamed {
+impl ParseList for FieldsUnnamed {
     type Item = Field;
     type ParseItem = FieldUnnamed;
     type Punct = Token![,];
