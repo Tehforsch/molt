@@ -29,20 +29,20 @@ pub type ParseCtx = Rc<RefCell<Ctx<Node>>>;
 pub use crate::error::{Error, Result};
 pub use crate::lookahead::{End, Lookahead1, Peek};
 
-/// Parsing interface implemented by all types that can be parsed in a default
-/// way from a token stream.
-///
-/// Refer to the [module documentation] for details about implementing and using
-/// the `Parse` trait.
-///
-/// [module documentation]: self
+/// Parsing interface implemented by types that can be parsed in a default
+/// way from a token stream. This trait is for types that aren't represented
+/// as nodes but stored within the AST structs directly.
 pub trait Parse: Sized {
     fn parse(input: ParseStream) -> Result<Self>;
 }
 
+/// Parsing interface implemented by types that can be parsed in a default
+/// way from a token stream. This trait is for types that are represented
+/// as nodes.
 pub trait ParsePat {
     type Target: ToNode<Node>;
 
+    /// Parse a Self::Target given the input. todo!()
     fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>>;
 
     /// By default, the `parse_pat` function on `ParseStream` will
