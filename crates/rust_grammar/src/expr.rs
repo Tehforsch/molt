@@ -1050,8 +1050,8 @@ pub(crate) mod parsing {
 
     use crate::parse::ParseBuffer;
     use crate::parse::{
-        parse_punctuated_list_real, ListOrItem, Parse, ParseList, ParseListOrItem, ParsePat,
-        ParseStream,
+        ListOrItem, Parse, ParseList, ParseListOrItem, ParsePat, ParseStream,
+        parse_punctuated_list_real,
     };
     use crate::pat::PatMultiLeadingVert;
 
@@ -1064,8 +1064,8 @@ pub(crate) mod parsing {
     use crate::ty::parsing::NoPlus;
 
     use crate::ty::ReturnType;
-    use crate::{token, Type};
-    use crate::{verbatim, Stmt};
+    use crate::{Stmt, verbatim};
+    use crate::{Type, token};
     use molt_lib::{Id, NodeId, NodeList, Pattern, Spanned, SpannedPat, WithSpan};
     use std::mem;
 
@@ -1173,7 +1173,7 @@ pub(crate) mod parsing {
         };
 
         if continue_parsing_early(input, &expr) {
-            if let Pattern::Real(ref mut expr) = &mut *expr {
+            if let Pattern::Real(expr) = &mut *expr {
                 attrs.extend(expr.replace_attrs(Vec::new()));
                 expr.replace_attrs(attrs);
             }
@@ -1185,7 +1185,7 @@ pub(crate) mod parsing {
         if input.peek(Token![.]) && !input.peek(Token![..]) || input.peek(Token![?]) {
             expr = trailer_helper(input, expr)?;
 
-            if let Pattern::Real(ref mut expr) = &mut *expr {
+            if let Pattern::Real(expr) = &mut *expr {
                 attrs.extend(expr.replace_attrs(Vec::new()));
                 expr.replace_attrs(attrs);
             }
@@ -1194,7 +1194,7 @@ pub(crate) mod parsing {
             return parse_expr(input, expr, allow_struct, Precedence::MIN);
         }
 
-        if let Pattern::Real(ref mut expr) = &mut *expr {
+        if let Pattern::Real(expr) = &mut *expr {
             attrs.extend(expr.replace_attrs(Vec::new()));
             expr.replace_attrs(attrs);
         }

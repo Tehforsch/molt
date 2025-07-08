@@ -752,8 +752,8 @@ pub(crate) mod parsing {
     use crate::restriction::Visibility;
     use crate::stmt::Block;
     use crate::ty::{Abi, ReturnType, Type, TypePath};
+    use crate::{Stmt, verbatim};
     use crate::{derive, token};
-    use crate::{verbatim, Stmt};
     use molt_lib::{NodeId, NodeList, Pattern, SpannedPat, WithSpan};
     use proc_macro2::TokenStream;
 

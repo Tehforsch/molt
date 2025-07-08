@@ -4,7 +4,7 @@ use crate::attr::Attribute;
 use crate::error::Result;
 use crate::item::Item;
 use crate::parse::parse_str_ctx;
-use crate::{whitespace, Node};
+use crate::{Node, whitespace};
 
 #[derive(Debug)]
 /// A complete file of Rust source code.
@@ -86,11 +86,11 @@ pub struct File {
 pub(crate) mod parsing {
     use molt_lib::NodeId;
 
+    use crate::Item;
     use crate::attr::Attribute;
     use crate::error::Result;
     use crate::file::File;
     use crate::parse::{Parse, ParseStream};
-    use crate::Item;
 
     impl Parse for File {
         fn parse(input: ParseStream) -> Result<Self> {

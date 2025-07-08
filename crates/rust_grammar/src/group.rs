@@ -1,8 +1,8 @@
 use crate::error::Result;
 use crate::parse::ParseBuffer;
 use crate::token;
-use proc_macro2::extra::DelimSpan;
 use proc_macro2::Delimiter;
+use proc_macro2::extra::DelimSpan;
 
 // Not public API.
 #[doc(hidden)]

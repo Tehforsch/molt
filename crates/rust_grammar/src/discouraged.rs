@@ -2,9 +2,9 @@
 
 use crate::buffer::Cursor;
 use crate::error::Result;
-use crate::parse::{inner_unexpected, ParseBuffer, Unexpected};
-use proc_macro2::extra::DelimSpan;
+use crate::parse::{ParseBuffer, Unexpected, inner_unexpected};
 use proc_macro2::Delimiter;
+use proc_macro2::extra::DelimSpan;
 use std::cell::Cell;
 use std::mem;
 use std::rc::Rc;

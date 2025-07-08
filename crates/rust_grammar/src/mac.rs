@@ -67,7 +67,7 @@ pub(crate) fn parse_delimiter(input: ParseStream) -> Result<(MacroDelimiter, Tok
 
 pub(crate) mod parsing {
     use crate::error::Result;
-    use crate::mac::{parse_delimiter, Macro};
+    use crate::mac::{Macro, parse_delimiter};
     use crate::parse::{Parse, ParseStream};
     use crate::path::Path;
 

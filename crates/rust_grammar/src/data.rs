@@ -123,7 +123,7 @@ pub(crate) mod parsing {
     use crate::data::{Field, Fields, FieldsNamed, FieldsUnnamed, Variant};
     use crate::error::Result;
     use crate::ident::{AnyIdent, Ident};
-    use crate::parse::{parse_punctuated_list_real, Parse, ParseList, ParsePat, ParseStream};
+    use crate::parse::{Parse, ParseList, ParsePat, ParseStream, parse_punctuated_list_real};
     use crate::restriction::{FieldMutability, Visibility};
     use crate::token;
     use crate::ty::Type;

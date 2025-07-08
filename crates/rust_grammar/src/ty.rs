@@ -242,8 +242,8 @@ pub(crate) mod parsing {
     use crate::lifetime::Lifetime;
     use crate::mac::{self, Macro};
     use crate::parse::{
-        parse_punctuated_list_real, ListOrItem, Parse, ParseList, ParseListOrItem, ParsePat,
-        ParseStream,
+        ListOrItem, Parse, ParseList, ParseListOrItem, ParsePat, ParseStream,
+        parse_punctuated_list_real,
     };
     use crate::path;
     use crate::punctuated::Punctuated;

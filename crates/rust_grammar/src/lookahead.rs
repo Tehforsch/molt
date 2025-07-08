@@ -1,10 +1,10 @@
+use crate::ParseCtx;
 use crate::buffer::Cursor;
 use crate::error::{self, Error};
-use crate::parse::{peek_pat, PeekPat};
+use crate::parse::{PeekPat, peek_pat};
 use crate::sealed::lookahead::Sealed;
 use crate::span::IntoSpans;
 use crate::token::{CustomToken, Token};
-use crate::ParseCtx;
 use proc_macro2::{Delimiter, Span};
 use std::cell::RefCell;
 

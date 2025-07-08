@@ -4,7 +4,7 @@ description = "A fork of the syn crate. Parsing is heavily modified to parse int
 repository.workspace = true
 version.workspace = true
 license.workspace = true
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 proc-macro2 = { version = "1.0.91", default-features = false, features = ["span-locations"] }

@@ -99,8 +99,8 @@ use crate::lifetime::Lifetime;
 
 use crate::parse::{Parse, ParseStream};
 use crate::span::IntoSpans;
-use proc_macro2::extra::DelimSpan;
 use proc_macro2::Span;
+use proc_macro2::extra::DelimSpan;
 
 use proc_macro2::{Delimiter, Ident};
 

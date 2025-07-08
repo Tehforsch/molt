@@ -303,7 +303,7 @@ pub(crate) mod parsing {
     use crate::path::{self, Path, QSelf};
     use crate::punctuated::Punctuated;
     use crate::verbatim;
-    use crate::{token, Stmt};
+    use crate::{Stmt, token};
     use molt_lib::{NodeId, NodeList, Pattern, WithSpan};
     use proc_macro2::TokenStream;
 

@@ -36,7 +36,7 @@ pub mod ext;
 
 mod file;
 
-pub use crate::file::{parse_file, File};
+pub use crate::file::{File, parse_file};
 
 mod generics;
 
