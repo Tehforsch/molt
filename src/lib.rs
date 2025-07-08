@@ -421,6 +421,7 @@ mod tests {
             subpattern,
             nested,
             tuple_list,
+            slice_list,
         )
     );
     test_transform!(transform, (rename));

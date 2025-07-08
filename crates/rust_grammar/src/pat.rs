@@ -790,12 +790,9 @@ impl ParseList for PatSlice {
     type Punct = Token![,];
 
     fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
-        let content;
-        bracketed!(content in input);
-
         let mut elems = Punctuated::new();
-        while !content.is_empty() {
-            let value = PatMultiLeadingVert::parse_pat(&content)?;
+        while !input.is_empty() {
+            let value = PatMultiLeadingVert::parse_pat(&input)?;
             match &*value {
                 Pattern::Real(Pat::Range(pat)) if pat.start.is_none() || pat.end.is_none() => {
                     let (start, end) = match &pat.limits {
@@ -810,10 +807,10 @@ impl ParseList for PatSlice {
                 _ => {}
             }
             elems.push_value(value);
-            if content.is_empty() {
+            if input.is_empty() {
                 break;
             }
-            let punct: Token![,] = content.parse()?;
+            let punct: Token![,] = input.parse()?;
             elems.push_punct(punct);
         }
 
@@ -822,9 +819,12 @@ impl ParseList for PatSlice {
 }
 
 fn pat_slice(input: ParseStream) -> Result<PatSlice> {
+    let content;
+    bracketed!(content in input);
+
     Ok(PatSlice {
         attrs: Vec::new(),
-        elems: input.parse_list::<PatSlice>()?,
+        elems: content.parse_list::<PatSlice>()?,
     })
 }
 

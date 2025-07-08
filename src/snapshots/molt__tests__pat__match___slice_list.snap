@@ -1,0 +1,32 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(& name, stringify! (slice_list))"
+---
+note: Match
+   ┌─ "test_data/pat/main.rs":26:9
+   │
+26 │     let [first, second, ..] = arr;
+   │         ^^^^^^^^^^^^^^^^^^^ $target
+   │
+   = $pat = first
+   = $pat = second
+   = $pat = ..
+
+note: Match
+   ┌─ "test_data/pat/main.rs":27:9
+   │
+27 │     let [.., last] = arr;
+   │         ^^^^^^^^^^ $target
+   │
+   = $pat = ..
+   = $pat = last
+
+note: Match
+   ┌─ "test_data/pat/main.rs":28:9
+   │
+28 │     let [first, .., last] = arr;
+   │         ^^^^^^^^^^^^^^^^^ $target
+   │
+   = $pat = first
+   = $pat = ..
+   = $pat = last

@@ -1,0 +1,2 @@
+let pat: Pat;
+let target: Pat = { [$($pat)*] };
