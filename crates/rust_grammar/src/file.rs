@@ -3,10 +3,8 @@ use molt_lib::{Ctx, NodeId, ParsingMode};
 use crate::attr::Attribute;
 use crate::error::Result;
 use crate::item::Item;
-use crate::parse::parse_str_ctx;
+use crate::parse::{Parse, ParseStream, parse_str_ctx};
 use crate::{Node, whitespace};
-
-use crate::parse::{Parse, ParseStream};
 
 #[derive(Debug)]
 /// A complete file of Rust source code.

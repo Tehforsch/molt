@@ -1,13 +1,15 @@
 //! Extensions to the parsing API with niche applicability.
 
-use crate::buffer::Cursor;
-use crate::error::Result;
-use crate::parse::{ParseBuffer, Unexpected, inner_unexpected};
-use proc_macro2::Delimiter;
-use proc_macro2::extra::DelimSpan;
 use std::cell::Cell;
 use std::mem;
 use std::rc::Rc;
+
+use proc_macro2::Delimiter;
+use proc_macro2::extra::DelimSpan;
+
+use crate::buffer::Cursor;
+use crate::error::Result;
+use crate::parse::{ParseBuffer, Unexpected, inner_unexpected};
 
 /// Extensions to the `ParseStream` API to support speculative parsing.
 pub trait Speculative {

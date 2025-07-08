@@ -1,11 +1,10 @@
-use crate::lookahead;
-
 use molt_lib::{Pattern, Spanned, SpannedPat};
 pub use proc_macro2::Ident;
 
 use crate::buffer::Cursor;
 use crate::error::Result;
 use crate::ext::IdentExt;
+use crate::lookahead;
 use crate::parse::{Parse, ParsePat, ParseStream, PeekPat};
 use crate::token::Token;
 

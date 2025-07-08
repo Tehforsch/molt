@@ -1,51 +1,34 @@
-use derive_macro::CmpSyn;
-use molt_lib::{Id, Pattern, Spanned, SpannedPat, WithSpan};
-use molt_lib::{NodeId, NodeList};
-
-use crate::attr::Attribute;
-
-use crate::generics::BoundLifetimes;
-use crate::ident::{AnyIdent, Ident};
-use crate::lifetime::Lifetime;
-use crate::lit::Lit;
-use crate::mac::Macro;
-use crate::op::{BinOp, UnOp};
-use crate::parse::ParseStream;
-
-use crate::pat::Pat;
-use crate::path::{AngleBracketedGenericArguments, Path, QSelf};
-use crate::punctuated::Punctuated;
-
-use crate::stmt::Block;
-use crate::token;
-
-use crate::ty::ReturnType;
-use crate::ty::Type;
-use proc_macro2::{Span, TokenStream};
 use std::hash::{Hash, Hasher};
 use std::mem;
 
-use crate::attr;
+use derive_macro::CmpSyn;
+use molt_lib::{Id, NodeId, NodeList, Pattern, Spanned, SpannedPat, WithSpan};
+use proc_macro2::{Span, TokenStream};
 
-use crate::classify;
+use crate::attr::Attribute;
 use crate::error::{Error, Result};
-
-use crate::lit::{LitFloat, LitInt};
-use crate::mac::{self};
-use crate::parse::discouraged::Speculative as _;
-
-use crate::parse::ParseBuffer;
-use crate::parse::{
-    ListOrItem, Parse, ParseList, ParseListOrItem, ParsePat, parse_punctuated_list_real,
+use crate::generics::BoundLifetimes;
+use crate::ident::{AnyIdent, Ident};
+use crate::lifetime::Lifetime;
+use crate::lit::{Lit, LitFloat, LitInt};
+use crate::mac::{
+    Macro, {self},
 };
-use crate::pat::PatMultiLeadingVert;
-
-use crate::pat::PatType;
-use crate::path::{self};
+use crate::op::{BinOp, UnOp};
+use crate::parse::discouraged::Speculative as _;
+use crate::parse::{
+    ListOrItem, Parse, ParseBuffer, ParseList, ParseListOrItem, ParsePat, ParseStream,
+    parse_punctuated_list_real,
+};
+use crate::pat::{Pat, PatMultiLeadingVert, PatType};
+use crate::path::{
+    AngleBracketedGenericArguments, Path, QSelf, {self},
+};
 use crate::precedence::Precedence;
-
-use crate::ty::NoPlus;
-use crate::{Stmt, verbatim};
+use crate::punctuated::Punctuated;
+use crate::stmt::Block;
+use crate::ty::{NoPlus, ReturnType, Type};
+use crate::{Stmt, attr, classify, token, verbatim};
 
 /// An alternative to the primary `Expr::parse` parser (from the [`Parse`]
 /// trait) for ambiguous syntactic positions in which a trailing brace

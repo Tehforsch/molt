@@ -1,35 +1,31 @@
-use derive_macro::CmpSyn;
+use std::mem;
 
-use crate::attr::Attribute;
-use crate::attr::{self};
+use derive_macro::CmpSyn;
+use molt_lib::{NodeId, NodeList, Pattern, SpannedPat, WithSpan};
+use proc_macro2::TokenStream;
+
+use crate::attr::{
+    Attribute, {self},
+};
 use crate::data::{Fields, FieldsNamed, Variant};
-use crate::derive;
 use crate::error::{Error, Result};
 use crate::expr::Expr;
 use crate::generics::{Generics, TypeParamBound};
-use crate::ident::Ident;
-use crate::ident::{AnyIdent, TokenIdent};
+use crate::ident::{AnyIdent, Ident, TokenIdent};
 use crate::lifetime::Lifetime;
 use crate::lit::LitStr;
-use crate::mac::Macro;
-use crate::mac::{self};
+use crate::mac::{
+    Macro, {self},
+};
 use crate::parse::discouraged::Speculative as _;
 use crate::parse::{Parse, ParseBuffer, ParsePat, ParseStream};
-use crate::pat::PatSingle;
-use crate::pat::{Pat, PatType};
+use crate::pat::{Pat, PatSingle, PatType};
 use crate::path::Path;
 use crate::punctuated::Punctuated;
 use crate::restriction::Visibility;
 use crate::stmt::Block;
-use crate::token;
-use crate::ty::TypePath;
-use crate::ty::{Abi, ReturnType, Type};
-use crate::{Stmt, verbatim};
-use molt_lib::NodeId;
-use molt_lib::{NodeList, Pattern, SpannedPat, WithSpan};
-use proc_macro2::TokenStream;
-
-use std::mem;
+use crate::ty::{Abi, ReturnType, Type, TypePath};
+use crate::{Stmt, derive, token, verbatim};
 
 #[derive(Debug, CmpSyn)]
 /// Things that can appear directly inside of a module or scope.

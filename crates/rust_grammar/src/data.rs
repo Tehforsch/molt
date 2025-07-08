@@ -1,18 +1,15 @@
 use derive_macro::CmpSyn;
-use molt_lib::{NodeId, NodeList};
-use molt_lib::{SpannedPat, WithSpan};
+use molt_lib::{NodeId, NodeList, SpannedPat, WithSpan};
 
 use crate::attr::Attribute;
 use crate::error::Result;
 use crate::expr::{Expr, Index, Member};
-use crate::ident::AnyIdent;
-use crate::ident::Ident;
+use crate::ident::{AnyIdent, Ident};
 use crate::parse::{Parse, ParseList, ParsePat, ParseStream, parse_punctuated_list_real};
 use crate::punctuated::{self};
 use crate::restriction::{FieldMutability, Visibility};
-use crate::token;
 use crate::ty::Type;
-use crate::verbatim;
+use crate::{token, verbatim};
 
 #[derive(Debug, CmpSyn)]
 /// An enum variant.

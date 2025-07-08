@@ -1,23 +1,16 @@
 use derive_macro::CmpSyn;
-use molt_lib::{NodeId, NodeList};
-use molt_lib::{Pattern, WithSpan};
+use molt_lib::{NodeId, NodeList, Pattern, WithSpan};
 
-use crate::expr::Expr;
+use crate::error::Result;
+use crate::expr::{Expr, ExprBlock, ExprPath};
 use crate::generics::TypeParamBound;
-use crate::ident::Ident;
+use crate::ident::{AnyIdent, Ident};
 use crate::lifetime::Lifetime;
+use crate::lit::Lit;
+use crate::parse::{Parse, ParseStream};
 use crate::punctuated::Punctuated;
 use crate::token;
 use crate::ty::{ReturnType, Type};
-
-use crate::error::Result;
-
-use crate::expr::ExprBlock;
-use crate::expr::ExprPath;
-
-use crate::ident::AnyIdent;
-use crate::lit::Lit;
-use crate::parse::{Parse, ParseStream};
 
 #[derive(Debug, CmpSyn)]
 /// A path at which a named item is exported (e.g. `std::collections::HashMap`).

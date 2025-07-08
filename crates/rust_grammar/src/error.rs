@@ -1,11 +1,12 @@
-use crate::buffer::Cursor;
-use crate::thread::ThreadBound;
+use std::fmt::{self, Debug, Display};
+use std::{slice, vec};
+
 use proc_macro2::{
     Delimiter, Group, Ident, LexError, Literal, Punct, Spacing, Span, TokenStream, TokenTree,
 };
-use std::fmt::{self, Debug, Display};
-use std::slice;
-use std::vec;
+
+use crate::buffer::Cursor;
+use crate::thread::ThreadBound;
 
 /// The result of a Syn parser.
 pub type Result<T> = std::result::Result<T, Error>;

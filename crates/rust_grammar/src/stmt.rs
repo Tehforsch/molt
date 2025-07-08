@@ -1,23 +1,20 @@
+use derive_macro::CmpSyn;
+use molt_lib::{NodeId, NodeList, Pattern, Spanned, SpannedPat, WithSpan};
+use proc_macro2::TokenStream;
+
 use crate::attr::Attribute;
-use crate::classify;
 use crate::error::Result;
-use crate::expr::Expr;
-use crate::expr::{ExprBlock, ExprEarlierBoundaryRule, ExprMacro};
+use crate::expr::{Expr, ExprBlock, ExprEarlierBoundaryRule, ExprMacro};
 use crate::ident::Ident;
-use crate::item;
 use crate::item::Item;
-use crate::mac::Macro;
-use crate::mac::{self};
+use crate::mac::{
+    Macro, {self},
+};
 use crate::parse::discouraged::Speculative as _;
 use crate::parse::{Parse, ParseList, ParsePat, ParseStream};
-use crate::pat::Pat;
-use crate::pat::{PatSingle, PatType};
+use crate::pat::{Pat, PatSingle, PatType};
 use crate::path::Path;
-use crate::token;
-use derive_macro::CmpSyn;
-use molt_lib::{NodeId, NodeList};
-use molt_lib::{Pattern, Spanned, SpannedPat, WithSpan};
-use proc_macro2::TokenStream;
+use crate::{classify, item, token};
 
 #[derive(Debug, CmpSyn)]
 /// A braced block containing Rust statements.

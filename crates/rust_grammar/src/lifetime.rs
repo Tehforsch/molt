@@ -1,11 +1,13 @@
-use crate::error::Result;
-use crate::lookahead;
-use crate::parse::{Parse, ParseStream};
-use molt_lib::{CmpSyn, Matcher};
-use proc_macro2::{Ident, Span};
 use std::cmp::Ordering;
 use std::fmt::{self, Display};
 use std::hash::{Hash, Hasher};
+
+use molt_lib::{CmpSyn, Matcher};
+use proc_macro2::{Ident, Span};
+
+use crate::error::Result;
+use crate::lookahead;
+use crate::parse::{Parse, ParseStream};
 
 /// A Rust lifetime: `'a`.
 ///

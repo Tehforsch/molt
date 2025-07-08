@@ -1,5 +1,6 @@
-use crate::op::BinOp;
 use std::cmp::Ordering;
+
+use crate::op::BinOp;
 
 // Reference: https://doc.rust-lang.org/reference/expressions.html#expression-precedence
 pub(crate) enum Precedence {

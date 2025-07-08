@@ -2,9 +2,10 @@ mod parse;
 
 use molt_lib::{Id, NodeId, Span, VarDecl};
 use parse::UnresolvedVarDecls;
+use rust_grammar::parse::ParseStream;
+use rust_grammar::parse::discouraged::Speculative;
 use rust_grammar::{
     Arm, Expr, FieldNamed, FieldUnnamed, Ident, Item, Kind, Lit, PatMulti, Stmt, TokenStream, Type,
-    parse::{ParseStream, discouraged::Speculative},
 };
 
 #[derive(Debug, Clone)]

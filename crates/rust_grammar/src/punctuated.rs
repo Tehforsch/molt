@@ -20,19 +20,15 @@
 //!                 ~~~~^ ~~~~^ ~~~~
 //! ```
 
+use std::ops::{Index, IndexMut};
+use std::{option, slice, vec};
+
 use molt_lib::CmpSyn;
 
 use crate::drops::{NoDrop, TrivialDrop};
-
 use crate::error::Result;
-
 use crate::parse::{Parse, ParseStream};
-
 use crate::token::Token;
-use std::ops::{Index, IndexMut};
-use std::option;
-use std::slice;
-use std::vec;
 
 /// **A punctuated sequence of syntax tree nodes of type `T` separated by
 /// punctuation of type `P`.**

@@ -1,3 +1,9 @@
+use std::collections::{HashSet, VecDeque};
+use std::io::{BufRead, BufReader, Write};
+use std::path::Path;
+use std::process::{Child, Command, Stdio};
+use std::time::{Duration, Instant};
+
 use lsp_types::notification::{Notification, PublishDiagnostics};
 use lsp_types::{
     ClientCapabilities, DidOpenTextDocumentParams, Hover, HoverContents, InitializeParams,
@@ -10,11 +16,6 @@ use rust_grammar::{Field, FieldNamed, Pat, Stmt, Type};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::{HashSet, VecDeque};
-use std::io::{BufRead, BufReader, Write};
-use std::path::Path;
-use std::process::{Child, Command, Stdio};
-use std::time::{Duration, Instant};
 use uuid::Uuid;
 
 use crate::type_check::LspType;

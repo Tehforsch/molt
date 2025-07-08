@@ -1,7 +1,9 @@
-use crate::parse::ParseStream;
-use proc_macro2::{Delimiter, TokenStream};
 use std::cmp::Ordering;
 use std::iter;
+
+use proc_macro2::{Delimiter, TokenStream};
+
+use crate::parse::ParseStream;
 
 pub fn between<'a>(begin: ParseStream<'a>, end: ParseStream<'a>) -> TokenStream {
     let end = end.cursor();

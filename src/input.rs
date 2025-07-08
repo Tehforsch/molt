@@ -1,8 +1,7 @@
+use std::ops::Range;
+use std::path::{Path, PathBuf};
+
 use codespan_reporting::files::{Error, Files};
-use std::{
-    ops::Range,
-    path::{Path, PathBuf},
-};
 
 pub type Diagnostic = codespan_reporting::diagnostic::Diagnostic<FileId>;
 

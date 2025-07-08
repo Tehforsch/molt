@@ -1,14 +1,13 @@
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 
+use crate::cmp_syn::CmpSyn;
+use crate::match_ctx::MatchCtx;
 use crate::node_list::{List, Set};
 use crate::{
     GetKind, Id, ListMatchingMode, NodeId, NodeList, PatNodeList, Pattern, RealNodeList,
     SetMatchingMode, Single, SingleMatchingMode, VarDecl,
 };
-
-use crate::cmp_syn::CmpSyn;
-use crate::match_ctx::MatchCtx;
 
 pub type MatchId = usize;
 

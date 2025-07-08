@@ -1,18 +1,14 @@
-use crate::expr::Expr;
+use std::ops::ControlFlow;
 
-use crate::generics::TypeParamBound;
-use crate::parse::ParseStream;
-
-use crate::path::{Path, PathArguments};
-
-use crate::punctuated::Punctuated;
-
-use crate::ty::{ReturnType, Type};
 use molt_lib::{NodeId, Pattern};
-
 use proc_macro2::{Delimiter, TokenStream, TokenTree};
 
-use std::ops::ControlFlow;
+use crate::expr::Expr;
+use crate::generics::TypeParamBound;
+use crate::parse::ParseStream;
+use crate::path::{Path, PathArguments};
+use crate::punctuated::Punctuated;
+use crate::ty::{ReturnType, Type};
 
 pub(crate) fn requires_semi_to_be_stmt(input: ParseStream, expr: NodeId<Expr>) -> bool {
     match input.ctx().get(expr).real() {

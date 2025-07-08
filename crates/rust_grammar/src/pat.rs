@@ -1,30 +1,24 @@
 use derive_macro::CmpSyn;
+use molt_lib::{NodeId, NodeList, Pattern, WithSpan};
+use proc_macro2::TokenStream;
 
-use crate::Stmt;
 use crate::attr::Attribute;
 use crate::error::Result;
-use crate::expr::Member;
-use crate::expr::{Expr, ExprConst, ExprLit, ExprMacro, ExprPath, ExprRange, RangeLimits};
+use crate::expr::{Expr, ExprConst, ExprLit, ExprMacro, ExprPath, ExprRange, Member, RangeLimits};
 pub use crate::expr::{
     ExprConst as PatConst, ExprLit as PatLit, ExprMacro as PatMacro, ExprPath as PatPath,
     ExprRange as PatRange,
 };
-use crate::ident::AnyIdent;
-use crate::ident::Ident;
+use crate::ident::{AnyIdent, Ident};
 use crate::lit::Lit;
 use crate::mac::{self, Macro};
 use crate::parse::{
     ListOrItem, Parse, ParseBuffer, ParseList, ParseListOrItem, ParsePat, ParseStream, PosMarker,
 };
-use crate::path::{self};
-use crate::path::{Path, QSelf};
+use crate::path::{self, Path, QSelf};
 use crate::punctuated::Punctuated;
-use crate::token;
 use crate::ty::Type;
-use crate::verbatim;
-use molt_lib::{NodeId, NodeList};
-use molt_lib::{Pattern, WithSpan};
-use proc_macro2::TokenStream;
+use crate::{Stmt, token, verbatim};
 
 #[derive(Debug, CmpSyn)]
 /// A pattern in a local binding, function signature, match expression, or

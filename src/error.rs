@@ -1,19 +1,13 @@
 use std::io;
 
-use codespan_reporting::{
-    diagnostic::{Diagnostic, Label},
-    term::{
-        self,
-        termcolor::{ColorChoice, StandardStream},
-    },
-};
+use codespan_reporting::diagnostic::{Diagnostic, Label};
+use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
+use codespan_reporting::term::{self};
 use molt_lib::Span;
 
+use crate::input::{FileId, Input};
 use crate::resolve::ResolveError;
-use crate::{
-    input::{FileId, Input},
-    transform::TransformError,
-};
+use crate::transform::TransformError;
 
 #[derive(Debug)]
 pub enum Error {

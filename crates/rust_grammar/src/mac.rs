@@ -1,13 +1,11 @@
+use derive_macro::CmpSyn;
+use proc_macro2::extra::DelimSpan;
+use proc_macro2::{Delimiter, TokenStream, TokenTree};
+
 use crate::error::Result;
-use crate::parse::Parse;
-use crate::parse::ParseStream;
+use crate::parse::{Parse, ParseStream};
 use crate::path::Path;
 use crate::token::{Brace, Bracket, Paren};
-use derive_macro::CmpSyn;
-use proc_macro2::Delimiter;
-use proc_macro2::TokenStream;
-use proc_macro2::TokenTree;
-use proc_macro2::extra::DelimSpan;
 
 #[derive(Debug, CmpSyn)]
 /// A macro invocation: `println!("{}", mac)`.

@@ -1,12 +1,12 @@
 //! Extension traits to provide parsing methods on foreign types.
 
+use proc_macro2::Ident;
+
 use crate::buffer::Cursor;
 use crate::error::Result;
-use crate::parse::ParseStream;
-use crate::parse::Peek;
+use crate::parse::{ParseStream, Peek};
 use crate::sealed::lookahead;
 use crate::token::CustomToken;
-use proc_macro2::Ident;
 
 /// Additional methods for `Ident` not provided by proc-macro2 or libproc_macro.
 ///

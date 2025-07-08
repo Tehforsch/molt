@@ -1,8 +1,6 @@
 use crate::config::Config;
-use crate::{Ctx, GetKind, ToNode, Var};
-use crate::{Id, Pattern};
-
 use crate::match_pattern::PatType;
+use crate::{Ctx, GetKind, Id, Pattern, ToNode, Var};
 
 pub struct MatchCtx<'a, Node: GetKind> {
     pub config: Config,

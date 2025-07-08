@@ -88,20 +88,18 @@
 //! [Printing]: https://docs.rs/quote/1.0/quote/trait.ToTokens.html
 //! [`Span`]: https://docs.rs/proc-macro2/1.0/proc_macro2/struct.Span.html
 
+use std::ops::{Deref, DerefMut};
+
+use proc_macro2::extra::DelimSpan;
+use proc_macro2::{Delimiter, Ident, Literal, Punct, Spacing, Span, TokenTree};
+
 pub use self::private::CustomToken;
 use self::private::WithSpan;
 use crate::buffer::Cursor;
-use crate::error::Error;
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::lifetime::Lifetime;
 use crate::parse::{Parse, ParseStream};
 use crate::span::IntoSpans;
-use proc_macro2::Spacing;
-use proc_macro2::Span;
-use proc_macro2::extra::DelimSpan;
-use proc_macro2::{Delimiter, Ident};
-use proc_macro2::{Literal, Punct, TokenTree};
-use std::ops::{Deref, DerefMut};
 
 /// Marker trait for types that represent single tokens.
 ///
@@ -119,8 +117,9 @@ pub trait Token: private::Sealed {
 
 pub(crate) mod private {
 
-    use crate::buffer::Cursor;
     use proc_macro2::Span;
+
+    use crate::buffer::Cursor;
 
     pub trait Sealed {}
 

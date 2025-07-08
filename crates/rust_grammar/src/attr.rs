@@ -1,21 +1,16 @@
 use derive_macro::CmpSyn;
+use molt_lib::{NodeId, WithSpan};
+use proc_macro2::TokenStream;
 
-use crate::error::Error;
-use crate::error::Result;
-use crate::expr::Expr;
-use crate::expr::ExprLit;
+use crate::error::{Error, Result};
+use crate::expr::{Expr, ExprLit};
 use crate::ident::TokenIdent;
 use crate::lit::Lit;
-use crate::mac;
 use crate::mac::MacroDelimiter;
-use crate::parse::Parse;
-use crate::parse::ParseStream;
 use crate::parse::discouraged::Speculative as _;
+use crate::parse::{Parse, ParseStream};
 use crate::path::Path;
-use crate::token;
-use molt_lib::NodeId;
-use molt_lib::WithSpan;
-use proc_macro2::TokenStream;
+use crate::{mac, token};
 
 #[derive(Debug, CmpSyn)]
 /// An attribute, like `#[repr(transparent)]`.

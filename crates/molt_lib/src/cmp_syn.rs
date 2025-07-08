@@ -1,4 +1,5 @@
-use crate::{NodeId, match_pattern::Matcher};
+use crate::NodeId;
+use crate::match_pattern::Matcher;
 
 pub trait CmpSyn {
     fn cmp_syn(&self, ctx: &mut Matcher, pat: &Self);

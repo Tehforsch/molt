@@ -1,7 +1,7 @@
 use rust_grammar::ext::IdentExt;
+use rust_grammar::parse::{Parse, ParseStream};
 use rust_grammar::token::Brace;
-use rust_grammar::{Ident, Token, TokenStream, TokenTree};
-use rust_grammar::{Result, braced, parse::Parse, parse::ParseStream};
+use rust_grammar::{Ident, Result, Token, TokenStream, TokenTree, braced};
 
 use super::{
     Command, Decl, MatchCommand, TokenVar, TransformCommand, UnresolvedMoltFile,

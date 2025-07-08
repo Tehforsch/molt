@@ -31,9 +31,7 @@ pub type TokenStream2 = proc_macro2::TokenStream;
 
 #[doc(hidden)]
 pub use crate::group::{parse_braces, parse_brackets, parse_parens};
-
 #[doc(hidden)]
 pub use crate::span::IntoSpans;
-
 #[doc(hidden)]
 pub use crate::token::private::CustomToken;

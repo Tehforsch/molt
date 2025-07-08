@@ -5,9 +5,9 @@ use codespan_reporting::files::Files;
 use molt_lib::{Id, Match, MatchCtx, Span};
 use rust_grammar::{Node, TokenStream};
 
-use crate::{
-    Error, FileId, Input, MatchResult, molt_grammar::TokenVar, resolve::get_vars_in_token_stream,
-};
+use crate::molt_grammar::TokenVar;
+use crate::resolve::get_vars_in_token_stream;
+use crate::{Error, FileId, Input, MatchResult};
 
 #[derive(Debug, thiserror::Error)]
 pub enum TransformError {

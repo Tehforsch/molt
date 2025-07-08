@@ -1,14 +1,13 @@
 mod cli;
 
-use clap::Parser;
-use cli::CliArgs;
-use codespan_reporting::term::{
-    self, Config,
-    termcolor::{ColorChoice, StandardStream},
-};
-use molt::{Input, MoltSource, emit_error, run};
 use std::io;
 use std::path::{Path, PathBuf};
+
+use clap::Parser;
+use cli::CliArgs;
+use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
+use codespan_reporting::term::{self, Config};
+use molt::{Input, MoltSource, emit_error, run};
 use walkdir::WalkDir;
 
 #[derive(Debug, thiserror::Error)]

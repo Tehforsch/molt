@@ -1,8 +1,6 @@
-use std::iter;
 use std::mem::ManuallyDrop;
 use std::ops::{Deref, DerefMut};
-use std::option;
-use std::slice;
+use std::{iter, option, slice};
 
 #[repr(transparent)]
 pub(crate) struct NoDrop<T: ?Sized>(ManuallyDrop<T>);

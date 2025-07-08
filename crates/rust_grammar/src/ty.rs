@@ -1,29 +1,24 @@
 use derive_macro::CmpSyn;
+use molt_lib::{NodeId, NodeList, Pattern, SpannedPat, WithSpan};
+use proc_macro2::{Span, TokenStream};
 
 use crate::attr::Attribute;
 use crate::error::{self, Result};
 use crate::expr::Expr;
-use crate::generics::{BoundLifetimes, TypeParamBound};
-use crate::generics::{TraitBound, TraitBoundModifier};
-use crate::ident::AnyIdent;
-use crate::ident::Ident;
+use crate::generics::{BoundLifetimes, TraitBound, TraitBoundModifier, TypeParamBound};
+use crate::ident::{AnyIdent, Ident};
 use crate::lifetime::Lifetime;
 use crate::lit::LitStr;
-use crate::mac::Macro;
-use crate::mac::{self};
+use crate::mac::{
+    Macro, {self},
+};
 use crate::parse::{
     ListOrItem, Parse, ParseList, ParseListOrItem, ParsePat, ParseStream,
     parse_punctuated_list_real,
 };
-use crate::path;
 use crate::path::{Path, QSelf};
 use crate::punctuated::Punctuated;
-use crate::token;
-use crate::verbatim;
-use molt_lib::{NodeId, NodeList};
-use molt_lib::{Pattern, SpannedPat, WithSpan};
-use proc_macro2::Span;
-use proc_macro2::TokenStream;
+use crate::{path, token, verbatim};
 
 #[derive(Debug, CmpSyn)]
 /// The possible types that a Rust value could have.

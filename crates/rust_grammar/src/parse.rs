@@ -182,20 +182,6 @@
 #[path = "discouraged.rs"]
 pub mod discouraged;
 
-use discouraged::Speculative;
-use molt_lib::{
-    Ctx, Id, List, ListMatchingMode, NodeId, NodeList, ParsingMode, PatNodeList, Pattern,
-    RealNodeList, Single, SingleMatchingMode, Spanned, SpannedPat, ToNode, Var, WithSpan,
-};
-
-use crate::buffer::{Cursor, TokenBuffer};
-use crate::ext::IdentExt;
-use crate::node::Node;
-use crate::punctuated::Punctuated;
-use crate::token::{Bracket, Paren, Token};
-use crate::{Ident, error};
-use crate::{Kind, lookahead};
-use proc_macro2::{Delimiter, Group, Literal, Punct, Span, TokenStream, TokenTree};
 use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::fmt::{self, Debug, Display};
 use std::marker::PhantomData;
@@ -204,6 +190,20 @@ use std::ops::Deref;
 use std::panic::{RefUnwindSafe, UnwindSafe};
 use std::rc::Rc;
 use std::str::FromStr;
+
+use discouraged::Speculative;
+use molt_lib::{
+    Ctx, Id, List, ListMatchingMode, NodeId, NodeList, ParsingMode, PatNodeList, Pattern,
+    RealNodeList, Single, SingleMatchingMode, Spanned, SpannedPat, ToNode, Var, WithSpan,
+};
+use proc_macro2::{Delimiter, Group, Literal, Punct, Span, TokenStream, TokenTree};
+
+use crate::buffer::{Cursor, TokenBuffer};
+use crate::ext::IdentExt;
+use crate::node::Node;
+use crate::punctuated::Punctuated;
+use crate::token::{Bracket, Paren, Token};
+use crate::{Ident, Kind, error, lookahead};
 
 pub type ParseCtx = Rc<RefCell<Ctx<Node>>>;
 

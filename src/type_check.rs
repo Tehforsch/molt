@@ -1,9 +1,11 @@
-use crate::lsp::LspClient;
-use crate::molt_grammar::TypeAnnotation;
+use std::path::Path;
+
 use lsp_types::{Position, Range};
 use molt_lib::{Ctx, Match, NodeId};
 use rust_grammar::{Node, Type};
-use std::path::Path;
+
+use crate::lsp::LspClient;
+use crate::molt_grammar::TypeAnnotation;
 
 pub struct LspType {
     pub ctx: Ctx<Node>,

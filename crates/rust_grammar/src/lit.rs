@@ -1,20 +1,17 @@
-use derive_macro::CmpSyn;
-
-use crate::buffer::Cursor;
-use crate::lookahead;
-use crate::parse::{Parse, ParseStream, Unexpected};
-use crate::parse::{ParseCtx, ParsePat};
-use crate::token::{self, Token};
-use crate::{Error, Ident, Result};
-use molt_lib::CmpSyn;
-use molt_lib::{ParsingMode, SpannedPat};
-use proc_macro2::Punct;
-use proc_macro2::{Literal, Span};
 use std::cell::Cell;
 use std::ffi::{CStr, CString};
 use std::fmt::{self, Display};
 use std::rc::Rc;
 use std::str::{self, FromStr};
+
+use derive_macro::CmpSyn;
+use molt_lib::{CmpSyn, ParsingMode, SpannedPat};
+use proc_macro2::{Literal, Punct, Span};
+
+use crate::buffer::Cursor;
+use crate::parse::{Parse, ParseCtx, ParsePat, ParseStream, Unexpected};
+use crate::token::{self, Token};
+use crate::{Error, Ident, Result, lookahead};
 
 #[derive(Debug, CmpSyn)]
 /// A Rust literal such as a string or integer or boolean.
@@ -732,16 +729,17 @@ impl_token!("floating point literal" LitFloat);
 impl_token!("boolean literal" LitBool);
 
 mod value {
+    use std::ffi::CString;
+    use std::ops::{Index, RangeFrom};
+    use std::{ascii, char};
+
+    use proc_macro2::{Literal, Span};
+
     use crate::bigint::BigInt;
     use crate::lit::{
         Lit, LitBool, LitByte, LitByteStr, LitCStr, LitChar, LitFloat, LitFloatRepr, LitInt,
         LitIntRepr, LitRepr, LitStr,
     };
-    use proc_macro2::{Literal, Span};
-    use std::ascii;
-    use std::char;
-    use std::ffi::CString;
-    use std::ops::{Index, RangeFrom};
 
     impl Lit {
         /// Interpret a Syn literal from a proc-macro2 literal.

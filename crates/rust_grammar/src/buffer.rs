@@ -5,11 +5,12 @@
 // Syn, and caution should be used when editing it. The public-facing interface
 // is 100% safe but the implementation is fragile internally.
 
-use proc_macro2::extra::DelimSpan;
-use proc_macro2::{Delimiter, Group, Ident, Literal, Punct, Spacing, Span, TokenStream, TokenTree};
 use std::cmp::Ordering;
 use std::marker::PhantomData;
 use std::ptr;
+
+use proc_macro2::extra::DelimSpan;
+use proc_macro2::{Delimiter, Group, Ident, Literal, Punct, Spacing, Span, TokenStream, TokenTree};
 
 use crate::lifetime::Lifetime;
 

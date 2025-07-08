@@ -6,20 +6,14 @@ mod resolve;
 mod transform;
 mod type_check;
 
-pub use error::Error;
-pub use error::emit_error;
+use codespan_reporting::diagnostic::Label;
+use codespan_reporting::files::Files;
+pub use error::{Error, emit_error};
 use input::FilePath;
 pub use input::{Diagnostic, FileId, Input, MoltSource};
-
-use codespan_reporting::{diagnostic::Label, files::Files};
-use molt_grammar::MatchCommand;
-use molt_grammar::TransformCommand;
-use molt_grammar::{Command, MoltFile, UnresolvedMoltFile};
-
 use lsp::LspClient;
-use molt_lib::Config;
-use molt_lib::ParsingMode;
-use molt_lib::{Id, Match, MatchCtx};
+use molt_grammar::{Command, MatchCommand, MoltFile, TransformCommand, UnresolvedMoltFile};
+use molt_lib::{Config, Id, Match, MatchCtx, ParsingMode};
 use rust_grammar::Node;
 
 pub struct RustFile;
@@ -191,12 +185,10 @@ mod tests {
     use codespan_reporting::files::Files;
     use molt_lib::Config;
 
-    use crate::{
-        Command, Error, MoltFile, RustFile,
-        error::{emit_diagnostic_str, make_error_diagnostic},
-        input::{Contents, Input, MoltSource},
-        lsp::LspClient,
-    };
+    use crate::error::{emit_diagnostic_str, make_error_diagnostic};
+    use crate::input::{Contents, Input, MoltSource};
+    use crate::lsp::LspClient;
+    use crate::{Command, Error, MoltFile, RustFile};
 
     fn parse_rust(path: &str) {
         let root = Path::new("test_data").join(path);

@@ -3,20 +3,15 @@ use molt_lib::NodeId;
 use proc_macro2::TokenStream;
 
 use crate::attr::Attribute;
-use crate::expr::Expr;
-use crate::ident::Ident;
-use crate::lifetime::Lifetime;
-use crate::path::Path;
-use crate::punctuated::Punctuated;
-use crate::token;
-use crate::ty::Type;
-
 use crate::error::{self, Result};
-
-use crate::ident::AnyIdent;
+use crate::expr::Expr;
+use crate::ident::{AnyIdent, Ident};
+use crate::lifetime::Lifetime;
 use crate::parse::{Parse, ParseStream};
-use crate::path::{self, ParenthesizedGenericArguments, PathArguments};
-use crate::verbatim;
+use crate::path::{self, ParenthesizedGenericArguments, Path, PathArguments};
+use crate::punctuated::Punctuated;
+use crate::ty::Type;
+use crate::{token, verbatim};
 
 #[derive(Debug, CmpSyn, Default)]
 /// Lifetimes and type parameters attached to a declaration of a function,

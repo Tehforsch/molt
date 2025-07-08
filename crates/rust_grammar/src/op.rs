@@ -1,6 +1,7 @@
+use derive_macro::CmpSyn;
+
 use crate::error::Result;
 use crate::parse::{Parse, ParseStream};
-use derive_macro::CmpSyn;
 
 #[derive(Debug, CmpSyn)]
 /// A binary operator: `+`, `+=`, `&`.
