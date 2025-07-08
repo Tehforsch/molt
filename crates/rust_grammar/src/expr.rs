@@ -1646,6 +1646,14 @@ impl ParseListOrItem for ExprArray {
             return Ok(ListOrItem::List(NodeList::empty(input.mode())));
         }
         let first = input.parse_pat::<Expr>()?;
+        // TODO make this prettier. This might be a pattern that
+        // I just havent understood yet. If the input is empty,
+        // and we continue the function without this early return,
+        // we'll think that the result is a list, even if all we find
+        // is a single var.
+        if first.is_var() {
+            return Ok(ListOrItem::Item(first));
+        }
         if input.is_empty() || input.peek(Token![,]) {
             let mut elems = Punctuated::<_, Token![,]>::new();
             elems.push_value(input.add_pat(first));

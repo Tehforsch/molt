@@ -1,0 +1,43 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(& name, stringify! (elements))"
+---
+note: Match
+  ┌─ "test_data/array_elements/main.rs":2:16
+  │
+2 │     let arr1 = [1, 2, 3];
+  │                ^^^^^^^^^ $x
+  │
+  = $expr = 1
+  = $expr = 2
+  = $expr = 3
+
+note: Match
+  ┌─ "test_data/array_elements/main.rs":3:16
+  │
+3 │     let arr2 = [x, y, z];
+  │                ^^^^^^^^^ $x
+  │
+  = $expr = x
+  = $expr = y
+  = $expr = z
+
+note: Match
+  ┌─ "test_data/array_elements/main.rs":4:16
+  │
+4 │     let arr3 = [a, b, c, d, e];
+  │                ^^^^^^^^^^^^^^^ $x
+  │
+  = $expr = a
+  = $expr = b
+  = $expr = c
+  = $expr = d
+  = $expr = e
+
+note: Match
+  ┌─ "test_data/array_elements/main.rs":6:18
+  │
+6 │     let single = [x];
+  │                  ^^^ $x
+  │
+  = $expr = x

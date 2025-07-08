@@ -427,6 +427,8 @@ mod tests {
     test_transform!(transform, (rename, inner));
     test_match_pattern!(transform2, (example10)); // TODO: Make this a transform test once the functionality exists.
 
+    test_match_pattern!(array_elements, (elements));
+
     molt_grammar_test_err!(
         molt_grammar,
         (undefined_var, non_inferable_command, early_boundary_rule)
