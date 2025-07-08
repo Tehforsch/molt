@@ -1,0 +1,579 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(& name, stringify! (pat))"
+---
+note: Match
+  ┌─ "test_data/pat/main.rs":2:9
+  │
+2 │     let x = 42;
+  │         ^ $pat
+
+note: Match
+  ┌─ "test_data/pat/main.rs":3:9
+  │
+3 │     let mut y = 10;
+  │         ^^^^^ $pat
+
+note: Match
+  ┌─ "test_data/pat/main.rs":4:9
+  │
+4 │     let ref z = 20;
+  │         ^^^^^ $pat
+
+note: Match
+  ┌─ "test_data/pat/main.rs":5:9
+  │
+5 │     let ref mut w = 30;
+  │         ^^^^^^^^^ $pat
+
+note: Match
+  ┌─ "test_data/pat/main.rs":9:10
+  │
+9 │     let (a, b, c) = (1, 2, 3);
+  │          ^ $pat
+
+note: Match
+  ┌─ "test_data/pat/main.rs":9:13
+  │
+9 │     let (a, b, c) = (1, 2, 3);
+  │             ^ $pat
+
+note: Match
+  ┌─ "test_data/pat/main.rs":9:16
+  │
+9 │     let (a, b, c) = (1, 2, 3);
+  │                ^ $pat
+
+note: Match
+  ┌─ "test_data/pat/main.rs":9:9
+  │
+9 │     let (a, b, c) = (1, 2, 3);
+  │         ^^^^^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":10:14
+   │
+10 │     let (x, (y, z)) = (10, (20, 30));
+   │              ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":10:17
+   │
+10 │     let (x, (y, z)) = (10, (20, 30));
+   │                 ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":10:10
+   │
+10 │     let (x, (y, z)) = (10, (20, 30));
+   │          ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":10:13
+   │
+10 │     let (x, (y, z)) = (10, (20, 30));
+   │             ^^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":10:9
+   │
+10 │     let (x, (y, z)) = (10, (20, 30));
+   │         ^^^^^^^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":15:17
+   │
+15 │     let Point { x, y } = Point { x: 1, y: 2 };
+   │                 ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":15:20
+   │
+15 │     let Point { x, y } = Point { x: 1, y: 2 };
+   │                    ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":15:9
+   │
+15 │     let Point { x, y } = Point { x: 1, y: 2 };
+   │         ^^^^^^^^^^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":16:20
+   │
+16 │     let Point { x: px, y: py } = Point { x: 1, y: 2 };
+   │                    ^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":16:27
+   │
+16 │     let Point { x: px, y: py } = Point { x: 1, y: 2 };
+   │                           ^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":16:9
+   │
+16 │     let Point { x: px, y: py } = Point { x: 1, y: 2 };
+   │         ^^^^^^^^^^^^^^^^^^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":21:15
+   │
+21 │     let Color(r, g, b) = Color(255, 0, 0);
+   │               ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":21:18
+   │
+21 │     let Color(r, g, b) = Color(255, 0, 0);
+   │                  ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":21:21
+   │
+21 │     let Color(r, g, b) = Color(255, 0, 0);
+   │                     ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":21:9
+   │
+21 │     let Color(r, g, b) = Color(255, 0, 0);
+   │         ^^^^^^^^^^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":25:9
+   │
+25 │     let arr = [1, 2, 3, 4, 5];
+   │         ^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":26:10
+   │
+26 │     let [first, second, ..] = arr;
+   │          ^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":26:17
+   │
+26 │     let [first, second, ..] = arr;
+   │                 ^^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":26:25
+   │
+26 │     let [first, second, ..] = arr;
+   │                         ^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":26:9
+   │
+26 │     let [first, second, ..] = arr;
+   │         ^^^^^^^^^^^^^^^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":27:10
+   │
+27 │     let [.., last] = arr;
+   │          ^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":27:14
+   │
+27 │     let [.., last] = arr;
+   │              ^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":27:9
+   │
+27 │     let [.., last] = arr;
+   │         ^^^^^^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":28:10
+   │
+28 │     let [first, .., last] = arr;
+   │          ^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":28:17
+   │
+28 │     let [first, .., last] = arr;
+   │                 ^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":28:21
+   │
+28 │     let [first, .., last] = arr;
+   │                     ^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":28:9
+   │
+28 │     let [first, .., last] = arr;
+   │         ^^^^^^^^^^^^^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":32:9
+   │
+32 │     let x = 42;
+   │         ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":33:10
+   │
+33 │     let &y = &x;
+   │          ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":33:9
+   │
+33 │     let &y = &x;
+   │         ^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":34:14
+   │
+34 │     let &mut z = &mut 10;
+   │              ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":34:9
+   │
+34 │     let &mut z = &mut 10;
+   │         ^^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":38:9
+   │
+38 │     let x = Some(42);
+   │         ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":40:14
+   │
+40 │         Some(1) | Some(2) | Some(3) => println!("small"),
+   │              ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":40:9
+   │
+40 │         Some(1) | Some(2) | Some(3) => println!("small"),
+   │         ^^^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":40:24
+   │
+40 │         Some(1) | Some(2) | Some(3) => println!("small"),
+   │                        ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":40:19
+   │
+40 │         Some(1) | Some(2) | Some(3) => println!("small"),
+   │                   ^^^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":40:34
+   │
+40 │         Some(1) | Some(2) | Some(3) => println!("small"),
+   │                                  ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":40:29
+   │
+40 │         Some(1) | Some(2) | Some(3) => println!("small"),
+   │                             ^^^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":40:9
+   │
+40 │         Some(1) | Some(2) | Some(3) => println!("small"),
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":41:14
+   │
+41 │         Some(n) => println!("other: {}", n),
+   │              ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":41:9
+   │
+41 │         Some(n) => println!("other: {}", n),
+   │         ^^^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":42:9
+   │
+42 │         None => println!("none"),
+   │         ^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":48:10
+   │
+48 │         (x) => println!("single: {}", x),
+   │          ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":48:9
+   │
+48 │         (x) => println!("single: {}", x),
+   │         ^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":49:10
+   │
+49 │         (a, b) => println!("pair: {}, {}", a, b),
+   │          ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":49:13
+   │
+49 │         (a, b) => println!("pair: {}, {}", a, b),
+   │             ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":49:9
+   │
+49 │         (a, b) => println!("pair: {}, {}", a, b),
+   │         ^^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":54:9
+   │
+54 │     let x = 42;
+   │         ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":55:9
+   │
+55 │     let _ = x;
+   │         ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":57:9
+   │
+57 │         42 => println!("forty-two"),
+   │         ^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":58:9
+   │
+58 │         _ => println!("other"),
+   │         ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":63:9
+   │
+63 │     let x = 5;
+   │         ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":65:9
+   │
+65 │         1..=5 => println!("one to five"),
+   │         ^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":66:9
+   │
+66 │         6..10 => println!("six to nine"),
+   │         ^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":67:9
+   │
+67 │         _ => println!("other"),
+   │         ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":72:9
+   │
+72 │     let x = 42;
+   │         ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":74:9
+   │
+74 │         42 => println!("forty-two"),
+   │         ^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":75:9
+   │
+75 │         100 => println!("one hundred"),
+   │         ^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":76:9
+   │
+76 │         _ => println!("other"),
+   │         ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":82:9
+   │
+82 │     let c = Color::Red;
+   │         ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":84:9
+   │
+84 │         Color::Red => println!("red"),
+   │         ^^^^^^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":85:9
+   │
+85 │         Color::Green => println!("green"),
+   │         ^^^^^^^^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":86:9
+   │
+86 │         Color::Blue => println!("blue"),
+   │         ^^^^^^^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":91:9
+   │
+91 │     let x: i32 = 42;
+   │         ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":91:5
+   │
+91 │     let x: i32 = 42;
+   │     ^^^^^^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":96:9
+   │
+96 │     let points = vec![Point { x: 1, y: 2 }, Point { x: 3, y: 4 }];
+   │         ^^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":98:17
+   │
+98 │     for Point { x, y } in points {
+   │                 ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":98:20
+   │
+98 │     for Point { x, y } in points {
+   │                    ^ $pat
+
+note: Match
+   ┌─ "test_data/pat/main.rs":98:9
+   │
+98 │     for Point { x, y } in points {
+   │         ^^^^^^^^^^^^^^ $pat
+
+note: Match
+    ┌─ "test_data/pat/main.rs":102:9
+    │
+102 │     let nested = ((1, 2), (3, 4));
+    │         ^^^^^^ $pat
+
+note: Match
+    ┌─ "test_data/pat/main.rs":103:11
+    │
+103 │     let ((a, b), (c, d)) = nested;
+    │           ^ $pat
+
+note: Match
+    ┌─ "test_data/pat/main.rs":103:14
+    │
+103 │     let ((a, b), (c, d)) = nested;
+    │              ^ $pat
+
+note: Match
+    ┌─ "test_data/pat/main.rs":103:19
+    │
+103 │     let ((a, b), (c, d)) = nested;
+    │                   ^ $pat
+
+note: Match
+    ┌─ "test_data/pat/main.rs":103:22
+    │
+103 │     let ((a, b), (c, d)) = nested;
+    │                      ^ $pat
+
+note: Match
+    ┌─ "test_data/pat/main.rs":103:10
+    │
+103 │     let ((a, b), (c, d)) = nested;
+    │          ^^^^^^ $pat
+
+note: Match
+    ┌─ "test_data/pat/main.rs":103:18
+    │
+103 │     let ((a, b), (c, d)) = nested;
+    │                  ^^^^^^ $pat
+
+note: Match
+    ┌─ "test_data/pat/main.rs":103:9
+    │
+103 │     let ((a, b), (c, d)) = nested;
+    │         ^^^^^^^^^^^^^^^^ $pat
+
+note: Match
+    ┌─ "test_data/pat/main.rs":107:9
+    │
+107 │     let x = Some(42);
+    │         ^ $pat
+
+note: Match
+    ┌─ "test_data/pat/main.rs":109:18
+    │
+109 │         Some(n @ 1..=10) => println!("small: {}", n),
+    │                  ^^^^^^ $pat
+
+note: Match
+    ┌─ "test_data/pat/main.rs":109:14
+    │
+109 │         Some(n @ 1..=10) => println!("small: {}", n),
+    │              ^^^^^^^^^^ $pat
+
+note: Match
+    ┌─ "test_data/pat/main.rs":109:9
+    │
+109 │         Some(n @ 1..=10) => println!("small: {}", n),
+    │         ^^^^^^^^^^^^^^^^ $pat
+
+note: Match
+    ┌─ "test_data/pat/main.rs":110:18
+    │
+110 │         Some(n @ 11..=100) => println!("medium: {}", n),
+    │                  ^^^^^^^^ $pat
+
+note: Match
+    ┌─ "test_data/pat/main.rs":110:14
+    │
+110 │         Some(n @ 11..=100) => println!("medium: {}", n),
+    │              ^^^^^^^^^^^^ $pat
+
+note: Match
+    ┌─ "test_data/pat/main.rs":110:9
+    │
+110 │         Some(n @ 11..=100) => println!("medium: {}", n),
+    │         ^^^^^^^^^^^^^^^^^^ $pat
+
+note: Match
+    ┌─ "test_data/pat/main.rs":111:14
+    │
+111 │         Some(n) => println!("large: {}", n),
+    │              ^ $pat
+
+note: Match
+    ┌─ "test_data/pat/main.rs":111:9
+    │
+111 │         Some(n) => println!("large: {}", n),
+    │         ^^^^^^^ $pat
+
+note: Match
+    ┌─ "test_data/pat/main.rs":112:9
+    │
+112 │         None => println!("none"),
+    │         ^^^^ $pat

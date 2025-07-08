@@ -1,0 +1,11 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(& name, stringify! (reference_mut))"
+---
+note: Match
+   ┌─ "test_data/pat/main.rs":34:9
+   │
+34 │     let &mut z = &mut 10;
+   │         ^^^^^^ $target
+   │
+   = $pat = z

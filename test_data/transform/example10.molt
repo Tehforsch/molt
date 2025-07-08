@@ -4,7 +4,7 @@ let input: Expr = {
     match $expr {
         $($arm_in)*
     }
-}
+};
 let arm_in: Arm = { $pat => Ok($val) };
 let arm_out: Arm = { $pat => $val };
 let output: Expr = {

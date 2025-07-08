@@ -1,0 +1,21 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(& name, stringify! (subpattern))"
+---
+note: Match
+    ┌─ "test_data/pat/main.rs":109:14
+    │
+109 │         Some(n @ 1..=10) => println!("small: {}", n),
+    │              ^^^^^^^^^^ $target
+    │
+    = $ident = n
+    = $pat = 1..=10
+
+note: Match
+    ┌─ "test_data/pat/main.rs":110:14
+    │
+110 │         Some(n @ 11..=100) => println!("medium: {}", n),
+    │              ^^^^^^^^^^^^ $target
+    │
+    = $ident = n
+    = $pat = 11..=100

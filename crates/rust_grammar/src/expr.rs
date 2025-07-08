@@ -993,6 +993,7 @@ impl ParseNode for ExprEarlierBoundaryRule {
 
 impl ParseList for Expr {
     type Item = Expr;
+    type ParseItem = Expr;
     type Punct = Token![,];
 
     fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
@@ -2065,6 +2066,7 @@ impl ParseNode for ClosureInput {
 
 impl ParseList for ClosureInput {
     type Punct = Token![,];
+    type ParseItem = ClosureInput;
     type Item = Pat;
 
     fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<<Self as ParseNode>::Target>>> {
@@ -2469,6 +2471,7 @@ impl Parse for Member {
 
 impl ParseList for Arm {
     type Punct = Token![,];
+    type ParseItem = Arm;
     type Item = Arm;
 
     fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Arm>>> {

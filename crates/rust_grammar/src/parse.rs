@@ -65,6 +65,7 @@ pub fn peek_pat<T: PeekPat>(cursor: Cursor, ctx: &Ctx<Node>) -> bool {
 
 pub trait ParseList {
     type Item: ToNode<Node>;
+    type ParseItem: ParseNode<Target = Self::Item>;
     type Punct: Parse;
 
     fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>>;
@@ -690,16 +691,11 @@ impl<'a> ParseBuffer<'a> {
         }
     }
 
-    pub(crate) fn parse_list<T: ParseList + ParseNode<Target = <T as ParseList>::Item>>(
-        &self,
-    ) -> Result<NodeList<T::Item, T::Punct>>
-    where
-        <T as ParseList>::Item: ToNode<Node>,
-    {
+    pub(crate) fn parse_list<T: ParseList>(&self) -> Result<NodeList<T::Item, T::Punct>> {
         if self.peek_list_var(T::Item::kind()) {
             Ok(NodeList::Pat(self.parse_list_var::<T::Item, T::Punct>(
                 T::parse_list_real,
-                |input| input.parse_id::<T>(),
+                |input| input.parse_id::<T::ParseItem>(),
             )?))
         } else {
             let list = T::parse_list_real(self)?;

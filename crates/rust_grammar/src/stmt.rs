@@ -84,6 +84,7 @@ struct AllowNoSemi(bool);
 
 impl ParseList for Stmt {
     type Item = Stmt;
+    type ParseItem = Stmt;
     type Punct = Token![;];
 
     fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Stmt>>> {

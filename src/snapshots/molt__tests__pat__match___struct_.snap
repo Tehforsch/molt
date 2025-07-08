@@ -1,0 +1,12 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(& name, stringify! (struct_))"
+---
+note: Match
+   ┌─ "test_data/pat/main.rs":16:9
+   │
+16 │     let Point { x: px, y: py } = Point { x: 1, y: 2 };
+   │         ^^^^^^^^^^^^^^^^^^^^^^ $target
+   │
+   = $pat1 = px
+   = $pat2 = py

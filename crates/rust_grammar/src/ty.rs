@@ -228,6 +228,7 @@ impl ParseNode for Type {
 
 impl ParseList for Type {
     type Item = Type;
+    type ParseItem = Type;
     type Punct = Token![,];
 
     fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {

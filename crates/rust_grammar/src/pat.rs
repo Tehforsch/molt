@@ -1,9 +1,9 @@
 use derive_macro::CmpSyn;
-use molt_lib::{NodeId, NodeList, Spanned, SpannedPat, WithSpan};
+use molt_lib::{NodeId, NodeList, Pattern, Spanned, SpannedPat, WithSpan};
 use proc_macro2::TokenStream;
 
 use crate::attr::Attribute;
-use crate::error::Result;
+use crate::error::{self, Result};
 use crate::expr::{Expr, ExprConst, ExprLit, ExprMacro, ExprPath, ExprRange, Member, RangeLimits};
 pub use crate::expr::{
     ExprConst as PatConst, ExprLit as PatLit, ExprMacro as PatMacro, ExprPath as PatPath,
@@ -180,7 +180,6 @@ pub struct PatOr {
 /// A parenthesized pattern: `(A | B)`.
 pub struct PatParen {
     pub attrs: Vec<Attribute>,
-    pub paren_token: token::Paren,
     pub pat: NodeId<Pat>,
 }
 
@@ -204,8 +203,7 @@ pub struct PatRest {
 /// A dynamically sized slice pattern: `[a, b, ref i @ .., y, z]`.
 pub struct PatSlice {
     pub attrs: Vec<Attribute>,
-    pub bracket_token: token::Bracket,
-    pub elems: Punctuated<Pat, Token![,]>,
+    pub elems: NodeList<Pat, Token![,]>,
 }
 
 #[derive(Debug, CmpSyn)]
@@ -223,8 +221,7 @@ pub struct PatStruct {
 /// A tuple pattern: `(a, b)`.
 pub struct PatTuple {
     pub attrs: Vec<Attribute>,
-    pub paren_token: token::Paren,
-    pub elems: Punctuated<Pat, Token![,]>,
+    pub elems: NodeList<Pat, Token![,]>,
 }
 
 #[derive(Debug, CmpSyn)]
@@ -483,6 +480,7 @@ fn pat_ident(input: ParseStream) -> Result<PatIdent> {
 
 impl ParseList for PatMultiLeadingVert {
     type Item = Pat;
+    type ParseItem = PatMultiLeadingVert;
     type Punct = Token![,];
 
     fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Pat>>> {
@@ -656,35 +654,48 @@ fn pat_range_half_open(input: ParseStream) -> Result<Pat> {
     }
 }
 
-fn pat_paren_or_tuple(_: ParseStream) -> Result<Pat> {
-    todo!()
-    // let content;
-    // let paren_token = parenthesized!(content in input);
+struct PatParenOrTuple;
 
-    // let mut elems = Punctuated::new();
-    // while !content.is_empty() {
-    //     let value = PatMultiLeadingVert::parse_pat(&content)?;
-    //     if content.is_empty() {
-    //         if elems.is_empty() && !matches!(&*value, Pattern::Real(Pat::Rest(_))) {
-    //             return Ok(Pat::Paren(PatParen {
-    //                 attrs: Vec::new(),
-    //                 paren_token,
-    //                 pat: input.add_pat(value),
-    //             }));
-    //         }
-    //         elems.push_value(value);
-    //         break;
-    //     }
-    //     elems.push_value(value);
-    //     let punct = content.parse()?;
-    //     elems.push_punct(punct);
-    // }
+impl ParseListOrItem for PatParenOrTuple {
+    type Target = Pat;
 
-    // Ok(Pat::Tuple(PatTuple {
-    //     attrs: Vec::new(),
-    //     paren_token,
-    //     elems,
-    // }))
+    type Punct = Token![,];
+
+    fn parse_list_or_item(input: ParseStream) -> Result<ListOrItem<Self::Target, Self::Punct>> {
+        let content;
+        parenthesized!(content in input);
+
+        let mut elems = Punctuated::new();
+        while !content.is_empty() {
+            let value = content.parse_pat::<PatMultiLeadingVert>()?;
+            if content.is_empty() {
+                if elems.is_empty() && !matches!(&*value, Pattern::Real(Pat::Rest(_))) {
+                    return Ok(ListOrItem::Item(value));
+                }
+                elems.push_value(value);
+                break;
+            }
+            elems.push_value(value);
+            let punct: Token![,] = content.parse()?;
+            elems.push_punct(punct);
+        }
+        Ok(ListOrItem::List(NodeList::Real(
+            elems.into_iter().map(|ty| input.add_pat(ty)).collect(),
+        )))
+    }
+}
+
+fn pat_paren_or_tuple(input: ParseStream) -> Result<Pat> {
+    match input.parse_list_or_item::<PatParenOrTuple>()? {
+        ListOrItem::Item(spanned) => Ok(Pat::Paren(PatParen {
+            attrs: Vec::new(),
+            pat: input.add_pat(spanned),
+        })),
+        ListOrItem::List(elems) => Ok(Pat::Tuple(PatTuple {
+            attrs: Vec::new(),
+            elems,
+        })),
+    }
 }
 
 fn pat_reference(input: ParseStream) -> Result<PatReference> {
@@ -773,40 +784,48 @@ fn pat_range_bound(input: ParseStream) -> Result<Option<PatRangeBound>> {
     Ok(Some(expr))
 }
 
-fn pat_slice(_: ParseStream) -> Result<PatSlice> {
-    todo!()
-    // let content;
-    // let bracket_token = bracketed!(content in input);
+impl ParseList for PatSlice {
+    type Item = Pat;
+    type ParseItem = PatMultiLeadingVert;
+    type Punct = Token![,];
 
-    // let mut elems = Punctuated::new();
-    // while !content.is_empty() {
-    //     let value = PatMultiLeadingVert::parse_pat(&content)?;
-    //     match &*value {
-    //         Pattern::Real(Pat::Range(pat)) if pat.start.is_none() || pat.end.is_none() => {
-    //             let (start, end) = match pat.limits {
-    //                 RangeLimits::HalfOpen(dot_dot) => (dot_dot.spans[0], dot_dot.spans[1]),
-    //                 RangeLimits::Closed(dot_dot_eq) => {
-    //                     (dot_dot_eq.spans[0], dot_dot_eq.spans[2])
-    //                 }
-    //             };
-    //             let msg = "range pattern is not allowed unparenthesized inside slice pattern";
-    //             return Err(error::new2(start, end, msg));
-    //         }
-    //         _ => {}
-    //     }
-    //     elems.push_value(value);
-    //     if content.is_empty() {
-    //         break;
-    //     }
-    //     let punct = content.parse()?;
-    //     elems.push_punct(punct);
-    // }
+    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
+        let content;
+        bracketed!(content in input);
 
-    // Ok(PatSlice {
-    //     attrs: Vec::new(),
-    //     bracket_token,
-    //     elems,
-    // })
+        let mut elems = Punctuated::new();
+        while !content.is_empty() {
+            let value = PatMultiLeadingVert::parse_pat(&content)?;
+            match &*value {
+                Pattern::Real(Pat::Range(pat)) if pat.start.is_none() || pat.end.is_none() => {
+                    let (start, end) = match &pat.limits {
+                        RangeLimits::HalfOpen(dot_dot) => (dot_dot.spans[0], dot_dot.spans[1]),
+                        RangeLimits::Closed(dot_dot_eq) => {
+                            (dot_dot_eq.spans[0], dot_dot_eq.spans[2])
+                        }
+                    };
+                    let msg = "range pattern is not allowed unparenthesized inside slice pattern";
+                    return Err(error::new2(start, end, msg));
+                }
+                _ => {}
+            }
+            elems.push_value(value);
+            if content.is_empty() {
+                break;
+            }
+            let punct: Token![,] = content.parse()?;
+            elems.push_punct(punct);
+        }
+
+        Ok(elems.into_iter().map(|pat| input.add_pat(pat)).collect())
+    }
+}
+
+fn pat_slice(input: ParseStream) -> Result<PatSlice> {
+    Ok(PatSlice {
+        attrs: Vec::new(),
+        elems: input.parse_list::<PatSlice>()?,
+    })
 }
 
 fn pat_const(input: ParseStream) -> Result<TokenStream> {

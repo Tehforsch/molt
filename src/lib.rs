@@ -406,6 +406,23 @@ mod tests {
     );
     test_match_pattern!(fields, (fields, field_var));
     test_match_pattern!(lists, (single, all));
+    test_match_pattern!(
+        pat,
+        (
+            pat,
+            tuple,
+            struct_,
+            tuple_struct,
+            slice,
+            reference,
+            reference_mut,
+            or,
+            paren,
+            type_,
+            subpattern,
+            nested,
+        )
+    );
     test_transform!(transform, (rename, example10));
 
     molt_grammar_test_err!(

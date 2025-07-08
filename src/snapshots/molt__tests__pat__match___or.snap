@@ -1,0 +1,13 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(& name, stringify! (or))"
+---
+note: Match
+   ┌─ "test_data/pat/main.rs":40:9
+   │
+40 │         Some(1) | Some(2) | Some(3) => println!("small"),
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ $target
+   │
+   = $pat1 = Some(1)
+   = $pat2 = Some(2)
+   = $pat3 = Some(3)

@@ -38,10 +38,6 @@ impl LspClient {
                         Err(e) => panic!("Failed to query type: {e}"),
                     }
                 };
-                dbg!(ast_ctx.print(*ast_node, data.rust_src));
-                if let Some(ref type_) = type_ {
-                    dbg!(type_.ctx.print(type_.type_.into(), &type_.src));
-                }
                 match type_ {
                     Some(type_) => {
                         if !compare_types(

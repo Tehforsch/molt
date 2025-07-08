@@ -1,0 +1,13 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(& name, stringify! (tuple_struct))"
+---
+note: Match
+   ┌─ "test_data/pat/main.rs":21:9
+   │
+21 │     let Color(r, g, b) = Color(255, 0, 0);
+   │         ^^^^^^^^^^^^^^ $target
+   │
+   = $pat1 = r
+   = $pat2 = g
+   = $pat3 = b

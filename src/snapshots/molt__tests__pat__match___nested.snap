@@ -1,0 +1,13 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(& name, stringify! (nested))"
+---
+note: Match
+    ┌─ "test_data/pat/main.rs":103:9
+    │
+103 │     let ((a, b), (c, d)) = nested;
+    │         ^^^^^^^^^^^^^^^^ $target
+    │
+    = $pat1 = a
+    = $pat2 = b
+    = $pat3 = (c, d)

@@ -1,0 +1,5 @@
+let pat1: Pat;
+let pat2: Pat;
+let pat3: Pat;
+
+let target: Pat = { Color($pat1, $pat2, $pat3) };

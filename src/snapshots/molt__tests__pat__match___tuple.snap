@@ -1,0 +1,13 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(& name, stringify! (tuple))"
+---
+note: Match
+  ┌─ "test_data/pat/main.rs":9:9
+  │
+9 │     let (a, b, c) = (1, 2, 3);
+  │         ^^^^^^^^^ $target
+  │
+  = $pat1 = a
+  = $pat2 = b
+  = $pat3 = c

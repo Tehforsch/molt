@@ -1,0 +1,11 @@
+---
+source: src/lib.rs
+expression: "super :: super :: match_pattern(& name, stringify! (paren))"
+---
+note: Match
+   ┌─ "test_data/pat/main.rs":48:9
+   │
+48 │         (x) => println!("single: {}", x),
+   │         ^^^ $target
+   │
+   = $pat = x

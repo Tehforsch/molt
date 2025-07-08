@@ -163,6 +163,7 @@ impl Parse for FieldsUnnamed {
 
 impl ParseList for FieldNamed {
     type Item = Field;
+    type ParseItem = FieldNamed;
     type Punct = Token![,];
 
     fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
@@ -172,6 +173,7 @@ impl ParseList for FieldNamed {
 
 impl ParseList for FieldUnnamed {
     type Item = Field;
+    type ParseItem = FieldUnnamed;
     type Punct = Token![,];
 
     fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
