@@ -288,7 +288,10 @@ impl ParseNode for PatSingle {
             input.call(pat_wild).map(Pat::Wild)
         } else if input.peek(Token![box]) {
             pat_box(begin, input)
-        } else if input.peek(Token![-]) || lookahead.peek(Lit) || lookahead.peek(Token![const]) {
+        } else if input.peek(Token![-])
+            || lookahead.peek_pat::<Lit>()
+            || lookahead.peek(Token![const])
+        {
             pat_lit_or_range(input)
         } else if lookahead.peek(Token![ref])
             || lookahead.peek(Token![mut])
@@ -765,7 +768,7 @@ fn pat_range_bound(input: ParseStream) -> Result<Option<PatRangeBound>> {
     }
 
     let lookahead = input.lookahead1();
-    let expr = if lookahead.peek(Lit) {
+    let expr = if lookahead.peek_pat::<Lit>() {
         PatRangeBound::Lit(input.parse()?)
     } else if lookahead.peek_pat::<Ident>()
         || lookahead.peek(Token![::])

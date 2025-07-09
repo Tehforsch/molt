@@ -725,7 +725,7 @@ impl Expr {
             || input.peek(token::Paren) // tuple
             || input.peek(token::Bracket) // array
             || input.peek(token::Brace) // block
-            || input.peek(Lit) // literal
+            || input.peek_pat::<Lit>() // literal
             || input.peek(Token![!]) && !input.peek(Token![!=]) // operator not
             || input.peek(Token![-]) && !input.peek(Token![-=]) && !input.peek(Token![->]) // unary minus
             || input.peek(Token![*]) && !input.peek(Token![*=]) // dereference
@@ -1417,7 +1417,7 @@ fn atom_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedPat
 
     let real: SpannedPat<Expr> = if input.peek(token::Group) {
         input.call_spanned_pat(|input| expr_group(input, allow_struct))?
-    } else if input.peek(Lit) {
+    } else if input.peek_pat::<Lit>() {
         input.parse_span_with(Expr::Lit)?
     } else if input.peek(Token![async])
         && (input.peek2(token::Brace) || input.peek2(Token![move]) && input.peek3(token::Brace))
@@ -1722,7 +1722,7 @@ impl Parse for ExprLit {
     fn parse(input: ParseStream) -> Result<Self> {
         Ok(ExprLit {
             attrs: Vec::new(),
-            lit: input.parse()?,
+            lit: input.parse_id::<Lit>()?,
         })
     }
 }

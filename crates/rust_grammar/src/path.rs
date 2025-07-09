@@ -198,7 +198,7 @@ impl Parse for GenericArgument {
             return Ok(GenericArgument::Lifetime(input.parse()?));
         }
 
-        if input.peek(Lit) || input.peek(token::Brace) {
+        if input.peek_pat::<Lit>() || input.peek(token::Brace) {
             return const_argument(input).map(GenericArgument::Const);
         }
 
@@ -222,7 +222,7 @@ impl Parse for GenericArgument {
                         PathArguments::AngleBracketed(arguments) => Some(arguments),
                         PathArguments::Parenthesized(_) => unreachable!(),
                     };
-                    return if input.peek(Lit) || input.peek(token::Brace) {
+                    return if input.peek_pat::<Lit>() || input.peek(token::Brace) {
                         Ok(GenericArgument::AssocConst(AssocConst {
                             ident,
                             generics,
@@ -289,7 +289,7 @@ impl Parse for GenericArgument {
 pub(crate) fn const_argument(input: ParseStream) -> Result<Expr> {
     let lookahead = input.lookahead1();
 
-    if input.peek(Lit) {
+    if input.peek_pat::<Lit>() {
         let lit = input.parse()?;
         return Ok(Expr::Lit(lit));
     }

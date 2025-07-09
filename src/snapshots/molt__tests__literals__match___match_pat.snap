@@ -1,0 +1,27 @@
+---
+source: src/tests.rs
+expression: "super :: super :: match_pattern(& name, stringify! (match_pat))"
+---
+note: Match
+   ┌─ "test_data/literals/main.rs":23:9
+   │
+23 │         42 => println!("forty-two"),
+   │         ^^ $pat
+   │
+   = $lit = 42
+
+note: Match
+   ┌─ "test_data/literals/main.rs":24:9
+   │
+24 │         "hello" => println!("greeting"),
+   │         ^^^^^^^ $pat
+   │
+   = $lit = "hello"
+
+note: Match
+   ┌─ "test_data/literals/main.rs":25:9
+   │
+25 │         true => println!("truth"),
+   │         ^^^^ $pat
+   │
+   = $lit = true

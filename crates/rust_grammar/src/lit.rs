@@ -9,7 +9,7 @@ use molt_lib::{CmpSyn, ParsingMode, Spanned};
 use proc_macro2::{Literal, Punct, Span};
 
 use crate::buffer::Cursor;
-use crate::parse::{Parse, ParseCtx, ParseNode, ParseStream, Unexpected};
+use crate::parse::{Parse, ParseCtx, ParseNode, ParseStream, PeekPat, Unexpected};
 use crate::token::{self, Token};
 use crate::{Error, Ident, Result, lookahead};
 
@@ -548,6 +548,17 @@ impl Parse for Lit {
 
             Err(cursor.error("expected literal"))
         })
+    }
+}
+
+impl PeekPat for Lit {
+    type Target = Lit;
+
+    fn peek(cursor: Cursor) -> bool {
+        fn peek(input: ParseStream) -> bool {
+            <Lit as Parse>::parse(input).is_ok()
+        }
+        peek_impl(cursor, peek)
     }
 }
 

@@ -553,6 +553,11 @@ impl<'a> ParseBuffer<'a> {
         println!("{:?}", self.ctx.borrow().get::<T>(t));
     }
 
+    #[allow(unused)]
+    pub(crate) fn show(&self) {
+        println!("{}", self.cursor().token_stream().to_string());
+    }
+
     pub fn ctx(&self) -> Ref<'_, Ctx<Node>> {
         self.ctx.borrow()
     }

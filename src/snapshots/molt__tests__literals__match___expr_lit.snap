@@ -1,0 +1,11 @@
+---
+source: src/tests.rs
+expression: "super :: super :: match_pattern(& name, stringify! (expr_lit))"
+---
+note: Match
+   ┌─ "test_data/literals/main.rs":17:5
+   │
+17 │     foo(123);
+   │     ^^^^^^^^ $expr
+   │
+   = $lit = 123
