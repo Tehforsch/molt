@@ -720,10 +720,6 @@ impl<'a> ParseBuffer<'a> {
         self.ctx.borrow_mut().add_pat(item)
     }
 
-    pub(crate) fn add_with_marker<T: ToNode<Node>>(&self, marker: PosMarker, t: T) -> NodeId<T> {
-        self.add(self.from_marker(marker, t))
-    }
-
     pub(crate) fn mode(&self) -> ParsingMode {
         self.mode
     }

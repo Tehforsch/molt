@@ -290,7 +290,7 @@ pub(crate) fn ambig_ty(input: ParseStream, allow_plus: bool) -> Result<Type> {
         if content.peek(Lifetime) {
             return Ok(Type::Paren(TypeParen {
                 paren_token,
-                elem: input.add_with_marker(marker, Type::TraitObject(content.parse()?)),
+                elem: input.add(input.from_marker(marker, Type::TraitObject(content.parse()?))),
             }));
         }
         if content.peek(Token![?]) {
