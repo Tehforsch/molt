@@ -558,26 +558,17 @@ impl<'a> ParseBuffer<'a> {
         self.ctx.borrow_mut()
     }
 
-    // TODO rename this or .... remove it?
-    pub(crate) fn parse_node<T: ParseNode + ?Sized>(&self) -> Result<T::Target> {
-        T::parse_node(self)
-    }
-
-    pub(crate) fn parse_spanned_pat<T: ParseNode + ?Sized>(&self) -> Result<SpannedPat<T::Target>> {
-        let marker = self.marker();
-        Ok(self.from_marker(marker, T::parse_pat(self)?))
-    }
-
     pub fn parse_id<T: ParseNode>(&self) -> Result<NodeId<T::Target>> {
         let pat = self.parse_spanned_pat::<T>()?;
         Ok(self.add_pat(pat))
     }
 
     pub(crate) fn parse_spanned<T: Parse>(&self) -> Result<Spanned<T>> {
-        let marker = self.marker();
-        let item = T::parse(self)?;
-        let span = self.span_from_marker(marker);
-        Ok(item.with_span(span))
+        self.call_spanned(T::parse)
+    }
+
+    pub(crate) fn parse_spanned_pat<T: ParseNode + ?Sized>(&self) -> Result<SpannedPat<T::Target>> {
+        self.call_spanned(T::parse_pat)
     }
 
     pub(crate) fn parse_span_with<T: Parse, S: ToNode<Node>>(

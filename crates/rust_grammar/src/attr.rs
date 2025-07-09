@@ -8,7 +8,7 @@ use crate::ident::TokenIdent;
 use crate::lit::Lit;
 use crate::mac::MacroDelimiter;
 use crate::parse::discouraged::Speculative as _;
-use crate::parse::{Parse, ParseStream};
+use crate::parse::{Parse, ParseNode, ParseStream};
 use crate::path::Path;
 use crate::{mac, token};
 
@@ -407,7 +407,7 @@ fn parse_meta_name_value_after_path(path: Path, input: ParseStream) -> Result<Me
     } else if input.peek(Token![#]) && input.peek2(token::Bracket) {
         return Err(input.error("unexpected attribute inside of attribute"));
     } else {
-        input.parse_node::<Expr>()?
+        Expr::parse_node(input)?
     };
     Ok(MetaNameValue {
         path,
