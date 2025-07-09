@@ -619,6 +619,10 @@ impl<'a> ParseBuffer<'a> {
         self.ctx.borrow_mut().add(t)
     }
 
+    pub(crate) fn add_pat<T: ToNode<Node>>(&self, item: SpannedPat<T>) -> NodeId<T> {
+        self.ctx.borrow_mut().add_pat(item)
+    }
+
     pub(crate) fn peek_var<T: ToNode<Node>>(&self) -> bool {
         peek_var(self.cursor(), &self.ctx.borrow(), T::kind())
     }
@@ -714,10 +718,6 @@ impl<'a> ParseBuffer<'a> {
         } else {
             T::parse_list_or_item(self)
         }
-    }
-
-    pub(crate) fn add_pat<T: ToNode<Node>>(&self, item: SpannedPat<T>) -> NodeId<T> {
-        self.ctx.borrow_mut().add_pat(item)
     }
 
     pub(crate) fn mode(&self) -> ParsingMode {
