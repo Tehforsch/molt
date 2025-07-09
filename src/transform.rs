@@ -37,8 +37,10 @@ pub fn transform(
     match_result: MatchResult,
     transforms: Vec<(Id, Id)>,
 ) -> Result<(), Error> {
-    let code = get_transformed_contents(input, rust_file_id, match_result, &transforms)?;
-    write_to_file(input, rust_file_id, code)?;
+    if !transforms.is_empty() {
+        let code = get_transformed_contents(input, rust_file_id, match_result, &transforms)?;
+        write_to_file(input, rust_file_id, code)?;
+    }
     Ok(())
 }
 
@@ -48,17 +50,14 @@ pub fn get_transformed_contents(
     match_result: MatchResult<'_>,
     transforms: &[(Id, Id)],
 ) -> Result<String, Error> {
-    let mut all_transformations = Vec::new();
-
-    // Generate transformations for each input->output pair
-    for (input_var, output_var) in transforms {
-        let transformations: Vec<_> = match_result
-            .matches
-            .iter()
-            .map(|match_| make_transformation(&match_result.ctx, match_, *input_var, *output_var))
-            .collect();
-        all_transformations.extend(transformations);
-    }
+    let mut all_transformations: Vec<_> = transforms
+        .into_iter()
+        .flat_map(|(input_var, output_var)| {
+            match_result.matches.iter().map(|match_| {
+                make_transformation(&match_result.ctx, match_, *input_var, *output_var)
+            })
+        })
+        .collect();
 
     // Sort transformations by their spans to ensure proper ordering
     all_transformations.sort_by_key(|t| t.span.byte_range().start);
