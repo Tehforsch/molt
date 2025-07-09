@@ -540,16 +540,6 @@ impl<'a> ParseBuffer<'a> {
         }
     }
 
-    pub(crate) fn span_from_marker(&self, marker: PosMarker) -> molt_lib::Span {
-        let end = self.cursor().prev_span().byte_range().end;
-        molt_lib::Span::new(marker.start, end)
-    }
-
-    pub(crate) fn marker(&self) -> PosMarker {
-        let start = self.cursor().span().byte_range().start;
-        PosMarker { start }
-    }
-
     #[allow(unused)]
     pub(crate) fn dbg<T: Debug + ToNode<Node>>(&self, t: NodeId<T>) {
         println!("{:?}", self.ctx.borrow().get::<T>(t));
@@ -575,7 +565,7 @@ impl<'a> ParseBuffer<'a> {
 
     pub(crate) fn parse_spanned_pat<T: ParseNode + ?Sized>(&self) -> Result<SpannedPat<T::Target>> {
         let marker = self.marker();
-        Ok(T::parse_pat(self)?.with_span(self.span_from_marker(marker)))
+        Ok(self.from_marker(marker, T::parse_pat(self)?))
     }
 
     pub fn parse_id<T: ParseNode>(&self) -> Result<NodeId<T::Target>> {
@@ -604,11 +594,21 @@ impl<'a> ParseBuffer<'a> {
     ) -> Result<Spanned<T>> {
         let marker = self.marker();
         let t = f(self)?;
-        Ok(t.with_span(self.span_from_marker(marker)))
+        Ok(self.from_marker(marker, t))
     }
 
     pub(crate) fn add_var<T: ToNode<Node>>(&self, var: Var<Node>) -> NodeId<T> {
         self.ctx.borrow_mut().add_var(var)
+    }
+
+    pub(crate) fn span_from_marker(&self, marker: PosMarker) -> molt_lib::Span {
+        let end = self.cursor().prev_span().byte_range().end;
+        molt_lib::Span::new(marker.start, end)
+    }
+
+    pub(crate) fn marker(&self) -> PosMarker {
+        let start = self.cursor().span().byte_range().start;
+        PosMarker { start }
     }
 
     pub(crate) fn from_marker<T>(&self, marker: PosMarker, t: T) -> Spanned<T> {
@@ -721,7 +721,7 @@ impl<'a> ParseBuffer<'a> {
     }
 
     pub(crate) fn add_with_marker<T: ToNode<Node>>(&self, marker: PosMarker, t: T) -> NodeId<T> {
-        self.add(t.with_span(self.span_from_marker(marker)))
+        self.add(self.from_marker(marker, t))
     }
 
     pub(crate) fn mode(&self) -> ParsingMode {

@@ -1839,7 +1839,7 @@ impl Parse for ExprIf {
         while let Some(mut prev) = clauses.pop() {
             let marker = markers.pop().unwrap();
             prev.else_branch.as_mut().unwrap().1 =
-                input.add(Expr::If(expr).with_span(input.span_from_marker(marker)));
+                input.add(input.from_marker(marker, Expr::If(expr)));
             expr = prev;
         }
         expr.attrs = attrs;

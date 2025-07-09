@@ -2268,8 +2268,8 @@ fn parse_impl(input: ParseStream, allow_verbatim_impl: bool) -> Result<Option<It
         self_ty = if polarity.is_none() {
             input.add_pat(first_ty.with_span(span))
         } else {
-            let span = input.span_from_marker(begin.marker());
-            input.add(Type::Verbatim(verbatim::between(&begin, input)).with_span(span))
+            let marker = begin.marker();
+            input.add(input.from_marker(marker, Type::Verbatim(verbatim::between(&begin, input))))
         };
     }
 

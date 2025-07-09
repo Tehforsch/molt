@@ -584,18 +584,20 @@ fn field_pat(input: ParseStream) -> Result<FieldPat> {
         Member::Unnamed(_) => unreachable!(),
     };
 
-    let pat = if boxed.is_some() {
-        Pat::Verbatim(verbatim::between(&begin, input))
-    } else {
-        Pat::Ident(PatIdent {
-            attrs: Vec::new(),
-            by_ref,
-            mutability,
-            ident,
-            subpat: None,
-        })
-    }
-    .with_span(input.span_from_marker(marker));
+    let pat = input.from_marker(
+        marker,
+        if boxed.is_some() {
+            Pat::Verbatim(verbatim::between(&begin, input))
+        } else {
+            Pat::Ident(PatIdent {
+                attrs: Vec::new(),
+                by_ref,
+                mutability,
+                ident,
+                subpat: None,
+            })
+        },
+    );
     let pat = input.add(pat);
 
     Ok(FieldPat {

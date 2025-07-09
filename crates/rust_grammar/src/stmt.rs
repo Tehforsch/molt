@@ -244,15 +244,15 @@ fn stmt_local(input: ParseStream, attrs: Vec<Attribute>) -> Result<Stmt> {
     if input.peek(Token![:]) {
         let colon_token: Token![:] = input.parse()?;
         let ty = input.parse()?;
-        pat = input.add(
+        pat = input.add(input.from_marker(
+            marker,
             Pat::Type(PatType {
                 attrs: Vec::new(),
                 pat,
                 colon_token,
                 ty,
-            })
-            .with_span(input.span_from_marker(marker)),
-        );
+            }),
+        ));
     }
 
     let init = if let Some(eq_token) = input.parse()? {
