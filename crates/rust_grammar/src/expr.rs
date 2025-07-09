@@ -961,8 +961,8 @@ impl ParseNode for Expr {
         unreachable!()
     }
 
-    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
-        ambiguous_expr(input, AllowStruct(true))
+    fn parse_pat(input: ParseStream) -> Result<Pattern<Self::Target, Id>> {
+        Ok(ambiguous_expr(input, AllowStruct(true))?.take())
     }
 }
 
@@ -973,8 +973,8 @@ impl ParseNode for ExprNoEagerBrace {
         unreachable!()
     }
 
-    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
-        ambiguous_expr(input, AllowStruct(false))
+    fn parse_pat(input: ParseStream) -> Result<Pattern<Self::Target, Id>> {
+        Ok(ambiguous_expr(input, AllowStruct(false))?.take())
     }
 }
 
@@ -985,8 +985,8 @@ impl ParseNode for ExprEarlierBoundaryRule {
         unreachable!()
     }
 
-    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
-        parse_with_earlier_boundary_rule(input)
+    fn parse_pat(input: ParseStream) -> Result<Pattern<Self::Target, Id>> {
+        Ok(parse_with_earlier_boundary_rule(input)?.take())
     }
 }
 
@@ -1006,7 +1006,9 @@ pub(super) fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<Spa
     let mut attrs = input.call(expr_attrs)?;
     let mut expr: SpannedPat<Expr> = if input.peek(token::Group) {
         let allow_struct = AllowStruct(true);
-        let atom = input.call_spanned_pat(|input| expr_group(input, allow_struct))?;
+        let atom = input
+            .call_spanned(|input| expr_group(input, allow_struct))?
+            .map(Pattern::Real);
         if continue_parsing_early(input, &atom) {
             trailer_helper(input, atom)?
         } else {
@@ -1033,7 +1035,7 @@ pub(super) fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<Spa
     } else if input.peek(token::Brace) {
         input.parse_span_with(Expr::Block)?
     } else if input.peek(Lifetime) {
-        input.call_spanned_pat(atom_labeled)?
+        input.call_spanned(atom_labeled)?.map(Pattern::Real)
     } else {
         let allow_struct = AllowStruct(true);
         unary_expr(input, allow_struct)?
@@ -1289,7 +1291,7 @@ fn trailer_expr(
     input: ParseStream,
     allow_struct: AllowStruct,
 ) -> Result<SpannedPat<Expr>> {
-    let atom = atom_expr(input, allow_struct)?;
+    let atom = input.call_spanned(|input| atom_expr(input, allow_struct))?;
     let e = trailer_helper(input, atom)?;
 
     if e.is_var() {
@@ -1408,23 +1410,24 @@ fn trailer_helper(input: ParseStream, mut e: SpannedPat<Expr>) -> Result<Spanned
 
 // Parse all atomic expressions which don't have to worry about precedence
 // interactions, as they are fully contained.
-fn atom_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedPat<Expr>> {
-    use molt_lib::SpannedPat;
-
+fn atom_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<Pattern<Expr, Id>> {
     if let Some(var) = input.parse_var() {
         return var;
     }
+    atom_expr_inner(input, allow_struct).map(Pattern::Real)
+}
 
-    let real: SpannedPat<Expr> = if input.peek(token::Group) {
-        input.call_spanned_pat(|input| expr_group(input, allow_struct))?
+fn atom_expr_inner(input: ParseStream, allow_struct: AllowStruct) -> Result<Expr> {
+    let real: Expr = if input.peek(token::Group) {
+        expr_group(input, allow_struct)?
     } else if input.peek_pat::<Lit>() {
-        input.parse_span_with(Expr::Lit)?
+        input.parse::<ExprLit>().map(Expr::Lit)?
     } else if input.peek(Token![async])
         && (input.peek2(token::Brace) || input.peek2(Token![move]) && input.peek3(token::Brace))
     {
-        input.parse_span_with(Expr::Async)?
+        input.parse::<ExprAsync>().map(Expr::Async)?
     } else if input.peek(Token![try]) && input.peek2(token::Brace) {
-        input.parse_span_with(Expr::TryBlock)?
+        input.parse::<ExprTryBlock>().map(Expr::TryBlock)?
     } else if input.peek(Token![|])
         || input.peek(Token![move])
         || input.peek(Token![for])
@@ -1434,7 +1437,7 @@ fn atom_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedPat
         || input.peek(Token![static])
         || input.peek(Token![async]) && (input.peek2(Token![|]) || input.peek2(Token![move]))
     {
-        input.call_spanned_pat(|input| expr_closure(input, allow_struct).map(Expr::Closure))?
+        expr_closure(input, allow_struct).map(Expr::Closure)?
     } else if token::peek_keyword(input.cursor(), "builtin") && input.peek2(Token![#]) {
         unimplemented!()
     } else if input.peek_pat::<Ident>()
@@ -1446,45 +1449,45 @@ fn atom_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedPat
         || input.peek(Token![crate])
         || input.peek(Token![try]) && (input.peek2(Token![!]) || input.peek2(Token![::]))
     {
-        input.call_spanned_pat(|input| path_or_macro_or_struct(input, allow_struct))?
+        path_or_macro_or_struct(input, allow_struct)?
     } else if input.peek(token::Paren) {
-        input.call_spanned_pat(paren_or_tuple)?
+        paren_or_tuple(input)?
     } else if input.peek(Token![break]) {
-        input.call_spanned_pat(|input| expr_break(input, allow_struct).map(Expr::Break))?
+        expr_break(input, allow_struct).map(Expr::Break)?
     } else if input.peek(Token![continue]) {
-        input.parse_span_with(Expr::Continue)?
+        input.parse::<ExprContinue>().map(Expr::Continue)?
     } else if input.peek(Token![return]) {
-        input.parse_span_with(Expr::Return)?
+        input.parse::<ExprReturn>().map(Expr::Return)?
     } else if input.peek(Token![become]) {
-        input.call_spanned_pat(expr_become)?
+        expr_become(input)?
     } else if input.peek(token::Bracket) {
-        input.call_spanned_pat(array_or_repeat)?
+        array_or_repeat(input)?
     } else if input.peek(Token![let]) {
-        input.call_spanned_pat(|input| expr_let(input, allow_struct).map(Expr::Let))?
+        expr_let(input, allow_struct).map(Expr::Let)?
     } else if input.peek(Token![if]) {
-        input.parse_span_with(Expr::If)?
+        input.parse::<ExprIf>().map(Expr::If)?
     } else if input.peek(Token![while]) {
-        input.parse_span_with(Expr::While)?
+        input.parse::<ExprWhile>().map(Expr::While)?
     } else if input.peek(Token![for]) {
-        input.parse_span_with(Expr::ForLoop)?
+        input.parse::<ExprForLoop>().map(Expr::ForLoop)?
     } else if input.peek(Token![loop]) {
-        input.parse_span_with(Expr::Loop)?
+        input.parse::<ExprLoop>().map(Expr::Loop)?
     } else if input.peek(Token![match]) {
-        input.parse_span_with(Expr::Match)?
+        input.parse::<ExprMatch>().map(Expr::Match)?
     } else if input.peek(Token![yield]) {
-        input.parse_span_with(Expr::Yield)?
+        input.parse::<ExprYield>().map(Expr::Yield)?
     } else if input.peek(Token![unsafe]) {
-        input.parse_span_with(Expr::Unsafe)?
+        input.parse::<ExprUnsafe>().map(Expr::Unsafe)?
     } else if input.peek(Token![const]) {
-        input.parse_span_with(Expr::Const)?
+        input.parse::<ExprConst>().map(Expr::Const)?
     } else if input.peek(token::Brace) {
-        input.parse_span_with(Expr::Block)?
+        input.parse::<ExprBlock>().map(Expr::Block)?
     } else if input.peek(Token![..]) {
-        input.call_spanned_pat(|input| expr_range(input, allow_struct).map(Expr::Range))?
+        expr_range(input, allow_struct).map(Expr::Range)?
     } else if input.peek(Token![_]) {
-        input.parse_span_with(Expr::Infer)?
+        input.parse::<ExprInfer>().map(Expr::Infer)?
     } else if input.peek(Lifetime) {
-        input.call_spanned_pat(atom_labeled)?
+        atom_labeled(input)?
     } else {
         Err(input.error("expected an expression"))?
     };
@@ -1587,7 +1590,7 @@ impl ParseListOrItem for ExprTuple {
             return Ok(ListOrItem::List(NodeList::empty(input.mode())));
         }
 
-        let first = input.parse_pat::<Expr>()?;
+        let first = input.parse_spanned_pat::<Expr>()?;
         if input.is_empty() {
             return Ok(ListOrItem::Item(first));
         }
@@ -1645,7 +1648,7 @@ impl ParseListOrItem for ExprArray {
         if input.is_empty() {
             return Ok(ListOrItem::List(NodeList::empty(input.mode())));
         }
-        let first = input.parse_pat::<Expr>()?;
+        let first = input.parse_spanned_pat::<Expr>()?;
         // TODO make this prettier. This might be a pattern that
         // I just havent understood yet. If the input is empty,
         // and we continue the function without this early return,
@@ -1729,7 +1732,7 @@ impl Parse for ExprLit {
 
 fn expr_group(input: ParseStream, allow_struct: AllowStruct) -> Result<Expr> {
     let group = crate::group::parse_group(input)?;
-    let inner: SpannedPat<Expr> = group.content.parse_pat::<Expr>()?;
+    let inner: SpannedPat<Expr> = group.content.parse_spanned_pat::<Expr>()?;
     let (span, inner) = inner.decompose();
     let make_group_expr = |inner: Pattern<Expr, Id>| {
         Ok(Expr::Group(ExprGroup {
@@ -2031,21 +2034,19 @@ impl ParseNode for ClosureInput {
         unreachable!()
     }
 
-    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
+    fn parse_pat(input: ParseStream) -> Result<Pattern<Self::Target, Id>> {
         use crate::pat::PatSingle;
 
-        let marker = input.marker();
         let attrs = input.call(Attribute::parse_outer)?;
-        let mut pat = input.parse_pat::<PatSingle>()?;
+        let mut pat = input.parse_spanned_pat::<PatSingle>()?;
 
         if input.peek(Token![:]) {
-            Ok(Pat::Type(PatType {
+            Ok(Pattern::Real(Pat::Type(PatType {
                 attrs,
                 pat: input.add_pat(pat),
                 colon_token: input.parse()?,
                 ty: input.parse()?,
-            })
-            .pattern_with_span(input.span_from_marker(marker)))
+            })))
         } else {
             match &mut *pat {
                 Pattern::Pat(_) => {}
@@ -2067,7 +2068,7 @@ impl ParseNode for ClosureInput {
                 Pattern::Real(Pat::Verbatim(_)) => {}
                 Pattern::Real(Pat::Wild(pat)) => pat.attrs = attrs,
             }
-            Ok(pat)
+            Ok(pat.take())
         }
     }
 }

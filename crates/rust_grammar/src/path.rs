@@ -202,7 +202,7 @@ impl Parse for GenericArgument {
             return const_argument(input).map(GenericArgument::Const);
         }
 
-        let (span, mut argument) = input.parse_pat::<Type>()?.decompose();
+        let (span, mut argument) = input.parse_spanned_pat::<Type>()?.decompose();
 
         match argument {
             Pattern::Real(Type::Path(mut ty))

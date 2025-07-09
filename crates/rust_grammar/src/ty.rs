@@ -325,8 +325,8 @@ pub(crate) fn ambig_ty(input: ParseStream, allow_plus: bool) -> Result<Type> {
                 return Ok(Type::Tuple(TypeTuple { paren_token, elems }));
             }
         };
-
         let (span, mut first) = first.decompose();
+
         if allow_plus && input.peek(Token![+]) {
             // False positive, as far as I can tell
             #[allow(clippy::never_loop)]
@@ -513,14 +513,14 @@ impl ParseListOrItem for TypeTuple {
     type Punct = Token![,];
 
     fn parse_list_or_item(input: ParseStream) -> Result<ListOrItem<Self::Target, Self::Punct>> {
-        let first = input.parse_pat::<Type>()?;
+        let first = input.parse_spanned_pat::<Type>()?;
 
         if input.peek(Token![,]) {
             let mut elems: Punctuated<_, Token![,]> = Punctuated::new();
             elems.push_value(first);
             elems.push_punct(input.parse()?);
             while !input.is_empty() {
-                elems.push_value(input.parse_pat::<Type>()?);
+                elems.push_value(input.parse_spanned_pat::<Type>()?);
                 if input.is_empty() {
                     break;
                 }

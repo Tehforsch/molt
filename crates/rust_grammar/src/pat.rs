@@ -1,5 +1,5 @@
 use derive_macro::CmpSyn;
-use molt_lib::{NodeId, NodeList, Pattern, SpannedPat, WithSpan};
+use molt_lib::{Id, NodeId, NodeList, Pattern, SpannedPat, WithSpan};
 use proc_macro2::TokenStream;
 
 use crate::attr::Attribute;
@@ -337,8 +337,8 @@ impl ParseNode for PatMulti {
         unreachable!()
     }
 
-    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
-        parse_pat_multi::<Self>(input)
+    fn parse_pat(input: ParseStream) -> Result<Pattern<Self::Target, Id>> {
+        Ok(parse_pat_multi::<Self>(input)?.take())
     }
 }
 
@@ -349,8 +349,8 @@ impl ParseNode for PatMultiLeadingVert {
         unreachable!()
     }
 
-    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
-        parse_pat_multi::<Self>(input)
+    fn parse_pat(input: ParseStream) -> Result<Pattern<Self::Target, Id>> {
+        Ok(parse_pat_multi::<Self>(input)?.take())
     }
 }
 
@@ -390,7 +390,7 @@ fn multi_pat_impl(
     input: ParseStream,
     leading_vert: Option<Token![|]>,
 ) -> Result<ListOrItem<Pat, Token![|]>> {
-    let pat = input.parse_pat::<PatSingle>()?;
+    let pat = input.parse_spanned_pat::<PatSingle>()?;
     if leading_vert.is_some()
         || input.peek(Token![|]) && !input.peek(Token![||]) && !input.peek(Token![|=])
     {
@@ -670,7 +670,7 @@ impl ParseListOrItem for PatParenOrTuple {
 
         let mut elems = Punctuated::new();
         while !content.is_empty() {
-            let value = content.parse_pat::<PatMultiLeadingVert>()?;
+            let value = content.parse_spanned_pat::<PatMultiLeadingVert>()?;
             if content.is_empty() {
                 if elems.is_empty() && !matches!(&*value, Pattern::Real(Pat::Rest(_))) {
                     return Ok(ListOrItem::Item(value));
@@ -795,7 +795,7 @@ impl ParseList for PatSlice {
     fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
         let mut elems = Punctuated::new();
         while !input.is_empty() {
-            let value = PatMultiLeadingVert::parse_pat(&input)?;
+            let value = input.parse_spanned_pat::<PatMultiLeadingVert>()?;
             match &*value {
                 Pattern::Real(Pat::Range(pat)) if pat.start.is_none() || pat.end.is_none() => {
                     let (start, end) = match &pat.limits {

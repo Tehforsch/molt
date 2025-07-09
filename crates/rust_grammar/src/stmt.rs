@@ -106,7 +106,7 @@ impl ParseList for Block {
             if input.is_empty() {
                 break;
             }
-            let stmt = input.parse_pat::<StmtAllowNoSemi>()?;
+            let stmt = input.parse_spanned_pat::<StmtAllowNoSemi>()?;
             let requires_semicolon = match stmt.real() {
                 Some(Stmt::Expr(stmt, None)) => classify::requires_semi_to_be_stmt(input, *stmt),
                 Some(Stmt::Macro(stmt)) => {
@@ -301,7 +301,7 @@ fn stmt_expr(
     allow_nosemi: AllowNoSemi,
     mut attrs: Vec<Attribute>,
 ) -> Result<Stmt> {
-    let e = input.parse_pat::<ExprEarlierBoundaryRule>()?;
+    let e = input.parse_spanned_pat::<ExprEarlierBoundaryRule>()?;
 
     let mut attr_target = None;
     loop {

@@ -2231,7 +2231,7 @@ fn parse_impl(input: ParseStream, allow_verbatim_impl: bool) -> Result<Option<It
     };
 
     let first_ty_span = input.span();
-    let (span, first_ty) = input.parse_pat::<Type>()?.decompose();
+    let (span, first_ty) = input.parse_spanned_pat::<Type>()?.decompose();
     let self_ty: NodeId<Type>;
     let trait_;
 

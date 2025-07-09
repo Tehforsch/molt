@@ -45,14 +45,11 @@ pub trait ParseNode {
     /// Parse a Self::Target given the input. TODO: Fill this
     fn parse_node(input: ParseStream) -> Result<Self::Target>;
 
-    fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
+    fn parse_pat(input: ParseStream) -> Result<Pattern<Self::Target, Id>> {
         if let Some(var) = input.parse_var() {
             return var;
         }
-        let marker = input.marker();
-        Ok(Self::parse_node(input)?
-            .with_span(input.span_from_marker(marker))
-            .map(|item| Pattern::Real(item)))
+        Ok(Pattern::Real(Self::parse_node(input)?))
     }
 }
 
@@ -110,7 +107,9 @@ fn parse_single<T: ParseListOrItem>(input: ParseStream) -> Result<NodeId<T::Targ
 fn parse_list<T: ParseListOrItem>(input: ParseStream) -> Result<Vec<NodeId<T::Target>>> {
     let list_or_item = T::parse_list_or_item(input)?;
     Ok(match list_or_item {
-        ListOrItem::Item(item) => vec![input.add_pat(item)],
+        ListOrItem::Item(item) => {
+            vec![input.add_pat(item)]
+        }
         ListOrItem::List(list) => list.unwrap_real().into(),
     })
 }
@@ -569,12 +568,22 @@ impl<'a> ParseBuffer<'a> {
         self.ctx.borrow_mut()
     }
 
-    pub fn parse_pat<T: ParseNode + ?Sized>(&self) -> Result<SpannedPat<T::Target>> {
+    // TODO rename this or .... remove it?
+    pub fn parse_node<T: ParseNode + ?Sized>(&self) -> Result<T::Target> {
+        T::parse_node(self)
+    }
+
+    pub fn parse_pat<T: ParseNode + ?Sized>(&self) -> Result<Pattern<T::Target, Id>> {
         T::parse_pat(self)
     }
 
+    pub fn parse_spanned_pat<T: ParseNode + ?Sized>(&self) -> Result<SpannedPat<T::Target>> {
+        let marker = self.marker();
+        Ok(T::parse_pat(self)?.with_span(self.span_from_marker(marker)))
+    }
+
     pub fn parse_id<T: ParseNode>(&self) -> Result<NodeId<T::Target>> {
-        let pat = self.parse_pat::<T>()?;
+        let pat = self.parse_spanned_pat::<T>()?;
         Ok(self.add_pat(pat))
     }
 
@@ -583,10 +592,6 @@ impl<'a> ParseBuffer<'a> {
         let item = T::parse(self)?;
         let span = self.span_from_marker(marker);
         Ok(item.with_span(span))
-    }
-
-    pub fn parse_spanned_pat<T: Parse>(&self) -> Result<SpannedPat<T>> {
-        Ok(self.parse_spanned::<T>()?.as_pattern())
     }
 
     pub fn parse_span_with<T: Parse, S: ToNode<Node>>(
@@ -604,13 +609,6 @@ impl<'a> ParseBuffer<'a> {
         let marker = self.marker();
         let t = f(self)?;
         Ok(t.with_span(self.span_from_marker(marker)))
-    }
-
-    pub fn call_spanned_pat<T>(
-        &self,
-        f: impl for<'b> Fn(&'b ParseBuffer<'b>) -> Result<T>,
-    ) -> Result<SpannedPat<T>> {
-        Ok(self.call_spanned::<T>(f)?.as_pattern())
     }
 
     pub fn add_var<T: ToNode<Node>>(&self, var: Var<Node>) -> NodeId<T> {
@@ -633,23 +631,20 @@ impl<'a> ParseBuffer<'a> {
         peek_pat::<T>(self.cursor(), &self.ctx.borrow())
     }
 
-    pub fn parse_var<T: ToNode<Node>>(&self) -> Option<Result<SpannedPat<T>>> {
-        let transposed = || -> Result<Option<SpannedPat<T>>> {
+    pub fn parse_var<T: ToNode<Node>>(&self) -> Option<Result<Pattern<T, Id>>> {
+        let transposed = || -> Result<Option<Pattern<T, Id>>> {
             let ahead = self.fork();
             if ahead.peek(Token![$]) {
-                let marker = ahead.marker();
                 let _: Token![$] = ahead.parse()?;
                 let ident: Ident = Ident::parse_any(&ahead)?;
                 if !kind_matches(&ahead.ctx.borrow(), &ident, T::kind()) {
                     return Ok(None);
                 }
                 self.advance_to(&ahead);
-                let span = self.span_from_marker(marker);
                 let id = self
                     .add_var::<T>(Var::new(ident.to_string(), T::kind()))
                     .into();
-                let item: SpannedPat<T> = Pattern::Pat(id).with_span(span);
-                Ok(Some(item))
+                Ok(Some(Pattern::Pat(id)))
             } else {
                 Ok(None)
             }
