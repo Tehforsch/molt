@@ -59,7 +59,7 @@ pub trait PeekPat {
     fn peek(cursor: Cursor) -> bool;
 }
 
-pub fn peek_pat<T: PeekPat>(cursor: Cursor, ctx: &Ctx<Node>) -> bool {
+pub(crate) fn peek_pat<T: PeekPat>(cursor: Cursor, ctx: &Ctx<Node>) -> bool {
     T::peek(cursor) || peek_var(cursor, ctx, T::Target::kind())
 }
 
@@ -71,7 +71,7 @@ pub trait ParseList {
     fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>>;
 }
 
-pub fn parse_punctuated_list_real<T: ParseNode, P: Parse>(
+pub(crate) fn parse_punctuated_list_real<T: ParseNode, P: Parse>(
     input: ParseStream,
 ) -> Result<Vec<NodeId<T::Target>>> {
     Ok(
@@ -114,7 +114,7 @@ fn parse_list<T: ParseListOrItem>(input: ParseStream) -> Result<Vec<NodeId<T::Ta
     })
 }
 
-pub fn peek_var(cursor: Cursor, ctx: &Ctx<Node>, kind: Kind) -> bool {
+pub(crate) fn peek_var(cursor: Cursor, ctx: &Ctx<Node>, kind: Kind) -> bool {
     if let Some((punct, _)) = cursor.punct() {
         if punct.as_char() == '$' {
             if let Some((ident, _)) = cursor.skip().and_then(|cursor| cursor.ident()) {
@@ -411,7 +411,7 @@ fn span_of_unexpected_ignoring_nones(mut cursor: Cursor) -> Option<(Span, Delimi
     }
 }
 
-pub fn kind_matches(ctx: &Ctx<Node>, ident: &Ident, kind: crate::Kind) -> bool {
+pub(crate) fn kind_matches(ctx: &Ctx<Node>, ident: &Ident, kind: crate::Kind) -> bool {
     ctx.get_kind_by_name(&ident.to_string()) == kind
 }
 
@@ -420,7 +420,7 @@ impl<'a> ParseBuffer<'a> {
         T::parse(self)
     }
 
-    pub fn call<T>(&'a self, function: fn(ParseStream<'a>) -> Result<T>) -> Result<T> {
+    pub(crate) fn call<T>(&'a self, function: fn(ParseStream<'a>) -> Result<T>) -> Result<T> {
         function(self)
     }
 
@@ -429,7 +429,7 @@ impl<'a> ParseBuffer<'a> {
         T::Token::peek(self.cursor())
     }
 
-    pub fn peek2<T: Peek>(&self, token: T) -> bool {
+    pub(crate) fn peek2<T: Peek>(&self, token: T) -> bool {
         fn peek2(buffer: &ParseBuffer, peek: fn(Cursor) -> bool) -> bool {
             buffer.cursor().skip().is_some_and(peek)
         }
@@ -438,7 +438,7 @@ impl<'a> ParseBuffer<'a> {
         peek2(self, T::Token::peek)
     }
 
-    pub fn peek3<T: Peek>(&self, token: T) -> bool {
+    pub(crate) fn peek3<T: Peek>(&self, token: T) -> bool {
         fn peek3(buffer: &ParseBuffer, peek: fn(Cursor) -> bool) -> bool {
             buffer
                 .cursor()
@@ -451,7 +451,7 @@ impl<'a> ParseBuffer<'a> {
         peek3(self, T::Token::peek)
     }
 
-    pub fn parse_terminated<T, P>(
+    pub(crate) fn parse_terminated<T, P>(
         &'a self,
         parser: fn(ParseStream<'a>) -> Result<T>,
         separator: P,
@@ -520,7 +520,7 @@ impl<'a> ParseBuffer<'a> {
         Ok(node)
     }
 
-    pub fn span(&self) -> Span {
+    pub(crate) fn span(&self) -> Span {
         let cursor = self.cursor();
         if cursor.eof() {
             self.scope
@@ -540,12 +540,12 @@ impl<'a> ParseBuffer<'a> {
         }
     }
 
-    pub fn span_from_marker(&self, marker: PosMarker) -> molt_lib::Span {
+    pub(crate) fn span_from_marker(&self, marker: PosMarker) -> molt_lib::Span {
         let end = self.cursor().prev_span().byte_range().end;
         molt_lib::Span::new(marker.start, end)
     }
 
-    pub fn marker(&self) -> PosMarker {
+    pub(crate) fn marker(&self) -> PosMarker {
         let start = self.cursor().span().byte_range().start;
         PosMarker { start }
     }
@@ -556,28 +556,24 @@ impl<'a> ParseBuffer<'a> {
     }
 
     #[allow(unused)]
-    pub fn show(&self) {
+    pub(crate) fn show(&self) {
         println!("{}", self.cursor().token_stream().to_string());
     }
 
-    pub fn ctx(&self) -> Ref<'_, Ctx<Node>> {
+    pub(crate) fn ctx(&self) -> Ref<'_, Ctx<Node>> {
         self.ctx.borrow()
     }
 
-    pub fn ctx_mut(&self) -> RefMut<'_, Ctx<Node>> {
+    pub(crate) fn ctx_mut(&self) -> RefMut<'_, Ctx<Node>> {
         self.ctx.borrow_mut()
     }
 
     // TODO rename this or .... remove it?
-    pub fn parse_node<T: ParseNode + ?Sized>(&self) -> Result<T::Target> {
+    pub(crate) fn parse_node<T: ParseNode + ?Sized>(&self) -> Result<T::Target> {
         T::parse_node(self)
     }
 
-    pub fn parse_pat<T: ParseNode + ?Sized>(&self) -> Result<Pattern<T::Target, Id>> {
-        T::parse_pat(self)
-    }
-
-    pub fn parse_spanned_pat<T: ParseNode + ?Sized>(&self) -> Result<SpannedPat<T::Target>> {
+    pub(crate) fn parse_spanned_pat<T: ParseNode + ?Sized>(&self) -> Result<SpannedPat<T::Target>> {
         let marker = self.marker();
         Ok(T::parse_pat(self)?.with_span(self.span_from_marker(marker)))
     }
@@ -587,14 +583,14 @@ impl<'a> ParseBuffer<'a> {
         Ok(self.add_pat(pat))
     }
 
-    pub fn parse_spanned<T: Parse>(&self) -> Result<Spanned<T>> {
+    pub(crate) fn parse_spanned<T: Parse>(&self) -> Result<Spanned<T>> {
         let marker = self.marker();
         let item = T::parse(self)?;
         let span = self.span_from_marker(marker);
         Ok(item.with_span(span))
     }
 
-    pub fn parse_span_with<T: Parse, S: ToNode<Node>>(
+    pub(crate) fn parse_span_with<T: Parse, S: ToNode<Node>>(
         &self,
         f: impl Fn(T) -> S,
     ) -> Result<Spanned<Pattern<S, Id>>> {
@@ -611,27 +607,27 @@ impl<'a> ParseBuffer<'a> {
         Ok(t.with_span(self.span_from_marker(marker)))
     }
 
-    pub fn add_var<T: ToNode<Node>>(&self, var: Var<Node>) -> NodeId<T> {
+    pub(crate) fn add_var<T: ToNode<Node>>(&self, var: Var<Node>) -> NodeId<T> {
         self.ctx.borrow_mut().add_var(var)
     }
 
-    pub fn from_marker<T>(&self, marker: PosMarker, t: T) -> Spanned<T> {
+    pub(crate) fn from_marker<T>(&self, marker: PosMarker, t: T) -> Spanned<T> {
         t.with_span(self.span_from_marker(marker))
     }
 
-    pub fn add<T: ToNode<Node>>(&self, t: Spanned<T>) -> NodeId<T> {
+    pub(crate) fn add<T: ToNode<Node>>(&self, t: Spanned<T>) -> NodeId<T> {
         self.ctx.borrow_mut().add(t)
     }
 
-    pub fn peek_var<T: ToNode<Node>>(&self) -> bool {
+    pub(crate) fn peek_var<T: ToNode<Node>>(&self) -> bool {
         peek_var(self.cursor(), &self.ctx.borrow(), T::kind())
     }
 
-    pub fn peek_pat<T: PeekPat>(&self) -> bool {
+    pub(crate) fn peek_pat<T: PeekPat>(&self) -> bool {
         peek_pat::<T>(self.cursor(), &self.ctx.borrow())
     }
 
-    pub fn parse_var<T: ToNode<Node>>(&self) -> Option<Result<Pattern<T, Id>>> {
+    pub(crate) fn parse_var<T: ToNode<Node>>(&self) -> Option<Result<Pattern<T, Id>>> {
         let transposed = || -> Result<Option<Pattern<T, Id>>> {
             let ahead = self.fork();
             if ahead.peek(Token![$]) {
@@ -844,7 +840,7 @@ pub fn parse_str<T: Parse>(s: &str, mode: ParsingMode) -> Result<T> {
     parse2_impl(ctx, T::parse, proc_macro2::TokenStream::from_str(s)?, mode)
 }
 
-pub fn parse_str_ctx<T: Parse>(s: &str, mode: ParsingMode) -> Result<(T, Ctx<Node>)> {
+pub(crate) fn parse_str_ctx<T: Parse>(s: &str, mode: ParsingMode) -> Result<(T, Ctx<Node>)> {
     let ctx = ParseCtx::default();
     parse2_impl(
         ctx.clone(),
