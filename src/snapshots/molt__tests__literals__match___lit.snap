@@ -1,0 +1,153 @@
+---
+source: src/tests.rs
+expression: "super :: super :: match_pattern(& name, stringify! (lit))"
+---
+note: Match
+  ┌─ "test_data/literals/main.rs":2:13
+  │
+2 │     let x = 42;
+  │             ^^ $lit
+
+note: Match
+  ┌─ "test_data/literals/main.rs":3:13
+  │
+3 │     let y = 3.14;
+  │             ^^^^ $lit
+
+note: Match
+  ┌─ "test_data/literals/main.rs":4:13
+  │
+4 │     let z = "hello";
+  │             ^^^^^^^ $lit
+
+note: Match
+  ┌─ "test_data/literals/main.rs":5:13
+  │
+5 │     let a = 'a';
+  │             ^^^ $lit
+
+note: Match
+  ┌─ "test_data/literals/main.rs":6:13
+  │
+6 │     let b = true;
+  │             ^^^^ $lit
+
+note: Match
+  ┌─ "test_data/literals/main.rs":7:13
+  │
+7 │     let c = false;
+  │             ^^^^^ $lit
+
+note: Match
+  ┌─ "test_data/literals/main.rs":8:13
+  │
+8 │     let d = b"bytes";
+  │             ^^^^^^^^ $lit
+
+note: Match
+  ┌─ "test_data/literals/main.rs":9:13
+  │
+9 │     let e = r"raw string";
+  │             ^^^^^^^^^^^^^ $lit
+
+note: Match
+   ┌─ "test_data/literals/main.rs":10:13
+   │
+10 │     let f = 0x1a;
+   │             ^^^^ $lit
+
+note: Match
+   ┌─ "test_data/literals/main.rs":11:13
+   │
+11 │     let g = 0o777;
+   │             ^^^^^ $lit
+
+note: Match
+   ┌─ "test_data/literals/main.rs":12:13
+   │
+12 │     let h = 0b1010;
+   │             ^^^^^^ $lit
+
+note: Match
+   ┌─ "test_data/literals/main.rs":13:13
+   │
+13 │     let i = 42_u32;
+   │             ^^^^^^ $lit
+
+note: Match
+   ┌─ "test_data/literals/main.rs":14:13
+   │
+14 │     let j = 3.14_f64;
+   │             ^^^^^^^^ $lit
+
+note: Match
+   ┌─ "test_data/literals/main.rs":17:9
+   │
+17 │     foo(123);
+   │         ^^^ $lit
+
+note: Match
+   ┌─ "test_data/literals/main.rs":18:9
+   │
+18 │     bar("literal");
+   │         ^^^^^^^^^ $lit
+
+note: Match
+   ┌─ "test_data/literals/main.rs":19:9
+   │
+19 │     baz(true);
+   │         ^^^^ $lit
+
+note: Match
+   ┌─ "test_data/literals/main.rs":23:9
+   │
+23 │         42 => println!("forty-two"),
+   │         ^^ $lit
+
+note: Match
+   ┌─ "test_data/literals/main.rs":24:9
+   │
+24 │         "hello" => println!("greeting"),
+   │         ^^^^^^^ $lit
+
+note: Match
+   ┌─ "test_data/literals/main.rs":25:9
+   │
+25 │         true => println!("truth"),
+   │         ^^^^ $lit
+
+note: Match
+   ┌─ "test_data/literals/main.rs":30:16
+   │
+30 │     let arr = [1, 2, 3];
+   │                ^ $lit
+
+note: Match
+   ┌─ "test_data/literals/main.rs":30:19
+   │
+30 │     let arr = [1, 2, 3];
+   │                   ^ $lit
+
+note: Match
+   ┌─ "test_data/literals/main.rs":30:22
+   │
+30 │     let arr = [1, 2, 3];
+   │                      ^ $lit
+
+note: Match
+   ┌─ "test_data/literals/main.rs":31:20
+   │
+31 │     let str_arr = ["a", "b", "c"];
+   │                    ^^^ $lit
+
+note: Match
+   ┌─ "test_data/literals/main.rs":31:25
+   │
+31 │     let str_arr = ["a", "b", "c"];
+   │                         ^^^ $lit
+
+note: Match
+   ┌─ "test_data/literals/main.rs":31:30
+   │
+31 │     let str_arr = ["a", "b", "c"];
+   │                              ^^^ $lit

@@ -1,5 +1,5 @@
 use derive_macro::CmpSyn;
-use molt_lib::{NodeId, WithSpan};
+use molt_lib::NodeId;
 use proc_macro2::TokenStream;
 
 use crate::error::{Error, Result};
@@ -258,7 +258,13 @@ pub struct MetaList {
 pub struct MetaNameValue {
     pub path: Path,
     pub eq_token: Token![=],
-    pub value: NodeId<Expr>,
+    // This is intentionally not a `NodeId` since we
+    // don't want to match on the exprs inside of attrs.
+    // If we ever add a feature like matching on
+    // #[cfg(...)] arms, we might have to change this
+    // and add functionality to ignore specific NodeId
+    // during matching.
+    pub value: Expr,
 }
 
 impl Meta {
@@ -384,21 +390,24 @@ fn parse_meta_list_after_path(path: Path, input: ParseStream) -> Result<MetaList
 fn parse_meta_name_value_after_path(path: Path, input: ParseStream) -> Result<MetaNameValue> {
     let eq_token: Token![=] = input.parse()?;
     let ahead = input.fork();
-    let lit: Option<NodeId<Lit>> = ahead.parse()?;
-    let value = if let (Some(lit), true) = (lit, ahead.is_empty()) {
+    let lit: Option<Lit> = ahead.parse()?;
+    let value: Expr = if let (Some(_lit), true) = (lit, ahead.is_empty()) {
         input.advance_to(&ahead);
-        let span = input.ctx().get_span(lit);
-        input.add(
-            Expr::Lit(ExprLit {
-                attrs: Vec::new(),
-                lit,
-            })
-            .with_span(span),
-        )
+        Expr::Lit(ExprLit {
+            attrs: Vec::new(),
+            // We use a placeholder here, since we don't want to add
+            // the Lit above to the ctx (we would match it otherwise).
+            // This is safe, since we also dont add the expr to the
+            // ctx, so there is no way to refer to the id later.
+            //
+            // If we ever allow matching on exprs in attributes (to check
+            // for #[cfg(...)] for example, this needs to be changed.
+            lit: NodeId::placeholder(),
+        })
     } else if input.peek(Token![#]) && input.peek2(token::Bracket) {
         return Err(input.error("unexpected attribute inside of attribute"));
     } else {
-        input.parse()?
+        input.parse_pat::<Expr>()?.take().unwrap_real()
     };
     Ok(MetaNameValue {
         path,

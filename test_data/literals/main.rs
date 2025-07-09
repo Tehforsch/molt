@@ -34,6 +34,8 @@ fn main() {
     #[cfg(feature = "test")]
     fn test_func() {}
     
+    /// Docstr
+    /// Continued docstr
     #[repr(align(16))]
     struct Aligned;
 }
