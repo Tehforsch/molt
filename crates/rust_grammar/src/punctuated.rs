@@ -1,25 +1,3 @@
-//! A punctuated sequence of syntax tree nodes separated by punctuation.
-//!
-//! Lots of things in Rust are punctuated sequences.
-//!
-//! - The fields of a struct are `Punctuated<Field, Token![,]>`.
-//! - The segments of a path are `Punctuated<PathSegment, Token![::]>`.
-//! - The bounds on a generic parameter are `Punctuated<TypeParamBound,
-//!   Token![+]>`.
-//! - The arguments to a function call are `Punctuated<Expr, Token![,]>`.
-//!
-//! This module provides a common representation for these punctuated sequences
-//! in the form of the [`Punctuated<T, P>`] type. We store a vector of pairs of
-//! syntax tree node + punctuation, where every node in the sequence is followed
-//! by punctuation except for possibly the final one.
-//!
-//! [`Punctuated<T, P>`]: Punctuated
-//!
-//! ```text
-//! a_function_call(arg1, arg2, arg3);
-//!                 ~~~~^ ~~~~^ ~~~~
-//! ```
-
 use std::ops::{Index, IndexMut};
 use std::{option, slice, vec};
 
@@ -32,10 +10,6 @@ use crate::token::Token;
 
 /// **A punctuated sequence of syntax tree nodes of type `T` separated by
 /// punctuation of type `P`.**
-///
-/// Refer to the [module documentation] for details about punctuated sequences.
-///
-/// [module documentation]: self
 #[derive(Debug)]
 pub struct Punctuated<T, P> {
     inner: Vec<(T, P)>,
