@@ -1,7 +1,7 @@
 use rust_grammar::ext::IdentExt;
 use rust_grammar::parse::{Parse, ParseStream};
 use rust_grammar::token::Brace;
-use rust_grammar::{Ident, Result, Token, TokenStream, TokenTree, braced};
+use rust_grammar::{Error, Ident, Result, Token, TokenStream, TokenTree, braced};
 
 use super::{
     Command, Decl, MatchCommand, TokenVar, TransformCommand, UnresolvedMoltFile,
@@ -153,6 +153,9 @@ fn parse_until_semicolon(input: ParseStream) -> Result<TokenStream> {
         let tt: TokenTree = input.parse()?;
         collected.extend(std::iter::once(tt));
 
+        if input.is_empty() {
+            return Err(Error::new(input.cursor().prev_span(), "Expected `;`."));
+        }
         if input.peek(Token![;]) || input.is_empty() {
             break;
         }

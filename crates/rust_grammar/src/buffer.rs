@@ -325,7 +325,7 @@ impl<'a> Cursor<'a> {
         }
     }
 
-    pub(crate) fn prev_span(mut self) -> Span {
+    pub fn prev_span(mut self) -> Span {
         if start_of_buffer(self) < self.ptr {
             self.ptr = unsafe { self.ptr.offset(-1) };
         }

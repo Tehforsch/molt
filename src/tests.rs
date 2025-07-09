@@ -282,7 +282,7 @@ test_match_pattern!(tuple_elements, (elements));
 test_match_pattern!(tuple_types, (elements));
 test_match_pattern!(struct_fields, (named, unnamed));
 
-test_match_pattern!(literals, (expr_lit, match_pat));
+test_match_pattern!(literals, (expr_lit, match_pat, lit));
 
 molt_grammar_test_err!(
     molt_grammar,
@@ -292,7 +292,8 @@ molt_grammar_test_err!(
         early_boundary_rule,
         syntax_error1,
         syntax_error2,
-        syntax_error3
+        syntax_error3,
+        syntax_error4,
     )
 );
 
