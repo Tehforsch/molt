@@ -1,5 +1,5 @@
 use derive_macro::CmpSyn;
-use molt_lib::{NodeId, NodeList, Pattern, Spanned, WithSpan};
+use molt_lib::{NodeId, NodeList, Pattern, WithSpan};
 use proc_macro2::{Span, TokenStream};
 
 use crate::attr::Attribute;
@@ -220,7 +220,7 @@ pub enum ReturnType {
 impl ParseNode for Type {
     type Target = Self;
 
-    fn parse_spanned(input: ParseStream) -> Result<Spanned<Self::Target>> {
+    fn parse_node(input: ParseStream) -> Result<Self::Target> {
         let allow_plus = true;
         ambig_ty(input, allow_plus)
     }
@@ -241,17 +241,14 @@ pub struct NoPlus;
 impl ParseNode for (Type, NoPlus) {
     type Target = Type;
 
-    fn parse_spanned(input: ParseStream) -> Result<Spanned<Self::Target>> {
+    fn parse_node(input: ParseStream) -> Result<Self::Target> {
         let allow_plus = false;
         ambig_ty(input, allow_plus)
     }
 }
 
-pub(crate) fn ambig_ty(input: ParseStream, allow_plus: bool) -> Result<Spanned<Type>> {
-    input.call_spanned(|input| ambig_ty_inner(input, allow_plus))
-}
-
-fn ambig_ty_inner(input: ParseStream, allow_plus: bool) -> Result<Type> {
+pub(crate) fn ambig_ty(input: ParseStream, allow_plus: bool) -> Result<Type> {
+    let input = input;
     let begin = input.fork();
 
     if input.peek(token::Group) {
@@ -651,7 +648,7 @@ impl ReturnType {
     pub(crate) fn parse(input: ParseStream, allow_plus: bool) -> Result<Self> {
         if input.peek(Token![->]) {
             let arrow = input.parse()?;
-            let ty = input.add(ambig_ty(input, allow_plus)?);
+            let ty = input.add(input.call_spanned(|input| ambig_ty(input, allow_plus))?);
             Ok(ReturnType::Type(arrow, ty))
         } else {
             Ok(ReturnType::Default)

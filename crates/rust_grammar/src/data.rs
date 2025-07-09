@@ -1,5 +1,5 @@
 use derive_macro::CmpSyn;
-use molt_lib::{NodeId, NodeList, Spanned, WithSpan};
+use molt_lib::{NodeId, NodeList, WithSpan};
 
 use crate::attr::Attribute;
 use crate::error::Result;
@@ -184,43 +184,40 @@ impl ParseList for FieldsUnnamed {
 impl ParseNode for FieldNamed {
     type Target = Field;
 
-    fn parse_spanned(input: ParseStream) -> Result<Spanned<Field>> {
-        input.call_spanned(|input| {
-            let attrs = input.call(Attribute::parse_outer)?;
-            let vis: Visibility = input.parse()?;
+    fn parse_node(input: ParseStream) -> Result<Field> {
+        let attrs = input.call(Attribute::parse_outer)?;
+        let vis: Visibility = input.parse()?;
 
-            let unnamed_field = input.peek(Token![_]);
-            let ident = if unnamed_field {
-                input.parse_id::<AnyIdent>()
-            } else {
-                input.parse()
-            }?;
+        let unnamed_field = input.peek(Token![_]);
+        let ident = if unnamed_field {
+            input.parse_id::<AnyIdent>()
+        } else {
+            input.parse()
+        }?;
 
-            let colon_token: Token![:] = input.parse()?;
+        let colon_token: Token![:] = input.parse()?;
 
-            let ty: NodeId<Type> = if unnamed_field
-                && (input.peek(Token![struct])
-                    || input.peek(Token![union]) && input.peek2(token::Brace))
-            {
-                let begin = input.fork();
-                input.parse_id::<AnyIdent>()?;
-                input.parse::<FieldsNamed>()?;
-                input.add(
-                    Type::Verbatim(verbatim::between(&begin, input))
-                        .with_span(molt_lib::Span::fake()),
-                )
-            } else {
-                input.parse()?
-            };
+        let ty: NodeId<Type> = if unnamed_field
+            && (input.peek(Token![struct])
+                || input.peek(Token![union]) && input.peek2(token::Brace))
+        {
+            let begin = input.fork();
+            input.parse_id::<AnyIdent>()?;
+            input.parse::<FieldsNamed>()?;
+            input.add(
+                Type::Verbatim(verbatim::between(&begin, input)).with_span(molt_lib::Span::fake()),
+            )
+        } else {
+            input.parse()?
+        };
 
-            Ok(Field {
-                attrs,
-                vis,
-                mutability: FieldMutability::None,
-                ident: Some(ident),
-                colon_token: Some(colon_token),
-                ty,
-            })
+        Ok(Field {
+            attrs,
+            vis,
+            mutability: FieldMutability::None,
+            ident: Some(ident),
+            colon_token: Some(colon_token),
+            ty,
         })
     }
 }
@@ -229,16 +226,14 @@ impl ParseNode for FieldUnnamed {
     type Target = Field;
 
     /// Parses an unnamed (tuple struct) field.
-    fn parse_spanned(input: ParseStream) -> Result<Spanned<Field>> {
-        input.call_spanned(|input| {
-            Ok(Field {
-                attrs: input.call(Attribute::parse_outer)?,
-                vis: input.parse()?,
-                mutability: FieldMutability::None,
-                ident: None,
-                colon_token: None,
-                ty: input.parse()?,
-            })
+    fn parse_node(input: ParseStream) -> Result<Field> {
+        Ok(Field {
+            attrs: input.call(Attribute::parse_outer)?,
+            vis: input.parse()?,
+            mutability: FieldMutability::None,
+            ident: None,
+            colon_token: None,
+            ty: input.parse()?,
         })
     }
 }

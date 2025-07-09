@@ -43,13 +43,16 @@ pub trait ParseNode {
     type Target: ToNode<Node>;
 
     /// Parse a Self::Target given the input. TODO: Fill this
-    fn parse_spanned(input: ParseStream) -> Result<Spanned<Self::Target>>;
+    fn parse_node(input: ParseStream) -> Result<Self::Target>;
 
     fn parse_pat(input: ParseStream) -> Result<SpannedPat<Self::Target>> {
         if let Some(var) = input.parse_var() {
             return var;
         }
-        Ok(Self::parse_spanned(input)?.map(|item| Pattern::Real(item)))
+        let marker = input.marker();
+        Ok(Self::parse_node(input)?
+            .with_span(input.span_from_marker(marker))
+            .map(|item| Pattern::Real(item)))
     }
 }
 

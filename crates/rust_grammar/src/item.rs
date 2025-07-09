@@ -1,7 +1,7 @@
 use std::mem;
 
 use derive_macro::CmpSyn;
-use molt_lib::{NodeId, NodeList, Pattern, Spanned, WithSpan};
+use molt_lib::{NodeId, NodeList, Pattern, WithSpan};
 use proc_macro2::TokenStream;
 
 use crate::attr::{
@@ -633,8 +633,8 @@ impl Parse for Item {
 impl ParseNode for Item {
     type Target = Item;
 
-    fn parse_spanned(input: ParseStream) -> Result<Spanned<Item>> {
-        input.call_spanned(Item::parse)
+    fn parse_node(input: ParseStream) -> Result<Item> {
+        Item::parse(input)
     }
 }
 

@@ -1,5 +1,5 @@
 use derive_macro::CmpSyn;
-use molt_lib::{NodeId, NodeList, Pattern, Spanned, SpannedPat, WithSpan};
+use molt_lib::{NodeId, NodeList, Pattern, SpannedPat, WithSpan};
 use proc_macro2::TokenStream;
 
 use crate::attr::Attribute;
@@ -266,8 +266,7 @@ pub struct FieldPat {
 impl ParseNode for PatSingle {
     type Target = Pat;
 
-    fn parse_spanned(input: ParseStream) -> Result<Spanned<Self::Target>> {
-        let marker = input.marker();
+    fn parse_node(input: ParseStream) -> Result<Self::Target> {
         let begin = input.fork();
         let lookahead = input.lookahead1();
         let pat = if lookahead.peek_pat::<Ident>()
@@ -312,7 +311,7 @@ impl ParseNode for PatSingle {
         } else {
             Err(lookahead.error())
         };
-        Ok(pat?.with_span(input.span_from_marker(marker)))
+        Ok(pat?)
     }
 }
 
@@ -334,7 +333,7 @@ fn parse_pat_multi<T: ParseListOrItem<Target = Pat, Punct = token::Or>>(
 
 impl ParseNode for PatMulti {
     type Target = Pat;
-    fn parse_spanned(_: ParseStream) -> Result<Spanned<Self::Target>> {
+    fn parse_node(_: ParseStream) -> Result<Self::Target> {
         unreachable!()
     }
 
@@ -346,7 +345,7 @@ impl ParseNode for PatMulti {
 impl ParseNode for PatMultiLeadingVert {
     type Target = Pat;
 
-    fn parse_spanned(_: ParseStream) -> Result<Spanned<Self::Target>> {
+    fn parse_node(_: ParseStream) -> Result<Self::Target> {
         unreachable!()
     }
 

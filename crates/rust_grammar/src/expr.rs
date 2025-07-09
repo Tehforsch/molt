@@ -957,7 +957,7 @@ pub(super) struct AllowStruct(pub bool);
 impl ParseNode for Expr {
     type Target = Expr;
 
-    fn parse_spanned(_: ParseStream) -> Result<Spanned<Self::Target>> {
+    fn parse_node(_: ParseStream) -> Result<Self::Target> {
         unreachable!()
     }
 
@@ -969,7 +969,7 @@ impl ParseNode for Expr {
 impl ParseNode for ExprNoEagerBrace {
     type Target = Expr;
 
-    fn parse_spanned(_: ParseStream) -> Result<Spanned<Self::Target>> {
+    fn parse_node(_: ParseStream) -> Result<Self::Target> {
         unreachable!()
     }
 
@@ -981,7 +981,7 @@ impl ParseNode for ExprNoEagerBrace {
 impl ParseNode for ExprEarlierBoundaryRule {
     type Target = Expr;
 
-    fn parse_spanned(_: ParseStream) -> Result<Spanned<Self::Target>> {
+    fn parse_node(_: ParseStream) -> Result<Self::Target> {
         unreachable!()
     }
 
@@ -2027,7 +2027,7 @@ struct ClosureInput;
 impl ParseNode for ClosureInput {
     type Target = Pat;
 
-    fn parse_spanned(_: ParseStream) -> Result<Spanned<Self::Target>> {
+    fn parse_node(_: ParseStream) -> Result<Self::Target> {
         unreachable!()
     }
 
@@ -2496,37 +2496,35 @@ impl ParseList for Arms {
 impl ParseNode for Arm {
     type Target = Arm;
 
-    fn parse_spanned(input: ParseStream) -> Result<Spanned<Arm>> {
-        input.call_spanned(|input| {
-            let requires_comma;
-            let res = Ok(Arm {
-                attrs: input.call(Attribute::parse_outer)?,
-                pat: input.parse_id::<PatMultiLeadingVert>()?,
-                guard: {
-                    if input.peek(Token![if]) {
-                        let if_token: Token![if] = input.parse()?;
-                        let guard: NodeId<Expr> = input.parse()?;
-                        Some((if_token, guard))
-                    } else {
-                        None
-                    }
-                },
-                fat_arrow_token: input.parse()?,
-                body: {
-                    let body = input.parse_id::<ExprEarlierBoundaryRule>()?;
-                    requires_comma = classify::requires_comma_to_be_match_arm(input, body);
-                    body
-                },
-            });
-            let _: Option<Token![,]> = {
-                if requires_comma && !input.is_empty() {
-                    Some(input.parse()?)
+    fn parse_node(input: ParseStream) -> Result<Arm> {
+        let requires_comma;
+        let res = Ok(Arm {
+            attrs: input.call(Attribute::parse_outer)?,
+            pat: input.parse_id::<PatMultiLeadingVert>()?,
+            guard: {
+                if input.peek(Token![if]) {
+                    let if_token: Token![if] = input.parse()?;
+                    let guard: NodeId<Expr> = input.parse()?;
+                    Some((if_token, guard))
                 } else {
-                    input.parse()?
+                    None
                 }
-            };
-            res
-        })
+            },
+            fat_arrow_token: input.parse()?,
+            body: {
+                let body = input.parse_id::<ExprEarlierBoundaryRule>()?;
+                requires_comma = classify::requires_comma_to_be_match_arm(input, body);
+                body
+            },
+        });
+        let _: Option<Token![,]> = {
+            if requires_comma && !input.is_empty() {
+                Some(input.parse()?)
+            } else {
+                input.parse()?
+            }
+        };
+        res
     }
 }
 
