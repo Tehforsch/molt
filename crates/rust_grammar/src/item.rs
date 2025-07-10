@@ -2269,7 +2269,7 @@ fn parse_impl(input: ParseStream, allow_verbatim_impl: bool) -> Result<Option<It
             input.add_pat(first_ty.with_span(span))
         } else {
             let marker = begin.marker();
-            input.add(input.from_marker(marker, Type::Verbatim(verbatim::between(&begin, input))))
+            input.add(input.make_spanned(marker, Type::Verbatim(verbatim::between(&begin, input))))
         };
     }
 

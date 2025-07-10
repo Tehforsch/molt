@@ -76,7 +76,7 @@ fn find_rust_files(dir: &Path) -> Vec<PathBuf> {
             let path = entry.path();
             if path.is_dir() {
                 find_rust_files(&path).into_iter()
-            } else if path.extension().map_or(false, |ext| ext == "rs") {
+            } else if path.extension().is_some_and(|ext| ext == "rs") {
                 vec![path.to_owned()].into_iter()
             } else {
                 vec![].into_iter()

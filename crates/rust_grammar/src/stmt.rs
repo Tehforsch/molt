@@ -244,7 +244,7 @@ fn stmt_local(input: ParseStream, attrs: Vec<Attribute>) -> Result<Stmt> {
     if input.peek(Token![:]) {
         let colon_token: Token![:] = input.parse()?;
         let ty = input.parse()?;
-        pat = input.add(input.from_marker(
+        pat = input.add(input.make_spanned(
             marker,
             Pat::Type(PatType {
                 attrs: Vec::new(),

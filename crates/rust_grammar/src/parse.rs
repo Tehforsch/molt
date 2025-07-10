@@ -566,7 +566,7 @@ impl<'a> ParseBuffer<'a> {
 
     #[allow(unused)]
     pub(crate) fn show(&self) {
-        println!("{}", self.cursor().token_stream().to_string());
+        println!("{}", self.cursor().token_stream());
     }
 
     pub(crate) fn ctx(&self) -> Ref<'_, Ctx<Node>> {
@@ -604,7 +604,7 @@ impl<'a> ParseBuffer<'a> {
     ) -> Result<Spanned<T>> {
         let marker = self.marker();
         let t = f(self)?;
-        Ok(self.from_marker(marker, t))
+        Ok(self.make_spanned(marker, t))
     }
 
     pub(crate) fn add_var<T: ToNode<Node>>(&self, var: Var<Node>) -> NodeId<T> {
@@ -621,7 +621,7 @@ impl<'a> ParseBuffer<'a> {
         PosMarker { start }
     }
 
-    pub(crate) fn from_marker<T>(&self, marker: PosMarker, t: T) -> Spanned<T> {
+    pub(crate) fn make_spanned<T>(&self, marker: PosMarker, t: T) -> Spanned<T> {
         t.with_span(self.span_from_marker(marker))
     }
 

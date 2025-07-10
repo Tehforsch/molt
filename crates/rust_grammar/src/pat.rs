@@ -269,7 +269,7 @@ impl ParseNode for PatSingle {
     fn parse_node(input: ParseStream) -> Result<Self::Target> {
         let begin = input.fork();
         let lookahead = input.lookahead1();
-        let pat = if lookahead.peek_pat::<Ident>()
+        if lookahead.peek_pat::<Ident>()
             && (input.peek2(Token![::])
                 || input.peek2(Token![!])
                 || input.peek2(token::Brace)
@@ -310,8 +310,7 @@ impl ParseNode for PatSingle {
             input.call(pat_const).map(Pat::Verbatim)
         } else {
             Err(lookahead.error())
-        };
-        Ok(pat?)
+        }
     }
 }
 
@@ -589,7 +588,7 @@ fn field_pat(input: ParseStream) -> Result<FieldPat> {
         Member::Unnamed(_) => unreachable!(),
     };
 
-    let pat = input.from_marker(
+    let pat = input.make_spanned(
         marker,
         if boxed.is_some() {
             Pat::Verbatim(verbatim::between(&begin, input))

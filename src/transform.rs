@@ -51,7 +51,7 @@ pub fn get_transformed_contents(
     transforms: &[(Id, Id)],
 ) -> Result<String, Error> {
     let mut all_transformations: Vec<_> = transforms
-        .into_iter()
+        .iter()
         .flat_map(|(input_var, output_var)| {
             match_result.matches.iter().map(|match_| {
                 make_transformation(&match_result.ctx, match_, *input_var, *output_var)

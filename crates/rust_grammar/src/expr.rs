@@ -1244,7 +1244,7 @@ fn unary_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedPa
         let expr = unary_expr(input, allow_struct)?;
         if let Some(raw) = raw {
             Ok(input
-                .from_marker(
+                .make_spanned(
                     marker,
                     Expr::RawAddr(ExprRawAddr {
                         attrs,
@@ -1260,7 +1260,7 @@ fn unary_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedPa
                 .as_pattern())
         } else {
             Ok(input
-                .from_marker(
+                .make_spanned(
                     marker,
                     Expr::Reference(ExprReference {
                         attrs,
@@ -1839,7 +1839,7 @@ impl Parse for ExprIf {
         while let Some(mut prev) = clauses.pop() {
             let marker = markers.pop().unwrap();
             prev.else_branch.as_mut().unwrap().1 =
-                input.add(input.from_marker(marker, Expr::If(expr)));
+                input.add(input.make_spanned(marker, Expr::If(expr)));
             expr = prev;
         }
         expr.attrs = attrs;
@@ -1933,7 +1933,7 @@ fn expr_unary(
 ) -> Result<SpannedPat<ExprUnary>> {
     let marker = input.marker();
     Ok(input
-        .from_marker(
+        .make_spanned(
             marker,
             ExprUnary {
                 attrs,

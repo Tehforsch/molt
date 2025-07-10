@@ -311,10 +311,8 @@ pub fn match_pattern<N: GetKind + CmpSyn>(
             if match_.valid || match_.multi_match_id.is_some() {
                 matches.push(match_)
             }
-        } else {
-            if match_.valid {
-                current.extend(match_.make_forks(&mut next_id));
-            }
+        } else if match_.valid {
+            current.extend(match_.make_forks(&mut next_id));
         }
     }
     merge_matches(matches)

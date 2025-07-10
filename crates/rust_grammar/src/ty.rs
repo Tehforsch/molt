@@ -248,7 +248,6 @@ impl ParseNode for (Type, NoPlus) {
 }
 
 pub(crate) fn ambig_ty(input: ParseStream, allow_plus: bool) -> Result<Type> {
-    let input = input;
     let begin = input.fork();
 
     if input.peek(token::Group) {
@@ -290,7 +289,7 @@ pub(crate) fn ambig_ty(input: ParseStream, allow_plus: bool) -> Result<Type> {
         if content.peek(Lifetime) {
             return Ok(Type::Paren(TypeParen {
                 paren_token,
-                elem: input.add(input.from_marker(marker, Type::TraitObject(content.parse()?))),
+                elem: input.add(input.make_spanned(marker, Type::TraitObject(content.parse()?))),
             }));
         }
         if content.peek(Token![?]) {

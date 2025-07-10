@@ -199,8 +199,7 @@ fn run_cargo_fmt(cargo_root: &Path) -> Result<(), Error> {
 
     if !status.success() {
         return Err(Error::Misc(format!(
-            "cargo fmt failed with exit code: {}",
-            status
+            "cargo fmt failed with exit code: {status}",
         )));
     }
 
