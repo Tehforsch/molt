@@ -1,5 +1,5 @@
 use derive_macro::CmpSyn;
-use molt_lib::{Id, NodeId, NodeList, Pattern, SpannedPat, WithSpan};
+use molt_lib::{Id, NodeId, NodeList, Pattern, WithSpan};
 use proc_macro2::TokenStream;
 
 use crate::attr::Attribute;
@@ -317,19 +317,24 @@ impl ParseNode for PatSingle {
 
 fn parse_pat_multi<T: ParseListOrItem<Target = Pat, Punct = token::Or>>(
     input: ParseStream,
-) -> Result<SpannedPat<Pat>> {
-    let marker = input.marker();
+) -> Result<Pattern<Pat, Id>> {
     let pat = input.parse_list_or_item::<T>()?;
     Ok(match pat {
-        ListOrItem::Item(item) => item,
-        ListOrItem::List(cases) => Pat::Or(PatOr {
+        ListOrItem::Item(item) => item.take(),
+        ListOrItem::List(cases) => Pattern::Real(Pat::Or(PatOr {
             attrs: Vec::new(),
             leading_vert: None,
             cases,
-        })
-        .pattern_with_span(input.span_from_marker(marker)),
+        })),
     })
 }
+
+// While parsing a multi-pattern, if we encounter a
+// molt variable, we cannot assume that the whole pattern
+// is represented by the variable. Instead, we defer
+// parsing of the variable to the `ParseNode` impl for
+// `Pat`. Because of this, we don't implement `parse_node`,
+// but implement `parse_pat` manually in the following impls.
 
 impl ParseNode for PatMulti {
     type Target = Pat;
@@ -338,7 +343,7 @@ impl ParseNode for PatMulti {
     }
 
     fn parse_pat(input: ParseStream) -> Result<Pattern<Self::Target, Id>> {
-        Ok(parse_pat_multi::<Self>(input)?.take())
+        parse_pat_multi::<Self>(input)
     }
 }
 
@@ -350,7 +355,7 @@ impl ParseNode for PatMultiLeadingVert {
     }
 
     fn parse_pat(input: ParseStream) -> Result<Pattern<Self::Target, Id>> {
-        Ok(parse_pat_multi::<Self>(input)?.take())
+        parse_pat_multi::<Self>(input)
     }
 }
 
