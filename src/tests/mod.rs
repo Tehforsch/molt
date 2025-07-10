@@ -39,6 +39,11 @@ fn make_input(path: &str, fname: &str) -> Input {
 }
 
 fn match_pattern(path: &str, fname: &str) -> String {
+    // This is super hacky, but it keeps the tests involving
+    // rust-analyzer from polluting the test dir.
+    unsafe {
+        std::env::set_var("CARGO_BUILD_TARGET_DIR", std::env::temp_dir());
+    }
     let input = make_input(path, fname);
     let diagnostics = super::run(&input, Config::test(), None);
     match diagnostics {
