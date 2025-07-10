@@ -34,6 +34,10 @@ default = ["debug-print"]
 
 [dev-dependencies]
 insta = { version = "1.41.1"}
+reqwest = { version = "0.11", features = ["blocking"] }
+flate2 = "1.0"
+tar = "0.4"
+tempfile = "3.0"
 
 [profile.dev.package]
 insta.opt-level = 3

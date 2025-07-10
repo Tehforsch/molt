@@ -1,3 +1,5 @@
+mod download;
+
 use std::path::Path;
 use std::process::{self, Stdio};
 
