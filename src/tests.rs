@@ -281,6 +281,7 @@ test_match_pattern!(function_args, (fn_));
 test_match_pattern!(tuple_elements, (elements));
 test_match_pattern!(tuple_types, (elements));
 test_match_pattern!(struct_fields, (named, unnamed));
+test_match_pattern!(attrs, (expr));
 
 test_match_pattern!(literals, (expr_lit, match_pat, lit));
 

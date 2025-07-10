@@ -946,7 +946,7 @@ pub(super) struct AllowStruct(pub bool);
 // By default, the `parse_pat` function on `ParseStream` will
 // automatically check if the input contains a variable and parse
 // it appropriately. However, for expressions, this is not the
-// right behavior.  This is because, While parsing an expression
+// right behavior.  This is because while parsing an expression
 // like `$e + 5`, we cannot eagerly consume the variable, but
 // need to go down to the lowest level first. We only check for
 // variables at the level of atomic expressions (see
