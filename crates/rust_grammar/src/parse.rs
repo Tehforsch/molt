@@ -42,9 +42,17 @@ pub trait Parse: Sized {
 pub trait ParseNode {
     type Target: ToNode<Node>;
 
-    /// Parse a Self::Target given the input. TODO: Fill this
+    /// Parse a Self::Target given the input. Most types implementing
+    /// this trait only need to implement this method and can defer
+    /// parsing molt variables do the default implementation of
+    /// `parse_pat`.  However, some types (recursive types like
+    /// expressions and patterns) may need to override the
+    /// implementation of the `parse_pat` implementation and check
+    /// against molt variables manually.
     fn parse_node(input: ParseStream) -> Result<Self::Target>;
 
+    /// Parse a pattern (either a concrete syntax element or a
+    /// molt variable).
     fn parse_pat(input: ParseStream) -> Result<Pattern<Self::Target, Id>> {
         if let Some(var) = input.parse_var() {
             return var;
@@ -53,6 +61,11 @@ pub trait ParseNode {
     }
 }
 
+/// Similar to `Peek`, this trait allows peeking at a token of
+/// a given type. The difference between the trait is that this
+/// trait and the corresponding `ParseStream::peek_pat` method
+/// also check for molt variables of the `Kind` corresponding to the
+/// associated `Target` type.
 pub trait PeekPat {
     type Target: ToNode<Node>;
 
@@ -88,6 +101,12 @@ pub enum ListOrItem<T, P> {
     List(NodeList<T, P>),
 }
 
+/// Parsing trait to parse something that may be either a single item
+/// or a list of items. (Example: parsing parenthesized expressions
+/// (1) and tuples (1, 2, 3)).  Along with the corresponding
+/// `ParseStream::parse_list_or_item` method, this trait takes care of
+/// proper handling of molt variables while parsing these types of
+/// structures.
 pub trait ParseListOrItem {
     type Target: ToNode<Node>;
     type Punct;
