@@ -110,6 +110,7 @@ fn transform(path: &str, fname: &str) -> String {
             rust_file_id,
             match_result,
             &tr.transforms,
+            false,
         )
         .unwrap(),
     )

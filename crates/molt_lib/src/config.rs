@@ -2,6 +2,7 @@
 pub struct Config {
     pub debug_print: bool,
     pub cargo_fmt: bool,
+    pub interactive: bool,
 }
 
 impl Config {
@@ -9,6 +10,7 @@ impl Config {
         Self {
             debug_print: true,
             cargo_fmt: false,
+            interactive: false,
         }
     }
 }
@@ -18,6 +20,7 @@ impl Default for Config {
         Self {
             debug_print: false,
             cargo_fmt: true,
+            interactive: false,
         }
     }
 }

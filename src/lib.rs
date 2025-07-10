@@ -7,6 +7,7 @@ mod resolve;
 mod tests;
 mod transform;
 mod type_check;
+mod utils;
 
 use std::path::{Path, PathBuf};
 
@@ -179,7 +180,13 @@ pub fn run(
                     data,
                     &mut lsp_client,
                 );
-                transform::transform(input, rust_file_id, match_result, transforms)?;
+                transform::transform(
+                    input,
+                    rust_file_id,
+                    match_result,
+                    transforms,
+                    config.interactive,
+                )?;
                 if let Some(cargo_root) = cargo_root
                     && config.cargo_fmt
                 {

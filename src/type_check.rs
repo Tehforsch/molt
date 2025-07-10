@@ -1,11 +1,12 @@
 use std::path::Path;
 
-use lsp_types::{Position, Range};
+use lsp_types::Range;
 use molt_lib::{Ctx, Match, MatchPatternData, NodeId};
 use rust_grammar::{Node, Type};
 
 use crate::lsp::LspClient;
 use crate::molt_grammar::TypeAnnotation;
+use crate::utils::{Position, get_position_from_byte_offset};
 
 pub struct LspType {
     pub ctx: Ctx<Node>,
@@ -78,23 +79,19 @@ impl LspClient {
     }
 }
 
-fn get_range_from_span(rust_src: &str, span: molt_lib::Span) -> Range {
-    let start = get_position_from_byte_offset(rust_src, span.byte_range().start);
-    let end = get_position_from_byte_offset(rust_src, span.byte_range().end);
-    Range { start, end }
+impl From<Position> for lsp_types::Position {
+    fn from(value: Position) -> Self {
+        Self {
+            line: value.line,
+            character: value.character,
+        }
+    }
 }
 
-fn get_position_from_byte_offset(rust_src: &str, byte_index: usize) -> Position {
-    let line_starts: Vec<usize> = crate::input::line_starts(rust_src).collect();
-    let line = line_starts
-        .binary_search(&byte_index)
-        .unwrap_or_else(|next_line| next_line - 1);
-    let line_start = line_starts[line];
-    let column = byte_index - line_start;
-    Position {
-        line: line as u32,
-        character: column as u32,
-    }
+fn get_range_from_span(rust_src: &str, span: molt_lib::Span) -> Range {
+    let start = get_position_from_byte_offset(rust_src, span.byte_range().start).into();
+    let end = get_position_from_byte_offset(rust_src, span.byte_range().end).into();
+    Range { start, end }
 }
 
 fn compare_types(

@@ -1,3 +1,4 @@
+use std::io::{self, Write};
 use std::str::FromStr;
 
 use codespan_reporting::files::Files;
@@ -23,12 +24,10 @@ struct Transformation {
 impl Transformation {
     fn apply(&self, code: &mut String) {
         let range = self.span.byte_range();
-        println!("-------- ORIGINAL --------");
-        println!("{}", &code[range.clone()]);
-        println!("--------   NEW    --------");
-        println!("{}", &self.new_code);
         code.replace_range(range, &self.new_code);
     }
+
+    fn show_diff(&self, _: &str) {}
 }
 
 pub fn transform(
@@ -36,9 +35,11 @@ pub fn transform(
     rust_file_id: FileId,
     match_result: MatchResult,
     transforms: Vec<(Id, Id)>,
+    interactive: bool,
 ) -> Result<(), Error> {
     if !transforms.is_empty() {
-        let code = get_transformed_contents(input, rust_file_id, match_result, &transforms)?;
+        let code =
+            get_transformed_contents(input, rust_file_id, match_result, &transforms, interactive)?;
         write_to_file(input, rust_file_id, code)?;
     }
     Ok(())
@@ -49,6 +50,7 @@ pub fn get_transformed_contents(
     rust_file_id: FileId,
     match_result: MatchResult<'_>,
     transforms: &[(Id, Id)],
+    interactive: bool,
 ) -> Result<String, Error> {
     let mut all_transformations: Vec<_> = transforms
         .iter()
@@ -65,9 +67,25 @@ pub fn get_transformed_contents(
     check_overlap(&all_transformations)?;
     let mut code = input.source(rust_file_id).unwrap().to_owned();
     for transformation in all_transformations.into_iter().rev() {
-        transformation.apply(&mut code);
+        transformation.show_diff(&code);
+        if !interactive || ask_user_for_confirmation() {
+            transformation.apply(&mut code);
+        }
     }
     Ok(code)
+}
+
+fn ask_user_for_confirmation() -> bool {
+    print!("Apply this transformation? (y/N): ");
+    io::stdout().flush().unwrap();
+
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).unwrap();
+
+    match input.trim().to_lowercase().as_str() {
+        "y" | "yes" => true,
+        _ => false,
+    }
 }
 
 fn write_to_file(input: &Input, rust_file_id: FileId, code: String) -> Result<(), Error> {

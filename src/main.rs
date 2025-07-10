@@ -75,6 +75,7 @@ fn main() -> Result<()> {
     let config = molt_lib::Config {
         debug_print: args.debug_print,
         cargo_fmt: args.cargo_fmt,
+        interactive: args.interactive,
     };
     let diagnostics = emit_error(&input, run(&input, config, root.as_ref()))?;
     let writer = StandardStream::stderr(ColorChoice::Always);
