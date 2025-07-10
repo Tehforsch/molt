@@ -29,17 +29,6 @@ impl Lifetime {
     /// # Panics
     ///
     /// Panics if the lifetime does not conform to the bulleted rules above.
-    ///
-    /// # Invocation
-    ///
-    /// ```
-    /// # use proc_macro2::Span;
-    /// # use syn::Lifetime;
-    /// #
-    /// # fn f() -> Lifetime {
-    /// Lifetime::new("'a", Span::call_site())
-    /// # }
-    /// ```
     pub fn new(symbol: &str, span: Span) -> Self {
         if !symbol.starts_with('\'') {
             panic!("lifetime name must start with apostrophe as in \"'a\", got {symbol:?}",);

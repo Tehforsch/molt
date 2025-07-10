@@ -2,7 +2,6 @@ pub use proc_macro2::Ident;
 
 use crate::buffer::Cursor;
 use crate::error::Result;
-use crate::ext::IdentExt;
 use crate::lookahead;
 use crate::parse::{Parse, ParseNode, ParseStream, PeekPat};
 use crate::token::Token;
@@ -113,7 +112,10 @@ impl ParseNode for AnyIdent {
     type Target = Ident;
 
     fn parse_node(input: ParseStream) -> Result<Ident> {
-        Ident::parse_any(input)
+        input.step(|cursor| match cursor.ident() {
+            Some((ident, rest)) => Ok((ident, rest)),
+            None => Err(cursor.error("expected ident")),
+        })
     }
 }
 

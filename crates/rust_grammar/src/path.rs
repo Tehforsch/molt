@@ -407,35 +407,6 @@ impl PathSegment {
 
 impl Path {
     /// Parse a `Path` containing no path arguments on any of its segments.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use syn::{Path, Result, Token};
-    /// use syn::parse::{Parse, ParseStream};
-    ///
-    /// // A simplified single `use` statement like:
-    /// //
-    /// //     use std::collections::HashMap;
-    /// //
-    /// // Note that generic parameters are not allowed in a `use` statement
-    /// // so the following must not be accepted.
-    /// //
-    /// //     use a::<b>::c;
-    /// struct SingleUse {
-    ///     use_token: Token![use],
-    ///     path: Path,
-    /// }
-    ///
-    /// impl Parse for SingleUse {
-    ///     fn parse(input: ParseStream) -> Result<Self> {
-    ///         Ok(SingleUse {
-    ///             use_token: input.parse()?,
-    ///             path: input.call(Path::parse_mod_style)?,
-    ///         })
-    ///     }
-    /// }
-    /// ```
     pub fn parse_mod_style(input: ParseStream) -> Result<Self> {
         Ok(Path {
             leading_colon: input.parse()?,

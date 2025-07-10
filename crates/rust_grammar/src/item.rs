@@ -598,16 +598,6 @@ impl Receiver {
 
 #[derive(Debug, CmpSyn)]
 /// The variadic argument of a foreign function.
-///
-/// ```rust
-/// # struct c_char;
-/// # struct c_int;
-/// #
-/// extern "C" {
-///     fn printf(format: *const c_char, ...) -> c_int;
-///     //                               ^^^
-/// }
-/// ```
 pub struct Variadic {
     pub attrs: Vec<Attribute>,
     pub pat: Option<(NodeId<Pat>, Token![:])>,

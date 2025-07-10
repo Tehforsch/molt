@@ -27,7 +27,7 @@ use crate::{Ident, Kind, error, lookahead};
 pub type ParseCtx = Rc<RefCell<Ctx<Node>>>;
 
 pub use crate::error::{Error, Result};
-pub use crate::lookahead::{End, Lookahead1, Peek};
+pub use crate::lookahead::{Lookahead1, Peek};
 
 /// Parsing interface implemented by types that can be parsed in a default
 /// way from a token stream. This trait is for types that aren't represented
@@ -258,47 +258,6 @@ impl<'a> RefUnwindSafe for ParseBuffer<'a> {}
 /// Cursor state associated with speculative parsing.
 ///
 /// This type is the input of the closure provided to [`ParseStream::step`].
-///
-/// [`ParseStream::step`]: ParseBuffer::step
-///
-/// # Example
-///
-/// ```
-/// use proc_macro2::TokenTree;
-/// use syn::Result;
-/// use syn::parse::ParseStream;
-///
-/// // This function advances the stream past the next occurrence of `@`. If
-/// // no `@` is present in the stream, the stream position is unchanged and
-/// // an error is returned.
-/// fn skip_past_next_at(input: ParseStream) -> Result<()> {
-///     input.step(|cursor| {
-///         let mut rest = *cursor;
-///         while let Some((tt, next)) = rest.token_tree() {
-///             match &tt {
-///                 TokenTree::Punct(punct) if punct.as_char() == '@' => {
-///                     return Ok(((), next));
-///                 }
-///                 _ => rest = next,
-///             }
-///         }
-///         Err(cursor.error("no `@` was found after this point"))
-///     })
-/// }
-/// #
-/// # fn remainder_after_skipping_past_next_at(
-/// #     input: ParseStream,
-/// # ) -> Result<proc_macro2::TokenStream> {
-/// #     skip_past_next_at(input)?;
-/// #     input.parse()
-/// # }
-/// #
-/// # use syn::parse::Parser;
-/// # let remainder = remainder_after_skipping_past_next_at
-/// #     .parse_str("a @ b c")
-/// #     .unwrap();
-/// # assert_eq!(remainder.to_string(), "b c");
-/// ```
 pub struct StepCursor<'c, 'a> {
     scope: Span,
     // This field is covariant in 'c.

@@ -681,25 +681,6 @@ pub struct ExprYield {
 }
 
 impl Expr {
-    /// An unspecified invalid expression.
-    ///
-    /// ```
-    /// use quote::ToTokens;
-    /// use std::mem;
-    /// use syn::{parse_quote, Expr};
-    ///
-    /// fn unparenthesize(e: &mut Expr) {
-    ///     while let Expr::Paren(paren) = e {
-    ///         *e = mem::replace(&mut *paren.expr, Expr::PLACEHOLDER);
-    ///     }
-    /// }
-    ///
-    /// fn main() {
-    ///     let mut e: Expr = parse_quote! { ((1 + 1)) };
-    ///     unparenthesize(&mut e);
-    ///     assert_eq!("1 + 1", e.to_token_stream().to_string());
-    /// }
-    /// ```
     pub const PLACEHOLDER: Self = Expr::Path(ExprPath {
         attrs: Vec::new(),
         qself: None,
