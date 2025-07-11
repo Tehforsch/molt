@@ -4,6 +4,48 @@ use similar::{ChangeTag, TextDiff};
 
 use crate::transform::Transformation;
 
+#[derive(Clone)]
+pub enum Color {
+    Red,
+    Green,
+    Cyan,
+    Bold,
+    None,
+}
+
+impl Color {
+    fn to_ansi(&self) -> &'static str {
+        match self {
+            Color::Red => "\x1b[31m",
+            Color::Green => "\x1b[32m",
+            Color::Cyan => "\x1b[36m",
+            Color::Bold => "\x1b[1m",
+            Color::None => "",
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct ColoredText {
+    text: String,
+    color: Color,
+}
+
+impl ColoredText {
+    pub fn new(text: String, color: Color) -> Self {
+        Self { text, color }
+    }
+
+    pub fn print(&self, colorized: bool) -> String {
+        if colorized && !matches!(self.color, Color::None) {
+            const RESET: &str = "\x1b[0m";
+            format!("{}{}{}", self.color.to_ansi(), self.text, RESET)
+        } else {
+            self.text.clone()
+        }
+    }
+}
+
 pub const NUM_LINES_CONTEXT: usize = 4;
 
 impl Transformation {
@@ -26,36 +68,16 @@ impl Transformation {
 pub fn format_diff(diff: TextDiff<str>, filename: &Path, colorized: bool) -> String {
     let mut output = String::new();
 
-    if colorized {
-        const BOLD: &str = "\x1b[1m";
-        const CYAN: &str = "\x1b[36m";
-        const RESET: &str = "\x1b[0m";
-        output.push_str(&format!(
-            "{}{}--- {}{}\n",
-            BOLD,
-            CYAN,
-            filename.to_string_lossy(),
-            RESET
-        ));
-    } else {
-        output.push_str(&format!("--- {}\n", filename.to_string_lossy()));
-    }
+    let header = ColoredText::new(format!("--- {}\n", filename.to_string_lossy()), Color::Bold);
+    output.push_str(&header.print(colorized));
 
     for group in diff.grouped_ops(NUM_LINES_CONTEXT).iter() {
         for op in group {
             for change in diff.iter_changes(op) {
-                let (sign, color) = if colorized {
-                    match change.tag() {
-                        ChangeTag::Delete => ("-", "\x1b[31m"),
-                        ChangeTag::Insert => ("+", "\x1b[32m"),
-                        ChangeTag::Equal => (" ", ""),
-                    }
-                } else {
-                    match change.tag() {
-                        ChangeTag::Delete => ("-", ""),
-                        ChangeTag::Insert => ("+", ""),
-                        ChangeTag::Equal => (" ", ""),
-                    }
+                let (sign, color) = match change.tag() {
+                    ChangeTag::Delete => ("-", Color::Red),
+                    ChangeTag::Insert => ("+", Color::Green),
+                    ChangeTag::Equal => (" ", Color::None),
                 };
 
                 // Get line numbers for old and new
@@ -70,23 +92,11 @@ pub fn format_diff(diff: TextDiff<str>, filename: &Path, colorized: bool) -> Str
                     (None, None) => "    ,    ".to_string(),
                 };
 
-                if colorized {
-                    const CYAN: &str = "\x1b[36m";
-                    const RESET: &str = "\x1b[0m";
-                    if color.is_empty() {
-                        output.push_str(&format!(
-                            "{}{} {}{}{}",
-                            CYAN, line_info, RESET, sign, change
-                        ));
-                    } else {
-                        output.push_str(&format!(
-                            "{}{} {}{}{}{}{}",
-                            CYAN, line_info, RESET, color, sign, change, RESET
-                        ));
-                    }
-                } else {
-                    output.push_str(&format!("{} {}{}", line_info, sign, change));
-                }
+                let line_numbers = ColoredText::new(format!("{} ", line_info), Color::Cyan);
+                let change_text = ColoredText::new(format!("{}{}", sign, change), color);
+
+                output.push_str(&line_numbers.print(colorized));
+                output.push_str(&change_text.print(colorized));
             }
         }
     }
