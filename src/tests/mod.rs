@@ -106,13 +106,21 @@ fn run_transform_with<T>(path: &str, fname: &str, f: impl FnOnce(Transform) -> T
         &mut lsp_client,
     );
 
-    let transform = Transform::new(&input, rust_file_id, match_result, &tr.transforms).unwrap();
+    let transform = Transform::new(
+        &input,
+        &config,
+        rust_file_id,
+        None,
+        match_result,
+        &tr.transforms,
+    )
+    .unwrap();
     f(transform)
 }
 
 fn transform(path: &str, fname: &str) -> String {
     run_transform_with(path, fname, |transform| {
-        let code = transform.get_transformed_contents(false).unwrap();
+        let code = transform.get_transformed_contents().unwrap();
         format_code(code).unwrap()
     })
 }

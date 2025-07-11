@@ -14,4 +14,6 @@ pub struct CliArgs {
     pub cargo_fmt: bool,
     #[clap(short, long)]
     pub interactive: bool,
+    #[clap(long)]
+    pub check_compilation: bool,
 }

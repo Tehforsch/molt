@@ -5,7 +5,7 @@ use std::path::Path;
 use std::str::FromStr;
 
 use codespan_reporting::files::Files;
-use molt_lib::{Id, Match, MatchCtx, Span};
+use molt_lib::{Config, Id, Match, MatchCtx, Span};
 use rust_grammar::{Node, TokenStream};
 
 use crate::molt_grammar::TokenVar;
@@ -27,13 +27,17 @@ pub struct Transformation {
 pub struct Transform<'a> {
     transformations: Vec<Transformation>,
     code: String,
-    filename: &'a Path,
+    rust_file_path: &'a Path,
+    config: &'a Config,
+    cargo_root: Option<&'a Path>,
 }
 
 impl<'a> Transform<'a> {
     pub fn new(
         input: &'a Input,
+        config: &'a Config,
         rust_file_id: FileId,
+        cargo_root: Option<&'a Path>,
         match_result: MatchResult<'a>,
         transforms: &'a [(Id, Id)],
     ) -> Result<Self, Error> {
@@ -43,49 +47,90 @@ impl<'a> Transform<'a> {
         Ok(Self {
             transformations,
             code,
-            filename,
+            rust_file_path: filename,
+            config,
+            cargo_root,
         })
     }
 
-    pub fn get_transformed_contents(mut self, interactive: bool) -> Result<String, Error> {
-        for transformation in self.transformations.into_iter().rev() {
-            transformation.show_diff(&self.code, self.filename);
-            if !interactive || ask_user_for_confirmation() {
-                transformation.apply(&mut self.code);
+    pub fn get_transformed_contents(mut self) -> Result<String, Error> {
+        for transformation in self.transformations.iter().rev() {
+            transformation.show_diff(&self.code, self.rust_file_path);
+            let not_interactive_or_user_said_yes =
+                !self.config.interactive || ask_user_for_confirmation();
+            let no_compile_check_or_code_still_compiles = !self.config.check_compilation
+                || self.check_transformation_compiles(&transformation)?;
+            if not_interactive_or_user_said_yes && no_compile_check_or_code_still_compiles {
+                self.code = transformation.apply(self.code.clone());
             }
         }
-        Ok(self.code)
+        Ok(self.code.clone())
     }
 
     #[cfg(test)]
     pub fn get_diff_output(self) -> Result<String, Error> {
         let mut diff_output = String::new();
         for transformation in self.transformations.into_iter().rev() {
-            let diff_str = transformation.get_diff(&self.code, self.filename, false);
+            let diff_str = transformation.get_diff(&self.code, self.rust_file_path, false);
             diff_output.push_str(&diff_str);
         }
         Ok(diff_output)
     }
+
+    fn check_transformation_compiles(
+        &self,
+        transformation: &Transformation,
+    ) -> Result<bool, Error> {
+        let original_code = &self.code;
+        let new_code = transformation.apply(original_code.clone());
+        self.write_code_to_file(new_code)?;
+        let mut cmd = std::process::Command::new("cargo");
+        cmd.arg("check");
+        if let Some(root) = self.cargo_root {
+            cmd.current_dir(root);
+        }
+        let output = cmd.output()?;
+        if output.status.success() {
+            Ok(true)
+        } else {
+            self.write_code_to_file(original_code.to_string())?;
+            Ok(false)
+        }
+    }
+
+    fn write_code_to_file(&self, original_code: String) -> Result<(), Error> {
+        std::fs::write(self.rust_file_path, original_code)?;
+        Ok(())
+    }
 }
 
 impl Transformation {
-    pub fn apply(&self, code: &mut String) {
+    pub fn apply(&self, mut code: String) -> String {
         let range = self.span.byte_range();
         code.replace_range(range, &self.new_code);
+        code
     }
 }
 
 pub fn transform(
     input: &Input,
+    config: &Config,
     rust_file_id: FileId,
     match_result: MatchResult,
     transforms: Vec<(Id, Id)>,
-    interactive: bool,
+    cargo_root: Option<&Path>,
 ) -> Result<(), Error> {
-    if !transforms.is_empty() {
-        let transform = Transform::new(input, rust_file_id, match_result, &transforms)?;
-        let code = transform.get_transformed_contents(interactive)?;
-        write_to_file(input, rust_file_id, code)?;
+    let transform = Transform::new(
+        input,
+        config,
+        rust_file_id,
+        cargo_root,
+        match_result,
+        &transforms,
+    )?;
+    if !transform.transformations.is_empty() {
+        let new_code = transform.get_transformed_contents()?;
+        write_to_file(input, rust_file_id, new_code)?;
     }
     Ok(())
 }

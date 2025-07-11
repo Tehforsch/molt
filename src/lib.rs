@@ -182,10 +182,11 @@ pub fn run(
                 );
                 transform::transform(
                     input,
+                    &config,
                     rust_file_id,
                     match_result,
                     transforms,
-                    config.interactive,
+                    cargo_root.map(|v| &**v),
                 )?;
                 if let Some(cargo_root) = cargo_root
                     && config.cargo_fmt
