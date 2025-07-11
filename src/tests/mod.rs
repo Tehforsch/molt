@@ -8,6 +8,7 @@ use molt_lib::Config;
 use crate::error::{emit_diagnostic_str, make_error_diagnostic};
 use crate::input::{Contents, Input, MoltSource};
 use crate::lsp::LspClient;
+use crate::transform::Transform;
 use crate::{Command, Error, MoltFile, RustFile, match_pattern_data};
 
 fn parse_rust(path: &str) {
@@ -83,7 +84,7 @@ fn format_code(code: String) -> Result<String, Error> {
     Ok(String::from_utf8(output.stdout).unwrap_or(code))
 }
 
-fn transform(path: &str, fname: &str) -> String {
+fn run_transform_with<T>(path: &str, fname: &str, f: impl FnOnce(Transform) -> T) -> T {
     let input = make_input(path, fname);
     let (molt_file, pat_ctx) = MoltFile::new(&input).unwrap();
     let rust_file_id = input.iter_rust_src().next().unwrap();
@@ -104,109 +105,123 @@ fn transform(path: &str, fname: &str) -> String {
         data,
         &mut lsp_client,
     );
-    format_code(
-        crate::transform::get_transformed_contents(
-            &input,
-            rust_file_id,
-            match_result,
-            &tr.transforms,
-            false,
-        )
-        .unwrap(),
-    )
-    .unwrap()
+
+    let transform = Transform::new(&input, rust_file_id, match_result, &tr.transforms);
+    f(transform)
+}
+
+fn transform(path: &str, fname: &str) -> String {
+    run_transform_with(path, fname, |transform| {
+        let code = transform.get_transformed_contents(false).unwrap();
+        format_code(code).unwrap()
+    })
+}
+
+fn transform_diff(path: &str, fname: &str) -> String {
+    run_transform_with(path, fname, |transform| {
+        transform.get_diff_output().unwrap()
+    })
 }
 
 macro_rules! test_match_pattern {
-        ($dir_name: ident, ($($test_name: ident),* $(,)?) $(,$add: literal)?) => {
-            mod $dir_name {
-                fn get_dir_name() -> String {
-                    let name = stringify!($dir_name);
-                    $(
-                        let name = format!("{}{}", name, $add);
-                    )?
-                    name.to_string()
-                }
-
-                mod match_ {
-                    $(
-                        #[test]
-                        fn $test_name() {
-                            let name = super::get_dir_name();
-                            insta::assert_snapshot!(super::super::match_pattern(&name, stringify!($test_name)));
-                        }
-                    )*
-                }
-
-                #[test]
-                fn parse() {
-                    let name = get_dir_name();
-                    super::parse_rust(&name);
-                }
+    ($dir_name: ident, ($($test_name: ident),* $(,)?) $(,$add: literal)?) => {
+        mod $dir_name {
+            fn get_dir_name() -> String {
+                let name = stringify!($dir_name);
+                $(
+                    let name = format!("{}{}", name, $add);
+                )?
+                name.to_string()
             }
-        };
-    }
+
+            mod match_ {
+                $(
+                    #[test]
+                    fn $test_name() {
+                        let name = super::get_dir_name();
+                        insta::assert_snapshot!(super::super::match_pattern(&name, stringify!($test_name)));
+                    }
+                )*
+            }
+
+            #[test]
+            fn parse() {
+                let name = get_dir_name();
+                super::parse_rust(&name);
+            }
+        }
+    };
+}
 
 macro_rules! test_transform {
-        ($dir_name: ident, ($($test_name: ident),* $(,)?)) => {
-            mod $dir_name {
-                mod match_ {
-                    $(
-                        #[test]
-                        fn $test_name() {
-                            insta::assert_snapshot!(super::super::transform(stringify!($dir_name), stringify!($test_name)));
-                        }
-                    )*
-                }
-
-                #[test]
-                fn parse() {
-                    super::parse_rust(stringify!($dir_name));
-                }
+    ($dir_name: ident, ($($test_name: ident),* $(,)?)) => {
+        mod $dir_name {
+            mod match_ {
+                $(
+                    #[test]
+                    fn $test_name() {
+                        insta::assert_snapshot!(super::super::transform(stringify!($dir_name), stringify!($test_name)));
+                    }
+                )*
             }
-        };
-    }
+
+            mod diff {
+                $(
+                    #[test]
+                    fn $test_name() {
+                        insta::assert_snapshot!(super::super::transform_diff(stringify!($dir_name), stringify!($test_name)));
+                    }
+                )*
+            }
+
+            #[test]
+            fn parse() {
+                super::parse_rust(stringify!($dir_name));
+            }
+        }
+    };
+}
 
 macro_rules! molt_grammar_test_err {
-        ($dir_name: ident, ($($test_name: ident),* $(,)?)) => {
-            $(
-                #[test]
-                fn $test_name() {
-                    let path = format!(
-                        "test_data/{}/{}.molt",
-                        stringify!($dir_name),
-                        stringify!($test_name)
-                    );
-                    let (input, result) = parse_molt(&path);
-                    let err = match result {
-                        Err(e) => e,
-                        Ok(_) => panic!("No error during parsing when one was expected"),
-                    };
-                    insta::assert_snapshot!(emit_diagnostic_str(&input, make_error_diagnostic(&err)));
-                }
-            )*
-        };
-    }
+    ($dir_name: ident, ($($test_name: ident),* $(,)?)) => {
+        $(
+            #[test]
+            fn $test_name() {
+                let path = format!(
+                    "test_data/{}/{}.molt",
+                    stringify!($dir_name),
+                    stringify!($test_name)
+                );
+                let (input, result) = parse_molt(&path);
+                let err = match result {
+                    Err(e) => e,
+                    Ok(_) => panic!("No error during parsing when one was expected"),
+                };
+                insta::assert_snapshot!(emit_diagnostic_str(&input, make_error_diagnostic(&err)));
+            }
+        )*
+    };
+}
 
 macro_rules! molt_grammar_test_ok {
-        ($dir_name: ident, ($($test_name: ident),* $(,)?)) => {
-            $(
-                #[test]
-                fn $test_name() {
-                    let path = format!(
-                        "test_data/{}/{}.molt",
-                        stringify!($dir_name),
-                        stringify!($test_name)
-                    );
-                    let (_, result) = parse_molt(&path);
-                    match result {
-                        Err(e) => panic!("Error during parsing when none was expected {}", e),
-                        Ok(_) => {},
-                    }
+    ($dir_name: ident, ($($test_name: ident),* $(,)?)) => {
+        $(
+            #[test]
+            fn $test_name() {
+                let path = format!(
+                    "test_data/{}/{}.molt",
+                    stringify!($dir_name),
+                    stringify!($test_name)
+                );
+                let (_, result) = parse_molt(&path);
+                match result {
+                    Err(e) => panic!("Error during parsing when none was expected {}", e),
+                    Ok(_) => {},
                 }
-            )*
-        };
-    }
+            }
+        )*
+    };
+}
 
 test_match_pattern!(consts, (exprs));
 test_match_pattern!(let_, (let_));

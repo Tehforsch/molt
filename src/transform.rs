@@ -25,50 +25,128 @@ struct Transformation {
     new_code: String,
 }
 
+pub struct Transform<'a> {
+    match_result: MatchResult<'a>,
+    transforms: &'a [(Id, Id)],
+    code: String,
+    filename: &'a Path,
+}
+
+impl<'a> Transform<'a> {
+    pub fn new(
+        input: &'a Input,
+        rust_file_id: FileId,
+        match_result: MatchResult<'a>,
+        transforms: &'a [(Id, Id)],
+    ) -> Self {
+        let code = input.source(rust_file_id).unwrap().to_owned();
+        let filename = input.name(rust_file_id).unwrap().unwrap_path();
+        Self {
+            match_result,
+            transforms,
+            code,
+            filename,
+        }
+    }
+
+    fn prepare_transformations(&self) -> Result<Vec<Transformation>, Error> {
+        let mut all_transformations: Vec<_> = self
+            .transforms
+            .iter()
+            .flat_map(|(input_var, output_var)| {
+                self.match_result.matches.iter().map(|match_| {
+                    make_transformation(&self.match_result.ctx, match_, *input_var, *output_var)
+                })
+            })
+            .collect();
+
+        // Sort transformations by their spans to ensure proper ordering
+        all_transformations.sort_by_key(|t| t.span.byte_range().start);
+
+        check_overlap(&all_transformations)?;
+        Ok(all_transformations)
+    }
+
+    pub fn get_transformed_contents(mut self, interactive: bool) -> Result<String, Error> {
+        let all_transformations = self.prepare_transformations()?;
+
+        for transformation in all_transformations.into_iter().rev() {
+            transformation.show_diff(&self.code, self.filename);
+            if !interactive || ask_user_for_confirmation() {
+                transformation.apply(&mut self.code);
+            }
+        }
+        Ok(self.code)
+    }
+
+    #[cfg(test)]
+    pub fn get_diff_output(self) -> Result<String, Error> {
+        let all_transformations = self.prepare_transformations()?;
+
+        let mut diff_output = String::new();
+        for transformation in all_transformations.into_iter().rev() {
+            let diff_str = transformation.get_diff(&self.code, self.filename, false);
+            diff_output.push_str(&diff_str);
+        }
+        Ok(diff_output)
+    }
+}
+
 impl Transformation {
     fn apply(&self, code: &mut String) {
         let range = self.span.byte_range();
         code.replace_range(range, &self.new_code);
     }
 
-    fn show_diff(&self, old_code: &str, filename: &Path) {
+    fn get_diff(&self, old_code: &str, filename: &Path, colorized: bool) -> String {
         let range = self.span.byte_range();
-        let old_excerpt = &old_code[range.clone()];
         let new_excerpt = &self.new_code;
-        if old_excerpt == new_excerpt {
-            return;
-        }
         let mut new_code = old_code.to_string();
         new_code.replace_range(range, new_excerpt);
 
         let diff = TextDiff::from_lines(old_code, &new_code);
-        print_diff(diff, filename);
+        format_diff(diff, filename, colorized)
+    }
+
+    fn show_diff(&self, old_code: &str, filename: &Path) {
+        let diff_output = self.get_diff(old_code, filename, true);
+        print!("{}", diff_output);
     }
 }
 
-fn print_diff(diff: TextDiff<str>, filename: &Path) {
-    const RED: &str = "\x1b[31m";
-    const GREEN: &str = "\x1b[32m";
-    const RESET: &str = "\x1b[0m";
-    const CYAN: &str = "\x1b[36m";
-    const BOLD: &str = "\x1b[1m";
+fn format_diff(diff: TextDiff<str>, filename: &Path, colorized: bool) -> String {
+    let mut output = String::new();
 
-    // Print filename header if provided
-    println!(
-        "{}{}--- {}{}",
-        BOLD,
-        CYAN,
-        filename.to_string_lossy(),
-        RESET
-    );
+    if colorized {
+        const BOLD: &str = "\x1b[1m";
+        const CYAN: &str = "\x1b[36m";
+        const RESET: &str = "\x1b[0m";
+        output.push_str(&format!(
+            "{}{}--- {}{}\n",
+            BOLD,
+            CYAN,
+            filename.to_string_lossy(),
+            RESET
+        ));
+    } else {
+        output.push_str(&format!("--- {}\n", filename.to_string_lossy()));
+    }
 
-    for (_, group) in diff.grouped_ops(NUM_LINES_CONTEXT).iter().enumerate() {
+    for group in diff.grouped_ops(NUM_LINES_CONTEXT).iter() {
         for op in group {
             for change in diff.iter_changes(op) {
-                let (sign, color) = match change.tag() {
-                    ChangeTag::Delete => ("-", RED),
-                    ChangeTag::Insert => ("+", GREEN),
-                    ChangeTag::Equal => (" ", ""),
+                let (sign, color) = if colorized {
+                    match change.tag() {
+                        ChangeTag::Delete => ("-", "\x1b[31m"),
+                        ChangeTag::Insert => ("+", "\x1b[32m"),
+                        ChangeTag::Equal => (" ", ""),
+                    }
+                } else {
+                    match change.tag() {
+                        ChangeTag::Delete => ("-", ""),
+                        ChangeTag::Insert => ("+", ""),
+                        ChangeTag::Equal => (" ", ""),
+                    }
                 };
 
                 // Get line numbers for old and new
@@ -83,19 +161,28 @@ fn print_diff(diff: TextDiff<str>, filename: &Path) {
                     (None, None) => "    ,    ".to_string(),
                 };
 
-                if color.is_empty() {
-                    print!("{}{} {}{}", CYAN, line_info, RESET, sign);
-                    print!("{}", change);
+                if colorized {
+                    const CYAN: &str = "\x1b[36m";
+                    const RESET: &str = "\x1b[0m";
+                    if color.is_empty() {
+                        output.push_str(&format!(
+                            "{}{} {}{}{}",
+                            CYAN, line_info, RESET, sign, change
+                        ));
+                    } else {
+                        output.push_str(&format!(
+                            "{}{} {}{}{}{}{}",
+                            CYAN, line_info, RESET, color, sign, change, RESET
+                        ));
+                    }
                 } else {
-                    print!(
-                        "{}{} {}{}{}{}{}",
-                        CYAN, line_info, RESET, color, sign, change, RESET
-                    );
+                    output.push_str(&format!("{} {}{}", line_info, sign, change));
                 }
             }
         }
     }
-    println!();
+    output.push('\n');
+    output
 }
 
 pub fn transform(
@@ -106,42 +193,11 @@ pub fn transform(
     interactive: bool,
 ) -> Result<(), Error> {
     if !transforms.is_empty() {
-        let code =
-            get_transformed_contents(input, rust_file_id, match_result, &transforms, interactive)?;
+        let transform = Transform::new(input, rust_file_id, match_result, &transforms);
+        let code = transform.get_transformed_contents(interactive)?;
         write_to_file(input, rust_file_id, code)?;
     }
     Ok(())
-}
-
-pub fn get_transformed_contents(
-    input: &Input,
-    rust_file_id: FileId,
-    match_result: MatchResult<'_>,
-    transforms: &[(Id, Id)],
-    interactive: bool,
-) -> Result<String, Error> {
-    let mut all_transformations: Vec<_> = transforms
-        .iter()
-        .flat_map(|(input_var, output_var)| {
-            match_result.matches.iter().map(|match_| {
-                make_transformation(&match_result.ctx, match_, *input_var, *output_var)
-            })
-        })
-        .collect();
-
-    // Sort transformations by their spans to ensure proper ordering
-    all_transformations.sort_by_key(|t| t.span.byte_range().start);
-
-    check_overlap(&all_transformations)?;
-    let mut code = input.source(rust_file_id).unwrap().to_owned();
-    let filename = input.name(rust_file_id).unwrap().unwrap_path();
-    for transformation in all_transformations.into_iter().rev() {
-        transformation.show_diff(&code, filename);
-        if !interactive || ask_user_for_confirmation() {
-            transformation.apply(&mut code);
-        }
-    }
-    Ok(code)
 }
 
 fn ask_user_for_confirmation() -> bool {

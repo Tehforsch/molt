@@ -1,0 +1,12 @@
+---
+source: src/tests/mod.rs
+expression: "super :: super :: transform_diff(stringify! (transform), stringify! (inner))"
+---
+--- test_data/transform/main.rs
+  16,  16          Some(x) => Ok(x * 2),
+  17,  17          None => Ok(0),
+  18,  18      };
+  19,  19  
+  20,-    -    bar.foo::<Foo1>()?;
+-   ,  20 +    bar.foo::<Foo2>()?;
+  21,  21  }
