@@ -106,7 +106,7 @@ fn run_transform_with<T>(path: &str, fname: &str, f: impl FnOnce(Transform) -> T
         &mut lsp_client,
     );
 
-    let transform = Transform::new(&input, rust_file_id, match_result, &tr.transforms);
+    let transform = Transform::new(&input, rust_file_id, match_result, &tr.transforms).unwrap();
     f(transform)
 }
 

@@ -25,8 +25,7 @@ pub struct Transformation {
 }
 
 pub struct Transform<'a> {
-    match_result: MatchResult<'a>,
-    transforms: &'a [(Id, Id)],
+    transformations: Vec<Transformation>,
     code: String,
     filename: &'a Path,
 }
@@ -37,39 +36,19 @@ impl<'a> Transform<'a> {
         rust_file_id: FileId,
         match_result: MatchResult<'a>,
         transforms: &'a [(Id, Id)],
-    ) -> Self {
+    ) -> Result<Self, Error> {
         let code = input.source(rust_file_id).unwrap().to_owned();
         let filename = input.name(rust_file_id).unwrap().unwrap_path();
-        Self {
-            match_result,
-            transforms,
+        let transformations = prepare_transformations(&match_result, transforms)?;
+        Ok(Self {
+            transformations,
             code,
             filename,
-        }
-    }
-
-    fn prepare_transformations(&self) -> Result<Vec<Transformation>, Error> {
-        let mut all_transformations: Vec<_> = self
-            .transforms
-            .iter()
-            .flat_map(|(input_var, output_var)| {
-                self.match_result.matches.iter().map(|match_| {
-                    make_transformation(&self.match_result.ctx, match_, *input_var, *output_var)
-                })
-            })
-            .collect();
-
-        // Sort transformations by their spans to ensure proper ordering
-        all_transformations.sort_by_key(|t| t.span.byte_range().start);
-
-        check_overlap(&all_transformations)?;
-        Ok(all_transformations)
+        })
     }
 
     pub fn get_transformed_contents(mut self, interactive: bool) -> Result<String, Error> {
-        let all_transformations = self.prepare_transformations()?;
-
-        for transformation in all_transformations.into_iter().rev() {
+        for transformation in self.transformations.into_iter().rev() {
             transformation.show_diff(&self.code, self.filename);
             if !interactive || ask_user_for_confirmation() {
                 transformation.apply(&mut self.code);
@@ -80,10 +59,8 @@ impl<'a> Transform<'a> {
 
     #[cfg(test)]
     pub fn get_diff_output(self) -> Result<String, Error> {
-        let all_transformations = self.prepare_transformations()?;
-
         let mut diff_output = String::new();
-        for transformation in all_transformations.into_iter().rev() {
+        for transformation in self.transformations.into_iter().rev() {
             let diff_str = transformation.get_diff(&self.code, self.filename, false);
             diff_output.push_str(&diff_str);
         }
@@ -106,7 +83,7 @@ pub fn transform(
     interactive: bool,
 ) -> Result<(), Error> {
     if !transforms.is_empty() {
-        let transform = Transform::new(input, rust_file_id, match_result, &transforms);
+        let transform = Transform::new(input, rust_file_id, match_result, &transforms)?;
         let code = transform.get_transformed_contents(interactive)?;
         write_to_file(input, rust_file_id, code)?;
     }
@@ -131,6 +108,26 @@ fn write_to_file(input: &Input, rust_file_id: FileId, code: String) -> Result<()
     let path = path.unwrap_path();
     std::fs::write(path, code)?;
     Ok(())
+}
+
+fn prepare_transformations(
+    match_result: &MatchResult,
+    transforms: &[(Id, Id)],
+) -> Result<Vec<Transformation>, Error> {
+    let mut all_transformations: Vec<_> = transforms
+        .iter()
+        .flat_map(|(input_var, output_var)| {
+            match_result.matches.iter().map(|match_| {
+                make_transformation(&match_result.ctx, match_, *input_var, *output_var)
+            })
+        })
+        .collect();
+
+    // Sort transformations by their spans to ensure proper ordering
+    all_transformations.sort_by_key(|t| t.span.byte_range().start);
+
+    check_overlap(&all_transformations)?;
+    Ok(all_transformations)
 }
 
 fn check_overlap(transformations: &[Transformation]) -> Result<(), Error> {
