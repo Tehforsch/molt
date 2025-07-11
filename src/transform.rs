@@ -1,13 +1,17 @@
 use std::io::{self, Write};
+use std::path::Path;
 use std::str::FromStr;
 
 use codespan_reporting::files::Files;
 use molt_lib::{Id, Match, MatchCtx, Span};
 use rust_grammar::{Node, TokenStream};
+use similar::{ChangeTag, TextDiff};
 
 use crate::molt_grammar::TokenVar;
 use crate::resolve::get_vars_in_token_stream;
 use crate::{Error, FileId, Input, MatchResult};
+
+pub const NUM_LINES_CONTEXT: usize = 4;
 
 #[derive(Debug, thiserror::Error)]
 pub enum TransformError {
@@ -27,7 +31,71 @@ impl Transformation {
         code.replace_range(range, &self.new_code);
     }
 
-    fn show_diff(&self, _: &str) {}
+    fn show_diff(&self, old_code: &str, filename: &Path) {
+        let range = self.span.byte_range();
+        let old_excerpt = &old_code[range.clone()];
+        let new_excerpt = &self.new_code;
+        if old_excerpt == new_excerpt {
+            return;
+        }
+        let mut new_code = old_code.to_string();
+        new_code.replace_range(range, new_excerpt);
+
+        let diff = TextDiff::from_lines(old_code, &new_code);
+        print_diff(diff, filename);
+    }
+}
+
+fn print_diff(diff: TextDiff<str>, filename: &Path) {
+    const RED: &str = "\x1b[31m";
+    const GREEN: &str = "\x1b[32m";
+    const RESET: &str = "\x1b[0m";
+    const CYAN: &str = "\x1b[36m";
+    const BOLD: &str = "\x1b[1m";
+
+    // Print filename header if provided
+    println!(
+        "{}{}--- {}{}",
+        BOLD,
+        CYAN,
+        filename.to_string_lossy(),
+        RESET
+    );
+
+    for (_, group) in diff.grouped_ops(NUM_LINES_CONTEXT).iter().enumerate() {
+        for op in group {
+            for change in diff.iter_changes(op) {
+                let (sign, color) = match change.tag() {
+                    ChangeTag::Delete => ("-", RED),
+                    ChangeTag::Insert => ("+", GREEN),
+                    ChangeTag::Equal => (" ", ""),
+                };
+
+                // Get line numbers for old and new
+                let old_line = change.old_index().map(|i| i + 1);
+                let new_line = change.new_index().map(|i| i + 1);
+
+                // Format line numbers
+                let line_info = match (old_line, new_line) {
+                    (Some(old), Some(new)) => format!("{:4},{:4}", old, new),
+                    (Some(old), None) => format!("{:4},-   ", old),
+                    (None, Some(new)) => format!("-   ,{:4}", new),
+                    (None, None) => "    ,    ".to_string(),
+                };
+
+                if color.is_empty() {
+                    print!("{}{} {}{}", CYAN, line_info, RESET, sign);
+                    print!("{}", change);
+                } else {
+                    print!(
+                        "{}{} {}{}{}{}{}",
+                        CYAN, line_info, RESET, color, sign, change, RESET
+                    );
+                }
+            }
+        }
+    }
+    println!();
 }
 
 pub fn transform(
@@ -66,8 +134,9 @@ pub fn get_transformed_contents(
 
     check_overlap(&all_transformations)?;
     let mut code = input.source(rust_file_id).unwrap().to_owned();
+    let filename = input.name(rust_file_id).unwrap().unwrap_path();
     for transformation in all_transformations.into_iter().rev() {
-        transformation.show_diff(&code);
+        transformation.show_diff(&code, filename);
         if !interactive || ask_user_for_confirmation() {
             transformation.apply(&mut code);
         }

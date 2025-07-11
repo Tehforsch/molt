@@ -759,6 +759,7 @@ dependencies = [
  "rust_grammar",
  "serde",
  "serde_json",
+ "similar",
  "tar",
  "tempfile",
  "thiserror",
