@@ -1,0 +1,6 @@
+let vis: Visibility;
+let ident: Ident;
+let type_: Type;
+let expr: Expr;
+
+let pattern: Item = { $vis const $ident: $type_ = $expr; };

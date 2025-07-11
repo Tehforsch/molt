@@ -1,0 +1,48 @@
+---
+source: src/tests/mod.rs
+expression: "super :: super :: match_pattern(& name, stringify! (fn_))"
+---
+note: Match
+   ┌─ "test_data/visibility/main.rs":20:1
+   │
+20 │ pub fn public_fn() {}
+   │ ^^^^^^^^^^^^^^^^^^^^^ $pattern
+   │
+   = $ident = public_fn
+   = $vis = pub
+
+note: Match
+   ┌─ "test_data/visibility/main.rs":21:1
+   │
+21 │ pub(crate) fn crate_fn() {}
+   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^ $pattern
+   │
+   = $ident = crate_fn
+   = $vis = pub(crate)
+
+note: Match
+   ┌─ "test_data/visibility/main.rs":22:1
+   │
+22 │ pub(super) fn super_fn() {}
+   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^ $pattern
+   │
+   = $ident = super_fn
+   = $vis = pub(super)
+
+note: Match
+   ┌─ "test_data/visibility/main.rs":23:1
+   │
+23 │ pub(in crate::visibility) fn restricted_fn() {}
+   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $pattern
+   │
+   = $ident = restricted_fn
+   = $vis = pub(in crate::visibility)
+
+note: Match
+   ┌─ "test_data/visibility/main.rs":24:1
+   │
+24 │ fn private_fn() {}
+   │ ^^^^^^^^^^^^^^^^^^ $pattern
+   │
+   = $ident = private_fn
+   = $vis =

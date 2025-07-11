@@ -3,7 +3,7 @@ use derive_macro::CmpSyn;
 use crate::error::Result;
 use crate::ident::AnyIdent;
 use crate::parse::discouraged::Speculative as _;
-use crate::parse::{Parse, ParseStream};
+use crate::parse::{ParseNode, ParseStream};
 use crate::path::Path;
 use crate::token;
 
@@ -48,8 +48,10 @@ pub enum FieldMutability {
     // }
 }
 
-impl Parse for Visibility {
-    fn parse(input: ParseStream) -> Result<Self> {
+impl ParseNode for Visibility {
+    type Target = Self;
+
+    fn parse_node(input: ParseStream) -> Result<Self::Target> {
         // Recognize an empty None-delimited group, as produced by a $:vis
         // matcher that matched no tokens.
         if input.peek(token::Group) {

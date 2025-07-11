@@ -64,7 +64,7 @@ pub struct FieldsUnnamed {
 pub struct Field {
     pub attrs: Vec<Attribute>,
 
-    pub vis: Visibility,
+    pub vis: NodeId<Visibility>,
 
     pub mutability: FieldMutability,
 
@@ -115,7 +115,7 @@ impl<'a> Clone for Members<'a> {
 impl Parse for Variant {
     fn parse(input: ParseStream) -> Result<Self> {
         let attrs = input.call(Attribute::parse_outer)?;
-        let _visibility: Visibility = input.parse()?;
+        let _visibility: NodeId<Visibility> = input.parse_id::<Visibility>()?;
         let ident: NodeId<Ident> = input.parse()?;
         let fields = if input.peek(token::Brace) {
             Fields::Named(input.parse()?)
@@ -186,7 +186,7 @@ impl ParseNode for FieldNamed {
 
     fn parse_node(input: ParseStream) -> Result<Field> {
         let attrs = input.call(Attribute::parse_outer)?;
-        let vis: Visibility = input.parse()?;
+        let vis = input.parse_id::<Visibility>()?;
 
         let unnamed_field = input.peek(Token![_]);
         let ident = if unnamed_field {

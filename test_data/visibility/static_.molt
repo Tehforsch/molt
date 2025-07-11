@@ -1,0 +1,5 @@
+let vis: Visibility;
+let ident: Ident;
+let type_: Type;
+let expr: Expr;
+let item: Item = { $vis static $ident: $type_ = $expr; };

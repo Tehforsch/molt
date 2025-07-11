@@ -1,0 +1,10 @@
+let vis: Visibility;
+let field_ident: Ident;
+let type_: Type;
+let pattern: Item = {
+    pub struct PublicStruct {
+        $(
+            $vis $field_ident: $type_ 
+        )*
+    }
+};

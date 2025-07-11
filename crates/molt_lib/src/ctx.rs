@@ -74,6 +74,12 @@ pub struct Spanned<T> {
 
 pub type SpannedPat<T> = Spanned<Pattern<T, Id>>;
 
+impl<T> SpannedPat<T> {
+    pub fn get_property<S>(&self, f: impl Fn(&T) -> S, default: S) -> S {
+        self.real().map(f).unwrap_or(default)
+    }
+}
+
 impl<T> Spanned<T> {
     fn new(item: T, span: Span) -> Self {
         Self { span, item }

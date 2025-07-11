@@ -1,0 +1,58 @@
+---
+source: src/tests/mod.rs
+expression: "super :: super :: match_pattern(& name, stringify! (static_))"
+---
+note: Match
+   ┌─ "test_data/visibility/main.rs":65:1
+   │
+65 │ pub static PUBLIC_STATIC: i32 = 42;
+   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $item
+   │
+   = $expr = 42
+   = $ident = PUBLIC_STATIC
+   = $type_ = i32
+   = $vis = pub
+
+note: Match
+   ┌─ "test_data/visibility/main.rs":66:1
+   │
+66 │ pub(crate) static CRATE_STATIC: i32 = 42;
+   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $item
+   │
+   = $expr = 42
+   = $ident = CRATE_STATIC
+   = $type_ = i32
+   = $vis = pub(crate)
+
+note: Match
+   ┌─ "test_data/visibility/main.rs":67:1
+   │
+67 │ pub(super) static SUPER_STATIC: i32 = 42;
+   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $item
+   │
+   = $expr = 42
+   = $ident = SUPER_STATIC
+   = $type_ = i32
+   = $vis = pub(super)
+
+note: Match
+   ┌─ "test_data/visibility/main.rs":68:1
+   │
+68 │ pub(in crate::visibility) static RESTRICTED_STATIC: i32 = 42;
+   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $item
+   │
+   = $expr = 42
+   = $ident = RESTRICTED_STATIC
+   = $type_ = i32
+   = $vis = pub(in crate::visibility)
+
+note: Match
+   ┌─ "test_data/visibility/main.rs":69:1
+   │
+69 │ static PRIVATE_STATIC: i32 = 42;
+   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $item
+   │
+   = $expr = 42
+   = $ident = PRIVATE_STATIC
+   = $type_ = i32
+   = $vis =

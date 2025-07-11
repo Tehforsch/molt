@@ -572,7 +572,16 @@ impl<'a> ParseBuffer<'a> {
 
     pub(crate) fn span_from_marker(&self, marker: PosMarker) -> molt_lib::Span {
         let end = self.cursor().prev_span().byte_range().end;
-        molt_lib::Span::new(marker.start, end)
+        // While parsing some items (notably visibilities),
+        // we might end up parsing nothing (if no visibility
+        // is given). With the naive approach, we would end up
+        // returning an invalid span (with end < start), so we
+        // add a special case here:
+        if end < marker.start {
+            molt_lib::Span::new(marker.start, marker.start)
+        } else {
+            molt_lib::Span::new(marker.start, end)
+        }
     }
 
     pub(crate) fn marker(&self) -> PosMarker {

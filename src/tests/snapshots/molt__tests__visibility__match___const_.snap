@@ -1,0 +1,58 @@
+---
+source: src/tests/mod.rs
+expression: "super :: super :: match_pattern(& name, stringify! (const_))"
+---
+note: Match
+   ┌─ "test_data/visibility/main.rs":59:1
+   │
+59 │ pub const PUBLIC_CONST: i32 = 42;
+   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $pattern
+   │
+   = $expr = 42
+   = $ident = PUBLIC_CONST
+   = $type_ = i32
+   = $vis = pub
+
+note: Match
+   ┌─ "test_data/visibility/main.rs":60:1
+   │
+60 │ pub(crate) const CRATE_CONST: i32 = 42;
+   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $pattern
+   │
+   = $expr = 42
+   = $ident = CRATE_CONST
+   = $type_ = i32
+   = $vis = pub(crate)
+
+note: Match
+   ┌─ "test_data/visibility/main.rs":61:1
+   │
+61 │ pub(super) const SUPER_CONST: i32 = 42;
+   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $pattern
+   │
+   = $expr = 42
+   = $ident = SUPER_CONST
+   = $type_ = i32
+   = $vis = pub(super)
+
+note: Match
+   ┌─ "test_data/visibility/main.rs":62:1
+   │
+62 │ pub(in crate::visibility) const RESTRICTED_CONST: i32 = 42;
+   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $pattern
+   │
+   = $expr = 42
+   = $ident = RESTRICTED_CONST
+   = $type_ = i32
+   = $vis = pub(in crate::visibility)
+
+note: Match
+   ┌─ "test_data/visibility/main.rs":63:1
+   │
+63 │ const PRIVATE_CONST: i32 = 42;
+   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $pattern
+   │
+   = $expr = 42
+   = $ident = PRIVATE_CONST
+   = $type_ = i32
+   = $vis =

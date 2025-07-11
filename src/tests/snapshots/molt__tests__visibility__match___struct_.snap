@@ -1,0 +1,39 @@
+---
+source: src/tests/mod.rs
+expression: "super :: super :: match_pattern(& name, stringify! (struct_))"
+---
+note: Match
+   ┌─ "test_data/visibility/main.rs":34:1
+   │
+34 │ pub(crate) struct CrateStruct;
+   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $pattern
+   │
+   = $ident = CrateStruct
+   = $vis = pub(crate)
+
+note: Match
+   ┌─ "test_data/visibility/main.rs":35:1
+   │
+35 │ pub(super) struct SuperStruct;
+   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $pattern
+   │
+   = $ident = SuperStruct
+   = $vis = pub(super)
+
+note: Match
+   ┌─ "test_data/visibility/main.rs":36:1
+   │
+36 │ pub(in crate::visibility) struct RestrictedStruct;
+   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $pattern
+   │
+   = $ident = RestrictedStruct
+   = $vis = pub(in crate::visibility)
+
+note: Match
+   ┌─ "test_data/visibility/main.rs":37:1
+   │
+37 │ struct PrivateStruct;
+   │ ^^^^^^^^^^^^^^^^^^^^^ $pattern
+   │
+   = $ident = PrivateStruct
+   = $vis =

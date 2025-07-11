@@ -1,0 +1,53 @@
+---
+source: src/tests/mod.rs
+expression: "super :: super :: match_pattern(& name, stringify! (type_alias))"
+---
+note: Match
+   ┌─ "test_data/visibility/main.rs":53:1
+   │
+53 │ pub type PublicType = i32;
+   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^ $pattern
+   │
+   = $ident = PublicType
+   = $type_ = i32
+   = $vis = pub
+
+note: Match
+   ┌─ "test_data/visibility/main.rs":54:1
+   │
+54 │ pub(crate) type CrateType = i32;
+   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $pattern
+   │
+   = $ident = CrateType
+   = $type_ = i32
+   = $vis = pub(crate)
+
+note: Match
+   ┌─ "test_data/visibility/main.rs":55:1
+   │
+55 │ pub(super) type SuperType = i32;
+   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $pattern
+   │
+   = $ident = SuperType
+   = $type_ = i32
+   = $vis = pub(super)
+
+note: Match
+   ┌─ "test_data/visibility/main.rs":56:1
+   │
+56 │ pub(in crate::visibility) type RestrictedType = i32;
+   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $pattern
+   │
+   = $ident = RestrictedType
+   = $type_ = i32
+   = $vis = pub(in crate::visibility)
+
+note: Match
+   ┌─ "test_data/visibility/main.rs":57:1
+   │
+57 │ type PrivateType = i32;
+   │ ^^^^^^^^^^^^^^^^^^^^^^^ $pattern
+   │
+   = $ident = PrivateType
+   = $type_ = i32
+   = $vis =

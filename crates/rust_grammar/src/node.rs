@@ -3,7 +3,7 @@ use molt_lib::ToNode;
 
 use crate::expr::Arm;
 use crate::pat::Pat;
-use crate::{Expr, Field, Ident, Item, Lit, Stmt, Type};
+use crate::{Expr, Field, Ident, Item, Lit, Stmt, Type, Visibility};
 
 macro_rules! define_node_and_kind {
     ($(($variant_name: ident, $ty: ty)),*$(,)?) => {
@@ -94,4 +94,5 @@ define_node_and_kind! {
     (Ident, Ident),
     (Arm, Arm),
     (Pat, Pat),
+    (Visibility, Visibility),
 }

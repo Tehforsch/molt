@@ -1,7 +1,7 @@
 use std::mem;
 
 use derive_macro::CmpSyn;
-use molt_lib::{NodeId, NodeList, Pattern, WithSpan};
+use molt_lib::{NodeId, NodeList, Pattern, SpannedPat, WithSpan};
 use proc_macro2::TokenStream;
 
 use crate::attr::{
@@ -85,7 +85,7 @@ pub enum Item {
 /// A constant item: `const MAX: u16 = 65535`.
 pub struct ItemConst {
     pub attrs: Vec<Attribute>,
-    pub vis: Visibility,
+    pub vis: NodeId<Visibility>,
     pub const_token: Token![const],
     pub ident: NodeId<Ident>,
     pub generics: Generics,
@@ -100,7 +100,7 @@ pub struct ItemConst {
 /// An enum definition: `enum Foo<A, B> { A(A), B(B) }`.
 pub struct ItemEnum {
     pub attrs: Vec<Attribute>,
-    pub vis: Visibility,
+    pub vis: NodeId<Visibility>,
     pub enum_token: Token![enum],
     pub ident: NodeId<Ident>,
     pub generics: Generics,
@@ -112,7 +112,7 @@ pub struct ItemEnum {
 /// An `extern crate` item: `extern crate serde`.
 pub struct ItemExternCrate {
     pub attrs: Vec<Attribute>,
-    pub vis: Visibility,
+    pub vis: NodeId<Visibility>,
     pub extern_token: Token![extern],
     pub crate_token: Token![crate],
     pub ident: NodeId<Ident>,
@@ -124,7 +124,7 @@ pub struct ItemExternCrate {
 /// A free-standing function: `fn process(n: usize) -> Result<()> { ... }`.
 pub struct ItemFn {
     pub attrs: Vec<Attribute>,
-    pub vis: Visibility,
+    pub vis: NodeId<Visibility>,
     pub sig: Signature,
     pub block: Box<Block>,
 }
@@ -170,7 +170,7 @@ pub struct ItemMacro {
 /// A module or module declaration: `mod m` or `mod m { ... }`.
 pub struct ItemMod {
     pub attrs: Vec<Attribute>,
-    pub vis: Visibility,
+    pub vis: NodeId<Visibility>,
     pub unsafety: Option<Token![unsafe]>,
     pub mod_token: Token![mod],
     pub ident: NodeId<Ident>,
@@ -182,7 +182,7 @@ pub struct ItemMod {
 /// A static item: `static BIKE: Shed = Shed(42)`.
 pub struct ItemStatic {
     pub attrs: Vec<Attribute>,
-    pub vis: Visibility,
+    pub vis: NodeId<Visibility>,
     pub static_token: Token![static],
     pub mutability: StaticMutability,
     pub ident: NodeId<Ident>,
@@ -197,7 +197,7 @@ pub struct ItemStatic {
 /// A struct definition: `struct Foo<A> { x: A }`.
 pub struct ItemStruct {
     pub attrs: Vec<Attribute>,
-    pub vis: Visibility,
+    pub vis: NodeId<Visibility>,
     pub struct_token: Token![struct],
     pub ident: NodeId<Ident>,
     pub generics: Generics,
@@ -209,7 +209,7 @@ pub struct ItemStruct {
 /// A trait definition: `pub trait Iterator { ... }`.
 pub struct ItemTrait {
     pub attrs: Vec<Attribute>,
-    pub vis: Visibility,
+    pub vis: NodeId<Visibility>,
     pub unsafety: Option<Token![unsafe]>,
     pub auto_token: Option<Token![auto]>,
     pub trait_token: Token![trait],
@@ -225,7 +225,7 @@ pub struct ItemTrait {
 /// A trait alias: `pub trait SharableIterator = Iterator + Sync`.
 pub struct ItemTraitAlias {
     pub attrs: Vec<Attribute>,
-    pub vis: Visibility,
+    pub vis: NodeId<Visibility>,
     pub trait_token: Token![trait],
     pub ident: NodeId<Ident>,
     pub generics: Generics,
@@ -238,7 +238,7 @@ pub struct ItemTraitAlias {
 /// A type alias: `type Result<T> = std::result::Result<T, MyError>`.
 pub struct ItemType {
     pub attrs: Vec<Attribute>,
-    pub vis: Visibility,
+    pub vis: NodeId<Visibility>,
     pub type_token: Token![type],
     pub ident: NodeId<Ident>,
     pub generics: Generics,
@@ -251,7 +251,7 @@ pub struct ItemType {
 /// A union definition: `union Foo<A, B> { x: A, y: B }`.
 pub struct ItemUnion {
     pub attrs: Vec<Attribute>,
-    pub vis: Visibility,
+    pub vis: NodeId<Visibility>,
     pub union_token: Token![union],
     pub ident: NodeId<Ident>,
     pub generics: Generics,
@@ -262,7 +262,7 @@ pub struct ItemUnion {
 /// A use declaration: `use std::collections::HashMap`.
 pub struct ItemUse {
     pub attrs: Vec<Attribute>,
-    pub vis: Visibility,
+    pub vis: NodeId<Visibility>,
     pub use_token: Token![use],
     pub leading_colon: Option<Token![::]>,
     pub tree: UseTree,
@@ -369,7 +369,7 @@ pub enum ForeignItem {
 /// A foreign function in an `extern` block.
 pub struct ForeignItemFn {
     pub attrs: Vec<Attribute>,
-    pub vis: Visibility,
+    pub vis: NodeId<Visibility>,
     pub sig: Signature,
     pub semi_token: Token![;],
 }
@@ -378,7 +378,7 @@ pub struct ForeignItemFn {
 /// A foreign static item in an `extern` block: `static ext: u8`.
 pub struct ForeignItemStatic {
     pub attrs: Vec<Attribute>,
-    pub vis: Visibility,
+    pub vis: NodeId<Visibility>,
     pub static_token: Token![static],
     pub mutability: StaticMutability,
     pub ident: NodeId<Ident>,
@@ -391,7 +391,7 @@ pub struct ForeignItemStatic {
 /// A foreign type in an `extern` block: `type void`.
 pub struct ForeignItemType {
     pub attrs: Vec<Attribute>,
-    pub vis: Visibility,
+    pub vis: NodeId<Visibility>,
     pub type_token: Token![type],
     pub ident: NodeId<Ident>,
     pub generics: Generics,
@@ -491,7 +491,7 @@ pub enum ImplItem {
 /// An associated constant within an impl block.
 pub struct ImplItemConst {
     pub attrs: Vec<Attribute>,
-    pub vis: Visibility,
+    pub vis: NodeId<Visibility>,
     pub defaultness: Option<Token![default]>,
     pub const_token: Token![const],
     pub ident: NodeId<Ident>,
@@ -507,7 +507,7 @@ pub struct ImplItemConst {
 /// An associated function within an impl block.
 pub struct ImplItemFn {
     pub attrs: Vec<Attribute>,
-    pub vis: Visibility,
+    pub vis: NodeId<Visibility>,
     pub defaultness: Option<Token![default]>,
     pub sig: Signature,
     pub block: Block,
@@ -517,7 +517,7 @@ pub struct ImplItemFn {
 /// An associated type within an impl block.
 pub struct ImplItemType {
     pub attrs: Vec<Attribute>,
-    pub vis: Visibility,
+    pub vis: NodeId<Visibility>,
     pub defaultness: Option<Token![default]>,
     pub type_token: Token![type],
     pub ident: NodeId<Ident>,
@@ -634,12 +634,12 @@ pub(crate) fn parse_rest_of_item(
     input: ParseStream,
 ) -> Result<Item> {
     let ahead = input.fork();
-    let vis: Visibility = ahead.parse()?;
+    let vis: SpannedPat<Visibility> = ahead.parse_spanned_pat::<Visibility>()?;
 
     let lookahead = ahead.lookahead1();
     let allow_safe = false;
     let mut item = if lookahead.peek(Token![fn]) || peek_signature(&ahead, allow_safe) {
-        let vis: Visibility = input.parse()?;
+        let vis = input.parse_id::<Visibility>()?;
         let sig: Signature = input.parse()?;
         if input.peek(Token![;]) {
             input.parse::<Token![;]>()?;
@@ -672,7 +672,7 @@ pub(crate) fn parse_rest_of_item(
             None => Ok(Item::Verbatim(verbatim::between(&begin, input))),
         }
     } else if lookahead.peek(Token![static]) {
-        let vis = input.parse()?;
+        let vis = input.parse_id::<Visibility>()?;
         let static_token = input.parse()?;
         let mutability = input.parse()?;
         let ident = input.parse()?;
@@ -703,7 +703,7 @@ pub(crate) fn parse_rest_of_item(
             }
         }
     } else if lookahead.peek(Token![const]) {
-        let vis = input.parse()?;
+        let vis = input.parse_id::<Visibility>()?;
         let const_token: Token![const] = input.parse()?;
         let lookahead = input.lookahead1();
         let ident = if lookahead.peek_pat::<Ident>() || lookahead.peek(Token![_]) {
@@ -787,8 +787,11 @@ pub(crate) fn parse_rest_of_item(
         }
     } else if lookahead.peek(Token![macro]) {
         input.advance_to(&ahead);
+        let vis = input.parse_id::<Visibility>()?;
         parse_macro2(begin, vis, input)
-    } else if vis.is_inherited()
+    }
+    // We don't consider visibility variables to be inherited.
+    else if vis.get_property(Visibility::is_inherited, false)
         && (lookahead.peek_pat::<Ident>()
             || lookahead.peek(Token![self])
             || lookahead.peek(Token![super])
@@ -806,7 +809,7 @@ pub(crate) fn parse_rest_of_item(
 }
 
 struct FlexibleItemType {
-    vis: Visibility,
+    vis: NodeId<Visibility>,
     defaultness: Option<Token![default]>,
     type_token: Token![type],
     ident: NodeId<Ident>,
@@ -837,7 +840,7 @@ impl FlexibleItemType {
         allow_defaultness: TypeDefaultness,
         where_clause_location: WhereClauseLocation,
     ) -> Result<Self> {
-        let vis: Visibility = input.parse()?;
+        let vis = input.parse_id::<Visibility>()?;
         let defaultness: Option<Token![default]> = match allow_defaultness {
             TypeDefaultness::Optional => input.parse()?,
             TypeDefaultness::Disallowed => None,
@@ -947,7 +950,7 @@ impl Parse for ItemMacro {
     }
 }
 
-fn parse_macro2(begin: ParseBuffer, _vis: Visibility, input: ParseStream) -> Result<Item> {
+fn parse_macro2(begin: ParseBuffer, _vis: NodeId<Visibility>, input: ParseStream) -> Result<Item> {
     input.parse::<Token![macro]>()?;
     input.parse::<NodeId<Ident>>()?;
 
@@ -1011,7 +1014,7 @@ impl Parse for ItemUse {
 
 fn parse_item_use(input: ParseStream, allow_crate_root_in_path: bool) -> Result<Option<ItemUse>> {
     let attrs = input.call(Attribute::parse_outer)?;
-    let vis: Visibility = input.parse()?;
+    let vis = input.parse_id::<Visibility>()?;
     let use_token: Token![use] = input.parse()?;
     let leading_colon: Option<Token![::]> = input.parse()?;
     let tree = parse_use_tree(input, allow_crate_root_in_path && leading_colon.is_none())?;
@@ -1132,7 +1135,7 @@ impl Parse for ItemStatic {
 impl Parse for ItemConst {
     fn parse(input: ParseStream) -> Result<Self> {
         let attrs = input.call(Attribute::parse_outer)?;
-        let vis: Visibility = input.parse()?;
+        let vis = input.parse_id::<Visibility>()?;
         let const_token: Token![const] = input.parse()?;
 
         let lookahead = input.lookahead1();
@@ -1224,7 +1227,7 @@ fn parse_signature(input: ParseStream, allow_safe: bool) -> Result<Option<Signat
 impl Parse for ItemFn {
     fn parse(input: ParseStream) -> Result<Self> {
         let outer_attrs = input.call(Attribute::parse_outer)?;
-        let vis: Visibility = input.parse()?;
+        let vis = input.parse_id::<Visibility>()?;
         let sig: Signature = input.parse()?;
         parse_rest_of_fn(input, outer_attrs, vis, sig)
     }
@@ -1233,7 +1236,7 @@ impl Parse for ItemFn {
 fn parse_rest_of_fn(
     input: ParseStream,
     mut attrs: Vec<Attribute>,
-    vis: Visibility,
+    vis: NodeId<Visibility>,
     sig: Signature,
 ) -> Result<ItemFn> {
     let content;
@@ -1405,7 +1408,7 @@ fn parse_fn_args(input: ParseStream) -> Result<(Punctuated<FnArg, Token![,]>, Op
 impl Parse for ItemMod {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut attrs = input.call(Attribute::parse_outer)?;
-        let vis: Visibility = input.parse()?;
+        let vis = input.parse_id::<Visibility>()?;
         let unsafety: Option<Token![unsafe]> = input.parse()?;
         let mod_token: Token![mod] = input.parse()?;
         let ident: NodeId<Ident> = if input.peek(Token![try]) {
@@ -1479,12 +1482,12 @@ impl Parse for ForeignItem {
         let begin = input.fork();
         let mut attrs = input.call(Attribute::parse_outer)?;
         let ahead = input.fork();
-        let vis: Visibility = ahead.parse()?;
+        let vis: SpannedPat<Visibility> = ahead.parse_spanned_pat::<Visibility>()?;
 
         let lookahead = ahead.lookahead1();
         let allow_safe = true;
         let mut item = if lookahead.peek(Token![fn]) || peek_signature(&ahead, allow_safe) {
-            let vis: Visibility = input.parse()?;
+            let vis = input.parse_id::<Visibility>()?;
             let sig = parse_signature(input, allow_safe)?;
             let has_safe = sig.is_none();
             let has_body = input.peek(token::Brace);
@@ -1511,7 +1514,7 @@ impl Parse for ForeignItem {
             || ((ahead.peek(Token![unsafe]) || token::peek_keyword(ahead.cursor(), "safe"))
                 && ahead.peek2(Token![static]))
         {
-            let vis = input.parse()?;
+            let vis = input.parse_id::<Visibility>()?;
             let unsafety: Option<Token![unsafe]> = input.parse()?;
             let safe = unsafety.is_none() && token::peek_keyword(input.cursor(), "safe");
             if safe {
@@ -1544,7 +1547,7 @@ impl Parse for ForeignItem {
             }
         } else if lookahead.peek(Token![type]) {
             parse_foreign_item_type(begin, input)
-        } else if vis.is_inherited()
+        } else if vis.get_property(Visibility::is_inherited, false)
             && (lookahead.peek_pat::<Ident>()
                 || lookahead.peek(Token![self])
                 || lookahead.peek(Token![super])
@@ -1573,7 +1576,7 @@ impl Parse for ForeignItem {
 impl Parse for ForeignItemFn {
     fn parse(input: ParseStream) -> Result<Self> {
         let attrs = input.call(Attribute::parse_outer)?;
-        let vis: Visibility = input.parse()?;
+        let vis = input.parse_id::<Visibility>()?;
         let sig: Signature = input.parse()?;
         let semi_token: Token![;] = input.parse()?;
         Ok(ForeignItemFn {
@@ -1721,7 +1724,7 @@ fn parse_item_type(begin: ParseBuffer, input: ParseStream) -> Result<Item> {
 impl Parse for ItemStruct {
     fn parse(input: ParseStream) -> Result<Self> {
         let attrs = input.call(Attribute::parse_outer)?;
-        let vis = input.parse::<Visibility>()?;
+        let vis = input.parse_id::<Visibility>()?;
         let struct_token = input.parse::<Token![struct]>()?;
         let ident = input.parse_id::<Ident>()?;
         let generics = input.parse::<Generics>()?;
@@ -1744,7 +1747,7 @@ impl Parse for ItemStruct {
 impl Parse for ItemEnum {
     fn parse(input: ParseStream) -> Result<Self> {
         let attrs = input.call(Attribute::parse_outer)?;
-        let vis = input.parse::<Visibility>()?;
+        let vis = input.parse_id::<Visibility>()?;
         let enum_token = input.parse::<Token![enum]>()?;
         let ident = input.parse_id::<Ident>()?;
         let generics = input.parse::<Generics>()?;
@@ -1767,7 +1770,7 @@ impl Parse for ItemEnum {
 impl Parse for ItemUnion {
     fn parse(input: ParseStream) -> Result<Self> {
         let attrs = input.call(Attribute::parse_outer)?;
-        let vis = input.parse::<Visibility>()?;
+        let vis = input.parse_id::<Visibility>()?;
         let union_token = input.parse::<Token![union]>()?;
         let ident = input.parse_id::<Ident>()?;
         let generics = input.parse::<Generics>()?;
@@ -1814,7 +1817,7 @@ fn parse_trait_or_trait_alias(input: ParseStream) -> Result<Item> {
 impl Parse for ItemTrait {
     fn parse(input: ParseStream) -> Result<Self> {
         let outer_attrs = input.call(Attribute::parse_outer)?;
-        let vis: Visibility = input.parse()?;
+        let vis = input.parse_id::<Visibility>()?;
         let unsafety: Option<Token![unsafe]> = input.parse()?;
         let auto_token: Option<Token![auto]> = input.parse()?;
         let trait_token: Token![trait] = input.parse()?;
@@ -1837,7 +1840,7 @@ impl Parse for ItemTrait {
 fn parse_rest_of_trait(
     input: ParseStream,
     mut attrs: Vec<Attribute>,
-    vis: Visibility,
+    vis: NodeId<Visibility>,
     unsafety: Option<Token![unsafe]>,
     auto_token: Option<Token![auto]>,
     trait_token: Token![trait],
@@ -1901,13 +1904,13 @@ fn parse_start_of_trait_alias(
     input: ParseStream,
 ) -> Result<(
     Vec<Attribute>,
-    Visibility,
+    NodeId<Visibility>,
     Token![trait],
     NodeId<Ident>,
     Generics,
 )> {
     let attrs = input.call(Attribute::parse_outer)?;
-    let vis: Visibility = input.parse()?;
+    let vis = input.parse_id::<Visibility>()?;
     let trait_token: Token![trait] = input.parse()?;
     let ident: NodeId<Ident> = input.parse()?;
     let generics: Generics = input.parse()?;
@@ -1917,7 +1920,7 @@ fn parse_start_of_trait_alias(
 fn parse_rest_of_trait_alias(
     input: ParseStream,
     attrs: Vec<Attribute>,
-    vis: Visibility,
+    vis: NodeId<Visibility>,
     trait_token: Token![trait],
     ident: NodeId<Ident>,
     mut generics: Generics,
@@ -1959,7 +1962,7 @@ impl Parse for TraitItem {
     fn parse(input: ParseStream) -> Result<Self> {
         let begin = input.fork();
         let mut attrs = input.call(Attribute::parse_outer)?;
-        let vis: Visibility = input.parse()?;
+        let vis: SpannedPat<Visibility> = input.parse_spanned_pat::<Visibility>()?;
         let defaultness: Option<Token![default]> = input.parse()?;
         let ahead = input.fork();
 
@@ -2009,7 +2012,7 @@ impl Parse for TraitItem {
             }
         } else if lookahead.peek(Token![type]) {
             parse_trait_item_type(begin.fork(), input)
-        } else if vis.is_inherited()
+        } else if vis.get_property(Visibility::is_inherited, false)
             && defaultness.is_none()
             && (lookahead.peek_pat::<Ident>()
                 || lookahead.peek(Token![self])
@@ -2022,8 +2025,8 @@ impl Parse for TraitItem {
             Err(lookahead.error())
         }?;
 
-        match (vis, defaultness) {
-            (Visibility::Inherited, None) => {}
+        match (&*vis, defaultness) {
+            (Pattern::Real(Visibility::Inherited), None) => {}
             _ => return Ok(TraitItem::Verbatim(verbatim::between(&begin, input))),
         }
 
@@ -2144,7 +2147,14 @@ fn parse_trait_item_type(begin: ParseBuffer, input: ParseStream) -> Result<Trait
         WhereClauseLocation::AfterEq,
     )?;
 
-    if vis.is_some() {
+    // We consider visibility variables to be explicit.
+    let vis_explicit = input
+        .ctx()
+        .get(vis)
+        .real()
+        .map(|vis: &&Visibility| vis.is_some())
+        .unwrap_or(true);
+    if vis_explicit {
         Ok(TraitItem::Verbatim(verbatim::between(&begin, input)))
     } else {
         Ok(TraitItem::Type(TraitItemType {
@@ -2186,7 +2196,10 @@ impl Parse for ItemImpl {
 
 fn parse_impl(input: ParseStream, allow_verbatim_impl: bool) -> Result<Option<ItemImpl>> {
     let mut attrs = input.call(Attribute::parse_outer)?;
-    let has_visibility = allow_verbatim_impl && input.parse::<Visibility>()?.is_some();
+    let has_visibility = allow_verbatim_impl
+        && input
+            .parse_spanned_pat::<Visibility>()?
+            .get_property(Visibility::is_some, true);
     let defaultness: Option<Token![default]> = input.parse()?;
     let unsafety: Option<Token![unsafe]> = input.parse()?;
     let impl_token: Token![impl] = input.parse()?;
@@ -2296,7 +2309,7 @@ impl Parse for ImplItem {
         let begin = input.fork();
         let mut attrs = input.call(Attribute::parse_outer)?;
         let ahead = input.fork();
-        let vis: Visibility = ahead.parse()?;
+        let vis: SpannedPat<Visibility> = ahead.parse_spanned_pat::<Visibility>()?;
 
         let mut lookahead = ahead.lookahead1();
         let defaultness = if lookahead.peek(Token![default]) && !ahead.peek2(Token![!]) {
@@ -2316,7 +2329,8 @@ impl Parse for ImplItem {
                 Ok(ImplItem::Verbatim(verbatim::between(&begin, input)))
             }
         } else if lookahead.peek(Token![const]) {
-            input.advance_to(&ahead);
+            let vis = input.parse_id::<Visibility>()?;
+            let defaultness: Option<Token![default]> = input.parse()?;
             let const_token: Token![const] = input.parse()?;
             let lookahead = input.lookahead1();
             let ident = if lookahead.peek_pat::<Ident>() || lookahead.peek(Token![_]) {
@@ -2357,7 +2371,7 @@ impl Parse for ImplItem {
             };
         } else if lookahead.peek(Token![type]) {
             parse_impl_item_type(begin, input)
-        } else if vis.is_inherited()
+        } else if vis.get_property(Visibility::is_inherited, false)
             && defaultness.is_none()
             && (lookahead.peek_pat::<Ident>()
                 || lookahead.peek(Token![self])
@@ -2389,7 +2403,7 @@ impl Parse for ImplItem {
 impl Parse for ImplItemConst {
     fn parse(input: ParseStream) -> Result<Self> {
         let attrs = input.call(Attribute::parse_outer)?;
-        let vis: Visibility = input.parse()?;
+        let vis = input.parse_id::<Visibility>()?;
         let defaultness: Option<Token![default]> = input.parse()?;
         let const_token: Token![const] = input.parse()?;
 
@@ -2431,7 +2445,7 @@ impl Parse for ImplItemFn {
 
 fn parse_impl_item_fn(input: ParseStream, allow_omitted_body: bool) -> Result<Option<ImplItemFn>> {
     let mut attrs = input.call(Attribute::parse_outer)?;
-    let vis: Visibility = input.parse()?;
+    let vis = input.parse_id::<Visibility>()?;
     let defaultness: Option<Token![default]> = input.parse()?;
     let sig: Signature = input.parse()?;
 
@@ -2462,7 +2476,7 @@ fn parse_impl_item_fn(input: ParseStream, allow_omitted_body: bool) -> Result<Op
 impl Parse for ImplItemType {
     fn parse(input: ParseStream) -> Result<Self> {
         let attrs = input.call(Attribute::parse_outer)?;
-        let vis: Visibility = input.parse()?;
+        let vis = input.parse_id::<Visibility>()?;
         let defaultness: Option<Token![default]> = input.parse()?;
         let type_token: Token![type] = input.parse()?;
         let ident: NodeId<Ident> = input.parse()?;

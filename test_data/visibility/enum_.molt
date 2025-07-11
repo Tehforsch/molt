@@ -1,0 +1,8 @@
+let vis: Visibility;
+let ident: Ident;
+
+let pattern: Item = {
+    $vis enum $ident {
+        Variant,
+    }
+};
