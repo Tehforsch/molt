@@ -86,6 +86,7 @@ impl<'a> Transform<'a> {
         self.write_code_to_file(new_code)?;
         let mut cmd = std::process::Command::new("cargo");
         cmd.arg("check");
+        cmd.arg("--all-targets");
         if let Some(root) = self.cargo_root {
             cmd.current_dir(root);
         }
