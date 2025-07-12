@@ -6,7 +6,6 @@ use molt_lib::CmpSyn;
 use crate::drops::{NoDrop, TrivialDrop};
 use crate::error::Result;
 use crate::parse::{Parse, ParseStream};
-use crate::token::Token;
 
 /// **A punctuated sequence of syntax tree nodes of type `T` separated by
 /// punctuation of type `P`.**
@@ -44,11 +43,6 @@ impl<T, P> Punctuated<T, P> {
         self.iter().next()
     }
 
-    /// Mutably borrows the first element in this sequence.
-    pub fn first_mut(&mut self) -> Option<&mut T> {
-        self.iter_mut().next()
-    }
-
     /// Borrows the last element in this sequence.
     pub fn last(&self) -> Option<&T> {
         self.iter().next_back()
@@ -57,29 +51,6 @@ impl<T, P> Punctuated<T, P> {
     /// Mutably borrows the last element in this sequence.
     pub fn last_mut(&mut self) -> Option<&mut T> {
         self.iter_mut().next_back()
-    }
-
-    /// Borrows the element at the given index.
-    pub fn get(&self, index: usize) -> Option<&T> {
-        if let Some((value, _punct)) = self.inner.get(index) {
-            Some(value)
-        } else if index == self.inner.len() {
-            self.last.as_deref()
-        } else {
-            None
-        }
-    }
-
-    /// Mutably borrows the element at the given index.
-    pub fn get_mut(&mut self, index: usize) -> Option<&mut T> {
-        let inner_len = self.inner.len();
-        if let Some((value, _punct)) = self.inner.get_mut(index) {
-            Some(value)
-        } else if index == inner_len {
-            self.last.as_deref_mut()
-        } else {
-            None
-        }
     }
 
     /// Returns an iterator over borrowed syntax tree nodes of type `&T`.
@@ -94,30 +65,12 @@ impl<T, P> Punctuated<T, P> {
 
     /// Returns an iterator over mutably borrowed syntax tree nodes of type
     /// `&mut T`.
-    pub fn iter_mut(&mut self) -> IterMut<T> {
+    fn iter_mut(&mut self) -> IterMut<T> {
         IterMut {
             inner: Box::new(NoDrop::new(PrivateIterMut {
                 inner: self.inner.iter_mut(),
                 last: self.last.as_mut().map(Box::as_mut).into_iter(),
             })),
-        }
-    }
-
-    /// Returns an iterator over the contents of this sequence as borrowed
-    /// punctuated pairs.
-    pub fn pairs(&self) -> Pairs<T, P> {
-        Pairs {
-            inner: self.inner.iter(),
-            last: self.last.as_ref().map(Box::as_ref).into_iter(),
-        }
-    }
-
-    /// Returns an iterator over the contents of this sequence as mutably
-    /// borrowed punctuated pairs.
-    pub fn pairs_mut(&mut self) -> PairsMut<T, P> {
-        PairsMut {
-            inner: self.inner.iter_mut(),
-            last: self.last.as_mut().map(Box::as_mut).into_iter(),
         }
     }
 
@@ -178,18 +131,6 @@ impl<T, P> Punctuated<T, P> {
         }
     }
 
-    /// Removes the trailing punctuation from this punctuated sequence, or
-    /// `None` if there isn't any.
-    pub fn pop_punct(&mut self) -> Option<P> {
-        if self.last.is_some() {
-            None
-        } else {
-            let (t, p) = self.inner.pop()?;
-            self.last = Some(Box::new(t));
-            Some(p)
-        }
-    }
-
     /// Determines whether this punctuated sequence ends with a trailing
     /// punctuation.
     pub fn trailing_punct(&self) -> bool {
@@ -219,47 +160,6 @@ impl<T, P> Punctuated<T, P> {
         self.push_value(value);
     }
 
-    /// Inserts an element at position `index`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `index` is greater than the number of elements previously in
-    /// this punctuated sequence.
-    pub fn insert(&mut self, index: usize, value: T)
-    where
-        P: Default,
-    {
-        assert!(
-            index <= self.len(),
-            "Punctuated::insert: index out of range",
-        );
-
-        if index == self.len() {
-            self.push(value);
-        } else {
-            self.inner.insert(index, (value, Default::default()));
-        }
-    }
-
-    /// Clears the sequence of all values and punctuation, making it empty.
-    pub fn clear(&mut self) {
-        self.inner.clear();
-        self.last = None;
-    }
-
-    /// Parses zero or more occurrences of `T` separated by punctuation of type
-    /// `P`, with optional trailing punctuation.
-    ///
-    /// Parsing continues until the end of this parse stream. The entire content
-    /// of this parse stream must consist of `T` and `P`.
-    pub fn parse_terminated(input: ParseStream) -> Result<Self>
-    where
-        T: Parse,
-        P: Parse,
-    {
-        Self::parse_terminated_with(input, T::parse)
-    }
-
     /// Parses zero or more occurrences of `T` using the given parse function,
     /// separated by punctuation of type `P`, with optional trailing
     /// punctuation.
@@ -284,51 +184,6 @@ impl<T, P> Punctuated<T, P> {
             let value = parser(input)?;
             punctuated.push_value(value);
             if input.is_empty() {
-                break;
-            }
-            let punct = input.parse()?;
-            punctuated.push_punct(punct);
-        }
-
-        Ok(punctuated)
-    }
-
-    /// Parses one or more occurrences of `T` separated by punctuation of type
-    /// `P`, not accepting trailing punctuation.
-    ///
-    /// Parsing continues as long as punctuation `P` is present at the head of
-    /// the stream. This method returns upon parsing a `T` and observing that it
-    /// is not followed by a `P`, even if there are remaining tokens in the
-    /// stream.
-    pub fn parse_separated_nonempty(input: ParseStream) -> Result<Self>
-    where
-        T: Parse,
-        P: Token + Parse,
-    {
-        Self::parse_separated_nonempty_with(input, T::parse)
-    }
-
-    /// Parses one or more occurrences of `T` using the given parse function,
-    /// separated by punctuation of type `P`, not accepting trailing
-    /// punctuation.
-    ///
-    /// Like [`parse_separated_nonempty`], may complete early without parsing
-    /// the entire content of this stream.
-    ///
-    /// [`parse_separated_nonempty`]: Punctuated::parse_separated_nonempty
-    pub fn parse_separated_nonempty_with<'a>(
-        input: ParseStream<'a>,
-        parser: fn(ParseStream<'a>) -> Result<T>,
-    ) -> Result<Self>
-    where
-        P: Token + Parse,
-    {
-        let mut punctuated = Punctuated::new();
-
-        loop {
-            let value = parser(input)?;
-            punctuated.push_value(value);
-            if !P::peek(input.cursor()) {
                 break;
             }
             let punct = input.parse()?;
@@ -436,96 +291,6 @@ impl<'a, T, P> IntoIterator for &'a mut Punctuated<T, P> {
 impl<T, P> Default for Punctuated<T, P> {
     fn default() -> Self {
         Punctuated::new()
-    }
-}
-
-/// An iterator over borrowed pairs of type `Pair<&T, &P>`.
-///
-/// Refer to the [module documentation] for details about punctuated sequences.
-///
-/// [module documentation]: self
-pub struct Pairs<'a, T: 'a, P: 'a> {
-    inner: slice::Iter<'a, (T, P)>,
-    last: option::IntoIter<&'a T>,
-}
-
-impl<'a, T, P> Iterator for Pairs<'a, T, P> {
-    type Item = Pair<&'a T, &'a P>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner
-            .next()
-            .map(|(t, p)| Pair::Punctuated(t, p))
-            .or_else(|| self.last.next().map(Pair::End))
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.len(), Some(self.len()))
-    }
-}
-
-impl<'a, T, P> DoubleEndedIterator for Pairs<'a, T, P> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        self.last
-            .next()
-            .map(Pair::End)
-            .or_else(|| self.inner.next_back().map(|(t, p)| Pair::Punctuated(t, p)))
-    }
-}
-
-impl<'a, T, P> ExactSizeIterator for Pairs<'a, T, P> {
-    fn len(&self) -> usize {
-        self.inner.len() + self.last.len()
-    }
-}
-
-// No Clone bound on T or P.
-impl<'a, T, P> Clone for Pairs<'a, T, P> {
-    fn clone(&self) -> Self {
-        Pairs {
-            inner: self.inner.clone(),
-            last: self.last.clone(),
-        }
-    }
-}
-
-/// An iterator over mutably borrowed pairs of type `Pair<&mut T, &mut P>`.
-///
-/// Refer to the [module documentation] for details about punctuated sequences.
-///
-/// [module documentation]: self
-pub struct PairsMut<'a, T: 'a, P: 'a> {
-    inner: slice::IterMut<'a, (T, P)>,
-    last: option::IntoIter<&'a mut T>,
-}
-
-impl<'a, T, P> Iterator for PairsMut<'a, T, P> {
-    type Item = Pair<&'a mut T, &'a mut P>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner
-            .next()
-            .map(|(t, p)| Pair::Punctuated(t, p))
-            .or_else(|| self.last.next().map(Pair::End))
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.len(), Some(self.len()))
-    }
-}
-
-impl<'a, T, P> DoubleEndedIterator for PairsMut<'a, T, P> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        self.last
-            .next()
-            .map(Pair::End)
-            .or_else(|| self.inner.next_back().map(|(t, p)| Pair::Punctuated(t, p)))
-    }
-}
-
-impl<'a, T, P> ExactSizeIterator for PairsMut<'a, T, P> {
-    fn len(&self) -> usize {
-        self.inner.len() + self.last.len()
     }
 }
 
@@ -830,20 +595,6 @@ impl<T, P> Pair<T, P> {
     /// Extracts the syntax tree node from this punctuated pair, discarding the
     /// following punctuation.
     pub fn into_value(self) -> T {
-        match self {
-            Pair::Punctuated(t, _) | Pair::End(t) => t,
-        }
-    }
-
-    /// Borrows the syntax tree node from this punctuated pair.
-    pub fn value(&self) -> &T {
-        match self {
-            Pair::Punctuated(t, _) | Pair::End(t) => t,
-        }
-    }
-
-    /// Mutably borrows the syntax tree node from this punctuated pair.
-    pub fn value_mut(&mut self) -> &mut T {
         match self {
             Pair::Punctuated(t, _) | Pair::End(t) => t,
         }

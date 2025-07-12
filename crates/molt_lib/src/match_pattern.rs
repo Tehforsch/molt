@@ -9,7 +9,7 @@ use crate::{
     SetMatchingMode, Single, SingleMatchingMode, VarDecl,
 };
 
-pub type MatchId = usize;
+type MatchId = usize;
 
 #[derive(Clone, Debug)]
 struct Comparison {
@@ -45,8 +45,8 @@ impl Fork {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Binding {
-    pub pat: Option<Id>,
-    pub ast: Option<Id>,
+    pat: Option<Id>,
+    ast: Option<Id>,
 }
 
 impl Binding {
@@ -244,7 +244,7 @@ impl Matcher {
         todo!()
     }
 
-    pub fn check(&mut self, val: bool) {
+    fn check(&mut self, val: bool) {
         if !val {
             self.valid = false;
         }
@@ -254,7 +254,7 @@ impl Matcher {
         self.check(t1 == t2)
     }
 
-    pub fn same<T>(&mut self, t1: &Option<T>, t2: &Option<T>) {
+    fn same<T>(&mut self, t1: &Option<T>, t2: &Option<T>) {
         self.check(t1.is_some() == t2.is_some())
     }
 

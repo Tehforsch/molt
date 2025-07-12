@@ -19,9 +19,9 @@ pub enum TransformError {
 }
 
 #[derive(Debug)]
-pub struct Transformation {
-    pub span: Span,
-    pub new_code: String,
+struct Transformation {
+    span: Span,
+    new_code: String,
 }
 
 pub struct Transform<'a> {
@@ -106,7 +106,7 @@ impl<'a> Transform<'a> {
 }
 
 impl Transformation {
-    pub fn apply(&self, mut code: String) -> String {
+    fn apply(&self, mut code: String) -> String {
         let range = self.span.byte_range();
         code.replace_range(range, &self.new_code);
         code

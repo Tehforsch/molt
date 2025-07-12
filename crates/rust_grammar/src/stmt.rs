@@ -24,7 +24,7 @@ pub struct Block {
     pub stmts: NodeList<Stmt, Token![;]>,
 }
 
-pub struct StmtAllowNoSemi;
+struct StmtAllowNoSemi;
 
 #[derive(Debug, CmpSyn)]
 /// A statement, usually ending in a semicolon.

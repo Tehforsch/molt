@@ -111,7 +111,7 @@ use crate::{attr, classify, token, verbatim};
 /// `return (0..(S {}))` implying tighter precedence for struct init than
 /// `..`, while the latter parses as `match (0..S) {}` implying tighter
 /// precedence for `..` than struct init, a contradiction.
-pub struct ExprNoEagerBrace;
+struct ExprNoEagerBrace;
 
 /// An alternative to the primary `Expr::parse` parser (from the [`Parse`]
 /// trait) for syntactic positions in which expression boundaries are placed
@@ -681,7 +681,7 @@ pub struct ExprYield {
 }
 
 impl Expr {
-    pub const PLACEHOLDER: Self = Expr::Path(ExprPath {
+    const PLACEHOLDER: Self = Expr::Path(ExprPath {
         attrs: Vec::new(),
         qself: None,
         path: Path {
@@ -700,7 +700,7 @@ impl Expr {
     /// required to be continued as a return value, such as `return <Struct as
     /// Trait>::CONST`. Meanwhile `return > …` treats the `>` as a binary
     /// operator because it cannot be a starting token for any Rust expression.
-    pub fn peek(input: ParseStream) -> bool {
+    fn peek(input: ParseStream) -> bool {
         input.peek_var::<Expr> ()
             || input.peek_pat::<AnyIdent>() && !input.peek(Token![as]) // value name or keyword
             || input.peek(token::Paren) // tuple
@@ -922,7 +922,7 @@ pub enum PointerMutability {
 //
 // Struct literals are ambiguous in certain positions
 // https://github.com/rust-lang/rfcs/pull/92
-pub(super) struct AllowStruct(pub bool);
+pub(super) struct AllowStruct(bool);
 
 // By default, the `parse_pat` function on `ParseStream` will
 // automatically check if the input contains a variable and parse

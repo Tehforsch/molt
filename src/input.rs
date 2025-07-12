@@ -37,7 +37,7 @@ pub struct Contents {
     line_starts: Vec<usize>,
 }
 
-pub struct RustSourceFile(SourceFile);
+struct RustSourceFile(SourceFile);
 
 pub enum MoltSource {
     FromCli(Contents),
@@ -199,7 +199,7 @@ pub fn line_starts(source: &str) -> impl '_ + Iterator<Item = usize> {
 }
 
 impl RustSourceFile {
-    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, crate::Error> {
+    fn new<P: AsRef<Path>>(path: P) -> Result<Self, crate::Error> {
         Ok(RustSourceFile(SourceFile::from_path(path.as_ref())?))
     }
 }

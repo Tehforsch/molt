@@ -1,7 +1,3 @@
-use std::cmp::Ordering;
-use std::fmt::{self, Display};
-use std::hash::{Hash, Hasher};
-
 use molt_lib::{CmpSyn, Matcher};
 use proc_macro2::{Ident, Span};
 
@@ -23,83 +19,6 @@ use crate::parse::{Parse, ParseStream};
 pub struct Lifetime {
     pub apostrophe: Span,
     pub ident: Ident,
-}
-
-impl Lifetime {
-    /// # Panics
-    ///
-    /// Panics if the lifetime does not conform to the bulleted rules above.
-    pub fn new(symbol: &str, span: Span) -> Self {
-        if !symbol.starts_with('\'') {
-            panic!("lifetime name must start with apostrophe as in \"'a\", got {symbol:?}",);
-        }
-
-        if symbol == "'" {
-            panic!("lifetime name must not be empty");
-        }
-
-        if !crate::ident::xid_ok(&symbol[1..]) {
-            panic!("{symbol:?} is not a valid lifetime name");
-        }
-
-        Lifetime {
-            apostrophe: span,
-            ident: Ident::new(&symbol[1..], span),
-        }
-    }
-
-    pub fn span(&self) -> Span {
-        self.apostrophe
-            .join(self.ident.span())
-            .unwrap_or(self.apostrophe)
-    }
-
-    pub fn set_span(&mut self, span: Span) {
-        self.apostrophe = span;
-        self.ident.set_span(span);
-    }
-}
-
-impl Display for Lifetime {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        "'".fmt(formatter)?;
-        self.ident.fmt(formatter)
-    }
-}
-
-impl Clone for Lifetime {
-    fn clone(&self) -> Self {
-        Lifetime {
-            apostrophe: self.apostrophe,
-            ident: self.ident.clone(),
-        }
-    }
-}
-
-impl PartialEq for Lifetime {
-    fn eq(&self, other: &Lifetime) -> bool {
-        self.ident.eq(&other.ident)
-    }
-}
-
-impl Eq for Lifetime {}
-
-impl PartialOrd for Lifetime {
-    fn partial_cmp(&self, other: &Lifetime) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Lifetime {
-    fn cmp(&self, other: &Lifetime) -> Ordering {
-        self.ident.cmp(&other.ident)
-    }
-}
-
-impl Hash for Lifetime {
-    fn hash<H: Hasher>(&self, h: &mut H) {
-        self.ident.hash(h);
-    }
 }
 
 #[doc(hidden)]

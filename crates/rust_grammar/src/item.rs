@@ -590,12 +590,6 @@ pub struct Receiver {
     pub ty: Option<NodeId<Type>>,
 }
 
-impl Receiver {
-    pub fn lifetime(&self) -> Option<&Lifetime> {
-        self.reference.as_ref()?.1.as_ref()
-    }
-}
-
 #[derive(Debug, CmpSyn)]
 /// The variadic argument of a foreign function.
 pub struct Variadic {

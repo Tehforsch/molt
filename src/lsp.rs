@@ -195,7 +195,7 @@ impl RealLspClient {
         Err("Timeout waiting for progress completion".into())
     }
 
-    pub fn initialize(&mut self, root_path: &Path) -> Result<()> {
+    fn initialize(&mut self, root_path: &Path) -> Result<()> {
         let root_uri = Url::from_file_path(root_path.canonicalize().unwrap())
             .map_err(|_| "Invalid file path")?;
         let initialization_options = serde_json::json!({
@@ -241,7 +241,7 @@ impl RealLspClient {
         Ok(())
     }
 
-    pub fn did_open(&mut self, file_path: &Path, content: &str) -> Result<()> {
+    fn did_open(&mut self, file_path: &Path, content: &str) -> Result<()> {
         let canonical_path = file_path.canonicalize()?;
 
         if self.opened_files.contains(&canonical_path) {
@@ -265,7 +265,7 @@ impl RealLspClient {
         Ok(())
     }
 
-    pub fn get_type_at_range(&mut self, file_path: &Path, range: Range) -> Result<Option<LspType>> {
+    fn get_type_at_range(&mut self, file_path: &Path, range: Range) -> Result<Option<LspType>> {
         let uri = Url::from_file_path(file_path.canonicalize().unwrap())
             .map_err(|_| "Invalid file path")?;
         // rust-analyzer supports passing ranges instead of

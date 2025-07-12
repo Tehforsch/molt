@@ -90,7 +90,7 @@ impl<T, P> List<T, P> {
 }
 
 impl<T, P> Set<T, P> {
-    pub fn new(items: Vec<NodeId<T>>, mode: SetMatchingMode) -> Self {
+    fn new(items: Vec<NodeId<T>>, mode: SetMatchingMode) -> Self {
         Self {
             items,
             mode,
@@ -106,15 +106,15 @@ impl<T, P> Set<T, P> {
         &self.items
     }
 
-    pub fn len(&self) -> usize {
+    fn len(&self) -> usize {
         self.items.len()
     }
 
-    pub fn is_empty(&self) -> bool {
+    fn is_empty(&self) -> bool {
         self.items.is_empty()
     }
 
-    pub fn get(&self, idx: usize) -> Option<&NodeId<T>> {
+    fn get(&self, idx: usize) -> Option<&NodeId<T>> {
         self.items.get(idx)
     }
 }
@@ -157,7 +157,7 @@ impl<T, P> RealNodeList<T, P> {
         }
     }
 
-    pub fn empty() -> Self {
+    fn empty() -> Self {
         Self {
             items: vec![],
             _marker: PhantomData,
@@ -168,15 +168,15 @@ impl<T, P> RealNodeList<T, P> {
         self.items.iter()
     }
 
-    pub fn len(&self) -> usize {
+    fn len(&self) -> usize {
         self.items.len()
     }
 
-    pub fn is_empty(&self) -> bool {
+    fn is_empty(&self) -> bool {
         self.items.is_empty()
     }
 
-    pub fn get(&self, idx: usize) -> Option<&NodeId<T>> {
+    fn get(&self, idx: usize) -> Option<&NodeId<T>> {
         self.items.get(idx)
     }
 

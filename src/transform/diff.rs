@@ -5,7 +5,7 @@ use similar::{ChangeTag, TextDiff};
 use crate::transform::Transformation;
 
 #[derive(Clone)]
-pub enum Color {
+enum Color {
     Red,
     Green,
     Cyan,
@@ -26,17 +26,17 @@ impl Color {
 }
 
 #[derive(Clone)]
-pub struct ColoredText {
+struct ColoredText {
     text: String,
     color: Color,
 }
 
 impl ColoredText {
-    pub fn new(text: String, color: Color) -> Self {
+    fn new(text: String, color: Color) -> Self {
         Self { text, color }
     }
 
-    pub fn print(&self, colorized: bool) -> String {
+    fn print(&self, colorized: bool) -> String {
         if colorized && !matches!(self.color, Color::None) {
             const RESET: &str = "\x1b[0m";
             format!("{}{}{}", self.color.to_ansi(), self.text, RESET)
@@ -46,7 +46,7 @@ impl ColoredText {
     }
 }
 
-pub const NUM_LINES_CONTEXT: usize = 4;
+const NUM_LINES_CONTEXT: usize = 4;
 
 impl Transformation {
     pub fn get_diff(&self, old_code: &str, filename: &Path, colorized: bool) -> String {
@@ -65,7 +65,7 @@ impl Transformation {
     }
 }
 
-pub fn format_diff(diff: TextDiff<str>, filename: &Path, colorized: bool) -> String {
+fn format_diff(diff: TextDiff<str>, filename: &Path, colorized: bool) -> String {
     let mut output = String::new();
 
     let header = ColoredText::new(format!("--- {}\n", filename.to_string_lossy()), Color::Bold);

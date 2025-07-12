@@ -20,11 +20,10 @@ use molt_grammar::{Command, MatchCommand, MoltFile, TransformCommand, Unresolved
 use molt_lib::{Config, Id, Match, MatchCtx, MatchPatternData, ParsingMode};
 use rust_grammar::Node;
 
-pub struct RustFile;
+struct RustFile;
 
 type Ctx = molt_lib::Ctx<Node>;
-pub type PatCtx = Ctx;
-pub type AstCtx = Ctx;
+type PatCtx = Ctx;
 
 fn match_pattern_data<'a>(
     input: &'a Input,
@@ -40,9 +39,9 @@ fn match_pattern_data<'a>(
 }
 
 pub(crate) struct MatchResult<'a> {
-    pub matches: Vec<Match>,
-    pub ctx: MatchCtx<'a, Node>,
-    pub var: Id,
+    matches: Vec<Match>,
+    ctx: MatchCtx<'a, Node>,
+    var: Id,
 }
 
 impl MoltFile {

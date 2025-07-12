@@ -4,7 +4,6 @@ mod group;
 #[macro_use]
 pub mod token;
 mod attr;
-pub use proc_macro2::Span;
 mod bigint;
 pub mod buffer;
 mod classify;
@@ -37,7 +36,7 @@ mod pat;
 pub use pat::{Pat, PatMulti};
 mod path;
 mod precedence;
-pub mod punctuated;
+mod punctuated;
 mod restriction;
 pub use crate::restriction::Visibility;
 mod sealed;

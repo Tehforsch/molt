@@ -1,6 +1,6 @@
 use syn::{GenericArgument, PathArguments, Type};
 
-pub fn type_path_matches(ty: &Type, name: &str) -> bool {
+fn type_path_matches(ty: &Type, name: &str) -> bool {
     if let Type::Path(type_path) = &ty {
         let seg = &type_path.path.segments.last().unwrap().ident;
         seg == name

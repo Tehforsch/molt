@@ -2,7 +2,7 @@ use derive_macro::CmpSyn;
 use molt_lib::NodeId;
 use proc_macro2::TokenStream;
 
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::expr::{Expr, ExprLit};
 use crate::ident::TokenIdent;
 use crate::lit::Lit;
@@ -172,30 +172,6 @@ pub struct MetaNameValue {
     pub value: Expr,
 }
 
-impl Meta {
-    /// Returns the path that begins this structured meta item.
-    ///
-    /// For example this would return the `test` in `#[test]`, the `derive` in
-    /// `#[derive(Copy)]`, and the `path` in `#[path = "sys/windows.rs"]`.
-    pub fn path(&self) -> &Path {
-        match self {
-            Meta::Path(path) => path,
-            Meta::List(meta) => &meta.path,
-            Meta::NameValue(meta) => &meta.path,
-        }
-    }
-
-    /// Error if this is a `Meta::List` or `Meta::NameValue`.
-    pub fn require_path_only(&self) -> Result<&Path> {
-        let error_span = match self {
-            Meta::Path(path) => return Ok(path),
-            Meta::List(meta) => meta.delimiter.span().open(),
-            Meta::NameValue(meta) => meta.eq_token.span,
-        };
-        Err(Error::new(error_span, "unexpected token in attribute"))
-    }
-}
-
 impl From<Path> for Meta {
     fn from(meta: Path) -> Meta {
         Meta::Path(meta)
@@ -273,7 +249,7 @@ fn parse_outermost_meta_path(input: ParseStream) -> Result<Path> {
     }
 }
 
-pub(crate) fn parse_meta_after_path(path: Path, input: ParseStream) -> Result<Meta> {
+fn parse_meta_after_path(path: Path, input: ParseStream) -> Result<Meta> {
     if input.peek(token::Paren) || input.peek(token::Bracket) || input.peek(token::Brace) {
         parse_meta_list_after_path(path, input).map(Meta::List)
     } else if input.peek(Token![=]) {
