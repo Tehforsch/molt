@@ -3,11 +3,10 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use molt_lib::{Id, ParsingMode, Span, Var, VarDecl};
-use rust_grammar::{Node, TokenStream, TokenTree, Type};
+use rust_grammar::{Node, TokenStream, TokenTree, Type, parse_node_with_kind};
 
 use crate::molt_grammar::{
-    MatchCommand, TokenVar, TransformCommand, TypeAnnotation, UnresolvedMoltFile,
-    UnresolvedVarDecl, parse_node_with_kind,
+    MatchCommand, TokenVar, TransformCommand, TypeAnnotation, UnresolvedMoltFile, UnresolvedVarDecl,
 };
 use crate::{Command, Error, FileId, MoltFile, PatCtx};
 

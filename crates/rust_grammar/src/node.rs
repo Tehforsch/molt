@@ -1,9 +1,13 @@
 use derive_macro::CmpSyn;
-use molt_lib::ToNode;
+use molt_lib::{Id, NodeId, ToNode};
 
 use crate::expr::Arm;
+use crate::parse::ParseStream;
+use crate::parse::discouraged::Speculative;
 use crate::pat::Pat;
-use crate::{Expr, Field, Ident, Item, Lit, Stmt, Type, Visibility};
+use crate::{
+    Expr, Field, FieldNamed, FieldUnnamed, Ident, Item, Lit, PatMulti, Stmt, Type, Visibility,
+};
 
 macro_rules! define_node_and_kind {
     ($(($variant_name: ident, $ty: ty)),*$(,)?) => {
@@ -84,6 +88,66 @@ macro_rules! define_node_and_kind {
     }
 }
 
+macro_rules! define_user_kind {
+    ($(($variant_name: ident, $kind_name: ident, $ty: ty $(, $expr: expr)?)),*$(,)?) => {
+        #[derive(Debug, Clone, Copy)]
+        pub enum UserKind {
+            $( $variant_name, )*
+        }
+
+        impl From<UserKind> for Kind {
+            fn from(val: UserKind) -> Kind {
+                match val {
+                    $(
+                        UserKind::$variant_name => Kind::$kind_name,
+                    )*
+                }
+            }
+        }
+
+        mod kind_kws {
+            $(
+                crate::custom_keyword!($variant_name);
+            )*
+        }
+
+        impl crate::parse::Parse for UserKind {
+            fn parse(input:crate::parse:: ParseStream) -> crate::Result<Self> {
+                $(
+                    if input.peek(kind_kws::$variant_name) {
+                        let _: kind_kws::$variant_name = input.parse()?;
+                        return Ok(UserKind::$variant_name);
+                    }
+                )*
+                Err(input.error("Invalid kind."))
+            }
+        }
+
+        pub fn parse_node_with_kind(parser: crate::parse::ParseStream, kind: UserKind) -> crate::Result<Id> {
+                $(
+                    parse_impl! {
+                        parser, kind, $variant_name, $ty $(,$expr)*
+                    }
+                )*
+                unreachable!()
+        }
+    }
+}
+
+macro_rules! parse_impl {
+    ($parser: ident, $kind: ident, $variant_name: ident, $ty: ty, $expr: expr) => {
+        if let UserKind::$variant_name = $kind {
+            return $expr($parser);
+        }
+    };
+    ($parser: ident, $kind: ident, $variant_name: ident, $ty: ty) => {
+        if let UserKind::$variant_name = $kind {
+            let parsed: NodeId<$ty> = $parser.parse()?;
+            return Ok(parsed.into());
+        }
+    };
+}
+
 define_node_and_kind! {
     (Lit, Lit),
     (Item, Item),
@@ -95,4 +159,31 @@ define_node_and_kind! {
     (Arm, Arm),
     (Pat, Pat),
     (Visibility, Visibility),
+}
+
+define_user_kind! {
+    (Lit, Lit, Lit),
+    (Item, Item, Item),
+    (Type, Type, Type),
+    (Expr, Expr, Expr),
+    (Stmt, Stmt, Stmt),
+    (Ident, Ident, Ident),
+    (Arm, Arm, Arm),
+    (Pat, Pat, Pat, |parser: ParseStream| {
+        parser.parse_id::<PatMulti>().map(|id| id.into())
+    }),
+    // Let's see how this works out in practice.
+    // We speculatively parse a named field and
+    // if it doesn't work out, we parse an unnamed field.
+    (Field, Field, Field, |parser: ParseStream| {
+        let fork = parser.fork();
+        if let Ok(field) = fork.parse_id::<FieldNamed>() {
+            parser.advance_to(&fork); // probably unnecessary
+            Ok(field.into())
+        }
+        else {
+            Ok(parser.parse_id::<FieldUnnamed>()?.into())
+        }
+    }),
+    (Visibility, Visibility, Visibility),
 }

@@ -1,11 +1,11 @@
 use rust_grammar::ext::IdentExt;
 use rust_grammar::parse::{Parse, ParseStream};
 use rust_grammar::token::Brace;
-use rust_grammar::{Error, Ident, Result, Token, TokenStream, TokenTree, braced};
+use rust_grammar::{Error, Ident, Result, Token, TokenStream, TokenTree, UserKind, braced};
 
 use super::{
     Command, Decl, MatchCommand, TokenVar, TransformCommand, UnresolvedMoltFile,
-    UnresolvedTypeAnnotation, UnresolvedVarDecl, UserKind,
+    UnresolvedTypeAnnotation, UnresolvedVarDecl,
 };
 
 mod kw {
