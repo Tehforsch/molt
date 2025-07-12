@@ -133,7 +133,7 @@ fn parse_list<T: ParseListOrItem>(input: ParseStream) -> Result<Vec<NodeId<T::Ta
     })
 }
 
-pub(crate) fn peek_var(cursor: Cursor, ctx: &Ctx<Node>, kind: Kind) -> bool {
+fn peek_var(cursor: Cursor, ctx: &Ctx<Node>, kind: Kind) -> bool {
     if let Some((punct, _)) = cursor.punct() {
         if punct.as_char() == '$' {
             if let Some((ident, _)) = cursor.skip().and_then(|cursor| cursor.ident()) {
@@ -389,7 +389,7 @@ fn span_of_unexpected_ignoring_nones(mut cursor: Cursor) -> Option<(Span, Delimi
     }
 }
 
-pub(crate) fn kind_matches(ctx: &Ctx<Node>, ident: &Ident, kind: crate::Kind) -> bool {
+fn kind_matches(ctx: &Ctx<Node>, ident: &Ident, kind: crate::Kind) -> bool {
     ctx.get_kind_by_name(&ident.to_string()) == kind
 }
 
@@ -519,12 +519,12 @@ impl<'a> ParseBuffer<'a> {
     }
 
     #[allow(unused)]
-    pub(crate) fn dbg<T: Debug + ToNode<Node>>(&self, t: NodeId<T>) {
+    fn dbg<T: Debug + ToNode<Node>>(&self, t: NodeId<T>) {
         println!("{:?}", self.ctx.borrow().get::<T>(t));
     }
 
     #[allow(unused)]
-    pub(crate) fn show(&self) {
+    fn show(&self) {
         println!("{}", self.cursor().token_stream());
     }
 
@@ -566,7 +566,7 @@ impl<'a> ParseBuffer<'a> {
         Ok(self.make_spanned(marker, t))
     }
 
-    pub(crate) fn add_var<T: ToNode<Node>>(&self, var: Var<Node>) -> NodeId<T> {
+    fn add_var<T: ToNode<Node>>(&self, var: Var<Node>) -> NodeId<T> {
         self.ctx.borrow_mut().add_var(var)
     }
 

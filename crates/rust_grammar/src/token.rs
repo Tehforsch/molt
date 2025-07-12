@@ -615,7 +615,7 @@ pub(crate) fn peek_keyword(cursor: Cursor, token: &str) -> bool {
     }
 }
 
-pub(crate) fn punct<const N: usize>(input: ParseStream, token: &str) -> Result<[Span; N]> {
+fn punct<const N: usize>(input: ParseStream, token: &str) -> Result<[Span; N]> {
     let mut spans = [input.span(); N];
     punct_helper(input, token, &mut spans)?;
     Ok(spans)
@@ -647,7 +647,7 @@ fn punct_helper(input: ParseStream, token: &str, spans: &mut [Span]) -> Result<(
     })
 }
 
-pub(crate) fn peek_punct(mut cursor: Cursor, token: &str) -> bool {
+fn peek_punct(mut cursor: Cursor, token: &str) -> bool {
     for (i, ch) in token.chars().enumerate() {
         match cursor.punct() {
             Some((punct, rest)) => {
@@ -674,6 +674,6 @@ macro_rules! impl_zst_cmp_syn {
     };
 }
 
-pub(crate) use impl_zst_cmp_syn;
+use impl_zst_cmp_syn;
 
 impl_zst_cmp_syn!(Group);

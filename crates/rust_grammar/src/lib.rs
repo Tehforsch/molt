@@ -48,7 +48,7 @@ mod ty;
 pub use crate::ty::Type;
 #[path = "export.rs"]
 pub mod __private;
-pub(crate) mod node;
+mod node;
 mod verbatim;
 mod whitespace;
 pub use node::{Kind, Node};

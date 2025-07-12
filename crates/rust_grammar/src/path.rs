@@ -323,7 +323,7 @@ impl AngleBracketedGenericArguments {
         Self::do_parse(Some(colon2_token), input)
     }
 
-    pub(crate) fn do_parse(colon2_token: Option<Token![::]>, input: ParseStream) -> Result<Self> {
+    fn do_parse(colon2_token: Option<Token![::]>, input: ParseStream) -> Result<Self> {
         Ok(AngleBracketedGenericArguments {
             colon2_token,
             lt_token: input.parse()?,
@@ -439,7 +439,7 @@ impl Path {
         })
     }
 
-    pub(crate) fn parse_helper(input: ParseStream, expr_style: bool) -> Result<Self> {
+    fn parse_helper(input: ParseStream, expr_style: bool) -> Result<Self> {
         let mut path = Path {
             leading_colon: input.parse()?,
             segments: {

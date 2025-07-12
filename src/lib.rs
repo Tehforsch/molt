@@ -1,7 +1,7 @@
 mod error;
 mod input;
 mod lsp;
-pub(crate) mod molt_grammar;
+mod molt_grammar;
 mod resolve;
 #[cfg(test)]
 mod tests;
@@ -38,14 +38,14 @@ fn match_pattern_data<'a>(
     }
 }
 
-pub(crate) struct MatchResult<'a> {
+struct MatchResult<'a> {
     matches: Vec<Match>,
     ctx: MatchCtx<'a, Node>,
     var: Id,
 }
 
 impl MoltFile {
-    pub(crate) fn new(input: &Input) -> Result<(Self, PatCtx), Error> {
+    fn new(input: &Input) -> Result<(Self, PatCtx), Error> {
         let file_id = input.molt_file_id();
         let source = input.source(file_id).unwrap();
         let unresolved: UnresolvedMoltFile = rust_grammar::parse_str(source, ParsingMode::Pat)
@@ -53,7 +53,7 @@ impl MoltFile {
         unresolved.resolve(file_id)
     }
 
-    pub(crate) fn match_pattern<'a>(
+    fn match_pattern<'a>(
         &'a self,
         ast_ctx: &'a Ctx,
         pat_ctx: &'a Ctx,
@@ -92,7 +92,7 @@ impl MoltFile {
 }
 
 impl RustFile {
-    pub(crate) fn new(input: &Input, file_id: FileId) -> Result<(Self, Ctx), Error> {
+    fn new(input: &Input, file_id: FileId) -> Result<(Self, Ctx), Error> {
         let source = input.source(file_id).unwrap();
         rust_grammar::parse_file(source, ParsingMode::Real)
             .map_err(|e| Error::parse(e, file_id))

@@ -247,7 +247,7 @@ impl ParseNode for (Type, NoPlus) {
     }
 }
 
-pub(crate) fn ambig_ty(input: ParseStream, allow_plus: bool) -> Result<Type> {
+fn ambig_ty(input: ParseStream, allow_plus: bool) -> Result<Type> {
     let begin = input.fork();
 
     if input.peek(token::Group) {
@@ -644,7 +644,7 @@ impl ReturnType {
         Self::parse(input, allow_plus)
     }
 
-    pub(crate) fn parse(input: ParseStream, allow_plus: bool) -> Result<Self> {
+    fn parse(input: ParseStream, allow_plus: bool) -> Result<Self> {
         if input.peek(Token![->]) {
             let arrow = input.parse()?;
             let ty = input.add(input.call_spanned(|input| ambig_ty(input, allow_plus))?);
@@ -676,7 +676,7 @@ impl TypeTraitObject {
     }
 
     // Only allow multiple trait references if allow_plus is true.
-    pub(crate) fn parse(input: ParseStream, allow_plus: bool) -> Result<Self> {
+    fn parse(input: ParseStream, allow_plus: bool) -> Result<Self> {
         let dyn_token: Option<Token![dyn]> = input.parse()?;
         let dyn_span = match &dyn_token {
             Some(token) => token.span,
@@ -725,7 +725,7 @@ impl TypeTraitObject {
 }
 
 impl TypeImplTrait {
-    pub(crate) fn parse(input: ParseStream, allow_plus: bool) -> Result<Self> {
+    fn parse(input: ParseStream, allow_plus: bool) -> Result<Self> {
         let impl_token: Token![impl] = input.parse()?;
         let allow_precise_capture = true;
         let allow_tilde_const = false;

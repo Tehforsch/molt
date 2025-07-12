@@ -197,7 +197,7 @@ pub(crate) fn parse_inner(input: ParseStream, attrs: &mut Vec<Attribute>) -> Res
     Ok(())
 }
 
-pub(crate) fn single_parse_inner(input: ParseStream) -> Result<Attribute> {
+fn single_parse_inner(input: ParseStream) -> Result<Attribute> {
     let content;
     Ok(Attribute {
         pound_token: input.parse()?,

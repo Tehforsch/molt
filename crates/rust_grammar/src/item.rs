@@ -270,7 +270,7 @@ pub struct ItemUse {
 }
 
 impl Item {
-    pub(crate) fn replace_attrs(&mut self, new: Vec<Attribute>) -> Vec<Attribute> {
+    fn replace_attrs(&mut self, new: Vec<Attribute>) -> Vec<Attribute> {
         match self {
             Item::Const(ItemConst { attrs, .. })
             | Item::Enum(ItemEnum { attrs, .. })

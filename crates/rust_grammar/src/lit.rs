@@ -837,7 +837,7 @@ mod value {
 
     /// Get the byte at offset idx, or a default of `b'\0'` if we're looking
     /// past the end of the input buffer.
-    pub(crate) fn byte<S: AsRef<[u8]> + ?Sized>(s: &S, idx: usize) -> u8 {
+    fn byte<S: AsRef<[u8]> + ?Sized>(s: &S, idx: usize) -> u8 {
         let s = s.as_ref();
         if idx < s.len() { s[idx] } else { 0 }
     }

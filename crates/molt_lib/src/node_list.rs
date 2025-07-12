@@ -98,11 +98,11 @@ impl<T, P> Set<T, P> {
         }
     }
 
-    pub(crate) fn mode(&self) -> SetMatchingMode {
+    fn mode(&self) -> SetMatchingMode {
         self.mode
     }
 
-    pub(crate) fn items(&self) -> &[NodeId<T>] {
+    fn items(&self) -> &[NodeId<T>] {
         &self.items
     }
 

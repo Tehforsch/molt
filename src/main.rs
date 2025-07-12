@@ -24,7 +24,7 @@ enum Error {
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
-pub(crate) fn get_cargo_toml(mut path: PathBuf) -> Result<PathBuf> {
+fn get_cargo_toml(mut path: PathBuf) -> Result<PathBuf> {
     loop {
         let cargo_toml = path.join("Cargo.toml").canonicalize()?;
         if cargo_toml.is_file() {
