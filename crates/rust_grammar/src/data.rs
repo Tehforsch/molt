@@ -3,10 +3,9 @@ use molt_lib::{NodeId, NodeList, WithSpan};
 
 use crate::attr::Attribute;
 use crate::error::Result;
-use crate::expr::{Expr, Index, Member};
+use crate::expr::Expr;
 use crate::ident::{AnyIdent, Ident};
 use crate::parse::{Parse, ParseList, ParseNode, ParseStream, parse_punctuated_list_real};
-use crate::punctuated::{self};
 use crate::restriction::{FieldMutability, Visibility};
 use crate::ty::Type;
 use crate::{token, verbatim};
@@ -76,40 +75,6 @@ pub struct Field {
     pub colon_token: Option<Token![:]>,
 
     pub ty: NodeId<Type>,
-}
-
-pub struct Members<'a> {
-    fields: punctuated::Iter<'a, Field>,
-    index: u32,
-}
-
-impl<'a> Iterator for Members<'a> {
-    type Item = Member;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let field = self.fields.next()?;
-        let member = match &field.ident {
-            Some(ident) => Member::Named(*ident),
-            None => {
-                let span = proc_macro2::Span::call_site();
-                Member::Unnamed(Index {
-                    index: self.index,
-                    span,
-                })
-            }
-        };
-        self.index += 1;
-        Some(member)
-    }
-}
-
-impl<'a> Clone for Members<'a> {
-    fn clone(&self) -> Self {
-        Members {
-            fields: self.fields.clone(),
-            index: self.index,
-        }
-    }
 }
 
 impl Parse for Variant {
