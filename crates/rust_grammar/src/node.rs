@@ -6,7 +6,8 @@ use crate::parse::ParseStream;
 use crate::parse::discouraged::Speculative;
 use crate::pat::Pat;
 use crate::{
-    Expr, Field, FieldNamed, FieldUnnamed, Ident, Item, Lit, PatMulti, Stmt, Type, Visibility,
+    Error, Expr, Field, FieldNamed, FieldUnnamed, Ident, Item, Lit, PatMulti, Stmt, Type,
+    Visibility,
 };
 
 macro_rules! define_node_and_kind {
@@ -149,41 +150,44 @@ macro_rules! parse_impl {
 }
 
 define_node_and_kind! {
-    (Lit, Lit),
-    (Item, Item),
+    (Arm, Arm),
     (Expr, Expr),
-    (Stmt, Stmt),
-    (Type, Type),
     (Field, Field),
     (Ident, Ident),
-    (Arm, Arm),
+    (Item, Item),
+    (Lit, Lit),
     (Pat, Pat),
+    (Stmt, Stmt),
+    (Type, Type),
     (Visibility, Visibility),
 }
 
 define_user_kind! {
-    (Lit, Lit, Lit),
-    (Item, Item, Item),
-    (Type, Type, Type),
-    (Expr, Expr, Expr),
-    (Stmt, Stmt, Stmt),
-    (Ident, Ident, Ident),
     (Arm, Arm, Arm),
-    (Pat, Pat, Pat, |parser: ParseStream| {
-        parser.parse_id::<PatMulti>().map(|id| id.into())
-    }),
-    // Let's see how this works out in practice.
-    // We speculatively parse a named field and
-    // if it doesn't work out, we parse an unnamed field.
-    (Field, Field, Field, |parser: ParseStream| {
-        let fork = parser.fork();
-        if let Ok(field) = fork.parse_id::<FieldNamed>() {
-            parser.advance_to(&fork); // probably unnecessary
-            Ok(field.into())
-        }
-        else {
-            Ok(parser.parse_id::<FieldUnnamed>()?.into())
-        }
-    }),
+    (Expr, Expr, Expr),
+    (Field, Field, Field, parse_field),
+    (Ident, Ident, Ident),
+    (Item, Item, Item),
+    (Lit, Lit, Lit),
+    (Pat, Pat, Pat, parse_pat),
+    (Stmt, Stmt, Stmt),
+    (Type, Type, Type),
     (Visibility, Visibility, Visibility),
+}
+
+// Let's see how this works out in practice.
+// We speculatively parse a named field and
+// if it doesn't work out, we parse an unnamed field.
+fn parse_field(parser: ParseStream) -> Result<Id, Error> {
+    let fork = parser.fork();
+    if let Ok(field) = fork.parse_id::<FieldNamed>() {
+        parser.advance_to(&fork); // probably unnecessary
+        Ok(field.into())
+    } else {
+        Ok(parser.parse_id::<FieldUnnamed>()?.into())
+    }
+}
+
+fn parse_pat(parser: ParseStream) -> Result<Id, Error> {
+    parser.parse_id::<PatMulti>().map(|id| id.into())
 }

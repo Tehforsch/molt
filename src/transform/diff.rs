@@ -61,7 +61,7 @@ impl Transformation {
 
     pub fn show_diff(&self, old_code: &str, filename: &Path) {
         let diff_output = self.get_diff(old_code, filename, true);
-        print!("{}", diff_output);
+        print!("{diff_output}");
     }
 }
 
@@ -86,14 +86,14 @@ fn format_diff(diff: TextDiff<str>, filename: &Path, colorized: bool) -> String 
 
                 // Format line numbers
                 let line_info = match (old_line, new_line) {
-                    (Some(old), Some(new)) => format!("{:4},{:4}", old, new),
-                    (Some(old), None) => format!("{:4},-   ", old),
-                    (None, Some(new)) => format!("-   ,{:4}", new),
+                    (Some(old), Some(new)) => format!("{old:4},{new:4}"),
+                    (Some(old), None) => format!("{old:4},-   "),
+                    (None, Some(new)) => format!("-   ,{new:4}"),
                     (None, None) => "    ,    ".to_string(),
                 };
 
-                let line_numbers = ColoredText::new(format!("{} ", line_info), Color::Cyan);
-                let change_text = ColoredText::new(format!("{}{}", sign, change), color);
+                let line_numbers = ColoredText::new(format!("{line_info} "), Color::Cyan);
+                let change_text = ColoredText::new(format!("{sign}{change}"), color);
 
                 output.push_str(&line_numbers.print(colorized));
                 output.push_str(&change_text.print(colorized));

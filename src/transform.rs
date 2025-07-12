@@ -59,7 +59,7 @@ impl<'a> Transform<'a> {
             let not_interactive_or_user_said_yes =
                 !self.config.interactive || ask_user_for_confirmation();
             let no_compile_check_or_code_still_compiles = !self.config.check_compilation
-                || self.check_transformation_compiles(&transformation)?;
+                || self.check_transformation_compiles(transformation)?;
             if not_interactive_or_user_said_yes && no_compile_check_or_code_still_compiles {
                 self.code = transformation.apply(self.code.clone());
             }
@@ -143,10 +143,7 @@ fn ask_user_for_confirmation() -> bool {
     let mut input = String::new();
     io::stdin().read_line(&mut input).unwrap();
 
-    match input.trim().to_lowercase().as_str() {
-        "y" | "yes" => true,
-        _ => false,
-    }
+    matches!(input.trim().to_lowercase().as_str(), "y" | "yes")
 }
 
 fn write_to_file(input: &Input, rust_file_id: FileId, code: String) -> Result<(), Error> {
