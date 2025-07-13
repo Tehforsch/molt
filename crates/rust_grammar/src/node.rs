@@ -1,9 +1,9 @@
 use derive_macro::CmpSyn;
-use molt_lib::{Id, NodeId, ToNode};
+use molt_lib::{Id, ToNode};
 
 use crate::expr::Arm;
-use crate::parse::ParseStream;
 use crate::parse::discouraged::Speculative;
+use crate::parse::{ParseBuffer, ParseStream};
 use crate::pat::Pat;
 use crate::{
     Error, Expr, Field, FieldNamed, FieldUnnamed, Ident, Item, Lit, PatMulti, Stmt, Type,
@@ -90,7 +90,7 @@ macro_rules! define_node_and_kind {
 }
 
 macro_rules! define_user_kind {
-    ($(($variant_name: ident, $kind_name: ident, $ty: ty $(, $expr: expr)?)),*$(,)?) => {
+    ($(($variant_name: ident, $kind_name: ident, $parse: expr)),*$(,)?) => {
         #[derive(Debug, Clone, Copy)]
         pub enum UserKind {
             $( $variant_name, )*
@@ -124,29 +124,16 @@ macro_rules! define_user_kind {
             }
         }
 
-        pub fn parse_node_with_kind(parser: crate::parse::ParseStream, kind: UserKind) -> crate::Result<Id> {
-                $(
-                    parse_impl! {
-                        parser, kind, $variant_name, $ty $(,$expr)*
-                    }
-                )*
-                unreachable!()
+        pub fn parse_node_with_kind(input: crate::parse::ParseStream, kind: UserKind) -> crate::Result<Id> {
+            $(
+                if let UserKind::$variant_name = kind {
+                    let parsed = $parse(input)?;
+                    return Ok(parsed.into());
+                }
+            )*
+            unreachable!()
         }
     }
-}
-
-macro_rules! parse_impl {
-    ($parser: ident, $kind: ident, $variant_name: ident, $ty: ty, $expr: expr) => {
-        if let UserKind::$variant_name = $kind {
-            return $expr($parser);
-        }
-    };
-    ($parser: ident, $kind: ident, $variant_name: ident, $ty: ty) => {
-        if let UserKind::$variant_name = $kind {
-            let parsed: NodeId<$ty> = $parser.parse()?;
-            return Ok(parsed.into());
-        }
-    };
 }
 
 define_node_and_kind! {
@@ -163,16 +150,16 @@ define_node_and_kind! {
 }
 
 define_user_kind! {
-    (Arm, Arm, Arm),
-    (Expr, Expr, Expr),
-    (Field, Field, Field, parse_field),
-    (Ident, Ident, Ident),
-    (Item, Item, Item),
-    (Lit, Lit, Lit),
-    (Pat, Pat, Pat, parse_pat),
-    (Stmt, Stmt, Stmt),
-    (Type, Type, Type),
-    (Visibility, Visibility, Visibility),
+    (Arm, Arm, ParseBuffer::parse_id::<Arm>),
+    (Expr, Expr, ParseBuffer::parse_id::<Expr>),
+    (Field, Field, parse_field),
+    (Ident, Ident, ParseBuffer::parse_id::<Ident>),
+    (Item, Item, ParseBuffer::parse_id::<Item>),
+    (Lit, Lit, ParseBuffer::parse_id::<Lit>),
+    (Pat, Pat, ParseBuffer::parse_id::<PatMulti>),
+    (Stmt, Stmt, ParseBuffer::parse_id::<Stmt>),
+    (Type, Type, ParseBuffer::parse_id::<Type>),
+    (Visibility, Visibility, ParseBuffer::parse_id::<Visibility>),
 }
 
 // Let's see how this works out in practice.
@@ -186,8 +173,4 @@ fn parse_field(parser: ParseStream) -> Result<Id, Error> {
     } else {
         Ok(parser.parse_id::<FieldUnnamed>()?.into())
     }
-}
-
-fn parse_pat(parser: ParseStream) -> Result<Id, Error> {
-    parser.parse_id::<PatMulti>().map(|id| id.into())
 }
