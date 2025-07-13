@@ -347,12 +347,12 @@ impl Id {
     }
 }
 
-pub struct Var<Node: GetKind> {
+pub struct Var<Kind> {
     name: String,
-    kind: Node::Kind,
+    kind: Kind,
 }
 
-impl<Node: GetKind> PartialEq for Var<Node> {
+impl<Kind: std::fmt::Debug + PartialEq> PartialEq for Var<Kind> {
     fn eq(&self, other: &Self) -> bool {
         debug_assert_eq!(self.kind, other.kind);
         self.name.eq(&other.name)
@@ -365,8 +365,8 @@ pub struct VarDecl {
     pub node: Option<Id>,
 }
 
-impl<Node: GetKind> Var<Node> {
-    pub fn new(name: String, kind: Node::Kind) -> Self {
+impl<Kind> Var<Kind> {
+    pub fn new(name: String, kind: Kind) -> Self {
         Self { name, kind }
     }
 
@@ -377,7 +377,7 @@ impl<Node: GetKind> Var<Node> {
 
 pub struct Ctx<Node: GetKind> {
     nodes: Vec<Node>,
-    vars: Vec<Var<Node>>,
+    vars: Vec<Var<Node::Kind>>,
     spans: Vec<Span>,
 }
 
@@ -396,12 +396,12 @@ impl<Node: GetKind> Ctx<Node> {
         self.add_node(t.map(|item| item.to_node())).typed()
     }
 
-    fn add_var_internal(&mut self, var: Var<Node>) -> Id {
+    fn add_var_internal(&mut self, var: Var<Node::Kind>) -> Id {
         self.vars.push(var);
         Id(InternalId::Pat(self.vars.len() - 1))
     }
 
-    pub fn add_var<T: ToNode<Node>>(&mut self, var: Var<Node>) -> NodeId<T> {
+    pub fn add_var<T: ToNode<Node>>(&mut self, var: Var<Node::Kind>) -> NodeId<T> {
         let id = if let Some((id, _)) = self.get_var_by_name(&var.name) {
             id
         } else {
@@ -457,7 +457,7 @@ impl<Node: GetKind> Ctx<Node> {
         }
     }
 
-    pub fn get_var(&self, id: Id) -> &Var<Node> {
+    pub fn get_var(&self, id: Id) -> &Var<Node::Kind> {
         match id.0 {
             InternalId::Real(_) => panic!(),
             InternalId::Pat(idx) => &self.vars[idx],
@@ -471,7 +471,7 @@ impl<Node: GetKind> Ctx<Node> {
         }
     }
 
-    fn get_var_by_name(&self, name: &str) -> Option<(Id, &Var<Node>)> {
+    fn get_var_by_name(&self, name: &str) -> Option<(Id, &Var<Node::Kind>)> {
         self.vars
             .iter()
             .enumerate()
@@ -491,7 +491,7 @@ impl<Node: GetKind> Ctx<Node> {
         (0..self.nodes.len()).map(|id| Id(InternalId::Real(id)))
     }
 
-    pub(crate) fn iter_vars(&self) -> impl Iterator<Item = &Var<Node>> {
+    pub(crate) fn iter_vars(&self) -> impl Iterator<Item = &Var<Node::Kind>> {
         self.vars.iter()
     }
 

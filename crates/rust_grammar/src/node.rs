@@ -1,9 +1,9 @@
 use derive_macro::CmpSyn;
-use molt_lib::{Id, ToNode};
+use molt_lib::{Id, NodeId, Pattern, ToNode};
 
 use crate::expr::Arm;
 use crate::parse::discouraged::Speculative;
-use crate::parse::{ParseBuffer, ParseStream};
+use crate::parse::{ParseNode, ParseStream};
 use crate::pat::Pat;
 use crate::{
     Error, Expr, Field, FieldNamed, FieldUnnamed, Ident, Item, Lit, PatMulti, Stmt, Type,
@@ -90,10 +90,20 @@ macro_rules! define_node_and_kind {
 }
 
 macro_rules! define_user_kind {
-    ($(($variant_name: ident, $kind_name: ident, $parse: expr)),*$(,)?) => {
+    ($(($variant_name: ident, $kind_name: ident, $parse_ty: ty)),*$(,)?) => {
         #[derive(Debug, Clone, Copy)]
         pub enum UserKind {
             $( $variant_name, )*
+        }
+
+        impl std::fmt::Display for UserKind {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                match self {
+                    $(
+                        Self::$variant_name => write!(f, stringify!($variant_name)),
+                    )*
+                }
+            }
         }
 
         impl From<UserKind> for Kind {
@@ -127,7 +137,7 @@ macro_rules! define_user_kind {
         pub fn parse_node_with_kind(input: crate::parse::ParseStream, kind: UserKind) -> crate::Result<Id> {
             $(
                 if let UserKind::$variant_name = kind {
-                    let parsed = $parse(input)?;
+                    let parsed = input.parse_id::<$parse_ty>()?;
                     return Ok(parsed.into());
                 }
             )*
@@ -150,27 +160,31 @@ define_node_and_kind! {
 }
 
 define_user_kind! {
-    (Arm, Arm, ParseBuffer::parse_id::<Arm>),
-    (Expr, Expr, ParseBuffer::parse_id::<Expr>),
-    (Field, Field, parse_field),
-    (Ident, Ident, ParseBuffer::parse_id::<Ident>),
-    (Item, Item, ParseBuffer::parse_id::<Item>),
-    (Lit, Lit, ParseBuffer::parse_id::<Lit>),
-    (Pat, Pat, ParseBuffer::parse_id::<PatMulti>),
-    (Stmt, Stmt, ParseBuffer::parse_id::<Stmt>),
-    (Type, Type, ParseBuffer::parse_id::<Type>),
-    (Visibility, Visibility, ParseBuffer::parse_id::<Visibility>),
+    (Arm, Arm, Arm),
+    (Expr, Expr, Expr),
+    (Field, Field, Field),
+    (Ident, Ident, Ident),
+    (Item, Item, Item),
+    (Lit, Lit, Lit),
+    (Pat, Pat, PatMulti),
+    (Stmt, Stmt, Stmt),
+    (Type, Type, Type),
+    (Visibility, Visibility, Visibility),
 }
 
-// Let's see how this works out in practice.
-// We speculatively parse a named field and
-// if it doesn't work out, we parse an unnamed field.
-fn parse_field(parser: ParseStream) -> Result<Id, Error> {
-    let fork = parser.fork();
-    if let Ok(field) = fork.parse_id::<FieldNamed>() {
-        parser.advance_to(&fork); // probably unnecessary
-        Ok(field.into())
-    } else {
-        Ok(parser.parse_id::<FieldUnnamed>()?.into())
+impl ParseNode for Field {
+    type Target = Field;
+
+    fn parse_node(input: ParseStream) -> crate::Result<Self::Target> {
+        // Let's see how this works out in practice.
+        // We speculatively parse a named field and
+        // if it doesn't work out, we parse an unnamed field.
+        let fork = input.fork();
+        if let Ok(field) = fork.parse_node::<FieldNamed>() {
+            input.advance_to(&fork);
+            Ok(field)
+        } else {
+            Ok(input.parse_node::<FieldUnnamed>()?)
+        }
     }
 }

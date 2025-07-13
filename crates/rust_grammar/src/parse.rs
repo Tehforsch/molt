@@ -12,7 +12,7 @@ use std::str::FromStr;
 
 use discouraged::Speculative;
 use molt_lib::{
-    Ctx, Id, List, ListMatchingMode, NodeId, NodeList, ParsingMode, PatNodeList, Pattern,
+    Ctx, GetKind, Id, List, ListMatchingMode, NodeId, NodeList, ParsingMode, PatNodeList, Pattern,
     RealNodeList, Single, SingleMatchingMode, Spanned, SpannedPat, ToNode, Var, WithSpan,
 };
 use proc_macro2::{Delimiter, Group, Literal, Punct, Span, TokenStream, TokenTree};
@@ -541,6 +541,10 @@ impl<'a> ParseBuffer<'a> {
         Ok(self.add_pat(pat))
     }
 
+    pub fn parse_node<T: ParseNode>(&self) -> Result<T::Target> {
+        T::parse_node(self)
+    }
+
     pub(crate) fn parse_spanned<T: Parse>(&self) -> Result<Spanned<T>> {
         self.call_spanned(T::parse)
     }
@@ -566,7 +570,7 @@ impl<'a> ParseBuffer<'a> {
         Ok(self.make_spanned(marker, t))
     }
 
-    fn add_var<T: ToNode<Node>>(&self, var: Var<Node>) -> NodeId<T> {
+    fn add_var<T: ToNode<Node>>(&self, var: Var<<Node as GetKind>::Kind>) -> NodeId<T> {
         self.ctx.borrow_mut().add_var(var)
     }
 

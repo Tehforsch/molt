@@ -79,7 +79,7 @@ impl<'a, Node: GetKind> MatchCtx<'a, Node> {
         }
     }
 
-    pub fn get_var(&self, var: Id) -> &Var<Node> {
+    pub fn get_var(&self, var: Id) -> &Var<Node::Kind> {
         self.pat_ctx.get_var(var)
     }
 
