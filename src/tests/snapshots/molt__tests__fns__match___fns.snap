@@ -1,0 +1,22 @@
+---
+source: src/tests/mod.rs
+expression: "super :: super :: match_pattern(& name, stringify! (fns))"
+snapshot_kind: text
+---
+note: Match
+  ┌─ "test_data/fns/main.rs":3:1
+  │
+3 │ fn foo() {}
+  │ ^^^^^^^^^^^ $x
+
+note: Match
+  ┌─ "test_data/fns/main.rs":4:1
+  │
+4 │ unsafe fn foo() {}
+  │ ^^^^^^^^^^^^^^^^^^ $x
+
+note: Match
+  ┌─ "test_data/fns/main.rs":5:1
+  │
+5 │ async fn foo() {}
+  │ ^^^^^^^^^^^^^^^^^ $x

@@ -320,6 +320,7 @@ test_match_pattern!(
         fn_, const_, enum_, field, module, static_, struct_, trait_, type_alias
     )
 );
+test_match_pattern!(fns, (fns,));
 
 molt_grammar_test_err!(
     molt_grammar,
