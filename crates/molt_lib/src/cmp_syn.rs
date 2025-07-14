@@ -1,8 +1,8 @@
 use crate::NodeId;
 use crate::match_pattern::Matcher;
 
-pub trait CmpSyn {
-    fn cmp_syn(&self, ctx: &mut Matcher, pat: &Self);
+pub trait CmpSyn<T = Self> {
+    fn cmp_syn(&self, ctx: &mut Matcher, pat: &T);
 }
 
 impl<T: CmpSyn> CmpSyn for NodeId<T> {

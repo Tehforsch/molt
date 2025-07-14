@@ -1,7 +1,7 @@
 use std::mem;
 
 use derive_macro::CmpSyn;
-use molt_lib::{NodeId, NodeList, Pattern, SpannedPat, WithSpan};
+use molt_lib::{CmpSyn, NodeId, NodeList, Pattern, SpannedPat, WithSpan};
 use proc_macro2::TokenStream;
 
 use crate::data::{Fields, FieldsNamed, Variant};
@@ -2591,5 +2591,65 @@ impl ParseList for ImplItems {
             items.push(input.parse()?);
         }
         Ok(items)
+    }
+}
+
+impl CmpSyn<Item> for ImplItem {
+    fn cmp_syn(&self, ctx: &mut molt_lib::Matcher, pat: &Item) {
+        match (self, pat) {
+            (ImplItem::Const(t1), Item::Const(t2)) => ctx.cmp_syn(t1, t2),
+            (ImplItem::Fn(t1), Item::Fn(t2)) => ctx.cmp_syn(t1, t2),
+            (ImplItem::Type(t1), Item::Type(t2)) => ctx.cmp_syn(t1, t2),
+            (ImplItem::Macro(t1), Item::Macro(t2)) => ctx.cmp_syn(t1, t2),
+            _ => ctx.no_match(),
+        }
+    }
+}
+
+impl CmpSyn<ItemConst> for ImplItemConst {
+    fn cmp_syn(&self, ctx: &mut molt_lib::Matcher, pat: &ItemConst) {
+        ctx.cmp_syn(&self.attrs, &pat.attrs);
+        ctx.cmp_syn(&self.vis, &pat.vis);
+        ctx.cmp_syn(&self.const_token, &pat.const_token);
+        ctx.cmp_syn(&self.ident, &pat.ident);
+        ctx.cmp_syn(&self.generics, &pat.generics);
+        ctx.cmp_syn(&self.colon_token, &pat.colon_token);
+        ctx.cmp_syn(&self.ty, &pat.ty);
+        ctx.cmp_syn(&self.eq_token, &pat.eq_token);
+        ctx.cmp_syn(&self.expr, &pat.expr);
+        ctx.cmp_syn(&self.semi_token, &pat.semi_token);
+        ctx.cmp_syn(&self.defaultness, &None);
+    }
+}
+
+impl CmpSyn<ItemFn> for ImplItemFn {
+    fn cmp_syn(&self, ctx: &mut molt_lib::Matcher, pat: &ItemFn) {
+        ctx.cmp_syn(&self.attrs, &pat.attrs);
+        ctx.cmp_syn(&self.vis, &pat.vis);
+        ctx.cmp_syn(&self.sig, &pat.sig);
+        ctx.cmp_syn(&self.block, &pat.block);
+        ctx.cmp_syn(&self.defaultness, &None);
+    }
+}
+
+impl CmpSyn<ItemType> for ImplItemType {
+    fn cmp_syn(&self, ctx: &mut molt_lib::Matcher, pat: &ItemType) {
+        ctx.cmp_syn(&self.attrs, &pat.attrs);
+        ctx.cmp_syn(&self.vis, &pat.vis);
+        ctx.cmp_syn(&self.type_token, &pat.type_token);
+        ctx.cmp_syn(&self.ident, &pat.ident);
+        ctx.cmp_syn(&self.generics, &pat.generics);
+        ctx.cmp_syn(&self.eq_token, &pat.eq_token);
+        ctx.cmp_syn(&self.ty, &pat.ty);
+        ctx.cmp_syn(&self.semi_token, &pat.semi_token);
+        ctx.cmp_syn(&self.defaultness, &None);
+    }
+}
+
+impl CmpSyn<ItemMacro> for ImplItemMacro {
+    fn cmp_syn(&self, ctx: &mut molt_lib::Matcher, pat: &ItemMacro) {
+        ctx.cmp_syn(&None, &pat.ident);
+        ctx.cmp_syn(&self.mac, &pat.mac);
+        ctx.cmp_syn(&self.semi_token, &pat.semi_token);
     }
 }

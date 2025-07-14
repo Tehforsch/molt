@@ -1,5 +1,4 @@
-use derive_macro::CmpSyn;
-use molt_lib::{Id, KindType, Pattern, ToNode};
+use molt_lib::{CmpSyn, Id, KindType, Matcher, Pattern, ToNode};
 
 use crate::expr::Arm;
 use crate::item::ImplItem;
@@ -12,11 +11,30 @@ use crate::{
 
 macro_rules! define_node {
     ($(($variant_name: ident, $ty: ty)),*$(,)?) => {
-        #[derive(CmpSyn)]
         pub enum Node {
             $(
                 $variant_name($ty),
             )*
+        }
+
+        impl Node {
+            /// Compare each enum variant with itself. This is not the
+            /// full `CmpSyn` implementation, because off-diagonal
+            /// comparisons exists (such as `Item` and `ImplItem`.)
+            /// These are checked in the real `CmpSyn` impl below.
+            fn cmp_syn_diagonal(&self, ctx: &mut Matcher, pat: &Self) -> bool {
+                match self {
+                    $(
+                        Node::$variant_name(t1) => {
+                            if let Node::$variant_name(t2) = pat {
+                                ctx.cmp_syn(t1, t2);
+                                return true
+                            }
+                        }
+                    )*
+                }
+                false
+            }
         }
 
         #[derive(Clone, Copy, Debug)]
@@ -172,10 +190,10 @@ macro_rules! parse_impl {
     };
     ($input: ident, $kind: ident, $variant_name: ident, $parse_ty: ty, $sub_ty: ty) => {
         if let Kind::$variant_name = $kind {
-            let parsed = $input.parse_spanned_pat::<$parse_ty>()?;
-            match &*parsed {
-                Pattern::Real(real) => {
-                    if !<$sub_ty>::is_of_sub_kind(real) {
+            let id = $input.parse_id::<$parse_ty>()?;
+            match $input.ctx().get(id) {
+                Pattern::Real(node) => {
+                    if !<$sub_ty>::is_of_sub_kind(&node) {
                         return Err($input.error(format!("Expected {}", <$sub_ty>::expected_str())));
                     }
                 }
@@ -183,7 +201,7 @@ macro_rules! parse_impl {
                     // TODO: Do we need to do anything here?
                 }
             }
-            return Ok($input.add_pat(parsed).into());
+            return Ok(id.into());
         }
     };
 }
@@ -196,11 +214,7 @@ macro_rules! match_impl {
     };
     ($node: ident, $pat_kind: ident, $variant_name: ident, $parse_ty: ty, $sub_ty: ty) => {
         if let Kind::$variant_name = $pat_kind {
-            if let Some(t) = <$parse_ty>::from_node_ref($node) {
-                return <$sub_ty>::is_of_sub_kind(t);
-            } else {
-                return false;
-            }
+            return <$sub_ty>::is_of_sub_kind($node);
         }
     };
 }
@@ -234,6 +248,33 @@ define_kind! {
     (Visibility, Visibility, Visibility),
 }
 
+impl CmpSyn<Node> for Node {
+    fn cmp_syn(&self, ctx: &mut Matcher, pat: &Self) {
+        if self.cmp_syn_diagonal(ctx, pat) {
+            // Two nodes with equal variants have already
+            // been compared. We're done.
+            return;
+        }
+        // Explicitly keep this exhaustive to make sure
+        // we don't miss this impl when we add a new variant.
+        match (self, pat) {
+            (Node::Item(item), Node::ImplItem(impl_item))
+            | (Node::ImplItem(impl_item), Node::Item(item)) => ctx.cmp_syn(impl_item, item),
+            (Node::Arm(_), _)
+            | (Node::Expr(_), _)
+            | (Node::Field(_), _)
+            | (Node::Ident(_), _)
+            | (Node::Lit(_), _)
+            | (Node::Pat(_), _)
+            | (Node::Stmt(_), _)
+            | (Node::Type(_), _)
+            | (Node::Item(_), _)
+            | (Node::ImplItem(_), _)
+            | (Node::Visibility(_), _) => ctx.no_match(),
+        }
+    }
+}
+
 impl ParseNode for Field {
     type Target = Field;
 
@@ -252,19 +293,18 @@ impl ParseNode for Field {
 }
 
 trait SubKind {
-    type Super;
-
-    fn is_of_sub_kind(sup: &Self::Super) -> bool;
+    fn is_of_sub_kind(node: &Node) -> bool;
     fn expected_str() -> &'static str;
 }
 
 struct Fn;
 
 impl SubKind for Fn {
-    type Super = Item;
-
-    fn is_of_sub_kind(sup: &Item) -> bool {
-        matches!(sup, Item::Fn(_))
+    fn is_of_sub_kind(node: &Node) -> bool {
+        matches!(
+            node,
+            Node::Item(Item::Fn(_)) | Node::ImplItem(ImplItem::Fn(_))
+        )
     }
 
     fn expected_str() -> &'static str {

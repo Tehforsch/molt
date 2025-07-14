@@ -130,7 +130,7 @@ impl Matcher {
             Pattern::Pat(var) => {
                 self.add_binding(ctx, var, ast_id);
             }
-            Pattern::Real(pat) => self.cmp_syn(ctx.ast_ctx.get(ast_id).unwrap_real(), pat),
+            Pattern::Real(pat) => self.cmp_syn::<N, N>(ctx.ast_ctx.get(ast_id).unwrap_real(), pat),
         }
     }
 
@@ -254,7 +254,7 @@ impl Matcher {
     }
 
     // This exists purely to make the calls look symmetrical
-    pub fn cmp_syn<T: CmpSyn>(&mut self, t1: &T, t2: &T) {
+    pub fn cmp_syn<T: CmpSyn<S>, S>(&mut self, t1: &T, t2: &S) {
         t1.cmp_syn(self, t2)
     }
 }
