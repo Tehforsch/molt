@@ -11,7 +11,6 @@ pub type NodeList<T, P> = Pattern<RealNodeList<T, P>, PatNodeList<T, P>>;
 pub enum PatNodeList<T, P> {
     Single(Single<T, P>),
     List(List<T, P>),
-    Set(Set<T, P>),
 }
 
 #[derive(Debug)]
@@ -25,13 +24,6 @@ pub struct Single<T, P> {
 pub struct List<T, P> {
     items: Vec<NodeId<T>>,
     mode: ListMatchingMode,
-    _marker: PhantomData<P>,
-}
-
-#[derive(Debug)]
-pub struct Set<T, P> {
-    items: Vec<NodeId<T>>,
-    mode: SetMatchingMode,
     _marker: PhantomData<P>,
 }
 
@@ -89,36 +81,6 @@ impl<T, P> List<T, P> {
     }
 }
 
-impl<T, P> Set<T, P> {
-    fn new(items: Vec<NodeId<T>>, mode: SetMatchingMode) -> Self {
-        Self {
-            items,
-            mode,
-            _marker: PhantomData,
-        }
-    }
-
-    fn mode(&self) -> SetMatchingMode {
-        self.mode
-    }
-
-    fn items(&self) -> &[NodeId<T>] {
-        &self.items
-    }
-
-    fn len(&self) -> usize {
-        self.items.len()
-    }
-
-    fn is_empty(&self) -> bool {
-        self.items.is_empty()
-    }
-
-    fn get(&self, idx: usize) -> Option<&NodeId<T>> {
-        self.items.get(idx)
-    }
-}
-
 impl<T, P> NodeList<T, P> {
     pub fn empty(mode: ParsingMode) -> Self {
         match mode {
@@ -166,18 +128,6 @@ impl<T, P> RealNodeList<T, P> {
 
     pub fn iter(&self) -> impl Iterator<Item = &NodeId<T>> {
         self.items.iter()
-    }
-
-    fn len(&self) -> usize {
-        self.items.len()
-    }
-
-    fn is_empty(&self) -> bool {
-        self.items.is_empty()
-    }
-
-    fn get(&self, idx: usize) -> Option<&NodeId<T>> {
-        self.items.get(idx)
     }
 
     pub(crate) fn items(&self) -> &[NodeId<T>] {

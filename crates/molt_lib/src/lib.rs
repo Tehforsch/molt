@@ -1,4 +1,3 @@
-#![allow(unused)]
 mod cmp_syn;
 mod config;
 mod ctx;
@@ -16,8 +15,8 @@ pub use match_ctx::{MatchCtx, MatchPatternData};
 pub use match_pattern::{Binding, Match, Matcher, PatType, match_pattern};
 pub use node::{NodeType, ToNode};
 pub use node_list::{
-    List, ListMatchingMode, NoPunct, NodeList, PatNodeList, RealNodeList, Set, SetMatchingMode,
-    Single, SingleMatchingMode,
+    List, ListMatchingMode, NoPunct, NodeList, PatNodeList, RealNodeList, SetMatchingMode, Single,
+    SingleMatchingMode,
 };
 pub use pattern::Pattern;
 pub use span::{Span, Spanned, SpannedPat, WithSpan};

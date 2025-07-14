@@ -122,10 +122,6 @@ impl<Node: NodeType> Ctx<Node> {
         Id(InternalId::Real(self.nodes.len() - 1))
     }
 
-    fn num_vars(&self) -> usize {
-        self.vars.len()
-    }
-
     pub fn add<T: ToNode<Node>>(&mut self, t: Spanned<T>) -> NodeId<T> {
         self.add_node(t.map(|item| item.to_node())).typed()
     }
@@ -159,14 +155,6 @@ impl<Node: NodeType> Ctx<Node> {
         }
     }
 
-    fn remove<T: ToNode<Node>>(mut self, id: impl Into<Id>) -> Pattern<T, Id> {
-        let id = id.into();
-        match id.0 {
-            InternalId::Real(idx) => Pattern::Real(T::from_node(self.nodes.remove(idx)).unwrap()),
-            InternalId::Pat(_) => Pattern::Pat(id),
-        }
-    }
-
     pub fn get_mut<T: ToNode<Node>>(&mut self, id: NodeId<T>) -> Pattern<&mut T, Id> {
         let id: Id = id.into();
         match id.0 {
@@ -179,13 +167,6 @@ impl<Node: NodeType> Ctx<Node> {
 
     pub fn get_real<T: ToNode<Node>>(&self, id: impl Into<Id>) -> Option<&T> {
         match self.get(id) {
-            Pattern::Real(t) => Some(t),
-            Pattern::Pat(_) => None,
-        }
-    }
-
-    fn get_real_mut<T: ToNode<Node>>(&mut self, id: NodeId<T>) -> Option<&mut T> {
-        match self.get_mut(id) {
             Pattern::Real(t) => Some(t),
             Pattern::Pat(_) => None,
         }

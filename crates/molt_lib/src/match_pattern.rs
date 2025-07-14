@@ -3,10 +3,10 @@ use std::collections::hash_map::Entry;
 
 use crate::cmp_syn::CmpSyn;
 use crate::match_ctx::MatchCtx;
-use crate::node_list::{List, Set};
+use crate::node_list::List;
 use crate::{
-    Id, ListMatchingMode, NodeId, NodeList, NodeType, PatNodeList, Pattern, RealNodeList,
-    SetMatchingMode, Single, SingleMatchingMode, VarDecl,
+    Id, ListMatchingMode, NodeId, NodeList, NodeType, PatNodeList, Pattern, RealNodeList, Single,
+    SingleMatchingMode, VarDecl,
 };
 
 type MatchId = usize;
@@ -191,7 +191,6 @@ impl Matcher {
             (Pattern::Real(ts1), Pattern::Pat(ts2)) => match ts2 {
                 PatNodeList::Single(single) => self.cmp_lists_single(ts1, single),
                 PatNodeList::List(list) => self.cmp_lists_list(ts1, list),
-                PatNodeList::Set(set) => self.cmp_lists_set(ts1, set),
             },
             (Pattern::Pat(_), _) => unreachable!(),
         }
@@ -240,10 +239,6 @@ impl Matcher {
         }
     }
 
-    fn cmp_lists_set<T: CmpSyn, P>(&mut self, ts1: &RealNodeList<T, P>, ts2: &Set<T, P>) {
-        todo!()
-    }
-
     fn check(&mut self, val: bool) {
         if !val {
             self.valid = false;
@@ -252,10 +247,6 @@ impl Matcher {
 
     pub fn eq<T: PartialEq>(&mut self, t1: T, t2: T) {
         self.check(t1 == t2)
-    }
-
-    fn same<T>(&mut self, t1: &Option<T>, t2: &Option<T>) {
-        self.check(t1.is_some() == t2.is_some())
     }
 
     pub fn no_match(&mut self) {

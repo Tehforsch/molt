@@ -1,6 +1,4 @@
-use std::marker::PhantomData;
-
-use crate::{Id, NodeId, Pattern};
+use crate::{Id, Pattern};
 
 #[derive(Copy, Clone, Debug)]
 pub struct Span {
@@ -105,43 +103,21 @@ impl<T> Spanned<T> {
     pub fn decompose(self) -> (Span, T) {
         (self.span, self.item)
     }
-
-    fn set_span(&mut self, span: Span) {
-        self.span = span
-    }
 }
 
 pub type SpannedPat<T> = Spanned<Pattern<T, Id>>;
 
 impl<T> SpannedPat<T> {
     pub fn get_property<S>(&self, f: impl Fn(&T) -> S, default: S) -> S {
-        self.real().map(f).unwrap_or(default)
+        self.item.real().map(f).unwrap_or(default)
     }
 
     pub fn is_var(&self) -> bool {
         matches!(self.item, Pattern::Pat(_))
     }
 
-    fn real(&self) -> Option<&T> {
-        self.item.real()
-    }
-
     pub fn unwrap_real(self) -> Spanned<T> {
         self.map(|item| item.unwrap_real())
-    }
-
-    fn unwrap_var(self) -> NodeId<T> {
-        match self.item {
-            Pattern::Pat(t) => t.typed(),
-            Pattern::Real(_) => panic!("unwrap_real called on real variant."),
-        }
-    }
-
-    fn do_if_real(&mut self, f: impl Fn(&mut T)) {
-        match &mut self.item {
-            Pattern::Real(t) => f(t),
-            Pattern::Pat(_) => {}
-        }
     }
 
     pub fn map_real<S>(self, f: impl Fn(T) -> S) -> SpannedPat<S> {

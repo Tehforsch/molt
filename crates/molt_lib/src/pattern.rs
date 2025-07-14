@@ -18,13 +18,6 @@ impl<Real, Pat> Pattern<Real, Pat> {
             Pattern::Pat(_) => None,
         }
     }
-
-    fn map_real<S>(self, f: impl Fn(Real) -> S) -> Pattern<S, Pat> {
-        match self {
-            Pattern::Real(t) => Pattern::Real(f(t)),
-            Pattern::Pat(id) => Pattern::Pat(id),
-        }
-    }
 }
 
 impl<Real, Pat: Copy> Pattern<Real, Pat> {
@@ -39,15 +32,6 @@ impl<Real, Pat: Copy> Pattern<Real, Pat> {
         match self {
             Pattern::Real(real) => Pattern::Real(real),
             Pattern::Pat(var) => Pattern::Pat(*var),
-        }
-    }
-}
-
-impl<Real, Pat> Pattern<Option<Real>, Pat> {
-    fn transpose(self) -> Option<Pattern<Real, Pat>> {
-        match self {
-            Pattern::Real(opt) => opt.map(Pattern::Real),
-            Pattern::Pat(var) => Some(Pattern::Pat(var)),
         }
     }
 }
