@@ -22,7 +22,7 @@ use crate::ext::IdentExt;
 use crate::node::Node;
 use crate::punctuated::Punctuated;
 use crate::token::{Bracket, Paren, Token};
-use crate::{Ident, UserKind, error, lookahead};
+use crate::{Ident, Kind, error, lookahead};
 
 pub type ParseCtx = Rc<RefCell<Ctx<Node>>>;
 
@@ -133,7 +133,7 @@ fn parse_list<T: ParseListOrItem>(input: ParseStream) -> Result<Vec<NodeId<T::Ta
     })
 }
 
-fn peek_var(cursor: Cursor, ctx: &Ctx<Node>, kind: UserKind) -> bool {
+fn peek_var(cursor: Cursor, ctx: &Ctx<Node>, kind: Kind) -> bool {
     if let Some((punct, _)) = cursor.punct() {
         if punct.as_char() == '$' {
             if let Some((ident, _)) = cursor.skip().and_then(|cursor| cursor.ident()) {
@@ -389,7 +389,7 @@ fn span_of_unexpected_ignoring_nones(mut cursor: Cursor) -> Option<(Span, Delimi
     }
 }
 
-fn kind_matches(ctx: &Ctx<Node>, ident: &Ident, kind: crate::UserKind) -> bool {
+fn kind_matches(ctx: &Ctx<Node>, ident: &Ident, kind: crate::Kind) -> bool {
     ctx.get_kind_by_name(&ident.to_string()) == kind
 }
 
@@ -662,7 +662,7 @@ impl<'a> ParseBuffer<'a> {
         }
     }
 
-    fn peek_list_var(&self, _: UserKind) -> bool {
+    fn peek_list_var(&self, _: Kind) -> bool {
         if self.peek(Token![$]) {
             if self.peek2(Ident::peek_any) {
                 false

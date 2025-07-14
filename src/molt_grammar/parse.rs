@@ -1,7 +1,7 @@
 use rust_grammar::ext::IdentExt;
 use rust_grammar::parse::{Parse, ParseStream};
 use rust_grammar::token::Brace;
-use rust_grammar::{Error, Ident, Result, Token, TokenStream, TokenTree, UserKind, braced};
+use rust_grammar::{Error, Ident, Kind, Result, Token, TokenStream, TokenTree, braced};
 
 use super::{
     Command, Decl, MatchCommand, TokenVar, TransformCommand, UnresolvedMoltFile,
@@ -59,7 +59,7 @@ impl Parse for UnresolvedVarDecls {
             vars.push(input.parse()?);
         }
         let _: Token![:] = input.parse()?;
-        let kind: UserKind = input.parse()?;
+        let kind: Kind = input.parse()?;
         let tokens = if input.peek(Token![=]) {
             let _: Token![=] = input.parse()?;
             if input.peek(Brace) {

@@ -51,6 +51,6 @@ pub mod __private;
 mod node;
 mod verbatim;
 mod whitespace;
-pub use node::{Node, UserKind, parse_node_with_kind};
+pub use node::{Kind, Node, parse_node_with_kind};
 pub use parse::{ParseCtx, parse_ctx, parse_str, parse_with_ctx};
 pub use proc_macro2::{TokenStream, TokenTree};

@@ -19,12 +19,12 @@ macro_rules! define_node_and_kind {
         }
 
         impl molt_lib::GetKind for Node {
-            type Kind = UserKind;
+            type Kind = Kind;
 
-            fn kind(&self) -> UserKind {
+            fn kind(&self) -> Kind {
                 match self {
                     $(
-                        Self::$variant_name(_) => UserKind::$variant_name,
+                        Self::$variant_name(_) => Kind::$variant_name,
                     )*
                 }
             }
@@ -63,8 +63,8 @@ macro_rules! define_node_and_kind {
                     }
                 }
 
-                fn kind() -> UserKind {
-                    UserKind::$variant_name
+                fn kind() -> Kind {
+                    Kind::$variant_name
                 }
             }
         )*
@@ -74,11 +74,11 @@ macro_rules! define_node_and_kind {
 macro_rules! define_user_kind {
     ($(($variant_name: ident, $kind_name: ident, $parse_ty: ty)),*$(,)?) => {
         #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-        pub enum UserKind {
+        pub enum Kind {
             $( $variant_name, )*
         }
 
-        impl std::fmt::Display for UserKind {
+        impl std::fmt::Display for Kind {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 match self {
                     $(
@@ -94,21 +94,21 @@ macro_rules! define_user_kind {
             )*
         }
 
-        impl crate::parse::Parse for UserKind {
+        impl crate::parse::Parse for Kind {
             fn parse(input:crate::parse:: ParseStream) -> crate::Result<Self> {
                 $(
                     if input.peek(kind_kws::$variant_name) {
                         let _: kind_kws::$variant_name = input.parse()?;
-                        return Ok(UserKind::$variant_name);
+                        return Ok(Kind::$variant_name);
                     }
                 )*
                 Err(input.error("Invalid kind."))
             }
         }
 
-        pub fn parse_node_with_kind(input: crate::parse::ParseStream, kind: UserKind) -> crate::Result<Id> {
+        pub fn parse_node_with_kind(input: crate::parse::ParseStream, kind: Kind) -> crate::Result<Id> {
             $(
-                if let UserKind::$variant_name = kind {
+                if let Kind::$variant_name = kind {
                     let parsed = input.parse_id::<$parse_ty>()?;
                     return Ok(parsed.into());
                 }

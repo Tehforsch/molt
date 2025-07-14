@@ -2,7 +2,7 @@ mod parse;
 
 use molt_lib::{Id, NodeId, Span, VarDecl};
 use parse::UnresolvedVarDecls;
-use rust_grammar::{TokenStream, Type, UserKind};
+use rust_grammar::{Kind, TokenStream, Type};
 
 #[derive(Debug, Clone)]
 pub struct TokenVar {
@@ -31,7 +31,7 @@ pub(crate) struct UnresolvedMoltFile {
 #[derive(Debug)]
 pub struct UnresolvedVarDecl {
     pub var: TokenVar,
-    pub kind: UserKind,
+    pub kind: Kind,
     pub tokens: Option<TokenStream>,
 }
 
