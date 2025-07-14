@@ -209,9 +209,10 @@ impl<T: GetKind> ToNode<T> for T {
 }
 
 pub trait GetKind {
-    type Kind: Copy + std::fmt::Debug + PartialEq + Eq;
+    type Kind: Copy + std::fmt::Debug;
 
     fn kind(&self) -> Self::Kind;
+    fn is_comparable(kind_pat: Self::Kind, kind_real: Self::Kind) -> bool;
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]

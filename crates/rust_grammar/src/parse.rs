@@ -390,7 +390,7 @@ fn span_of_unexpected_ignoring_nones(mut cursor: Cursor) -> Option<(Span, Delimi
 }
 
 fn kind_matches(ctx: &Ctx<Node>, ident: &Ident, kind: crate::Kind) -> bool {
-    ctx.get_kind_by_name(&ident.to_string()) == kind
+    Node::is_comparable(ctx.get_kind_by_name(&ident.to_string()), kind)
 }
 
 impl<'a> ParseBuffer<'a> {

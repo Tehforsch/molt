@@ -9,7 +9,7 @@ use crate::{
     Expr, Field, FieldNamed, FieldUnnamed, Ident, Item, Lit, PatMulti, Stmt, Type, Visibility,
 };
 
-macro_rules! define_node_and_kind {
+macro_rules! define_node {
     ($(($variant_name: ident, $ty: ty)),*$(,)?) => {
         #[derive(CmpSyn)]
         pub enum Node {
@@ -27,6 +27,10 @@ macro_rules! define_node_and_kind {
                         Self::$variant_name(_) => Kind::$variant_name,
                     )*
                 }
+            }
+
+            fn is_comparable(kind_pat: Self::Kind, kind_real: Self::Kind) -> bool {
+                is_comparable(kind_pat, kind_real)
             }
         }
 
@@ -71,9 +75,9 @@ macro_rules! define_node_and_kind {
     }
 }
 
-macro_rules! define_user_kind {
+macro_rules! define_kind {
     ($(($variant_name: ident, $kind_name: ident, $parse_ty: ty)),*$(,)?) => {
-        #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+        #[derive(Copy, Clone, Debug)]
         pub enum Kind {
             $( $variant_name, )*
         }
@@ -118,7 +122,7 @@ macro_rules! define_user_kind {
     }
 }
 
-define_node_and_kind! {
+define_node! {
     (Arm, Arm),
     (Expr, Expr),
     (Field, Field),
@@ -131,7 +135,7 @@ define_node_and_kind! {
     (Visibility, Visibility),
 }
 
-define_user_kind! {
+define_kind! {
     (Arm, Arm, Arm),
     (Expr, Expr, Expr),
     (Field, Field, Field),
@@ -142,6 +146,21 @@ define_user_kind! {
     (Stmt, Stmt, Stmt),
     (Type, Type, Type),
     (Visibility, Visibility, Visibility),
+}
+
+fn is_comparable(kind_pat: Kind, kind_real: Kind) -> bool {
+    match kind_pat {
+        Kind::Arm => matches!(kind_real, Kind::Arm),
+        Kind::Expr => matches!(kind_real, Kind::Expr),
+        Kind::Field => matches!(kind_real, Kind::Field),
+        Kind::Ident => matches!(kind_real, Kind::Ident),
+        Kind::Item => matches!(kind_real, Kind::Item),
+        Kind::Lit => matches!(kind_real, Kind::Lit),
+        Kind::Pat => matches!(kind_real, Kind::Pat),
+        Kind::Stmt => matches!(kind_real, Kind::Stmt),
+        Kind::Type => matches!(kind_real, Kind::Type),
+        Kind::Visibility => matches!(kind_real, Kind::Visibility),
+    }
 }
 
 impl ParseNode for Field {

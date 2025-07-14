@@ -117,7 +117,7 @@ impl Matcher {
         self.pat_type = pat_type;
         let ast_kind = ctx.ast_ctx.get_kind(ast_id);
         let pat_kind = ctx.get_kind(pat_id, pat_type);
-        if ctx.config().debug_print && ast_kind == pat_kind {
+        if ctx.config().debug_print && N::is_comparable(ast_kind, pat_kind) {
             println!(
                 "Compare ({:?} {:?})\n\t{}\n\t{}",
                 ast_kind,
