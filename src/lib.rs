@@ -17,7 +17,9 @@ pub use error::{Error, emit_error};
 pub use input::{Diagnostic, FileId, Input, MoltSource};
 use lsp::LspClient;
 use molt_grammar::{Command, MatchCommand, MoltFile, TransformCommand, UnresolvedMoltFile};
-use molt_lib::{Config, Id, Match, MatchCtx, MatchPatternData, NodeType, ParsingMode};
+use molt_lib::{
+    Config, Id, KindType, Match, MatchCtx, MatchPatternData, NodeType, ParsingMode, Pattern,
+};
 use rust_grammar::Node;
 
 struct RustFile;
@@ -65,13 +67,21 @@ impl MoltFile {
         if ctx.config().debug_print {
             ctx.dump();
         }
-        let pat_kind = ctx.pat_ctx.get_kind(var);
+        let pat_kind = ctx.pat_ctx.get_var(var).kind();
         let matches = ctx
             .ast_ctx
             .iter()
             .flat_map(|item| {
-                let kind = ctx.ast_ctx.get_kind(item);
-                if Node::is_comparable(pat_kind, kind) {
+                let node: Pattern<&Node, Id> = ctx.ast_ctx.get(item);
+                let is_of_kind = match node {
+                    molt_lib::Pattern::Real(node) => node.is_of_kind(pat_kind),
+                    molt_lib::Pattern::Pat(var) => ctx
+                        .ast_ctx
+                        .get_var(var)
+                        .kind()
+                        .is_comparable_to(pat_kind.into_node_kind()),
+                };
+                if is_of_kind {
                     molt_lib::match_pattern(&ctx, &self.vars, var, item)
                 } else {
                     vec![]

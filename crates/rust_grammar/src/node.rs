@@ -1,5 +1,5 @@
 use derive_macro::CmpSyn;
-use molt_lib::{Id, ToNode};
+use molt_lib::{Id, KindType, ToNode};
 
 use crate::expr::Arm;
 use crate::parse::discouraged::Speculative;
@@ -18,19 +18,37 @@ macro_rules! define_node {
             )*
         }
 
+        #[derive(Clone, Copy, Debug)]
+        pub enum NodeKind {
+            $(
+                $variant_name,
+            )*
+        }
+
         impl molt_lib::NodeType for Node {
             type Kind = Kind;
+            type NodeKind = NodeKind;
 
-            fn kind(&self) -> Kind {
+            fn node_kind(&self) -> NodeKind {
                 match self {
                     $(
-                        Self::$variant_name(_) => Kind::$variant_name,
+                        Self::$variant_name(_) => NodeKind::$variant_name,
                     )*
                 }
             }
 
-            fn is_comparable(kind_pat: Self::Kind, kind_real: Self::Kind) -> bool {
-                is_comparable(kind_pat, kind_real)
+            fn is_of_kind(&self, pat_kind: Self::Kind) -> bool {
+                is_of_kind(self, pat_kind)
+            }
+        }
+
+        impl From<NodeKind> for Kind {
+            fn from(val: NodeKind) -> Kind {
+                match val {
+                    $(
+                        NodeKind::$variant_name => Kind::$variant_name,
+                    )*
+                }
             }
         }
 
@@ -67,8 +85,8 @@ macro_rules! define_node {
                     }
                 }
 
-                fn kind() -> Kind {
-                    Kind::$variant_name
+                fn node_kind() -> NodeKind {
+                    NodeKind::$variant_name
                 }
             }
         )*
@@ -87,6 +105,24 @@ macro_rules! define_kind {
                 match self {
                     $(
                         Self::$variant_name => write!(f, stringify!($variant_name)),
+                    )*
+                }
+            }
+        }
+
+        impl KindType<NodeKind> for Kind {
+            fn is_comparable_to(&self, node_kind: NodeKind) -> bool {
+                match self {
+                    $(
+                        Kind::$variant_name => matches!(node_kind, NodeKind::$kind_name),
+                    )*
+                }
+            }
+
+            fn into_node_kind(self) -> NodeKind {
+                match self {
+                    $(
+                        Kind::$variant_name => NodeKind::$kind_name,
                     )*
                 }
             }
@@ -141,6 +177,7 @@ define_kind! {
     (Field, Field, Field),
     (Ident, Ident, Ident),
     (Item, Item, Item),
+    (Fn, Item, Sub<Fn>),
     (Lit, Lit, Lit),
     (Pat, Pat, PatMulti),
     (Stmt, Stmt, Stmt),
@@ -148,18 +185,19 @@ define_kind! {
     (Visibility, Visibility, Visibility),
 }
 
-fn is_comparable(kind_pat: Kind, kind_real: Kind) -> bool {
-    match kind_pat {
-        Kind::Arm => matches!(kind_real, Kind::Arm),
-        Kind::Expr => matches!(kind_real, Kind::Expr),
-        Kind::Field => matches!(kind_real, Kind::Field),
-        Kind::Ident => matches!(kind_real, Kind::Ident),
-        Kind::Item => matches!(kind_real, Kind::Item),
-        Kind::Lit => matches!(kind_real, Kind::Lit),
-        Kind::Pat => matches!(kind_real, Kind::Pat),
-        Kind::Stmt => matches!(kind_real, Kind::Stmt),
-        Kind::Type => matches!(kind_real, Kind::Type),
-        Kind::Visibility => matches!(kind_real, Kind::Visibility),
+fn is_of_kind(node: &Node, pat_kind: Kind) -> bool {
+    match pat_kind {
+        Kind::Arm => matches!(node, Node::Arm(_)),
+        Kind::Expr => matches!(node, Node::Expr(_)),
+        Kind::Field => matches!(node, Node::Field(_)),
+        Kind::Ident => matches!(node, Node::Ident(_)),
+        Kind::Item => matches!(node, Node::Item(_)),
+        Kind::Fn => matches!(node, Node::Item(Item::Fn(_))),
+        Kind::Lit => matches!(node, Node::Lit(_)),
+        Kind::Pat => matches!(node, Node::Pat(_)),
+        Kind::Stmt => matches!(node, Node::Stmt(_)),
+        Kind::Type => matches!(node, Node::Type(_)),
+        Kind::Visibility => matches!(node, Node::Visibility(_)),
     }
 }
 
@@ -177,5 +215,45 @@ impl ParseNode for Field {
         } else {
             Ok(input.parse_node::<FieldUnnamed>()?)
         }
+    }
+}
+
+trait SubType {
+    type Super: ParseNode;
+
+    fn matches_subtype(sup: &<Self::Super as ParseNode>::Target) -> bool;
+    fn expected_str() -> &'static str;
+}
+
+struct Sub<T>(T);
+
+impl<T: SubType> ParseNode for Sub<T>
+where
+    <T as SubType>::Super: ParseNode,
+{
+    type Target = <<T as SubType>::Super as ParseNode>::Target;
+
+    fn parse_node(input: ParseStream) -> crate::Result<Self::Target> {
+        let t = <T as SubType>::Super::parse_node(input)?;
+        if T::matches_subtype(&t) {
+            Ok(t)
+        } else {
+            let expected = T::expected_str();
+            Err(input.error(format!("Expected {expected}")))
+        }
+    }
+}
+
+struct Fn;
+
+impl SubType for Fn {
+    type Super = Item;
+
+    fn matches_subtype(sup: &<Self::Super as ParseNode>::Target) -> bool {
+        matches!(sup, Item::Fn(_))
+    }
+
+    fn expected_str() -> &'static str {
+        "function"
     }
 }

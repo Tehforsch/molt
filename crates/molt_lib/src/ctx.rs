@@ -99,13 +99,17 @@ pub struct VarDecl {
     pub node: Option<Id>,
 }
 
-impl<K> Var<K> {
+impl<K: Copy> Var<K> {
     pub fn new(name: String, kind: K) -> Self {
         Self { name, kind }
     }
 
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn kind(&self) -> K {
+        self.kind
     }
 }
 
@@ -176,13 +180,6 @@ impl<Node: NodeType> Ctx<Node> {
         match id.0 {
             InternalId::Real(_) => panic!(),
             InternalId::Pat(idx) => &self.vars[idx],
-        }
-    }
-
-    pub fn get_kind(&self, id: Id) -> Node::Kind {
-        match id.0 {
-            InternalId::Real(idx) => self.nodes[idx].kind(),
-            InternalId::Pat(idx) => self.vars[idx].kind,
         }
     }
 

@@ -14,18 +14,20 @@
 //! position (`Item` node variant) or within an `impl` block
 //! (`ImplItem` node variant), however the user most likely does not
 //! want to differentiate these. To this end, the `NodeType` trait
-//! defines a `is_comparable` function which returns whether two
+//! defines a `kinds_are_comparable` function which returns whether two
 //! `Kind` should be compared by the matching algorithm.
 //!
-//! For simplicity, we define at least one `Kind` per `Node`
-//! variant. This mapping is given by the `NodeType::kind` method.
+//! For simplicity, each node type is represented by at least one
+//! `Kind` variant. This is expressed by the `Node::node_kind` method
+//! which returns a `NodeKind` struct which can be converted to the
+//! corresponding `Kind`.
 
 pub trait ToNode<Node: NodeType>: Sized {
     fn to_node(self) -> Node;
     fn from_node(node: Node) -> Option<Self>;
     fn from_node_ref(node: &Node) -> Option<&Self>;
     fn from_node_ref_mut(node: &mut Node) -> Option<&mut Self>;
-    fn kind() -> Node::Kind;
+    fn node_kind() -> Node::NodeKind;
 }
 
 impl<T: NodeType> ToNode<T> for T {
@@ -45,14 +47,20 @@ impl<T: NodeType> ToNode<T> for T {
         Some(node)
     }
 
-    fn kind() -> T::Kind {
+    fn node_kind() -> T::NodeKind {
         panic!()
     }
 }
 
 pub trait NodeType {
-    type Kind: Copy + std::fmt::Debug;
+    type NodeKind: Copy + std::fmt::Debug + Into<Self::Kind>;
+    type Kind: Copy + KindType<Self::NodeKind>;
 
-    fn kind(&self) -> Self::Kind;
-    fn is_comparable(kind_pat: Self::Kind, kind_real: Self::Kind) -> bool;
+    fn node_kind(&self) -> Self::NodeKind;
+    fn is_of_kind(&self, pat_kind: Self::Kind) -> bool;
+}
+
+pub trait KindType<NodeKind> {
+    fn is_comparable_to(&self, node_kind: NodeKind) -> bool;
+    fn into_node_kind(self) -> NodeKind;
 }

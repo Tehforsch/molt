@@ -35,7 +35,7 @@ impl<'a, Node: NodeType> MatchCtx<'a, Node> {
         println!("--------------------------------");
         for id in self.ast_ctx.iter() {
             let node = self.ast_ctx.get::<Node>(id).unwrap_real();
-            let kind_str = format!("{:?}", node.kind());
+            let kind_str = format!("{:?}", node.node_kind());
             println!(
                 "AstNode({:02}): {:13} = {}",
                 id.unwrap_idx(),
@@ -46,7 +46,7 @@ impl<'a, Node: NodeType> MatchCtx<'a, Node> {
         println!("--------------------------------");
         for id in self.pat_ctx.iter() {
             let node = self.pat_ctx.get::<Node>(id).unwrap_real();
-            let kind_str = format!("{:?}", node.kind());
+            let kind_str = format!("{:?}", node.node_kind());
             println!(
                 "PatNode({:02}): {:13} = {}",
                 id.unwrap_idx(),
@@ -81,12 +81,5 @@ impl<'a, Node: NodeType> MatchCtx<'a, Node> {
 
     pub fn get_var(&self, var: Id) -> &Var<Node::Kind> {
         self.pat_ctx.get_var(var)
-    }
-
-    pub fn get_kind(&self, pat_id: Id, pat_type: PatType) -> Node::Kind {
-        match pat_type {
-            PatType::FromAst => self.ast_ctx.get_kind(pat_id),
-            PatType::FromPat => self.pat_ctx.get_kind(pat_id),
-        }
     }
 }
