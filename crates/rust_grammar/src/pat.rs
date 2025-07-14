@@ -319,7 +319,7 @@ fn parse_pat_multi<T: ParseListOrItem<Target = Pat, Punct = token::Or>>(
 ) -> Result<Pattern<Pat, Id>> {
     let pat = input.parse_list_or_item::<T>()?;
     Ok(match pat {
-        ListOrItem::Item(item) => item.take(),
+        ListOrItem::Item(item) => item.item(),
         ListOrItem::List(cases) => Pattern::Real(Pat::Or(PatOr {
             attrs: Vec::new(),
             leading_vert: None,
@@ -731,7 +731,7 @@ fn pat_lit_or_range(input: ParseStream) -> Result<Pat> {
             end: end.map(|end| input.add(end.map(|end| end.into_expr()))),
         }))
     } else {
-        Ok(start.take().into_pat())
+        Ok(start.item().into_pat())
     }
 }
 

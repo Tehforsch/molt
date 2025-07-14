@@ -92,7 +92,7 @@ impl<T> Spanned<T> {
         self.span
     }
 
-    pub fn take(self) -> T {
+    pub fn item(self) -> T {
         self.item
     }
 

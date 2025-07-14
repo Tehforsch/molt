@@ -118,7 +118,7 @@ pub struct Ctx<Node: NodeType> {
 impl<Node: NodeType> Ctx<Node> {
     fn add_node(&mut self, node: Spanned<Node>) -> Id {
         self.spans.push(node.span());
-        self.nodes.push(node.take());
+        self.nodes.push(node.item());
         Id(InternalId::Real(self.nodes.len() - 1))
     }
 

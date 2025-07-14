@@ -943,7 +943,7 @@ impl ParseNode for Expr {
     }
 
     fn parse_pat(input: ParseStream) -> Result<Pattern<Self::Target, Id>> {
-        Ok(ambiguous_expr(input, AllowStruct(true))?.take())
+        Ok(ambiguous_expr(input, AllowStruct(true))?.item())
     }
 }
 
@@ -955,7 +955,7 @@ impl ParseNode for ExprNoEagerBrace {
     }
 
     fn parse_pat(input: ParseStream) -> Result<Pattern<Self::Target, Id>> {
-        Ok(ambiguous_expr(input, AllowStruct(false))?.take())
+        Ok(ambiguous_expr(input, AllowStruct(false))?.item())
     }
 }
 
@@ -967,7 +967,7 @@ impl ParseNode for ExprEarlierBoundaryRule {
     }
 
     fn parse_pat(input: ParseStream) -> Result<Pattern<Self::Target, Id>> {
-        Ok(parse_with_earlier_boundary_rule(input)?.take())
+        Ok(parse_with_earlier_boundary_rule(input)?.item())
     }
 }
 
@@ -2049,7 +2049,7 @@ impl ParseNode for ClosureInput {
                 Pattern::Real(Pat::Verbatim(_)) => {}
                 Pattern::Real(Pat::Wild(pat)) => pat.attrs = attrs,
             }
-            Ok(pat.take())
+            Ok(pat.item())
         }
     }
 }
@@ -2263,7 +2263,7 @@ impl Parse for FieldValue {
 
         Ok(FieldValue {
             attrs,
-            member: member.take(),
+            member: member.item(),
             colon_token,
             expr: value,
         })
