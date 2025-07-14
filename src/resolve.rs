@@ -102,7 +102,7 @@ impl UnresolvedMoltFile {
             .map(|var| {
                 (
                     pat_ctx
-                        .add_var::<Node>(Var::new(var.var.name, var.kind.into()))
+                        .add_var::<Node>(Var::new(var.var.name, var.kind))
                         .into(),
                     var.kind,
                     var.tokens,

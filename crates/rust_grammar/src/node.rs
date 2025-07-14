@@ -1,13 +1,12 @@
 use derive_macro::CmpSyn;
-use molt_lib::{Id, NodeId, Pattern, ToNode};
+use molt_lib::{Id, ToNode};
 
 use crate::expr::Arm;
 use crate::parse::discouraged::Speculative;
 use crate::parse::{ParseNode, ParseStream};
 use crate::pat::Pat;
 use crate::{
-    Error, Expr, Field, FieldNamed, FieldUnnamed, Ident, Item, Lit, PatMulti, Stmt, Type,
-    Visibility,
+    Expr, Field, FieldNamed, FieldUnnamed, Ident, Item, Lit, PatMulti, Stmt, Type, Visibility,
 };
 
 macro_rules! define_node_and_kind {
@@ -27,12 +26,12 @@ macro_rules! define_node_and_kind {
         }
 
         impl molt_lib::GetKind for Node {
-            type Kind = Kind;
+            type Kind = UserKind;
 
-            fn kind(&self) -> Kind {
+            fn kind(&self) -> UserKind {
                 match self {
                     $(
-                        Self::$variant_name(_) => Kind::$variant_name,
+                        Self::$variant_name(_) => UserKind::$variant_name,
                     )*
                 }
             }
@@ -81,8 +80,8 @@ macro_rules! define_node_and_kind {
                     }
                 }
 
-                fn kind() -> Kind {
-                    Kind::$variant_name
+                fn kind() -> UserKind {
+                    UserKind::$variant_name
                 }
             }
         )*
@@ -91,7 +90,7 @@ macro_rules! define_node_and_kind {
 
 macro_rules! define_user_kind {
     ($(($variant_name: ident, $kind_name: ident, $parse_ty: ty)),*$(,)?) => {
-        #[derive(Debug, Clone, Copy)]
+        #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
         pub enum UserKind {
             $( $variant_name, )*
         }
