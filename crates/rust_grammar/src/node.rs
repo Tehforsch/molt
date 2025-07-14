@@ -11,13 +11,6 @@ use crate::{
 
 macro_rules! define_node_and_kind {
     ($(($variant_name: ident, $ty: ty)),*$(,)?) => {
-        #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-        pub enum Kind {
-            $(
-                $variant_name,
-            )*
-        }
-
         #[derive(CmpSyn)]
         pub enum Node {
             $(
@@ -32,16 +25,6 @@ macro_rules! define_node_and_kind {
                 match self {
                     $(
                         Self::$variant_name(_) => UserKind::$variant_name,
-                    )*
-                }
-            }
-        }
-
-        impl std::fmt::Display for Kind {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                match self {
-                    $(
-                        Self::$variant_name => write!(f, stringify!($variant_name)),
                     )*
                 }
             }
@@ -100,16 +83,6 @@ macro_rules! define_user_kind {
                 match self {
                     $(
                         Self::$variant_name => write!(f, stringify!($variant_name)),
-                    )*
-                }
-            }
-        }
-
-        impl From<UserKind> for Kind {
-            fn from(val: UserKind) -> Kind {
-                match val {
-                    $(
-                        UserKind::$variant_name => Kind::$kind_name,
                     )*
                 }
             }
