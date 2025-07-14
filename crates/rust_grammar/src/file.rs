@@ -1,8 +1,8 @@
-use molt_lib::{Ctx, NodeId, ParsingMode};
+use molt_lib::{Ctx, NodeList, ParsingMode};
 
 use crate::attr::Attribute;
 use crate::error::Result;
-use crate::item::Item;
+use crate::item::{Item, Items};
 use crate::parse::{Parse, ParseStream, parse_str_ctx};
 use crate::{Node, whitespace};
 
@@ -11,7 +11,7 @@ use crate::{Node, whitespace};
 pub struct File {
     pub shebang: Option<String>,
     pub attrs: Vec<Attribute>,
-    pub items: Vec<NodeId<Item>>,
+    pub items: NodeList<Item, Token![;]>,
 }
 
 impl Parse for File {
@@ -19,13 +19,7 @@ impl Parse for File {
         Ok(File {
             shebang: None,
             attrs: input.call(Attribute::parse_inner)?,
-            items: {
-                let mut items: Vec<NodeId<Item>> = Vec::new();
-                while !input.is_empty() {
-                    items.push(input.parse()?);
-                }
-                items
-            },
+            items: input.parse_list::<Items>()?,
         })
     }
 }

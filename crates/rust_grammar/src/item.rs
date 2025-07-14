@@ -2182,24 +2182,6 @@ impl Parse for TraitItemMacro {
     }
 }
 
-struct ImplItems;
-
-impl ParseList for ImplItems {
-    type Item = ImplItem;
-
-    type ParseItem = ImplItem;
-
-    type Punct = Token![;];
-
-    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
-        let mut items = vec![];
-        while !input.is_empty() {
-            items.push(input.parse()?);
-        }
-        Ok(items)
-    }
-}
-
 impl Parse for ItemImpl {
     fn parse(input: ParseStream) -> Result<Self> {
         let allow_verbatim_impl = false;
@@ -2573,5 +2555,41 @@ impl Parse for StaticMutability {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut_token: Option<Token![mut]> = input.parse()?;
         Ok(mut_token.map_or(StaticMutability::None, StaticMutability::Mut))
+    }
+}
+
+pub struct Items;
+
+impl ParseList for Items {
+    type Item = Item;
+
+    type ParseItem = Item;
+
+    type Punct = Token![;];
+
+    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
+        let mut items = vec![];
+        while !input.is_empty() {
+            items.push(input.parse()?);
+        }
+        Ok(items)
+    }
+}
+
+struct ImplItems;
+
+impl ParseList for ImplItems {
+    type Item = ImplItem;
+
+    type ParseItem = ImplItem;
+
+    type Punct = Token![;];
+
+    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
+        let mut items = vec![];
+        while !input.is_empty() {
+            items.push(input.parse()?);
+        }
+        Ok(items)
     }
 }
