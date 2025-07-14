@@ -1,5 +1,5 @@
 use derive_macro::CmpSyn;
-use molt_lib::{Id, KindType, ToNode};
+use molt_lib::{Id, KindType, Pattern, ToNode};
 
 use crate::expr::Arm;
 use crate::parse::discouraged::Speculative;
@@ -94,7 +94,7 @@ macro_rules! define_node {
 }
 
 macro_rules! define_kind {
-    ($(($variant_name: ident, $kind_name: ident, $parse_ty: ty)),*$(,)?) => {
+    ($(($variant_name: ident, $kind_name: ident, $parse_ty: ty $(,$sub_ty: ty)?)),* $(,)?) => {
         #[derive(Copy, Clone, Debug)]
         pub enum Kind {
             $( $variant_name, )*
@@ -146,16 +146,62 @@ macro_rules! define_kind {
             }
         }
 
+        fn is_of_kind(node: &Node, pat_kind: Kind) -> bool {
+            $(
+                match_impl!(node, pat_kind, $variant_name, $parse_ty $(,$sub_ty)?);
+            )*
+            unreachable!()
+        }
+
         pub fn parse_node_with_kind(input: crate::parse::ParseStream, kind: Kind) -> crate::Result<Id> {
             $(
-                if let Kind::$variant_name = kind {
-                    let parsed = input.parse_id::<$parse_ty>()?;
-                    return Ok(parsed.into());
-                }
+                parse_impl!(input, kind, $variant_name, $parse_ty $(,$sub_ty)?);
             )*
             unreachable!()
         }
     }
+}
+
+macro_rules! parse_impl {
+    ($input: ident, $kind: ident, $variant_name: ident, $parse_ty: ty) => {
+        if let Kind::$variant_name = $kind {
+            let parsed = $input.parse_id::<$parse_ty>()?;
+            return Ok(parsed.into());
+        }
+    };
+    ($input: ident, $kind: ident, $variant_name: ident, $parse_ty: ty, $sub_ty: ty) => {
+        if let Kind::$variant_name = $kind {
+            let parsed = $input.parse_spanned_pat::<$parse_ty>()?;
+            match &*parsed {
+                Pattern::Real(real) => {
+                    if !<$sub_ty>::is_of_sub_kind(real) {
+                        return Err($input.error(format!("Expected {}", <$sub_ty>::expected_str())));
+                    }
+                }
+                Pattern::Pat(_) => {
+                    // TODO: Do we need to do anything here?
+                }
+            }
+            return Ok($input.add_pat(parsed).into());
+        }
+    };
+}
+
+macro_rules! match_impl {
+    ($node: ident, $pat_kind: ident, $variant_name: ident, $parse_ty: ty) => {
+        if let Kind::$variant_name = $pat_kind {
+            return matches!($node, Node::$variant_name(_));
+        }
+    };
+    ($node: ident, $pat_kind: ident, $variant_name: ident, $parse_ty: ty, $sub_ty: ty) => {
+        if let Kind::$variant_name = $pat_kind {
+            if let Some(t) = <$parse_ty>::from_node_ref($node) {
+                return <$sub_ty>::is_of_sub_kind(t);
+            } else {
+                return false;
+            }
+        }
+    };
 }
 
 define_node! {
@@ -177,28 +223,12 @@ define_kind! {
     (Field, Field, Field),
     (Ident, Ident, Ident),
     (Item, Item, Item),
-    (Fn, Item, Sub<Fn>),
+    (Fn, Item, Item, Fn),
     (Lit, Lit, Lit),
     (Pat, Pat, PatMulti),
     (Stmt, Stmt, Stmt),
     (Type, Type, Type),
     (Visibility, Visibility, Visibility),
-}
-
-fn is_of_kind(node: &Node, pat_kind: Kind) -> bool {
-    match pat_kind {
-        Kind::Arm => matches!(node, Node::Arm(_)),
-        Kind::Expr => matches!(node, Node::Expr(_)),
-        Kind::Field => matches!(node, Node::Field(_)),
-        Kind::Ident => matches!(node, Node::Ident(_)),
-        Kind::Item => matches!(node, Node::Item(_)),
-        Kind::Fn => matches!(node, Node::Item(Item::Fn(_))),
-        Kind::Lit => matches!(node, Node::Lit(_)),
-        Kind::Pat => matches!(node, Node::Pat(_)),
-        Kind::Stmt => matches!(node, Node::Stmt(_)),
-        Kind::Type => matches!(node, Node::Type(_)),
-        Kind::Visibility => matches!(node, Node::Visibility(_)),
-    }
 }
 
 impl ParseNode for Field {
@@ -218,38 +248,19 @@ impl ParseNode for Field {
     }
 }
 
-trait SubType {
-    type Super: ParseNode;
+trait SubKind {
+    type Super;
 
-    fn matches_subtype(sup: &<Self::Super as ParseNode>::Target) -> bool;
+    fn is_of_sub_kind(sup: &Self::Super) -> bool;
     fn expected_str() -> &'static str;
-}
-
-struct Sub<T>(T);
-
-impl<T: SubType> ParseNode for Sub<T>
-where
-    <T as SubType>::Super: ParseNode,
-{
-    type Target = <<T as SubType>::Super as ParseNode>::Target;
-
-    fn parse_node(input: ParseStream) -> crate::Result<Self::Target> {
-        let t = <T as SubType>::Super::parse_node(input)?;
-        if T::matches_subtype(&t) {
-            Ok(t)
-        } else {
-            let expected = T::expected_str();
-            Err(input.error(format!("Expected {expected}")))
-        }
-    }
 }
 
 struct Fn;
 
-impl SubType for Fn {
+impl SubKind for Fn {
     type Super = Item;
 
-    fn matches_subtype(sup: &<Self::Super as ParseNode>::Target) -> bool {
+    fn is_of_sub_kind(sup: &Item) -> bool {
         matches!(sup, Item::Fn(_))
     }
 
