@@ -18,7 +18,7 @@ macro_rules! define_node {
             )*
         }
 
-        impl molt_lib::GetKind for Node {
+        impl molt_lib::NodeType for Node {
             type Kind = Kind;
 
             fn kind(&self) -> Kind {

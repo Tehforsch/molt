@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use crate::{Span, Spanned, span::SpannedPat};
 
-pub trait ToNode<Node: GetKind>: Sized {
+pub trait ToNode<Node: NodeType>: Sized {
     fn to_node(self) -> Node;
     fn from_node(node: Node) -> Option<Self>;
     fn from_node_ref(node: &Node) -> Option<&Self>;
@@ -10,7 +10,7 @@ pub trait ToNode<Node: GetKind>: Sized {
     fn kind() -> Node::Kind;
 }
 
-impl<T: GetKind> ToNode<T> for T {
+impl<T: NodeType> ToNode<T> for T {
     fn to_node(self) -> T {
         self
     }
@@ -32,7 +32,7 @@ impl<T: GetKind> ToNode<T> for T {
     }
 }
 
-pub trait GetKind {
+pub trait NodeType {
     type Kind: Copy + std::fmt::Debug;
 
     fn kind(&self) -> Self::Kind;
@@ -200,13 +200,13 @@ impl<K> Var<K> {
     }
 }
 
-pub struct Ctx<Node: GetKind> {
+pub struct Ctx<Node: NodeType> {
     nodes: Vec<Node>,
     vars: Vec<Var<Node::Kind>>,
     spans: Vec<Span>,
 }
 
-impl<Node: GetKind> Ctx<Node> {
+impl<Node: NodeType> Ctx<Node> {
     fn add_node(&mut self, node: Spanned<Node>) -> Id {
         self.spans.push(node.span());
         self.nodes.push(node.take());
@@ -333,7 +333,7 @@ impl<Node: GetKind> Ctx<Node> {
     }
 }
 
-impl<Node: GetKind> Default for Ctx<Node> {
+impl<Node: NodeType> Default for Ctx<Node> {
     fn default() -> Self {
         Self {
             nodes: vec![],

@@ -5,7 +5,7 @@ use crate::cmp_syn::CmpSyn;
 use crate::match_ctx::MatchCtx;
 use crate::node_list::{List, Set};
 use crate::{
-    GetKind, Id, ListMatchingMode, NodeId, NodeList, PatNodeList, Pattern, RealNodeList,
+    Id, ListMatchingMode, NodeId, NodeList, NodeType, PatNodeList, Pattern, RealNodeList,
     SetMatchingMode, Single, SingleMatchingMode, VarDecl,
 };
 
@@ -99,7 +99,7 @@ impl Matcher {
         }
     }
 
-    fn cmp_ids<N: GetKind + CmpSyn>(
+    fn cmp_ids<N: NodeType + CmpSyn>(
         &mut self,
         ctx: &MatchCtx<N>,
         ast_id: Id,
@@ -142,7 +142,7 @@ impl Matcher {
         self.forks.push(fork);
     }
 
-    fn add_binding<N: GetKind + CmpSyn>(&mut self, ctx: &MatchCtx<N>, key: Id, ast_id: Id) {
+    fn add_binding<N: NodeType + CmpSyn>(&mut self, ctx: &MatchCtx<N>, key: Id, ast_id: Id) {
         if ctx.config().debug_print {
             println!(
                 "\tBind ${} to {}",
@@ -282,7 +282,7 @@ impl Match {
     }
 }
 
-pub fn match_pattern<N: GetKind + CmpSyn>(
+pub fn match_pattern<N: NodeType + CmpSyn>(
     ctx: &MatchCtx<N>,
     vars: &[VarDecl],
     var: Id,

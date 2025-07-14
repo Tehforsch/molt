@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::config::Config;
 use crate::match_pattern::PatType;
-use crate::{Ctx, GetKind, Id, Pattern, ToNode, Var};
+use crate::{Ctx, Id, NodeType, Pattern, ToNode, Var};
 
 #[derive(Clone)]
 pub struct MatchPatternData<'a> {
@@ -12,13 +12,13 @@ pub struct MatchPatternData<'a> {
     pub config: &'a Config,
 }
 
-pub struct MatchCtx<'a, Node: GetKind> {
+pub struct MatchCtx<'a, Node: NodeType> {
     pub pat_ctx: &'a Ctx<Node>,
     pub ast_ctx: &'a Ctx<Node>,
     data: MatchPatternData<'a>,
 }
 
-impl<'a, Node: GetKind> MatchCtx<'a, Node> {
+impl<'a, Node: NodeType> MatchCtx<'a, Node> {
     pub fn new(pat_ctx: &'a Ctx<Node>, ast_ctx: &'a Ctx<Node>, data: MatchPatternData<'a>) -> Self {
         Self {
             pat_ctx,

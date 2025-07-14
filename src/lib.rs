@@ -17,7 +17,7 @@ pub use error::{Error, emit_error};
 pub use input::{Diagnostic, FileId, Input, MoltSource};
 use lsp::LspClient;
 use molt_grammar::{Command, MatchCommand, MoltFile, TransformCommand, UnresolvedMoltFile};
-use molt_lib::{Config, GetKind, Id, Match, MatchCtx, MatchPatternData, ParsingMode};
+use molt_lib::{Config, Id, Match, MatchCtx, MatchPatternData, NodeType, ParsingMode};
 use rust_grammar::Node;
 
 struct RustFile;
