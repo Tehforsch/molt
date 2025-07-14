@@ -2,6 +2,7 @@ use derive_macro::CmpSyn;
 use molt_lib::{Id, KindType, Pattern, ToNode};
 
 use crate::expr::Arm;
+use crate::item::ImplItem;
 use crate::parse::discouraged::Speculative;
 use crate::parse::{ParseNode, ParseStream};
 use crate::pat::Pat;
@@ -210,6 +211,7 @@ define_node! {
     (Field, Field),
     (Ident, Ident),
     (Item, Item),
+    (ImplItem, ImplItem),
     (Lit, Lit),
     (Pat, Pat),
     (Stmt, Stmt),
@@ -223,6 +225,7 @@ define_kind! {
     (Field, Field, Field),
     (Ident, Ident, Ident),
     (Item, Item, Item),
+    (ImplItem, ImplItem, ImplItem),
     (Fn, Item, Item, Fn),
     (Lit, Lit, Lit),
     (Pat, Pat, PatMulti),

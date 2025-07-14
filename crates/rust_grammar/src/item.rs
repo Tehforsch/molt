@@ -4,9 +4,6 @@ use derive_macro::CmpSyn;
 use molt_lib::{NodeId, NodeList, Pattern, SpannedPat, WithSpan};
 use proc_macro2::TokenStream;
 
-use crate::attr::{
-    Attribute, {self},
-};
 use crate::data::{Fields, FieldsNamed, Variant};
 use crate::error::{Error, Result};
 use crate::expr::Expr;
@@ -25,6 +22,10 @@ use crate::punctuated::Punctuated;
 use crate::restriction::Visibility;
 use crate::stmt::Block;
 use crate::ty::{Abi, ReturnType, Type, TypePath};
+use crate::{
+    attr::{self, Attribute},
+    parse::ParseList,
+};
 use crate::{derive, token, verbatim};
 
 #[derive(Debug, CmpSyn)]
@@ -153,7 +154,7 @@ pub struct ItemImpl {
     /// The Self type of the impl.
     pub self_ty: NodeId<Type>,
     pub brace_token: token::Brace,
-    pub items: Vec<ImplItem>,
+    pub items: NodeList<ImplItem, Token![;]>,
 }
 
 #[derive(Debug, CmpSyn)]
@@ -2181,6 +2182,24 @@ impl Parse for TraitItemMacro {
     }
 }
 
+struct ImplItems;
+
+impl ParseList for ImplItems {
+    type Item = ImplItem;
+
+    type ParseItem = ImplItem;
+
+    type Punct = Token![;];
+
+    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
+        let mut items = vec![];
+        while !input.is_empty() {
+            items.push(input.parse()?);
+        }
+        Ok(items)
+    }
+}
+
 impl Parse for ItemImpl {
     fn parse(input: ParseStream) -> Result<Self> {
         let allow_verbatim_impl = false;
@@ -2276,10 +2295,7 @@ fn parse_impl(input: ParseStream, allow_verbatim_impl: bool) -> Result<Option<It
     let brace_token = braced!(content in input);
     attr::parse_inner(&content, &mut attrs)?;
 
-    let mut items = Vec::new();
-    while !content.is_empty() {
-        items.push(content.parse()?);
-    }
+    let items = content.parse_list::<ImplItems>()?;
 
     if has_visibility || is_const_impl || is_impl_for && trait_.is_none() {
         Ok(None)
@@ -2298,8 +2314,10 @@ fn parse_impl(input: ParseStream, allow_verbatim_impl: bool) -> Result<Option<It
     }
 }
 
-impl Parse for ImplItem {
-    fn parse(input: ParseStream) -> Result<Self> {
+impl ParseNode for ImplItem {
+    type Target = ImplItem;
+
+    fn parse_node(input: ParseStream) -> Result<Self> {
         let begin = input.fork();
         let mut attrs = input.call(Attribute::parse_outer)?;
         let ahead = input.fork();
