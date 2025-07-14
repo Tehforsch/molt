@@ -347,12 +347,12 @@ impl Id {
     }
 }
 
-pub struct Var<Kind> {
+pub struct Var<K> {
     name: String,
-    kind: Kind,
+    kind: K,
 }
 
-impl<Kind: std::fmt::Debug + PartialEq> PartialEq for Var<Kind> {
+impl<K: std::fmt::Debug + PartialEq> PartialEq for Var<K> {
     fn eq(&self, other: &Self) -> bool {
         debug_assert_eq!(self.kind, other.kind);
         self.name.eq(&other.name)
@@ -365,8 +365,8 @@ pub struct VarDecl {
     pub node: Option<Id>,
 }
 
-impl<Kind> Var<Kind> {
-    pub fn new(name: String, kind: Kind) -> Self {
+impl<K> Var<K> {
+    pub fn new(name: String, kind: K) -> Self {
         Self { name, kind }
     }
 
