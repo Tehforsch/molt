@@ -1,14 +1,24 @@
 use crate::NodeId;
 use crate::match_pattern::Matcher;
-use crate::rule::RuleKeyKind;
+use crate::rule::DoesNotRequireRule;
 
-pub trait CmpSyn<T = Self> {
-    const RULE: Option<RuleKeyKind> = None;
-
+/// This trait describes how a syntactic type is compared
+/// to itself (or another, similar, type `T`).
+///
+/// The `Rule` generic exists to distinguish types that
+/// can be compared without checking if the corresponding
+/// rule is enabled to those that need this check.
+///
+/// The `Matcher::cmp_syn` method only exists for the former
+/// types while a more specific method exists for the latter.
+/// This structure exists to make sure one does not accidentally
+/// forget to check for the correct rule in custom impls of this
+/// trait.
+pub trait CmpSyn<T = Self, Rule = DoesNotRequireRule> {
     fn cmp_syn(&self, ctx: &mut Matcher, pat: &T);
 }
 
-impl<T: CmpSyn> CmpSyn for NodeId<T> {
+impl<T: CmpSyn<T, R>, R> CmpSyn<NodeId<T>, R> for NodeId<T> {
     fn cmp_syn(&self, ctx: &mut Matcher, pat: &Self) {
         ctx.cmp_nodes(*self, *pat)
     }

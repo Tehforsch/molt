@@ -63,6 +63,7 @@ pub struct FieldsUnnamed {
 pub struct Field {
     pub attrs: Vec<Attribute>,
 
+    #[rule(Vis, Field)]
     pub vis: NodeId<Vis>,
 
     pub mutability: FieldMutability,

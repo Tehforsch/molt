@@ -4,6 +4,7 @@ use std::collections::hash_map::Entry;
 use crate::cmp_syn::CmpSyn;
 use crate::match_ctx::MatchCtx;
 use crate::node_list::List;
+use crate::rule::{DoesNotRequireRule, RequiresRule};
 use crate::{
     Id, ListMatchingMode, NodeId, NodeList, NodeType, PatNodeList, Pattern, RealNodeList, Single,
     SingleMatchingMode, VarDecl,
@@ -253,11 +254,29 @@ impl<'a> Matcher<'a> {
         self.check(false)
     }
 
-    pub fn cmp_nodes<T: CmpSyn>(&mut self, ast: NodeId<T>, pat: NodeId<T>) {
+    pub fn cmp_nodes<T: CmpSyn<T, R>, R>(&mut self, ast: NodeId<T>, pat: NodeId<T>) {
         self.cmps.push(Comparison::new(ast, pat, self.pat_type));
     }
 
-    pub fn cmp_syn<T: CmpSyn<S>, S>(&mut self, t1: &T, t2: &S) {
+    /// Compare two types that do not have a rule to toggle their behavior.
+    pub fn cmp_syn<T: CmpSyn<S, DoesNotRequireRule>, S>(&mut self, t1: &T, t2: &S) {
+        t1.cmp_syn(self, t2)
+    }
+
+    /// Compare two types that have a rule to toggle their behavior.
+    pub fn cmp_syn_with_rule<T: CmpSyn<S, RequiresRule>, S>(
+        &mut self,
+        t1: &T,
+        t2: &S,
+        rule: impl Into<RuleKey>,
+    ) {
+        if self.should_compare(rule.into()) {
+            t1.cmp_syn(self, t2)
+        }
+    }
+
+    /// Compare two types and explicitly ignore whether a rule is required or not.
+    pub fn cmp_syn_ignore_rule<R, T: CmpSyn<S, R>, S>(&mut self, t1: &T, t2: &S) {
         t1.cmp_syn(self, t2)
     }
 

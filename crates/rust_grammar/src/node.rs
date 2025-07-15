@@ -25,7 +25,7 @@ macro_rules! define_node {
                     $(
                         Node::$variant_name(t1) => {
                             if let Node::$variant_name(t2) = pat {
-                                ctx.cmp_syn(t1, t2);
+                                ctx.cmp_syn_ignore_rule(t1, t2);
                                 return true
                             }
                         }

@@ -1,7 +1,7 @@
 use std::mem;
 
 use derive_macro::CmpSyn;
-use molt_lib::{CmpSyn, NodeId, NodeList, Pattern, SpannedPat, WithSpan};
+use molt_lib::{CmpSyn, NodeId, NodeList, Pattern, SpannedPat, WithSpan, rule};
 use proc_macro2::TokenStream;
 
 use crate::data::{Fields, FieldsNamed, Variant};
@@ -2627,7 +2627,7 @@ impl CmpSyn<Item> for ImplItem {
 impl CmpSyn<ItemConst> for ImplItemConst {
     fn cmp_syn(&self, ctx: &mut molt_lib::Matcher, pat: &ItemConst) {
         ctx.cmp_syn(&self.attrs, &pat.attrs);
-        ctx.cmp_syn(&self.vis, &pat.vis);
+        ctx.cmp_syn_with_rule(&self.vis, &pat.vis, rule::Vis::Const);
         ctx.cmp_syn(&self.const_token, &pat.const_token);
         ctx.cmp_syn(&self.ident, &pat.ident);
         ctx.cmp_syn(&self.generics, &pat.generics);
@@ -2643,7 +2643,7 @@ impl CmpSyn<ItemConst> for ImplItemConst {
 impl CmpSyn<ItemFn> for ImplItemFn {
     fn cmp_syn(&self, ctx: &mut molt_lib::Matcher, pat: &ItemFn) {
         ctx.cmp_syn(&self.attrs, &pat.attrs);
-        ctx.cmp_syn(&self.vis, &pat.vis);
+        ctx.cmp_syn_with_rule(&self.vis, &pat.vis, rule::Vis::Fn);
         ctx.cmp_syn(&self.sig, &pat.sig);
         ctx.cmp_syn(&self.block, &pat.block);
         ctx.cmp_syn(&self.defaultness, &None);
@@ -2653,7 +2653,7 @@ impl CmpSyn<ItemFn> for ImplItemFn {
 impl CmpSyn<ItemType> for ImplItemType {
     fn cmp_syn(&self, ctx: &mut molt_lib::Matcher, pat: &ItemType) {
         ctx.cmp_syn(&self.attrs, &pat.attrs);
-        ctx.cmp_syn(&self.vis, &pat.vis);
+        ctx.cmp_syn_with_rule(&self.vis, &pat.vis, rule::Vis::Type);
         ctx.cmp_syn(&self.type_token, &pat.type_token);
         ctx.cmp_syn(&self.ident, &pat.ident);
         ctx.cmp_syn(&self.generics, &pat.generics);

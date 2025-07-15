@@ -10,6 +10,7 @@ use crate::token;
 #[derive(Debug, CmpSyn)]
 /// The visibility level of an item: inherited or `pub` or
 /// `pub(restricted)`.
+#[requires_rule]
 pub enum Vis {
     /// A public visibility level: `pub`.
     Public(Token![pub]),

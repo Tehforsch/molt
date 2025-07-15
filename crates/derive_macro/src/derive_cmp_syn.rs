@@ -6,6 +6,11 @@ use crate::utils::{is_box, is_node_list, is_token, is_vec_attribute};
 
 pub fn impl_cmp_syn(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
+    let requires_rule = input
+        .attrs
+        .iter()
+        .find(|attr| attr.path().is_ident("requires_rule"))
+        .is_some();
     let name = &input.ident;
 
     let impl_ = match input.data {
@@ -14,8 +19,14 @@ pub fn impl_cmp_syn(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         _ => panic!("Union found"),
     };
 
+    let rule_ty = if requires_rule {
+        quote! { molt_lib::rule::RequiresRule }
+    } else {
+        quote! { molt_lib::rule::DoesNotRequireRule }
+    };
+
     let expanded = quote! {
-        impl molt_lib::CmpSyn for #name {
+        impl molt_lib::CmpSyn<#name, #rule_ty> for #name {
             fn cmp_syn(&self, ctx: &mut molt_lib::Matcher, pat: &Self) {
                 #impl_
             }
@@ -56,28 +67,27 @@ fn impl_struct(data_struct: syn::DataStruct) -> TokenStream {
 }
 
 fn cmp_ty(field_name: &Ident, ty: &Type, rule: Option<Rule>) -> Option<TokenStream> {
-    let cmp = if is_node_list(ty) {
+    let cmp_fn = match rule {
+        Some(_) => quote! { cmp_syn_with_rule },
+        None => quote! { cmp_syn },
+    };
+    let rule_arg = match rule {
+        Some(rule) => {
+            let rule_name = rule.rule_name;
+            let surrounding_ty = rule.surrounding_ty;
+            quote! { , molt_lib::rule::RuleKey::#rule_name(molt_lib::rule::#rule_name::#surrounding_ty) }
+        }
+        None => quote! {},
+    };
+    if is_node_list(ty) {
         Some(quote! { ctx.cmp_lists(&self. #field_name, &pat. #field_name ); })
     } else if is_vec_attribute(ty) || is_token(ty) {
         None
     } else if is_box(ty) {
-        Some(quote! { ctx.cmp_syn(&*self. #field_name, &*pat. #field_name ); })
+        Some(quote! { ctx.#cmp_fn(&*self. #field_name, &*pat. #field_name #rule_arg ); })
     } else {
-        Some(quote! { ctx.cmp_syn(&self. #field_name, &pat. #field_name ); })
-    };
-    cmp.map(|cmp| {
-        if let Some(rule) = rule {
-            let rule_name = rule.rule_name;
-            let surrounding_ty = rule.surrounding_ty;
-            quote! {
-                if ctx.should_compare(molt_lib::rule::RuleKey::#rule_name(molt_lib::rule::#rule_name::#surrounding_ty)) {
-                    #cmp
-                }
-            }
-        } else {
-            cmp
-        }
-    })
+        Some(quote! { ctx.#cmp_fn(&self. #field_name, &pat. #field_name #rule_arg ); })
+    }
 }
 
 fn impl_enum(data_enum: syn::DataEnum) -> TokenStream {
