@@ -7,6 +7,7 @@ use crate::error::{self, Result};
 use crate::expr::Expr;
 use crate::generics::{BoundLifetimes, TraitBound, TraitBoundModifier, TypeParamBound};
 use crate::ident::{AnyIdent, Ident};
+use crate::item::Unsafety;
 use crate::lifetime::Lifetime;
 use crate::lit::LitStr;
 use crate::mac::{
@@ -85,7 +86,8 @@ pub struct TypeArray {
 /// A bare function type: `fn(usize) -> bool`.
 pub struct TypeBareFn {
     pub lifetimes: Option<BoundLifetimes>,
-    pub unsafety: Option<Token![unsafe]>,
+    #[rule(Unsafe, Fn)]
+    pub unsafety: Unsafety,
     pub abi: Option<Abi>,
     pub fn_token: Token![fn],
     pub paren_token: token::Paren,

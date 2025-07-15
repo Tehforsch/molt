@@ -242,15 +242,17 @@ macro_rules! rules {
         mod key_kws {
             $(
                 rust_grammar::custom_keyword!($name);
-                pub mod inner {
+            )*
+            pub mod inner {
+                $(
                     #[allow(non_snake_case)]
                     pub mod $name {
                         $(
                             rust_grammar::custom_keyword!($item);
                         )*
                     }
-                }
-            )*
+                )*
+            }
         }
 
         struct RuleKeyKindWrapper(molt_lib::rule::RuleKeyKind);
@@ -263,8 +265,8 @@ macro_rules! rules {
                         let _ = input.parse::<key_kws::$name>()?;
                         return Ok(RuleKeyKindWrapper(molt_lib::rule::RuleKeyKind::$name))
                     }
-                    return Err(lookahead.error());
                 )*
+                return Err(lookahead.error());
             }
         }
 
@@ -326,5 +328,12 @@ rules! {
         (Type, Strict),
         (Union, Strict),
         (Use, Strict),
+        (Field, Strict),
+    ),
+    (Unsafe,
+        (Mod, Strict),
+        (Impl, Strict),
+        (Trait, Strict),
+        (Fn, Strict),
     ),
 }

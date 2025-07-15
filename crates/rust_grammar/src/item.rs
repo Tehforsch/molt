@@ -29,6 +29,23 @@ use crate::{
 use crate::{derive, token, verbatim};
 
 #[derive(Debug, CmpSyn)]
+#[requires_rule]
+pub enum Unsafety {
+    Unsafe,
+    Safe,
+}
+
+impl Unsafety {
+    fn is_none(&self) -> bool {
+        matches!(self, Unsafety::Safe)
+    }
+
+    fn is_some(&self) -> bool {
+        matches!(self, Unsafety::Unsafe)
+    }
+}
+
+#[derive(Debug, CmpSyn)]
 /// Things that can appear directly inside of a module or scope.
 pub enum Item {
     /// A constant item: `const MAX: u16 = 65535`.
@@ -138,7 +155,8 @@ pub struct ItemFn {
 /// A block of foreign items: `extern "C" { ... }`.
 pub struct ItemForeignMod {
     pub attrs: Vec<Attribute>,
-    pub unsafety: Option<Token![unsafe]>,
+    #[rule(Unsafe, Mod)]
+    pub unsafety: Unsafety,
     pub abi: Abi,
     pub brace_token: token::Brace,
     pub items: Vec<ForeignItem>,
@@ -150,7 +168,8 @@ pub struct ItemForeignMod {
 pub struct ItemImpl {
     pub attrs: Vec<Attribute>,
     pub defaultness: Option<Token![default]>,
-    pub unsafety: Option<Token![unsafe]>,
+    #[rule(Unsafe, Impl)]
+    pub unsafety: Unsafety,
     pub impl_token: Token![impl],
     pub generics: Generics,
     /// Trait this impl implements.
@@ -177,7 +196,8 @@ pub struct ItemMod {
     pub attrs: Vec<Attribute>,
     #[rule(Vis, Mod)]
     pub vis: NodeId<Vis>,
-    pub unsafety: Option<Token![unsafe]>,
+    #[rule(Unsafe, Mod)]
+    pub unsafety: Unsafety,
     pub mod_token: Token![mod],
     pub ident: NodeId<Ident>,
     pub content: Option<(token::Brace, Vec<Item>)>,
@@ -219,7 +239,8 @@ pub struct ItemTrait {
     pub attrs: Vec<Attribute>,
     #[rule(Vis, Trait)]
     pub vis: NodeId<Vis>,
-    pub unsafety: Option<Token![unsafe]>,
+    #[rule(Unsafe, Trait)]
+    pub unsafety: Unsafety,
     pub auto_token: Option<Token![auto]>,
     pub trait_token: Token![trait],
     pub ident: NodeId<Ident>,
@@ -560,7 +581,8 @@ pub struct ImplItemMacro {
 pub struct Signature {
     pub constness: Option<Token![const]>,
     pub asyncness: Option<Token![async]>,
-    pub unsafety: Option<Token![unsafe]>,
+    #[rule(Unsafe, Fn)]
+    pub unsafety: Unsafety,
     pub abi: Option<Abi>,
     pub fn_token: Token![fn],
     pub ident: NodeId<Ident>,
@@ -1186,7 +1208,7 @@ fn peek_signature(input: ParseStream, allow_safe: bool) -> bool {
         && ((allow_safe
             && token::peek_keyword(fork.cursor(), "safe")
             && token::keyword(&fork, "safe").is_ok())
-            || fork.parse::<Option<Token![unsafe]>>().is_ok())
+            || fork.parse::<Unsafety>().is_ok())
         && fork.parse::<Option<Abi>>().is_ok()
         && fork.peek(Token![fn])
 }
@@ -1201,7 +1223,7 @@ impl Parse for Signature {
 fn parse_signature(input: ParseStream, allow_safe: bool) -> Result<Option<Signature>> {
     let constness: Option<Token![const]> = input.parse()?;
     let asyncness: Option<Token![async]> = input.parse()?;
-    let unsafety: Option<Token![unsafe]> = input.parse()?;
+    let unsafety: Unsafety = input.parse()?;
     let safe = allow_safe && unsafety.is_none() && token::peek_keyword(input.cursor(), "safe");
     if safe {
         token::keyword(input, "safe")?;
@@ -1422,7 +1444,7 @@ impl Parse for ItemMod {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut attrs = input.call(Attribute::parse_outer)?;
         let vis = input.parse_id::<Vis>()?;
-        let unsafety: Option<Token![unsafe]> = input.parse()?;
+        let unsafety: Unsafety = input.parse()?;
         let mod_token: Token![mod] = input.parse()?;
         let ident: NodeId<Ident> = if input.peek(Token![try]) {
             input.parse_id::<AnyIdent>()
@@ -1469,7 +1491,7 @@ impl Parse for ItemMod {
 impl Parse for ItemForeignMod {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut attrs = input.call(Attribute::parse_outer)?;
-        let unsafety: Option<Token![unsafe]> = input.parse()?;
+        let unsafety: Unsafety = input.parse()?;
         let abi: Abi = input.parse()?;
 
         let content;
@@ -1528,7 +1550,7 @@ impl Parse for ForeignItem {
                 && ahead.peek2(Token![static]))
         {
             let vis = input.parse_id::<Vis>()?;
-            let unsafety: Option<Token![unsafe]> = input.parse()?;
+            let unsafety: Unsafety = input.parse()?;
             let safe = unsafety.is_none() && token::peek_keyword(input.cursor(), "safe");
             if safe {
                 token::keyword(input, "safe")?;
@@ -1806,7 +1828,7 @@ fn parse_trait_or_trait_alias(input: ParseStream) -> Result<Item> {
     let (attrs, vis, trait_token, ident, generics) = parse_start_of_trait_alias(input)?;
     let lookahead = input.lookahead1();
     if lookahead.peek(token::Brace) || lookahead.peek(Token![:]) || lookahead.peek(Token![where]) {
-        let unsafety = None;
+        let unsafety = Unsafety::Safe;
         let auto_token = None;
         parse_rest_of_trait(
             input,
@@ -1831,7 +1853,7 @@ impl Parse for ItemTrait {
     fn parse(input: ParseStream) -> Result<Self> {
         let outer_attrs = input.call(Attribute::parse_outer)?;
         let vis = input.parse_id::<Vis>()?;
-        let unsafety: Option<Token![unsafe]> = input.parse()?;
+        let unsafety: Unsafety = input.parse()?;
         let auto_token: Option<Token![auto]> = input.parse()?;
         let trait_token: Token![trait] = input.parse()?;
         let ident = input.parse_id::<Ident>()?;
@@ -1854,7 +1876,7 @@ fn parse_rest_of_trait(
     input: ParseStream,
     mut attrs: Vec<Attribute>,
     vis: NodeId<Vis>,
-    unsafety: Option<Token![unsafe]>,
+    unsafety: Unsafety,
     auto_token: Option<Token![auto]>,
     trait_token: Token![trait],
     ident: NodeId<Ident>,
@@ -2214,7 +2236,7 @@ fn parse_impl(input: ParseStream, allow_verbatim_impl: bool) -> Result<Option<It
             .parse_spanned_pat::<Vis>()?
             .get_property(Vis::is_some, true);
     let defaultness: Option<Token![default]> = input.parse()?;
-    let unsafety: Option<Token![unsafe]> = input.parse()?;
+    let unsafety: Unsafety = input.parse()?;
     let impl_token: Token![impl] = input.parse()?;
 
     let has_generics = input.peek(Token![<])
@@ -2573,6 +2595,17 @@ impl Parse for StaticMutability {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut_token: Option<Token![mut]> = input.parse()?;
         Ok(mut_token.map_or(StaticMutability::None, StaticMutability::Mut))
+    }
+}
+
+impl Parse for Unsafety {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let token: Option<Token![unsafe]> = input.parse()?;
+        Ok(if token.is_some() {
+            Unsafety::Unsafe
+        } else {
+            Unsafety::Safe
+        })
     }
 }
 

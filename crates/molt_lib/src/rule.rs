@@ -90,6 +90,12 @@ rules! {
         (Use, Strict),
         (Field, Strict),
     ),
+    (Unsafe,
+        (Mod, Strict),
+        (Impl, Strict),
+        (Trait, Strict),
+        (Fn, Strict),
+    ),
 }
 
 impl Index<RuleKey> for Rules {
