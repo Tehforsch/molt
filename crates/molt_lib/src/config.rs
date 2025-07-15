@@ -72,7 +72,7 @@ macro_rules! rules {
 }
 
 rules! {
-    (Vis, Ignore),
+    (Vis, Strict),
 }
 
 impl Index<RuleKey> for Rules {
