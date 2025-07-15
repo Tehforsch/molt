@@ -28,49 +28,67 @@ note: Match
   │ ^^^^^^^^^^^^^^^^^ $x
 
 note: Match
-  ┌─ "test_data/fns/main.rs":9:5
+  ┌─ "test_data/fns/main.rs":7:1
   │
-9 │     fn foo() {}
-  │     ^^^^^^^^^^^ $x
+7 │ const fn foo() {}
+  │ ^^^^^^^^^^^^^^^^^ $x
 
 note: Match
    ┌─ "test_data/fns/main.rs":10:5
    │
-10 │     pub fn foo() {}
-   │     ^^^^^^^^^^^^^^^ $x
+10 │     fn foo() {}
+   │     ^^^^^^^^^^^ $x
 
 note: Match
    ┌─ "test_data/fns/main.rs":11:5
    │
-11 │     unsafe fn foo() {}
-   │     ^^^^^^^^^^^^^^^^^^ $x
+11 │     pub fn foo() {}
+   │     ^^^^^^^^^^^^^^^ $x
 
 note: Match
    ┌─ "test_data/fns/main.rs":12:5
    │
-12 │     async fn foo() {}
+12 │     unsafe fn foo() {}
+   │     ^^^^^^^^^^^^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/fns/main.rs":13:5
+   │
+13 │     async fn foo() {}
    │     ^^^^^^^^^^^^^^^^^ $x
 
 note: Match
-   ┌─ "test_data/fns/main.rs":16:5
+   ┌─ "test_data/fns/main.rs":14:5
    │
-16 │     fn foo() {}
-   │     ^^^^^^^^^^^ $x
-
-note: Match
-   ┌─ "test_data/fns/main.rs":17:5
-   │
-17 │     pub fn foo() {}
-   │     ^^^^^^^^^^^^^^^ $x
+14 │     const fn foo() {}
+   │     ^^^^^^^^^^^^^^^^^ $x
 
 note: Match
    ┌─ "test_data/fns/main.rs":18:5
    │
-18 │     unsafe fn foo() {}
-   │     ^^^^^^^^^^^^^^^^^^ $x
+18 │     fn foo() {}
+   │     ^^^^^^^^^^^ $x
 
 note: Match
    ┌─ "test_data/fns/main.rs":19:5
    │
-19 │     async fn foo() {}
+19 │     pub fn foo() {}
+   │     ^^^^^^^^^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/fns/main.rs":20:5
+   │
+20 │     unsafe fn foo() {}
+   │     ^^^^^^^^^^^^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/fns/main.rs":21:5
+   │
+21 │     async fn foo() {}
+   │     ^^^^^^^^^^^^^^^^^ $x
+
+note: Match
+   ┌─ "test_data/fns/main.rs":22:5
+   │
+22 │     const fn foo() {}
    │     ^^^^^^^^^^^^^^^^^ $x

@@ -1,6 +1,6 @@
 ---
 source: src/tests/mod.rs
-expression: "super :: super :: match_pattern(& name, stringify! (async_rule))"
+expression: "super :: super :: match_pattern(& name, stringify! (const_rule))"
 snapshot_kind: text
 ---
 note: Match
@@ -10,9 +10,9 @@ note: Match
   │ ^^^^^^^^^^^ $pat
 
 note: Match
-  ┌─ "test_data/fns/main.rs":6:1
+  ┌─ "test_data/fns/main.rs":7:1
   │
-6 │ async fn foo() {}
+7 │ const fn foo() {}
   │ ^^^^^^^^^^^^^^^^^ $pat
 
 note: Match
@@ -22,9 +22,9 @@ note: Match
    │     ^^^^^^^^^^^ $pat
 
 note: Match
-   ┌─ "test_data/fns/main.rs":13:5
+   ┌─ "test_data/fns/main.rs":14:5
    │
-13 │     async fn foo() {}
+14 │     const fn foo() {}
    │     ^^^^^^^^^^^^^^^^^ $pat
 
 note: Match
@@ -34,7 +34,7 @@ note: Match
    │     ^^^^^^^^^^^ $pat
 
 note: Match
-   ┌─ "test_data/fns/main.rs":21:5
+   ┌─ "test_data/fns/main.rs":22:5
    │
-21 │     async fn foo() {}
+22 │     const fn foo() {}
    │     ^^^^^^^^^^^^^^^^^ $pat

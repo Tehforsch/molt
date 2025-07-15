@@ -16,25 +16,25 @@ note: Match
   │ ^^^^^^^^^^^^^^^^^^ $pat
 
 note: Match
-  ┌─ "test_data/fns/main.rs":9:5
-  │
-9 │     fn foo() {}
-  │     ^^^^^^^^^^^ $pat
-
-note: Match
-   ┌─ "test_data/fns/main.rs":11:5
+   ┌─ "test_data/fns/main.rs":10:5
    │
-11 │     unsafe fn foo() {}
-   │     ^^^^^^^^^^^^^^^^^^ $pat
-
-note: Match
-   ┌─ "test_data/fns/main.rs":16:5
-   │
-16 │     fn foo() {}
+10 │     fn foo() {}
    │     ^^^^^^^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/fns/main.rs":12:5
+   │
+12 │     unsafe fn foo() {}
+   │     ^^^^^^^^^^^^^^^^^^ $pat
 
 note: Match
    ┌─ "test_data/fns/main.rs":18:5
    │
-18 │     unsafe fn foo() {}
+18 │     fn foo() {}
+   │     ^^^^^^^^^^^ $pat
+
+note: Match
+   ┌─ "test_data/fns/main.rs":20:5
+   │
+20 │     unsafe fn foo() {}
    │     ^^^^^^^^^^^^^^^^^^ $pat

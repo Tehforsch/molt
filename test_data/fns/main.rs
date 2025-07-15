@@ -4,12 +4,14 @@ fn foo() {}
 pub fn foo() {}
 unsafe fn foo() {}
 async fn foo() {}
+const fn foo() {}
 
 impl Foo for Bar {
     fn foo() {}
     pub fn foo() {}
     unsafe fn foo() {}
     async fn foo() {}
+    const fn foo() {}
 }
 
 impl Baz {
@@ -17,4 +19,5 @@ impl Baz {
     pub fn foo() {}
     unsafe fn foo() {}
     async fn foo() {}
+    const fn foo() {}
 }

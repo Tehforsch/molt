@@ -9,7 +9,7 @@ use crate::attr::Attribute;
 use crate::error::{Error, Result};
 use crate::generics::BoundLifetimes;
 use crate::ident::{AnyIdent, Ident};
-use crate::item::Asyncness;
+use crate::item::{Asyncness, Constness};
 use crate::lifetime::Lifetime;
 use crate::lit::{Lit, LitFloat, LitInt};
 use crate::mac::{
@@ -397,7 +397,8 @@ pub struct ExprCast {
 pub struct ExprClosure {
     pub attrs: Vec<Attribute>,
     pub lifetimes: Option<BoundLifetimes>,
-    pub constness: Option<Token![const]>,
+    #[rule(Const, Closure)]
+    pub constness: Constness,
     pub movability: Option<Token![static]>,
     #[rule(Async, Closure)]
     pub asyncness: Asyncness,
@@ -2081,7 +2082,7 @@ impl ParseList for ClosureInput {
 
 fn expr_closure(input: ParseStream, allow_struct: AllowStruct) -> Result<ExprClosure> {
     let lifetimes: Option<BoundLifetimes> = input.parse()?;
-    let constness: Option<Token![const]> = input.parse()?;
+    let constness: Constness = input.parse()?;
     let movability: Option<Token![static]> = input.parse()?;
     let asyncness: Asyncness = input.parse()?;
     let capture: Option<Token![move]> = input.parse()?;

@@ -321,7 +321,7 @@ test_match_pattern!(
         rule_mod_2, rule_mod_3,
     )
 );
-test_match_pattern!(fns, (fns, rule, unsafe_rule, async_rule));
+test_match_pattern!(fns, (fns, rule, unsafe_rule, async_rule, const_rule));
 
 molt_grammar_test_err!(
     molt_grammar,
