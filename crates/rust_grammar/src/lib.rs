@@ -38,7 +38,7 @@ mod path;
 mod precedence;
 mod punctuated;
 mod restriction;
-pub use crate::restriction::Visibility;
+pub use crate::restriction::Vis;
 mod sealed;
 mod span;
 mod stmt;

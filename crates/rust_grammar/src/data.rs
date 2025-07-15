@@ -6,7 +6,7 @@ use crate::error::Result;
 use crate::expr::Expr;
 use crate::ident::{AnyIdent, Ident};
 use crate::parse::{Parse, ParseList, ParseNode, ParseStream, parse_punctuated_list_real};
-use crate::restriction::{FieldMutability, Visibility};
+use crate::restriction::{FieldMutability, Vis};
 use crate::ty::Type;
 use crate::{token, verbatim};
 
@@ -63,7 +63,7 @@ pub struct FieldsUnnamed {
 pub struct Field {
     pub attrs: Vec<Attribute>,
 
-    pub vis: NodeId<Visibility>,
+    pub vis: NodeId<Vis>,
 
     pub mutability: FieldMutability,
 
@@ -80,7 +80,7 @@ pub struct Field {
 impl Parse for Variant {
     fn parse(input: ParseStream) -> Result<Self> {
         let attrs = input.call(Attribute::parse_outer)?;
-        let _visibility: NodeId<Visibility> = input.parse_id::<Visibility>()?;
+        let _visibility: NodeId<Vis> = input.parse_id::<Vis>()?;
         let ident: NodeId<Ident> = input.parse()?;
         let fields = if input.peek(token::Brace) {
             Fields::Named(input.parse()?)
@@ -151,7 +151,7 @@ impl ParseNode for FieldNamed {
 
     fn parse_node(input: ParseStream) -> Result<Field> {
         let attrs = input.call(Attribute::parse_outer)?;
-        let vis = input.parse_id::<Visibility>()?;
+        let vis = input.parse_id::<Vis>()?;
 
         let unnamed_field = input.peek(Token![_]);
         let ident = if unnamed_field {

@@ -10,7 +10,7 @@ use crate::token;
 #[derive(Debug, CmpSyn)]
 /// The visibility level of an item: inherited or `pub` or
 /// `pub(restricted)`.
-pub enum Visibility {
+pub enum Vis {
     /// A public visibility level: `pub`.
     Public(Token![pub]),
 
@@ -48,7 +48,7 @@ pub enum FieldMutability {
     // }
 }
 
-impl ParseNode for Visibility {
+impl ParseNode for Vis {
     type Target = Self;
 
     fn parse_node(input: ParseStream) -> Result<Self::Target> {
@@ -59,19 +59,19 @@ impl ParseNode for Visibility {
             let group = crate::group::parse_group(&ahead)?;
             if group.content.is_empty() {
                 input.advance_to(&ahead);
-                return Ok(Visibility::Inherited);
+                return Ok(Vis::Inherited);
             }
         }
 
         if input.peek(Token![pub]) {
             Self::parse_pub(input)
         } else {
-            Ok(Visibility::Inherited)
+            Ok(Vis::Inherited)
         }
     }
 }
 
-impl Visibility {
+impl Vis {
     fn parse_pub(input: ParseStream) -> Result<Self> {
         let pub_token = input.parse::<Token![pub]>()?;
 
@@ -92,7 +92,7 @@ impl Visibility {
                 // e.g. `pub (crate::A, crate::B)` (Issue #720).
                 if content.is_empty() {
                     input.advance_to(&ahead);
-                    return Ok(Visibility::Restricted(VisRestricted {
+                    return Ok(Vis::Restricted(VisRestricted {
                         pub_token,
                         paren_token,
                         in_token: None,
@@ -104,7 +104,7 @@ impl Visibility {
                 let path = content.call(Path::parse_mod_style)?;
 
                 input.advance_to(&ahead);
-                return Ok(Visibility::Restricted(VisRestricted {
+                return Ok(Vis::Restricted(VisRestricted {
                     pub_token,
                     paren_token,
                     in_token: Some(in_token),
@@ -113,10 +113,10 @@ impl Visibility {
             }
         }
 
-        Ok(Visibility::Public(pub_token))
+        Ok(Vis::Public(pub_token))
     }
 
     pub(crate) fn is_some(&self) -> bool {
-        !matches!(self, Visibility::Inherited)
+        !matches!(self, Vis::Inherited)
     }
 }

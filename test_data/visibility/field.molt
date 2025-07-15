@@ -1,4 +1,4 @@
-let vis: Visibility;
+let vis: Vis;
 let field_ident: Ident;
 let type_: Type;
 let pattern: Item = {

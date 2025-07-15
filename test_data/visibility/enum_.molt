@@ -1,4 +1,4 @@
-let vis: Visibility;
+let vis: Vis;
 let ident: Ident;
 
 let pattern: Item = {

@@ -5,9 +5,7 @@ use crate::item::ImplItem;
 use crate::parse::discouraged::Speculative;
 use crate::parse::{ParseNode, ParseStream};
 use crate::pat::Pat;
-use crate::{
-    Expr, Field, FieldNamed, FieldUnnamed, Ident, Item, Lit, PatMulti, Stmt, Type, Visibility,
-};
+use crate::{Expr, Field, FieldNamed, FieldUnnamed, Ident, Item, Lit, PatMulti, Stmt, Type, Vis};
 
 macro_rules! define_node {
     ($(($variant_name: ident, $ty: ty)),*$(,)?) => {
@@ -230,7 +228,7 @@ define_node! {
     (Pat, Pat),
     (Stmt, Stmt),
     (Type, Type),
-    (Visibility, Visibility),
+    (Vis, Vis),
 }
 
 define_kind! {
@@ -245,7 +243,7 @@ define_kind! {
     (Pat, Pat, PatMulti),
     (Stmt, Stmt, Stmt),
     (Type, Type, Type),
-    (Visibility, Visibility, Visibility),
+    (Vis, Vis, Vis),
 }
 
 impl CmpSyn<Node> for Node {
@@ -270,7 +268,7 @@ impl CmpSyn<Node> for Node {
             | (Node::Type(_), _)
             | (Node::Item(_), _)
             | (Node::ImplItem(_), _)
-            | (Node::Visibility(_), _) => ctx.no_match(),
+            | (Node::Vis(_), _) => ctx.no_match(),
         }
     }
 }
