@@ -9,8 +9,7 @@ pub fn impl_cmp_syn(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let requires_rule = input
         .attrs
         .iter()
-        .find(|attr| attr.path().is_ident("requires_rule"))
-        .is_some();
+        .any(|attr| attr.path().is_ident("requires_rule"));
     let name = &input.ident;
 
     let impl_ = match input.data {

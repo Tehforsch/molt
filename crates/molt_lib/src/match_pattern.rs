@@ -305,7 +305,7 @@ pub fn match_pattern<N: NodeType + CmpSyn>(
     ast: Id,
     rules: &Rules,
 ) -> Vec<Match> {
-    let mut match_ = Matcher::new_root(vars, &rules);
+    let mut match_ = Matcher::new_root(vars, rules);
     match_.add_binding(ctx, var, ast);
     let mut current = vec![match_];
     let mut matches = vec![];
