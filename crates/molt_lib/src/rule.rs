@@ -96,6 +96,11 @@ rules! {
         (Trait, Strict),
         (Fn, Strict),
     ),
+    (Async,
+        (Trait, Strict),
+        (Fn, Strict),
+        (Closure, Strict),
+    ),
 }
 
 impl Index<RuleKey> for Rules {

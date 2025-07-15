@@ -1,0 +1,3 @@
+ignore Async;
+
+let pat: Fn = fn foo() {};

@@ -46,6 +46,13 @@ impl Unsafety {
 }
 
 #[derive(Debug, CmpSyn)]
+#[requires_rule]
+pub enum Asyncness {
+    Async,
+    Sync,
+}
+
+#[derive(Debug, CmpSyn)]
 /// Things that can appear directly inside of a module or scope.
 pub enum Item {
     /// A constant item: `const MAX: u16 = 65535`.
@@ -580,7 +587,8 @@ pub struct ImplItemMacro {
 /// initialize(&self)`.
 pub struct Signature {
     pub constness: Option<Token![const]>,
-    pub asyncness: Option<Token![async]>,
+    #[rule(Async, Fn)]
+    pub asyncness: Asyncness,
     #[rule(Unsafe, Fn)]
     pub unsafety: Unsafety,
     pub abi: Option<Abi>,
@@ -1204,7 +1212,7 @@ impl Parse for ItemConst {
 fn peek_signature(input: ParseStream, allow_safe: bool) -> bool {
     let fork = input.fork();
     fork.parse::<Option<Token![const]>>().is_ok()
-        && fork.parse::<Option<Token![async]>>().is_ok()
+        && fork.parse::<Asyncness>().is_ok()
         && ((allow_safe
             && token::peek_keyword(fork.cursor(), "safe")
             && token::keyword(&fork, "safe").is_ok())
@@ -1222,7 +1230,7 @@ impl Parse for Signature {
 
 fn parse_signature(input: ParseStream, allow_safe: bool) -> Result<Option<Signature>> {
     let constness: Option<Token![const]> = input.parse()?;
-    let asyncness: Option<Token![async]> = input.parse()?;
+    let asyncness: Asyncness = input.parse()?;
     let unsafety: Unsafety = input.parse()?;
     let safe = allow_safe && unsafety.is_none() && token::peek_keyword(input.cursor(), "safe");
     if safe {
@@ -2605,6 +2613,17 @@ impl Parse for Unsafety {
             Unsafety::Unsafe
         } else {
             Unsafety::Safe
+        })
+    }
+}
+
+impl Parse for Asyncness {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let token: Option<Token![async]> = input.parse()?;
+        Ok(if token.is_some() {
+            Asyncness::Async
+        } else {
+            Asyncness::Sync
         })
     }
 }

@@ -9,6 +9,7 @@ use crate::attr::Attribute;
 use crate::error::{Error, Result};
 use crate::generics::BoundLifetimes;
 use crate::ident::{AnyIdent, Ident};
+use crate::item::Asyncness;
 use crate::lifetime::Lifetime;
 use crate::lit::{Lit, LitFloat, LitInt};
 use crate::mac::{
@@ -398,7 +399,8 @@ pub struct ExprClosure {
     pub lifetimes: Option<BoundLifetimes>,
     pub constness: Option<Token![const]>,
     pub movability: Option<Token![static]>,
-    pub asyncness: Option<Token![async]>,
+    #[rule(Async, Closure)]
+    pub asyncness: Asyncness,
     pub capture: Option<Token![move]>,
     pub or1_token: Token![|],
     pub inputs: NodeList<Pat, Token![,]>,
@@ -2081,7 +2083,7 @@ fn expr_closure(input: ParseStream, allow_struct: AllowStruct) -> Result<ExprClo
     let lifetimes: Option<BoundLifetimes> = input.parse()?;
     let constness: Option<Token![const]> = input.parse()?;
     let movability: Option<Token![static]> = input.parse()?;
-    let asyncness: Option<Token![async]> = input.parse()?;
+    let asyncness: Asyncness = input.parse()?;
     let capture: Option<Token![move]> = input.parse()?;
     let or1_token: Token![|] = input.parse()?;
 
