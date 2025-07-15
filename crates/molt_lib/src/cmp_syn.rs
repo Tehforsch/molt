@@ -1,7 +1,10 @@
 use crate::NodeId;
 use crate::match_pattern::Matcher;
+use crate::rule::RuleKeyKind;
 
 pub trait CmpSyn<T = Self> {
+    const RULE: Option<RuleKeyKind> = None;
+
     fn cmp_syn(&self, ctx: &mut Matcher, pat: &T);
 }
 

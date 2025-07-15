@@ -23,6 +23,13 @@ macro_rules! rules {
             )*
         }
 
+        pub enum RuleKeyKind {
+            $(
+                $name,
+            )*
+        }
+
+
         $(
             #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
             pub enum $name {

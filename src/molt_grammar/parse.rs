@@ -212,7 +212,7 @@ impl Parse for RuleWrap {
 macro_rules! rules {
     ($(($name: ident, $(($item: ident, $rule: ident)),* $(,)?),)* $(,)?) => {
         pub enum ParseRuleKey {
-            Blanket(BlanketKey),
+            Blanket(molt_lib::rule::RuleKeyKind),
             Concrete(Vec<molt_lib::rule::RuleKey>),
         }
 
@@ -222,7 +222,7 @@ macro_rules! rules {
                     Self::Blanket(key) => {
                         match key {
                             $(
-                                BlanketKey::$name => {
+                                molt_lib::rule::RuleKeyKind::$name => {
                                     vec![
                                         $(
                                             molt_lib::rule::RuleKey::$name(molt_lib::rule::$name::$item),
@@ -239,12 +239,6 @@ macro_rules! rules {
             }
         }
 
-        pub enum BlanketKey {
-            $(
-                $name,
-            )*
-        }
-
         mod key_kws {
             $(
                 rust_grammar::custom_keyword!($name);
@@ -259,13 +253,15 @@ macro_rules! rules {
             )*
         }
 
-        impl Parse for BlanketKey {
-            fn parse(input: ParseStream) -> Result<BlanketKey> {
+        struct RuleKeyKindWrapper(molt_lib::rule::RuleKeyKind);
+
+        impl Parse for RuleKeyKindWrapper {
+            fn parse(input: ParseStream) -> Result<RuleKeyKindWrapper> {
                 let lookahead = input.lookahead1();
                 $(
                     if lookahead.peek(key_kws::$name) {
                         let _ = input.parse::<key_kws::$name>()?;
-                        return Ok(BlanketKey::$name)
+                        return Ok(RuleKeyKindWrapper(molt_lib::rule::RuleKeyKind::$name))
                     }
                     return Err(lookahead.error());
                 )*
@@ -274,7 +270,7 @@ macro_rules! rules {
 
         impl Parse for ParseRuleKey {
             fn parse(input: ParseStream) -> Result<Self> {
-                let key = input.parse::<BlanketKey>()?;
+                let key = input.parse::<RuleKeyKindWrapper>()?.0;
                 if input.peek(Paren) {
                     let content;
                     parenthesized!(content in input);
@@ -282,7 +278,7 @@ macro_rules! rules {
                     while !content.is_empty() {
                         match key {
                             $(
-                                BlanketKey::$name => {
+                                molt_lib::rule::RuleKeyKind::$name => {
                                     let lookahead = content.lookahead1();
                                     $(
                                         if lookahead.peek(key_kws::inner::$name::$item) {
