@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{Data, DeriveInput, Fields, Ident, Type, parse_macro_input};
+use syn::{Data, DeriveInput, Fields, Ident, Token, Type, parse::Parse, parse_macro_input};
 
 use crate::utils::{is_box, is_node_list, is_token, is_vec_attribute};
 
@@ -25,6 +25,22 @@ pub fn impl_cmp_syn(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     proc_macro::TokenStream::from(expanded)
 }
 
+pub struct Rule {
+    rule_name: Ident,
+    _comma: Token![,],
+    surrounding_ty: Ident,
+}
+
+impl Parse for Rule {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        Ok(Rule {
+            rule_name: input.parse()?,
+            _comma: input.parse()?,
+            surrounding_ty: input.parse()?,
+        })
+    }
+}
+
 fn impl_struct(data_struct: syn::DataStruct) -> TokenStream {
     let calls = data_struct.fields.iter().filter_map(|field| {
         let rule = field
@@ -39,7 +55,7 @@ fn impl_struct(data_struct: syn::DataStruct) -> TokenStream {
     }
 }
 
-fn cmp_ty(field_name: &Ident, ty: &Type, rule: Option<Ident>) -> Option<TokenStream> {
+fn cmp_ty(field_name: &Ident, ty: &Type, rule: Option<Rule>) -> Option<TokenStream> {
     let cmp = if is_node_list(ty) {
         Some(quote! { ctx.cmp_lists(&self. #field_name, &pat. #field_name ); })
     } else if is_vec_attribute(ty) || is_token(ty) {
@@ -51,8 +67,10 @@ fn cmp_ty(field_name: &Ident, ty: &Type, rule: Option<Ident>) -> Option<TokenStr
     };
     cmp.map(|cmp| {
         if let Some(rule) = rule {
+            let rule_name = rule.rule_name;
+            let surrounding_ty = rule.surrounding_ty;
             quote! {
-                if ctx.should_compare(molt_lib::RuleKey::#rule) {
+                if ctx.should_compare(molt_lib::RuleKey::#rule_name(molt_lib::#rule_name::#surrounding_ty)) {
                     #cmp
                 }
             }

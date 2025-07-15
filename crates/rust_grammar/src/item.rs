@@ -86,7 +86,7 @@ pub enum Item {
 /// A constant item: `const MAX: u16 = 65535`.
 pub struct ItemConst {
     pub attrs: Vec<Attribute>,
-    #[rule(Vis)]
+    #[rule(Vis, Const)]
     pub vis: NodeId<Vis>,
     pub const_token: Token![const],
     pub ident: NodeId<Ident>,
@@ -102,7 +102,7 @@ pub struct ItemConst {
 /// An enum definition: `enum Foo<A, B> { A(A), B(B) }`.
 pub struct ItemEnum {
     pub attrs: Vec<Attribute>,
-    #[rule(Vis)]
+    #[rule(Vis, Enum)]
     pub vis: NodeId<Vis>,
     pub enum_token: Token![enum],
     pub ident: NodeId<Ident>,
@@ -115,7 +115,7 @@ pub struct ItemEnum {
 /// An `extern crate` item: `extern crate serde`.
 pub struct ItemExternCrate {
     pub attrs: Vec<Attribute>,
-    #[rule(Vis)]
+    #[rule(Vis, ExternCrate)]
     pub vis: NodeId<Vis>,
     pub extern_token: Token![extern],
     pub crate_token: Token![crate],
@@ -128,7 +128,7 @@ pub struct ItemExternCrate {
 /// A free-standing function: `fn process(n: usize) -> Result<()> { ... }`.
 pub struct ItemFn {
     pub attrs: Vec<Attribute>,
-    #[rule(Vis)]
+    #[rule(Vis, Fn)]
     pub vis: NodeId<Vis>,
     pub sig: Signature,
     pub block: Box<Block>,
@@ -175,7 +175,7 @@ pub struct ItemMacro {
 /// A module or module declaration: `mod m` or `mod m { ... }`.
 pub struct ItemMod {
     pub attrs: Vec<Attribute>,
-    #[rule(Vis)]
+    #[rule(Vis, Mod)]
     pub vis: NodeId<Vis>,
     pub unsafety: Option<Token![unsafe]>,
     pub mod_token: Token![mod],
@@ -188,7 +188,7 @@ pub struct ItemMod {
 /// A static item: `static BIKE: Shed = Shed(42)`.
 pub struct ItemStatic {
     pub attrs: Vec<Attribute>,
-    #[rule(Vis)]
+    #[rule(Vis, Static)]
     pub vis: NodeId<Vis>,
     pub static_token: Token![static],
     pub mutability: StaticMutability,
@@ -204,7 +204,7 @@ pub struct ItemStatic {
 /// A struct definition: `struct Foo<A> { x: A }`.
 pub struct ItemStruct {
     pub attrs: Vec<Attribute>,
-    #[rule(Vis)]
+    #[rule(Vis, Struct)]
     pub vis: NodeId<Vis>,
     pub struct_token: Token![struct],
     pub ident: NodeId<Ident>,
@@ -217,7 +217,7 @@ pub struct ItemStruct {
 /// A trait definition: `pub trait Iterator { ... }`.
 pub struct ItemTrait {
     pub attrs: Vec<Attribute>,
-    #[rule(Vis)]
+    #[rule(Vis, Trait)]
     pub vis: NodeId<Vis>,
     pub unsafety: Option<Token![unsafe]>,
     pub auto_token: Option<Token![auto]>,
@@ -234,7 +234,7 @@ pub struct ItemTrait {
 /// A trait alias: `pub trait SharableIterator = Iterator + Sync`.
 pub struct ItemTraitAlias {
     pub attrs: Vec<Attribute>,
-    #[rule(Vis)]
+    #[rule(Vis, TraitAlias)]
     pub vis: NodeId<Vis>,
     pub trait_token: Token![trait],
     pub ident: NodeId<Ident>,
@@ -248,7 +248,7 @@ pub struct ItemTraitAlias {
 /// A type alias: `type Result<T> = std::result::Result<T, MyError>`.
 pub struct ItemType {
     pub attrs: Vec<Attribute>,
-    #[rule(Vis)]
+    #[rule(Vis, Type)]
     pub vis: NodeId<Vis>,
     pub type_token: Token![type],
     pub ident: NodeId<Ident>,
@@ -262,7 +262,7 @@ pub struct ItemType {
 /// A union definition: `union Foo<A, B> { x: A, y: B }`.
 pub struct ItemUnion {
     pub attrs: Vec<Attribute>,
-    #[rule(Vis)]
+    #[rule(Vis, Union)]
     pub vis: NodeId<Vis>,
     pub union_token: Token![union],
     pub ident: NodeId<Ident>,
@@ -274,7 +274,7 @@ pub struct ItemUnion {
 /// A use declaration: `use std::collections::HashMap`.
 pub struct ItemUse {
     pub attrs: Vec<Attribute>,
-    #[rule(Vis)]
+    #[rule(Vis, Use)]
     pub vis: NodeId<Vis>,
     pub use_token: Token![use],
     pub leading_colon: Option<Token![::]>,
@@ -382,7 +382,7 @@ pub enum ForeignItem {
 /// A foreign function in an `extern` block.
 pub struct ForeignItemFn {
     pub attrs: Vec<Attribute>,
-    #[rule(Vis)]
+    #[rule(Vis, Fn)]
     pub vis: NodeId<Vis>,
     pub sig: Signature,
     pub semi_token: Token![;],
@@ -392,7 +392,7 @@ pub struct ForeignItemFn {
 /// A foreign static item in an `extern` block: `static ext: u8`.
 pub struct ForeignItemStatic {
     pub attrs: Vec<Attribute>,
-    #[rule(Vis)]
+    #[rule(Vis, Static)]
     pub vis: NodeId<Vis>,
     pub static_token: Token![static],
     pub mutability: StaticMutability,
@@ -406,7 +406,7 @@ pub struct ForeignItemStatic {
 /// A foreign type in an `extern` block: `type void`.
 pub struct ForeignItemType {
     pub attrs: Vec<Attribute>,
-    #[rule(Vis)]
+    #[rule(Vis, Type)]
     pub vis: NodeId<Vis>,
     pub type_token: Token![type],
     pub ident: NodeId<Ident>,
@@ -507,7 +507,7 @@ pub enum ImplItem {
 /// An associated constant within an impl block.
 pub struct ImplItemConst {
     pub attrs: Vec<Attribute>,
-    #[rule(Vis)]
+    #[rule(Vis, Const)]
     pub vis: NodeId<Vis>,
     pub defaultness: Option<Token![default]>,
     pub const_token: Token![const],
@@ -524,7 +524,7 @@ pub struct ImplItemConst {
 /// An associated function within an impl block.
 pub struct ImplItemFn {
     pub attrs: Vec<Attribute>,
-    #[rule(Vis)]
+    #[rule(Vis, Fn)]
     pub vis: NodeId<Vis>,
     pub defaultness: Option<Token![default]>,
     pub sig: Signature,
@@ -535,7 +535,7 @@ pub struct ImplItemFn {
 /// An associated type within an impl block.
 pub struct ImplItemType {
     pub attrs: Vec<Attribute>,
-    #[rule(Vis)]
+    #[rule(Vis, Type)]
     pub vis: NodeId<Vis>,
     pub defaultness: Option<Token![default]>,
     pub type_token: Token![type],

@@ -45,22 +45,31 @@ pub struct Rules {
 }
 
 macro_rules! rules {
-    ($(($name: ident, $rule: ident $(,$config: ident)?),)* $(,)?) => {
+    ($(($name: ident, $(($item: ident, $rule: ident)),* $(,)?),)* $(,)?) => {
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
         pub enum RuleKey {
             $(
-                $name,
+                $name($name),
             )*
         }
 
+        $(
+            #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+            pub enum $name {
+                $(
+                    $item,
+                )*
+            }
+        )*
+
         impl Default for Rules {
             fn default() -> Self {
-                use RuleKey::*;
-                use Rule::*;
                 Rules {
                     rules: [
                         $(
-                            ($name, $rule),
+                            $(
+                                (RuleKey::$name($name::$item), Rule::$rule),
+                            )*
                         )*
                     ]
                     .into_iter()
@@ -72,7 +81,20 @@ macro_rules! rules {
 }
 
 rules! {
-    (Vis, Strict),
+    (Vis,
+     (Const, Strict),
+     (Enum, Strict),
+     (ExternCrate, Strict),
+     (Fn, Strict),
+     (Mod, Strict),
+     (Static, Strict),
+     (Struct, Strict),
+     (Trait, Strict),
+     (TraitAlias, Strict),
+     (Type, Strict),
+     (Union, Strict),
+     (Use, Strict),
+    ),
 }
 
 impl Index<RuleKey> for Rules {
