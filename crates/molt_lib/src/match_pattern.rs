@@ -5,8 +5,9 @@ use crate::cmp_syn::CmpSyn;
 use crate::match_ctx::MatchCtx;
 use crate::node_list::List;
 use crate::{
-    Config, Id, ListMatchingMode, NodeId, NodeList, NodeType, PatNodeList, Pattern, RealNodeList,
-    Rule, RuleKey, Rules, Single, SingleMatchingMode, VarDecl,
+    Id, ListMatchingMode, NodeId, NodeList, NodeType, PatNodeList, Pattern, RealNodeList, Single,
+    SingleMatchingMode, VarDecl,
+    rule::{Rule, RuleKey, Rules},
 };
 
 type MatchId = usize;
@@ -283,9 +284,9 @@ pub fn match_pattern<N: NodeType + CmpSyn>(
     vars: &[VarDecl],
     var: Id,
     ast: Id,
-    config: &Config,
+    rules: &Rules,
 ) -> Vec<Match> {
-    let mut match_ = Matcher::new_root(vars, &config.rules);
+    let mut match_ = Matcher::new_root(vars, &rules);
     match_.add_binding(ctx, var, ast);
     let mut current = vec![match_];
     let mut matches = vec![];

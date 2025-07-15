@@ -1,6 +1,9 @@
 mod parse;
 
-use molt_lib::{Id, NodeId, Span, VarDecl};
+use molt_lib::{
+    Id, NodeId, Span, VarDecl,
+    rule::{Rule, RuleKey},
+};
 use parse::UnresolvedVarDecls;
 use rust_grammar::{Kind, TokenStream, Type};
 
@@ -22,10 +25,17 @@ pub struct TypeAnnotation {
     pub type_: NodeId<Type>,
 }
 
+#[derive(Debug)]
+pub(crate) struct Ruleset {
+    pub rule: Rule,
+    pub keys: Vec<RuleKey>,
+}
+
 pub(crate) struct UnresolvedMoltFile {
     pub vars: Vec<UnresolvedVarDecl>,
     pub commands: Vec<Command<TokenVar>>,
     pub type_annotations: Vec<UnresolvedTypeAnnotation>,
+    pub rules: Vec<Ruleset>,
 }
 
 #[derive(Debug)]
@@ -39,6 +49,7 @@ enum Decl {
     Var(UnresolvedVarDecls),
     Command(Command<TokenVar>),
     TypeAnnotation(UnresolvedTypeAnnotation),
+    Ruleset(Ruleset),
 }
 
 #[derive(Debug)]
@@ -46,6 +57,7 @@ pub(crate) struct MoltFile {
     pub vars: Vec<VarDecl>,
     pub command: Command<Id>,
     pub type_annotations: Vec<TypeAnnotation>,
+    pub rulesets: Vec<Ruleset>,
 }
 
 #[derive(Debug, Clone)]

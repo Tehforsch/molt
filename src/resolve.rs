@@ -155,6 +155,7 @@ impl UnresolvedMoltFile {
                 vars: vars?,
                 command,
                 type_annotations: type_annotations?,
+                rulesets: self.rules,
             },
             pat_ctx.take(),
         ))

@@ -19,6 +19,7 @@ use lsp::LspClient;
 use molt_grammar::{Command, MatchCommand, MoltFile, TransformCommand, UnresolvedMoltFile};
 use molt_lib::{
     Config, Id, KindType, Match, MatchCtx, MatchPatternData, NodeType, ParsingMode, Pattern,
+    rule::Rules,
 };
 use rust_grammar::Node;
 
@@ -55,6 +56,16 @@ impl MoltFile {
         unresolved.resolve(file_id)
     }
 
+    fn get_rules(&self) -> Rules {
+        let mut rules = Rules::default();
+        for ruleset in self.rulesets.iter() {
+            for key in ruleset.keys.iter() {
+                rules[*key] = ruleset.rule;
+            }
+        }
+        rules
+    }
+
     fn match_pattern<'a>(
         &'a self,
         ast_ctx: &'a Ctx,
@@ -63,6 +74,7 @@ impl MoltFile {
         data: MatchPatternData<'a>,
         lsp_client: &'a mut LspClient,
     ) -> MatchResult<'a> {
+        let rules = &self.get_rules();
         let ctx = MatchCtx::new(pat_ctx, ast_ctx, data.clone());
         if ctx.config().debug_print {
             ctx.dump();
@@ -82,7 +94,7 @@ impl MoltFile {
                         .is_comparable_to(pat_kind.into_node_kind()),
                 };
                 if is_of_kind {
-                    molt_lib::match_pattern(&ctx, &self.vars, var, item, &ctx.config())
+                    molt_lib::match_pattern(&ctx, &self.vars, var, item, &rules)
                 } else {
                     vec![]
                 }

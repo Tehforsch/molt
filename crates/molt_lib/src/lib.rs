@@ -6,10 +6,11 @@ mod match_pattern;
 mod node;
 mod node_list;
 mod pattern;
+pub mod rule;
 mod span;
 
 pub use cmp_syn::CmpSyn;
-pub use config::*;
+pub use config::Config;
 pub use ctx::{Ctx, Id, NodeId, Var, VarDecl};
 pub use match_ctx::{MatchCtx, MatchPatternData};
 pub use match_pattern::{Binding, Match, Matcher, PatType, match_pattern};

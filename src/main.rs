@@ -8,7 +8,6 @@ use cli::CliArgs;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
 use codespan_reporting::term::{self, Config};
 use molt::{Input, MoltSource, emit_error, run};
-use molt_lib::Rules;
 use walkdir::WalkDir;
 
 #[derive(Debug, thiserror::Error)]
@@ -78,7 +77,6 @@ fn main() -> Result<()> {
         cargo_fmt: args.cargo_fmt,
         interactive: args.interactive,
         check_compilation: args.check_compilation,
-        rules: Rules::default(),
     };
     let diagnostics = emit_error(&input, run(&input, config, root.as_ref()))?;
     let writer = StandardStream::stderr(ColorChoice::Always);

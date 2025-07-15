@@ -1,15 +1,19 @@
+use molt_lib::rule::Rule;
 use rust_grammar::ext::IdentExt;
 use rust_grammar::parse::{Parse, ParseStream};
 use rust_grammar::token::Brace;
 use rust_grammar::{Error, Ident, Kind, Result, Token, TokenStream, TokenTree, braced};
+use rust_grammar::{parenthesized, token::Paren};
 
 use super::{
-    Command, Decl, MatchCommand, TokenVar, TransformCommand, UnresolvedMoltFile,
+    Command, Decl, MatchCommand, Ruleset, TokenVar, TransformCommand, UnresolvedMoltFile,
     UnresolvedTypeAnnotation, UnresolvedVarDecl,
 };
 
 mod kw {
     rust_grammar::custom_keyword!(transform);
+    rust_grammar::custom_keyword!(strict);
+    rust_grammar::custom_keyword!(ignore);
 }
 
 impl Parse for UnresolvedMoltFile {
@@ -17,17 +21,20 @@ impl Parse for UnresolvedMoltFile {
         let mut commands = vec![];
         let mut vars = vec![];
         let mut type_annotations = vec![];
+        let mut rules = vec![];
         while !parser.is_empty() {
             match parser.parse()? {
                 Decl::Var(new_vars) => vars.extend(new_vars.0.into_iter()),
                 Decl::Command(command) => commands.push(command),
                 Decl::TypeAnnotation(type_annotation) => type_annotations.push(type_annotation),
+                Decl::Ruleset(rule) => rules.push(rule),
             }
         }
         Ok(UnresolvedMoltFile {
             vars,
             commands,
             type_annotations,
+            rules,
         })
     }
 }
@@ -41,6 +48,8 @@ impl Parse for Decl {
             Ok(Self::TypeAnnotation(parser.parse()?))
         } else if lookahead.peek(Token![let]) {
             Ok(Self::Var(parser.parse()?))
+        } else if lookahead.peek(kw::strict) || lookahead.peek(kw::ignore) {
+            Ok(Self::Ruleset(parser.parse()?))
         } else {
             Err(lookahead.error())
         }
@@ -162,4 +171,164 @@ fn parse_until_semicolon(input: ParseStream) -> Result<TokenStream> {
     }
 
     Ok(collected)
+}
+
+impl Parse for Ruleset {
+    fn parse(input: ParseStream) -> Result<Self> {
+        Ok(Ruleset {
+            rule: input.parse::<RuleWrap>()?.0,
+            keys: {
+                let mut keys = vec![];
+                while !input.peek(Token![;]) {
+                    let parse_key: ParseRuleKey = input.parse()?;
+                    keys.extend(parse_key.into_keys());
+                    if input.peek(Token![,]) {
+                        input.parse::<Token![,]>()?;
+                    }
+                }
+                input.parse::<Token![;]>()?;
+                keys
+            },
+        })
+    }
+}
+
+struct RuleWrap(Rule);
+
+impl Parse for RuleWrap {
+    fn parse(input: ParseStream) -> Result<Self> {
+        if input.peek(kw::ignore) {
+            let _: kw::ignore = input.parse()?;
+            Ok(RuleWrap(Rule::Ignore))
+        } else if input.peek(kw::strict) {
+            let _: kw::strict = input.parse()?;
+            Ok(RuleWrap(Rule::Strict))
+        } else {
+            unreachable!()
+        }
+    }
+}
+
+macro_rules! rules {
+    ($(($name: ident, $(($item: ident, $rule: ident)),* $(,)?),)* $(,)?) => {
+        pub enum ParseRuleKey {
+            Blanket(BlanketKey),
+            Concrete(Vec<molt_lib::rule::RuleKey>),
+        }
+
+        impl ParseRuleKey {
+            fn into_keys(self) -> Vec<molt_lib::rule::RuleKey> {
+                match self {
+                    Self::Blanket(key) => {
+                        match key {
+                            $(
+                                BlanketKey::$name => {
+                                    vec![
+                                        $(
+                                            molt_lib::rule::RuleKey::$name(molt_lib::rule::$name::$item),
+                                        )*
+                                    ]
+                                }
+                            )*
+                        }
+                    }
+                    Self::Concrete(keys) => {
+                        keys
+                    }
+                }
+            }
+        }
+
+        pub enum BlanketKey {
+            $(
+                $name,
+            )*
+        }
+
+        mod key_kws {
+            $(
+                rust_grammar::custom_keyword!($name);
+                pub mod inner {
+                    #[allow(non_snake_case)]
+                    pub mod $name {
+                        $(
+                            rust_grammar::custom_keyword!($item);
+                        )*
+                    }
+                }
+            )*
+        }
+
+        impl Parse for BlanketKey {
+            fn parse(input: ParseStream) -> Result<BlanketKey> {
+                let lookahead = input.lookahead1();
+                $(
+                    if lookahead.peek(key_kws::$name) {
+                        let _ = input.parse::<key_kws::$name>()?;
+                        return Ok(BlanketKey::$name)
+                    }
+                    return Err(lookahead.error());
+                )*
+            }
+        }
+
+        impl Parse for ParseRuleKey {
+            fn parse(input: ParseStream) -> Result<Self> {
+                let key = input.parse::<BlanketKey>()?;
+                if input.peek(Paren) {
+                    let content;
+                    parenthesized!(content in input);
+                    let mut types = vec![];
+                    while !content.is_empty() {
+                        match key {
+                            $(
+                                BlanketKey::$name => {
+                                    let lookahead = content.lookahead1();
+                                    $(
+                                        if lookahead.peek(key_kws::inner::$name::$item) {
+                                            let _ = content.parse::<key_kws::inner::$name::$item>();
+                                            let inner = molt_lib::rule::$name::$item;
+                                            types.push(molt_lib::rule::RuleKey::$name(inner));
+                                            if content.peek(Token![,]) {
+                                                let _ = content.parse::<Token![,]>()?;
+                                                break
+                                            }
+                                            else {
+                                                continue
+                                            }
+                                        }
+                                    )*
+                                    return Err(lookahead.error());
+                                }
+                            )*
+                        }
+                    }
+                    Ok(ParseRuleKey::Concrete(types))
+                }
+                else {
+                    Ok(ParseRuleKey::Blanket(key))
+                }
+            }
+        }
+    }
+}
+
+// Unfortunately, this is split over crates for now.
+// Remember to update the corresponding macro call in
+// crates/molt_lib/src/rule.rs
+rules! {
+    (Vis,
+        (Const, Strict),
+        (Enum, Strict),
+        (ExternCrate, Strict),
+        (Fn, Strict),
+        (Mod, Strict),
+        (Static, Strict),
+        (Struct, Strict),
+        (Trait, Strict),
+        (TraitAlias, Strict),
+        (Type, Strict),
+        (Union, Strict),
+        (Use, Strict),
+    ),
 }

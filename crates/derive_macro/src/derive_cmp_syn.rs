@@ -70,7 +70,7 @@ fn cmp_ty(field_name: &Ident, ty: &Type, rule: Option<Rule>) -> Option<TokenStre
             let rule_name = rule.rule_name;
             let surrounding_ty = rule.surrounding_ty;
             quote! {
-                if ctx.should_compare(molt_lib::RuleKey::#rule_name(molt_lib::#rule_name::#surrounding_ty)) {
+                if ctx.should_compare(molt_lib::rule::RuleKey::#rule_name(molt_lib::rule::#rule_name::#surrounding_ty)) {
                     #cmp
                 }
             }
