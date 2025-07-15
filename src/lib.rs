@@ -82,7 +82,7 @@ impl MoltFile {
                         .is_comparable_to(pat_kind.into_node_kind()),
                 };
                 if is_of_kind {
-                    molt_lib::match_pattern(&ctx, &self.vars, var, item)
+                    molt_lib::match_pattern(&ctx, &self.vars, var, item, &ctx.config())
                 } else {
                     vec![]
                 }

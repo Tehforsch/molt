@@ -26,17 +26,21 @@ pub fn impl_cmp_syn(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 }
 
 fn impl_struct(data_struct: syn::DataStruct) -> TokenStream {
-    let calls = data_struct
-        .fields
-        .iter()
-        .filter_map(|field| cmp_ty(field.ident.as_ref().unwrap(), &field.ty));
+    let calls = data_struct.fields.iter().filter_map(|field| {
+        let rule = field
+            .attrs
+            .iter()
+            .find(|attr| attr.path().is_ident("rule"))
+            .map(|attr| attr.parse_args().unwrap());
+        cmp_ty(field.ident.as_ref().unwrap(), &field.ty, rule)
+    });
     quote! {
         #(#calls)*
     }
 }
 
-fn cmp_ty(field_name: &Ident, ty: &Type) -> Option<TokenStream> {
-    if is_node_list(ty) {
+fn cmp_ty(field_name: &Ident, ty: &Type, rule: Option<Ident>) -> Option<TokenStream> {
+    let cmp = if is_node_list(ty) {
         Some(quote! { ctx.cmp_lists(&self. #field_name, &pat. #field_name ); })
     } else if is_vec_attribute(ty) || is_token(ty) {
         None
@@ -44,7 +48,18 @@ fn cmp_ty(field_name: &Ident, ty: &Type) -> Option<TokenStream> {
         Some(quote! { ctx.cmp_syn(&*self. #field_name, &*pat. #field_name ); })
     } else {
         Some(quote! { ctx.cmp_syn(&self. #field_name, &pat. #field_name ); })
-    }
+    };
+    cmp.map(|cmp| {
+        if let Some(rule) = rule {
+            quote! {
+                if ctx.should_compare(molt_lib::RuleKey::#rule) {
+                    #cmp
+                }
+            }
+        } else {
+            cmp
+        }
+    })
 }
 
 fn impl_enum(data_enum: syn::DataEnum) -> TokenStream {

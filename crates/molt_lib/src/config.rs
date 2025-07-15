@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Index};
 
 #[derive(Clone)]
 pub struct Config {
@@ -33,38 +33,52 @@ impl Default for Config {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum Rule {
     Ignore,
     Strict,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Rules {
     rules: HashMap<RuleKey, Rule>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub enum RuleKey {
-    FnAsync,
-    FnConst,
-    FnUnsafe,
-    FnGenerics,
-    // ...
+macro_rules! rules {
+    ($(($name: ident, $rule: ident $(,$config: ident)?),)* $(,)?) => {
+        #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+        pub enum RuleKey {
+            $(
+                $name,
+            )*
+        }
+
+        impl Default for Rules {
+            fn default() -> Self {
+                use RuleKey::*;
+                use Rule::*;
+                Rules {
+                    rules: [
+                        $(
+                            ($name, $rule),
+                        )*
+                    ]
+                    .into_iter()
+                    .collect(),
+                }
+            }
+        }
+    }
 }
 
-impl Default for Rules {
-    fn default() -> Self {
-        use RuleKey::*;
-        Rules {
-            rules: [
-                (FnAsync, Rule::Ignore),
-                (FnConst, Rule::Ignore),
-                (FnUnsafe, Rule::Ignore),
-                (FnGenerics, Rule::Strict),
-            ]
-            .into_iter()
-            .collect(),
-        }
+rules! {
+    (Vis, Ignore),
+}
+
+impl Index<RuleKey> for Rules {
+    type Output = Rule;
+
+    fn index(&self, index: RuleKey) -> &Self::Output {
+        &self.rules[&index]
     }
 }

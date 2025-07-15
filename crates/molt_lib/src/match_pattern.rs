@@ -5,8 +5,8 @@ use crate::cmp_syn::CmpSyn;
 use crate::match_ctx::MatchCtx;
 use crate::node_list::List;
 use crate::{
-    Id, ListMatchingMode, NodeId, NodeList, NodeType, PatNodeList, Pattern, RealNodeList, Single,
-    SingleMatchingMode, VarDecl,
+    Config, Id, ListMatchingMode, NodeId, NodeList, NodeType, PatNodeList, Pattern, RealNodeList,
+    Rule, RuleKey, Rules, Single, SingleMatchingMode, VarDecl,
 };
 
 type MatchId = usize;
@@ -68,7 +68,8 @@ pub enum PatType {
 }
 
 #[derive(Debug)]
-pub struct Matcher {
+pub struct Matcher<'a> {
+    rules: &'a Rules,
     bindings: HashMap<Id, Binding>,
     cmps: Vec<Comparison>,
     forks: Vec<Fork>,
@@ -83,9 +84,10 @@ pub struct Match {
     bindings: HashMap<Id, MultiBinding>,
 }
 
-impl Matcher {
-    fn new_root(vars: &[VarDecl]) -> Self {
+impl<'a> Matcher<'a> {
+    fn new_root(vars: &[VarDecl], rules: &'a Rules) -> Self {
         Self {
+            rules,
             bindings: vars
                 .iter()
                 .map(|var| (var.id, Binding::new(var.node)))
@@ -160,11 +162,12 @@ impl Matcher {
     fn make_forks(
         mut self,
         next_id: &mut (impl FnOnce() -> MatchId + Copy),
-    ) -> impl Iterator<Item = Matcher> {
+    ) -> impl Iterator<Item = Matcher<'a>> {
         assert!(self.cmps.is_empty());
         assert!(self.valid);
         let fork = self.forks.pop().unwrap();
         fork.cmps.into_iter().map(move |cmp| Matcher {
+            rules: self.rules,
             bindings: self.bindings.clone(),
             forks: self.forks.clone(),
             cmps: vec![cmp],
@@ -253,9 +256,15 @@ impl Matcher {
         self.cmps.push(Comparison::new(ast, pat, self.pat_type));
     }
 
-    // This exists purely to make the calls look symmetrical
     pub fn cmp_syn<T: CmpSyn<S>, S>(&mut self, t1: &T, t2: &S) {
         t1.cmp_syn(self, t2)
+    }
+
+    pub fn should_compare(&mut self, rule: RuleKey) -> bool {
+        match self.rules[rule] {
+            Rule::Ignore => false,
+            Rule::Strict => true,
+        }
     }
 }
 
@@ -274,8 +283,9 @@ pub fn match_pattern<N: NodeType + CmpSyn>(
     vars: &[VarDecl],
     var: Id,
     ast: Id,
+    config: &Config,
 ) -> Vec<Match> {
-    let mut match_ = Matcher::new_root(vars);
+    let mut match_ = Matcher::new_root(vars, &config.rules);
     match_.add_binding(ctx, var, ast);
     let mut current = vec![match_];
     let mut matches = vec![];

@@ -125,6 +125,7 @@ pub struct ItemExternCrate {
 /// A free-standing function: `fn process(n: usize) -> Result<()> { ... }`.
 pub struct ItemFn {
     pub attrs: Vec<Attribute>,
+    #[rule(Vis)]
     pub vis: NodeId<Visibility>,
     pub sig: Signature,
     pub block: Box<Block>,
