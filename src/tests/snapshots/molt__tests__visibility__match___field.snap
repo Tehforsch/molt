@@ -1,17 +1,18 @@
 ---
 source: src/tests/mod.rs
 expression: "super :: super :: match_pattern(& name, stringify! (field))"
+snapshot_kind: text
 ---
 note: Match
-   ┌─ "test_data/visibility/main.rs":26:1
+   ┌─ "test_data/visibility/main.rs":29:1
    │  
-26 │ ╭ pub struct PublicStruct {
-27 │ │     pub public_field: i32,
-28 │ │     pub(crate) crate_field: i32,
-29 │ │     pub(super) super_field: i32,
-30 │ │     pub(in crate::visibility) restricted_field: i32,
-31 │ │     private_field: i32,
-32 │ │ }
+29 │ ╭ pub struct PublicStruct {
+30 │ │     pub public_field: i32,
+31 │ │     pub(crate) crate_field: i32,
+32 │ │     pub(super) super_field: i32,
+33 │ │     pub(in crate::visibility) restricted_field: i32,
+34 │ │     private_field: i32,
+35 │ │ }
    │ ╰─^ $pattern
    │  
    = $field_ident = public_field

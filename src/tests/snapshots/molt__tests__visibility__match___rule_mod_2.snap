@@ -1,0 +1,13 @@
+---
+source: src/tests/mod.rs
+expression: "super :: super :: match_pattern(& name, stringify! (rule_mod_2))"
+snapshot_kind: text
+---
+note: Match
+  ┌─ "test_data/visibility/main.rs":1:1
+  │  
+1 │ ╭ mod private_module {
+2 │ │ }
+  │ ╰─^ $pat
+  │  
+  = $ident = private_module

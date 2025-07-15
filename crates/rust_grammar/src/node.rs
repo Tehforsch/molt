@@ -238,12 +238,14 @@ define_kind! {
     (Ident, Ident, Ident),
     (Item, Item, Item),
     (ImplItem, ImplItem, ImplItem),
-    (Fn, Item, Item, Fn),
     (Lit, Lit, Lit),
     (Pat, Pat, PatMulti),
     (Stmt, Stmt, Stmt),
     (Type, Type, Type),
     (Vis, Vis, Vis),
+    // Subtypes
+    (Fn, Item, Item, Fn),
+    (Mod, Item, Item, Mod),
 }
 
 impl CmpSyn<Node> for Node {
@@ -307,5 +309,17 @@ impl SubKind for Fn {
 
     fn expected_str() -> &'static str {
         "function"
+    }
+}
+
+struct Mod;
+
+impl SubKind for Mod {
+    fn is_of_sub_kind(node: &Node) -> bool {
+        matches!(node, Node::Item(Item::Mod(_)))
+    }
+
+    fn expected_str() -> &'static str {
+        "module"
     }
 }

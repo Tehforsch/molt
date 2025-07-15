@@ -1,22 +1,23 @@
 ---
 source: src/tests/mod.rs
 expression: "super :: super :: match_pattern(& name, stringify! (trait_))"
+snapshot_kind: text
 ---
 note: Match
-   ┌─ "test_data/visibility/main.rs":47:1
+   ┌─ "test_data/visibility/main.rs":50:1
    │  
-47 │ ╭ pub trait PublicTrait {
-48 │ │ }
+50 │ ╭ pub trait PublicTrait {
+51 │ │ }
    │ ╰─^ $item
    │  
    = $ident = PublicTrait
    = $vis = pub
 
 note: Match
-   ┌─ "test_data/visibility/main.rs":50:1
+   ┌─ "test_data/visibility/main.rs":53:1
    │  
-50 │ ╭ pub(crate) trait CrateTrait {
-51 │ │ }
+53 │ ╭ pub(crate) trait CrateTrait {
+54 │ │ }
    │ ╰─^ $item
    │  
    = $ident = CrateTrait

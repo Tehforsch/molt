@@ -1,3 +1,6 @@
+mod private_module {
+}
+
 pub mod public_module {
 }
 

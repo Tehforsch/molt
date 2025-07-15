@@ -1,6 +1,6 @@
 ---
 source: src/tests/mod.rs
-expression: "super :: super :: match_pattern(& name, stringify! (module))"
+expression: "super :: super :: match_pattern(& name, stringify! (rule_mod_1))"
 snapshot_kind: text
 ---
 note: Match
@@ -8,17 +8,15 @@ note: Match
   │  
 1 │ ╭ mod private_module {
 2 │ │ }
-  │ ╰─^ $item
+  │ ╰─^ $pat
   │  
   = $ident = private_module
-  = $vis = mod
 
 note: Match
   ┌─ "test_data/visibility/main.rs":4:1
   │  
 4 │ ╭ pub mod public_module {
 5 │ │ }
-  │ ╰─^ $item
+  │ ╰─^ $pat
   │  
   = $ident = public_module
-  = $vis = pub

@@ -1,24 +1,25 @@
 ---
 source: src/tests/mod.rs
 expression: "super :: super :: match_pattern(& name, stringify! (enum_))"
+snapshot_kind: text
 ---
 note: Match
-   ┌─ "test_data/visibility/main.rs":39:1
+   ┌─ "test_data/visibility/main.rs":42:1
    │  
-39 │ ╭ pub enum PublicEnum {
-40 │ │     Variant,
-41 │ │ }
+42 │ ╭ pub enum PublicEnum {
+43 │ │     Variant,
+44 │ │ }
    │ ╰─^ $pattern
    │  
    = $ident = PublicEnum
    = $vis = pub
 
 note: Match
-   ┌─ "test_data/visibility/main.rs":43:1
+   ┌─ "test_data/visibility/main.rs":46:1
    │  
-43 │ ╭ pub(crate) enum CrateEnum {
-44 │ │     Variant,
-45 │ │ }
+46 │ ╭ pub(crate) enum CrateEnum {
+47 │ │     Variant,
+48 │ │ }
    │ ╰─^ $pattern
    │  
    = $ident = CrateEnum

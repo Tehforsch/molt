@@ -317,7 +317,8 @@ test_match_pattern!(literals, (expr_lit, match_pat, lit));
 test_match_pattern!(
     visibility,
     (
-        fn_, const_, enum_, field, module, static_, struct_, trait_, type_alias
+        fn_, const_, enum_, field, module, static_, struct_, trait_, type_alias, rule_mod_1,
+        rule_mod_2, rule_mod_3,
     )
 );
 test_match_pattern!(fns, (fns, rule,));

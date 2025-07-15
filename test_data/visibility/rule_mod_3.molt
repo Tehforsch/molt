@@ -1,0 +1,4 @@
+strict Vis;
+ignore Vis(Mod);
+let ident: Ident;
+let pat: Mod = { mod $ident {} };
