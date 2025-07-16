@@ -1,9 +1,10 @@
+use crate::rust_grammar::ext::IdentExt;
+use crate::rust_grammar::parse::{Parse, ParseStream};
+use crate::rust_grammar::token::Brace;
+use crate::rust_grammar::token::Paren;
+use crate::rust_grammar::{Error, Ident, Kind, Result, TokenStream, TokenTree};
+use crate::{Token, braced, parenthesized};
 use molt_lib::rule::Rule;
-use rust_grammar::ext::IdentExt;
-use rust_grammar::parse::{Parse, ParseStream};
-use rust_grammar::token::Brace;
-use rust_grammar::{Error, Ident, Kind, Result, Token, TokenStream, TokenTree, braced};
-use rust_grammar::{parenthesized, token::Paren};
 
 use super::{
     Command, Decl, MatchCommand, Ruleset, TokenVar, TransformCommand, UnresolvedMoltFile,
@@ -11,9 +12,9 @@ use super::{
 };
 
 mod kw {
-    rust_grammar::custom_keyword!(transform);
-    rust_grammar::custom_keyword!(strict);
-    rust_grammar::custom_keyword!(ignore);
+    crate::custom_keyword!(transform);
+    crate::custom_keyword!(strict);
+    crate::custom_keyword!(ignore);
 }
 
 impl Parse for UnresolvedMoltFile {
@@ -241,14 +242,14 @@ macro_rules! rules {
 
         mod key_kws {
             $(
-                rust_grammar::custom_keyword!($name);
+                crate::custom_keyword!($name);
             )*
             pub mod inner {
                 $(
                     #[allow(non_snake_case)]
                     pub mod $name {
                         $(
-                            rust_grammar::custom_keyword!($item);
+                            crate::custom_keyword!($item);
                         )*
                     }
                 )*

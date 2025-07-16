@@ -1,8 +1,8 @@
 use std::path::Path;
 
+use crate::rust_grammar::{Node, Type};
 use lsp_types::Range;
 use molt_lib::{Ctx, Match, MatchPatternData, NodeId};
-use rust_grammar::{Node, Type};
 
 use crate::lsp::LspClient;
 use crate::molt_grammar::TypeAnnotation;

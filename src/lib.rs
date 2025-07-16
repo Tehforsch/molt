@@ -3,6 +3,7 @@ mod input;
 mod lsp;
 mod molt_grammar;
 mod resolve;
+mod rust_grammar;
 #[cfg(test)]
 mod tests;
 mod transform;
@@ -11,6 +12,7 @@ mod utils;
 
 use std::path::{Path, PathBuf};
 
+use crate::rust_grammar::Node;
 use codespan_reporting::diagnostic::Label;
 use codespan_reporting::files::Files;
 pub use error::{Error, emit_error};
@@ -21,7 +23,6 @@ use molt_lib::{
     Config, Id, KindType, Match, MatchCtx, MatchPatternData, NodeType, ParsingMode, Pattern,
     rule::Rules,
 };
-use rust_grammar::Node;
 
 struct RustFile;
 
@@ -51,8 +52,9 @@ impl MoltFile {
     fn new(input: &Input) -> Result<(Self, PatCtx), Error> {
         let file_id = input.molt_file_id();
         let source = input.source(file_id).unwrap();
-        let unresolved: UnresolvedMoltFile = rust_grammar::parse_str(source, ParsingMode::Pat)
-            .map_err(|e| Error::parse(e, file_id))?;
+        let unresolved: UnresolvedMoltFile =
+            crate::rust_grammar::parse_str(source, ParsingMode::Pat)
+                .map_err(|e| Error::parse(e, file_id))?;
         unresolved.resolve(file_id)
     }
 
@@ -116,7 +118,7 @@ impl MoltFile {
 impl RustFile {
     fn new(input: &Input, file_id: FileId) -> Result<(Self, Ctx), Error> {
         let source = input.source(file_id).unwrap();
-        rust_grammar::parse_file(source, ParsingMode::Real)
+        crate::rust_grammar::parse_file(source, ParsingMode::Real)
             .map_err(|e| Error::parse(e, file_id))
             .map(|(_, ctx)| (RustFile, ctx))
     }

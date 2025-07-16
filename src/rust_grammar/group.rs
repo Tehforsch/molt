@@ -1,0 +1,150 @@
+use proc_macro2::Delimiter;
+use proc_macro2::extra::DelimSpan;
+
+use crate::rust_grammar::error::Result;
+use crate::rust_grammar::parse::ParseBuffer;
+use crate::rust_grammar::token;
+
+// Not public API.
+#[doc(hidden)]
+pub struct Parens<'a> {
+    #[doc(hidden)]
+    pub token: token::Paren,
+    #[doc(hidden)]
+    pub content: ParseBuffer<'a>,
+}
+
+// Not public API.
+#[doc(hidden)]
+pub struct Braces<'a> {
+    #[doc(hidden)]
+    pub token: token::Brace,
+    #[doc(hidden)]
+    pub content: ParseBuffer<'a>,
+}
+
+// Not public API.
+#[doc(hidden)]
+pub struct Brackets<'a> {
+    #[doc(hidden)]
+    pub token: token::Bracket,
+    #[doc(hidden)]
+    pub content: ParseBuffer<'a>,
+}
+
+#[doc(hidden)]
+pub struct Group<'a> {
+    #[doc(hidden)]
+    pub token: token::Group,
+    #[doc(hidden)]
+    pub content: ParseBuffer<'a>,
+}
+
+// Not public API.
+#[doc(hidden)]
+pub fn parse_parens<'a>(input: &ParseBuffer<'a>) -> Result<Parens<'a>> {
+    parse_delimited(input, Delimiter::Parenthesis).map(|(span, content)| Parens {
+        token: token::Paren(span),
+        content,
+    })
+}
+
+// Not public API.
+#[doc(hidden)]
+pub fn parse_braces<'a>(input: &ParseBuffer<'a>) -> Result<Braces<'a>> {
+    parse_delimited(input, Delimiter::Brace).map(|(span, content)| Braces {
+        token: token::Brace(span),
+        content,
+    })
+}
+
+// Not public API.
+#[doc(hidden)]
+pub fn parse_brackets<'a>(input: &ParseBuffer<'a>) -> Result<Brackets<'a>> {
+    parse_delimited(input, Delimiter::Bracket).map(|(span, content)| Brackets {
+        token: token::Bracket(span),
+        content,
+    })
+}
+
+pub(crate) fn parse_group<'a>(input: &ParseBuffer<'a>) -> Result<Group<'a>> {
+    parse_delimited(input, Delimiter::None).map(|(span, content)| Group {
+        token: token::Group(span.join()),
+        content,
+    })
+}
+
+fn parse_delimited<'a>(
+    input: &ParseBuffer<'a>,
+    delimiter: Delimiter,
+) -> Result<(DelimSpan, ParseBuffer<'a>)> {
+    input.step(|cursor| {
+        if let Some((content, span, rest)) = cursor.group(delimiter) {
+            let scope = span.close();
+            let ctx = cursor.ctx.clone();
+            let nested = crate::rust_grammar::parse::advance_step_cursor(cursor, content);
+            let unexpected = crate::rust_grammar::parse::get_unexpected(input);
+            let content = crate::rust_grammar::parse::new_parse_buffer(
+                scope,
+                nested,
+                unexpected,
+                ctx,
+                input.mode(),
+            );
+            Ok(((span, content), rest))
+        } else {
+            let message = match delimiter {
+                Delimiter::Parenthesis => "expected parentheses",
+                Delimiter::Brace => "expected curly braces",
+                Delimiter::Bracket => "expected square brackets",
+                Delimiter::None => "expected invisible group",
+            };
+            Err(cursor.error(message))
+        }
+    })
+}
+
+#[macro_export]
+macro_rules! parenthesized {
+    ($content:ident in $cursor:expr) => {
+        match $crate::rust_grammar::__private::parse_parens(&$cursor) {
+            Ok(parens) => {
+                $content = parens.content;
+                parens.token
+            }
+            Err(error) => {
+                return Err(error);
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! braced {
+    ($content:ident in $cursor:expr) => {
+        match $crate::rust_grammar::__private::parse_braces(&$cursor) {
+            Ok(braces) => {
+                $content = braces.content;
+                braces.token
+            }
+            Err(error) => {
+                return Err(error);
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! bracketed {
+    ($content:ident in $cursor:expr) => {
+        match $crate::rust_grammar::__private::parse_brackets(&$cursor) {
+            Ok(brackets) => {
+                $content = brackets.content;
+                brackets.token
+            }
+            Err(error) => {
+                return Err(error);
+            }
+        }
+    };
+}

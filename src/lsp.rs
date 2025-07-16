@@ -4,6 +4,8 @@ use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
+use crate::rust_grammar::parse::ParseNode;
+use crate::rust_grammar::{Field, FieldNamed, Pat, Stmt, Type};
 use lsp_types::notification::{Notification, PublishDiagnostics};
 use lsp_types::{
     ClientCapabilities, DidOpenTextDocumentParams, Hover, HoverContents, InitializeParams,
@@ -11,8 +13,6 @@ use lsp_types::{
     WorkspaceFolder,
 };
 use molt_lib::{NodeId, ParsingMode, Pattern};
-use rust_grammar::parse::ParseNode;
-use rust_grammar::{Field, FieldNamed, Pat, Stmt, Type};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -305,7 +305,8 @@ fn try_parse_as<T: ParseNode>(
     f: impl Fn(&Ctx, &<T as ParseNode>::Target) -> Option<NodeId<Type>>,
 ) -> Option<(NodeId<Type>, Ctx)> {
     let (id, ctx) =
-        rust_grammar::parse_ctx(|input| input.parse_id::<T>(), line, ParsingMode::Real).ok()?;
+        crate::rust_grammar::parse_ctx(|input| input.parse_id::<T>(), line, ParsingMode::Real)
+            .ok()?;
     f(&ctx, ctx.get(id).unwrap_real()).map(|item| (item, ctx))
 }
 
@@ -323,7 +324,12 @@ fn parse_type_from_str(line: &str) -> Option<LspType> {
             })
         })
         .or_else(|| {
-            rust_grammar::parse_ctx(|input| input.parse_id::<Type>(), line, ParsingMode::Real).ok()
+            crate::rust_grammar::parse_ctx(
+                |input| input.parse_id::<Type>(),
+                line,
+                ParsingMode::Real,
+            )
+            .ok()
         });
     if result.is_none() {
         println!("Failed to parse type in LSP response. LSP response: {line}");

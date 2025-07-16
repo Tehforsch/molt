@@ -751,18 +751,20 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "codespan-reporting",
+ "derive_macro",
  "flate2",
  "insta",
  "lsp-types",
  "molt_lib",
+ "proc-macro2",
  "reqwest",
- "rust_grammar",
  "serde",
  "serde_json",
  "similar",
  "tar",
  "tempfile",
  "thiserror",
+ "unicode-ident",
  "uuid",
  "walkdir",
 ]
@@ -960,16 +962,6 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-sys",
  "winreg",
-]
-
-[[package]]
-name = "rust_grammar"
-version = "0.1.0"
-dependencies = [
- "derive_macro",
- "molt_lib",
- "proc-macro2",
- "unicode-ident",
 ]
 
 [[package]]

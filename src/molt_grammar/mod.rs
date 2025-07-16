@@ -1,11 +1,11 @@
 mod parse;
 
+use crate::rust_grammar::{Kind, TokenStream, Type};
 use molt_lib::{
     Id, NodeId, Span, VarDecl,
     rule::{Rule, RuleKey},
 };
 use parse::UnresolvedVarDecls;
-use rust_grammar::{Kind, TokenStream, Type};
 
 #[derive(Debug, Clone)]
 pub struct TokenVar {

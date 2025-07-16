@@ -2,8 +2,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use crate::rust_grammar::{Node, TokenStream, TokenTree, Type, parse_node_with_kind};
 use molt_lib::{Id, ParsingMode, Span, Var, VarDecl};
-use rust_grammar::{Node, TokenStream, TokenTree, Type, parse_node_with_kind};
 
 use crate::molt_grammar::{
     MatchCommand, TokenVar, TransformCommand, TypeAnnotation, UnresolvedMoltFile, UnresolvedVarDecl,
@@ -122,7 +122,7 @@ impl UnresolvedMoltFile {
             .map(|(id, kind, tokens)| {
                 let node = tokens
                     .map(|tokens| {
-                        rust_grammar::parse_with_ctx(
+                        crate::rust_grammar::parse_with_ctx(
                             pat_ctx.clone(),
                             |stream| parse_node_with_kind(stream, kind),
                             tokens,
@@ -140,7 +140,7 @@ impl UnresolvedMoltFile {
             .map(|ann| {
                 Ok(TypeAnnotation {
                     var_name: ann.var_name,
-                    type_: rust_grammar::parse_with_ctx(
+                    type_: crate::rust_grammar::parse_with_ctx(
                         pat_ctx.clone(),
                         |input| input.parse_id::<Type>(),
                         ann.type_,
