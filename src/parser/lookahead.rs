@@ -6,7 +6,6 @@ use crate::parser::ParseCtx;
 use crate::parser::buffer::Cursor;
 use crate::parser::error::{self, Error};
 use crate::parser::parse::{PeekPat, peek_pat};
-use crate::parser::sealed::lookahead::Sealed;
 use crate::parser::span::IntoSpans;
 use crate::parser::token::Token;
 
@@ -103,10 +102,8 @@ impl<'a> Lookahead1<'a> {
 /// Use [`ParseStream::peek`] to peek one of these types in a parse stream
 /// without consuming it from the stream.
 ///
-/// This trait is sealed and cannot be implemented for types outside of Syn.
-///
 /// [`ParseStream::peek`]: crate::parser::parse::ParseBuffer::peek
-pub trait Peek: Sealed {
+pub trait Peek {
     // Not public API.
     #[doc(hidden)]
     type Token: Token;
@@ -123,5 +120,3 @@ impl<S> IntoSpans<S> for TokenMarker {
         match self {}
     }
 }
-
-impl<F: Copy + FnOnce(TokenMarker) -> T, T: Token> Sealed for F {}

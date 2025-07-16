@@ -1,5 +1,3 @@
-#![allow(clippy::large_enum_variant)]
-
 #[macro_use]
 pub mod group;
 #[macro_use]
@@ -16,7 +14,6 @@ pub mod __private;
 pub mod lookahead;
 pub mod parse;
 pub mod punctuated;
-pub mod sealed;
 mod span;
 mod thread;
 

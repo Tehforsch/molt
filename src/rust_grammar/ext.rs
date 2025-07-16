@@ -5,11 +5,10 @@ use proc_macro2::Ident;
 use crate::parser::buffer::Cursor;
 use crate::parser::error::Result;
 use crate::parser::parse::{ParseStream, Peek};
-use crate::parser::sealed::lookahead;
 use crate::parser::token::CustomToken;
 
 /// Additional methods for `Ident` not provided by proc-macro2 or libproc_macro.
-pub trait IdentExt: Sized + private::Sealed {
+pub trait IdentExt: Sized {
     fn parse_any(input: ParseStream) -> Result<Self>;
 
     #[allow(non_upper_case_globals)]
@@ -39,15 +38,7 @@ impl CustomToken for private::IdentAny {
     }
 }
 
-impl lookahead::Sealed for private::PeekFn {}
-
 mod private {
-    use proc_macro2::Ident;
-
-    pub trait Sealed {}
-
-    impl Sealed for Ident {}
-
     pub struct PeekFn;
     pub struct IdentAny;
 
