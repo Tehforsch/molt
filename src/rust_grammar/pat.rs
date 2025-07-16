@@ -2,8 +2,13 @@ use crate::{Id, NodeId, NodeList, Pattern, WithSpan};
 use derive_macro::CmpSyn;
 use proc_macro2::TokenStream;
 
+use crate::parser::error::{self, Result};
+use crate::parser::parse::{
+    ListOrItem, Parse, ParseBuffer, ParseList, ParseListOrItem, ParseNode, ParseStream, PosMarker,
+};
+use crate::parser::punctuated::Punctuated;
+use crate::parser::token;
 use crate::rust_grammar::attr::Attribute;
-use crate::rust_grammar::error::{self, Result};
 use crate::rust_grammar::expr::{
     Expr, ExprConst, ExprLit, ExprMacro, ExprPath, ExprRange, Member, RangeLimits,
 };
@@ -14,14 +19,10 @@ pub use crate::rust_grammar::expr::{
 use crate::rust_grammar::ident::{AnyIdent, Ident};
 use crate::rust_grammar::lit::Lit;
 use crate::rust_grammar::mac::{self, Macro};
-use crate::rust_grammar::parse::{
-    ListOrItem, Parse, ParseBuffer, ParseList, ParseListOrItem, ParseNode, ParseStream, PosMarker,
-};
 use crate::rust_grammar::path::{self, Path, QSelf};
-use crate::rust_grammar::punctuated::Punctuated;
 use crate::rust_grammar::stmt::Block;
 use crate::rust_grammar::ty::Type;
-use crate::rust_grammar::{token, verbatim};
+use crate::rust_grammar::verbatim;
 
 #[derive(Debug, CmpSyn)]
 /// A pattern in a local binding, function signature, match expression, or

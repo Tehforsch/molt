@@ -8,19 +8,19 @@ macro_rules! custom_punctuation {
 
         #[doc(hidden)]
         #[allow(dead_code, non_snake_case)]
-        pub fn $ident<__S: $crate::rust_grammar::__private::IntoSpans<$crate::rust_grammar::custom_punctuation_repr!($($tt)+)>>(
+        pub fn $ident<__S: $crate::parser::__private::IntoSpans<$crate::rust_grammar::custom_punctuation_repr!($($tt)+)>>(
             spans: __S,
         ) -> $ident {
             let _validate_len = 0 $(+ $crate::rust_grammar::custom_punctuation_len!(strict, $tt))*;
             $ident {
-                spans: $crate::rust_grammar::__private::IntoSpans::into_spans(spans)
+                spans: $crate::parser::__private::IntoSpans::into_spans(spans)
             }
         }
 
         const _: () = {
             impl Default for $ident {
                 fn default() -> Self {
-                    $ident($crate::rust_grammar::__private::Span::call_site())
+                    $ident($crate::parser::__private::Span::call_site())
                 }
             }
 
@@ -37,20 +37,20 @@ macro_rules! custom_punctuation {
 #[macro_export]
 macro_rules! impl_parse_for_custom_punctuation {
     ($ident:ident, $($tt:tt)+) => {
-        impl $crate::rust_grammar::__private::CustomToken for $ident {
-            fn peek(cursor: $crate::rust_grammar::buffer::Cursor) -> $crate::rust_grammar::__private::bool {
-                $crate::rust_grammar::__private::peek_punct(cursor, $crate::rust_grammar::stringify_punct!($($tt)+))
+        impl $crate::parser::__private::CustomToken for $ident {
+            fn peek(cursor: $crate::parser::buffer::Cursor) -> $crate::parser::__private::bool {
+                $crate::parser::__private::peek_punct(cursor, $crate::rust_grammar::stringify_punct!($($tt)+))
             }
 
-            fn display() -> &'static $crate::rust_grammar::__private::str {
-                $crate::rust_grammar::__private::concat!("`", $crate::rust_grammar::stringify_punct!($($tt)+), "`")
+            fn display() -> &'static $crate::parser::__private::str {
+                $crate::parser::__private::concat!("`", $crate::rust_grammar::stringify_punct!($($tt)+), "`")
             }
         }
 
-        impl $crate::rust_grammar::parse::Parse for $ident {
-            fn parse(input: $crate::rust_grammar::parse::ParseStream) -> $crate::rust_grammar::parse::Result<$ident> {
+        impl $crate::parser::parse::Parse for $ident {
+            fn parse(input: $crate::parser::parse::ParseStream) -> $crate::parser::parse::Result<$ident> {
                 let spans: $crate::rust_grammar::custom_punctuation_repr!($($tt)+) =
-                    $crate::rust_grammar::__private::parse_punct(input, $crate::rust_grammar::stringify_punct!($($tt)+))?;
+                    $crate::parser::__private::parse_punct(input, $crate::rust_grammar::stringify_punct!($($tt)+))?;
                 Ok($ident(spans))
             }
         }
@@ -69,7 +69,7 @@ macro_rules! impl_to_tokens_for_custom_punctuation {
 #[macro_export]
 macro_rules! custom_punctuation_repr {
     ($($tt:tt)+) => {
-        [$crate::rust_grammar::__private::Span; 0 $(+ $crate::rust_grammar::custom_punctuation_len!(lenient, $tt))+]
+        [$crate::parser::__private::Span; 0 $(+ $crate::rust_grammar::custom_punctuation_len!(lenient, $tt))+]
     };
 }
 
@@ -140,6 +140,6 @@ macro_rules! custom_punctuation_unexpected {
 #[macro_export]
 macro_rules! stringify_punct {
     ($($tt:tt)+) => {
-        $crate::rust_grammar::__private::concat!($($crate::rust_grammar::__private::stringify!($tt)),+)
+        $crate::parser::__private::concat!($($crate::parser::__private::stringify!($tt)),+)
     };
 }

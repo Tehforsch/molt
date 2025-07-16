@@ -5,8 +5,15 @@ use crate::{Id, NodeId, NodeList, Pattern, Spanned, SpannedPat, WithSpan};
 use derive_macro::CmpSyn;
 use proc_macro2::{Span, TokenStream};
 
+use crate::parser::error::{Error, Result};
+use crate::parser::parse::discouraged::Speculative as _;
+use crate::parser::parse::{
+    ListOrItem, Parse, ParseBuffer, ParseList, ParseListOrItem, ParseNode, ParseStream,
+    parse_punctuated_list_real,
+};
+use crate::parser::punctuated::Punctuated;
+use crate::parser::token;
 use crate::rust_grammar::attr::Attribute;
-use crate::rust_grammar::error::{Error, Result};
 use crate::rust_grammar::generics::BoundLifetimes;
 use crate::rust_grammar::ident::{AnyIdent, Ident};
 use crate::rust_grammar::item::{Asyncness, Constness};
@@ -16,26 +23,20 @@ use crate::rust_grammar::mac::{
     Macro, {self},
 };
 use crate::rust_grammar::op::{BinOp, UnOp};
-use crate::rust_grammar::parse::discouraged::Speculative as _;
-use crate::rust_grammar::parse::{
-    ListOrItem, Parse, ParseBuffer, ParseList, ParseListOrItem, ParseNode, ParseStream,
-    parse_punctuated_list_real,
-};
 use crate::rust_grammar::pat::{Pat, PatMultiLeadingVert, PatType};
 use crate::rust_grammar::path::{
     AngleBracketedGenericArguments, Path, QSelf, {self},
 };
 use crate::rust_grammar::precedence::Precedence;
-use crate::rust_grammar::punctuated::Punctuated;
 use crate::rust_grammar::stmt::Block;
 use crate::rust_grammar::ty::{NoPlus, ReturnType, Type};
-use crate::rust_grammar::{attr, classify, token, verbatim};
+use crate::rust_grammar::{attr, classify, verbatim};
 
 /// An alternative to the primary `Expr::parse` parser (from the [`Parse`]
 /// trait) for ambiguous syntactic positions in which a trailing brace
 /// should not be taken as part of the expression.
 ///
-/// [`Parse`]: crate::rust_grammar::parse::Parse
+/// [`Parse`]: crate::parser::parse::Parse
 ///
 /// Rust grammar has an ambiguity where braces sometimes turn a path
 /// expression into a struct initialization and sometimes do not. In the
@@ -120,7 +121,7 @@ struct ExprNoEagerBrace;
 /// expressions at the head of a statement or in the right-hand side of a
 /// `match` arm.
 ///
-/// [`Parse`]: crate::rust_grammar::parse::Parse
+/// [`Parse`]: crate::parser::parse::Parse
 ///
 /// Compare the following cases:
 ///
@@ -1598,7 +1599,7 @@ impl ParseListOrItem for ExprTuple {
 }
 
 fn array_or_repeat(input: ParseStream) -> Result<Expr> {
-    use crate::rust_grammar::parse::ListOrItem;
+    use crate::parser::parse::ListOrItem;
 
     let content;
     let bracket_token = bracketed!(content in input);
@@ -1715,7 +1716,7 @@ impl Parse for ExprLit {
 }
 
 fn expr_group(input: ParseStream, allow_struct: AllowStruct) -> Result<Expr> {
-    let group = crate::rust_grammar::group::parse_group(input)?;
+    let group = crate::parser::group::parse_group(input)?;
     let inner: SpannedPat<Expr> = group.content.parse_spanned_pat::<Expr>()?;
     let (span, inner) = inner.decompose();
     let make_group_expr = |inner: Pattern<Expr, Id>| {
@@ -2219,7 +2220,7 @@ fn expr_break(input: ParseStream, allow_struct: AllowStruct) -> Result<ExprBreak
         let _: NodeId<Expr> = input.parse()?;
         let start_span = label.unwrap().apostrophe;
         let end_span = input.cursor().prev_span();
-        return Err(crate::rust_grammar::error::new2(
+        return Err(crate::parser::error::new2(
             start_span,
             end_span,
             "parentheses required",
@@ -2546,7 +2547,7 @@ fn multi_index(
 
     let mut offset = 0;
     for part in float_repr.split('.') {
-        let mut index: Index = crate::rust_grammar::parse::parse_str(part, input.mode())
+        let mut index: Index = crate::parser::parse::parse_str(part, input.mode())
             .map_err(|err| Error::new(float_span, err))?;
         let part_end = offset + part.len();
         index.span = float_token.subspan(offset..part_end).unwrap_or(float_span);

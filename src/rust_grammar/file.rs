@@ -1,9 +1,9 @@
 use crate::{Ctx, NodeList, ParsingMode};
 
+use crate::parser::error::Result;
+use crate::parser::parse::{Parse, ParseStream, parse_str_ctx};
 use crate::rust_grammar::attr::Attribute;
-use crate::rust_grammar::error::Result;
 use crate::rust_grammar::item::{Item, Items};
-use crate::rust_grammar::parse::{Parse, ParseStream, parse_str_ctx};
 use crate::rust_grammar::{Node, whitespace};
 
 #[derive(Debug)]

@@ -1,9 +1,9 @@
 use crate::{CmpSyn, Matcher};
 use proc_macro2::{Ident, Span};
 
-use crate::rust_grammar::error::Result;
-use crate::rust_grammar::lookahead;
-use crate::rust_grammar::parse::{Parse, ParseStream};
+use crate::parser::error::Result;
+use crate::parser::lookahead;
+use crate::parser::parse::{Parse, ParseStream};
 
 /// A Rust lifetime: `'a`.
 ///

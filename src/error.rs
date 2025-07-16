@@ -11,7 +11,7 @@ use crate::transform::TransformError;
 
 #[derive(Debug)]
 pub enum Error {
-    Parse(crate::rust_grammar::Error, FileId),
+    Parse(crate::parser::Error, FileId),
     Resolve(ResolveError, FileId),
     Misc(String),
     Transform(TransformError),
@@ -80,7 +80,7 @@ impl From<io::Error> for Error {
 }
 
 impl Error {
-    pub fn parse(t: crate::rust_grammar::Error, file_id: FileId) -> Self {
+    pub fn parse(t: crate::parser::Error, file_id: FileId) -> Self {
         Self::Parse(t, file_id)
     }
 }

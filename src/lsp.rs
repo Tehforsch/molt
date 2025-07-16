@@ -4,7 +4,7 @@ use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
-use crate::rust_grammar::parse::ParseNode;
+use crate::parser::parse::ParseNode;
 use crate::rust_grammar::{Field, FieldNamed, Pat, Stmt, Type};
 use crate::{CtxR, NodeId, ParsingMode, Pattern};
 use lsp_types::notification::{Notification, PublishDiagnostics};
@@ -305,7 +305,7 @@ fn try_parse_as<T: ParseNode>(
     f: impl Fn(&CtxR, &<T as ParseNode>::Target) -> Option<NodeId<Type>>,
 ) -> Option<(NodeId<Type>, CtxR)> {
     let (id, ctx) =
-        crate::rust_grammar::parse_ctx(|input| input.parse_id::<T>(), line, ParsingMode::Real)
+        crate::parser::parse::parse_ctx(|input| input.parse_id::<T>(), line, ParsingMode::Real)
             .ok()?;
     f(&ctx, ctx.get(id).unwrap_real()).map(|item| (item, ctx))
 }
@@ -324,12 +324,7 @@ fn parse_type_from_str(line: &str) -> Option<LspType> {
             })
         })
         .or_else(|| {
-            crate::rust_grammar::parse_ctx(
-                |input| input.parse_id::<Type>(),
-                line,
-                ParsingMode::Real,
-            )
-            .ok()
+            crate::parser::parse_ctx(|input| input.parse_id::<Type>(), line, ParsingMode::Real).ok()
         });
     if result.is_none() {
         println!("Failed to parse type in LSP response. LSP response: {line}");

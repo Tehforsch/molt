@@ -3,9 +3,9 @@ use std::{option, slice, vec};
 
 use crate::CmpSyn;
 
-use crate::rust_grammar::drops::{NoDrop, TrivialDrop};
-use crate::rust_grammar::error::Result;
-use crate::rust_grammar::parse::{Parse, ParseStream};
+use crate::parser::drops::{NoDrop, TrivialDrop};
+use crate::parser::error::Result;
+use crate::parser::parse::{Parse, ParseStream};
 
 /// **A punctuated sequence of syntax tree nodes of type `T` separated by
 /// punctuation of type `P`.**

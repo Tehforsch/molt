@@ -1,9 +1,9 @@
 use crate::{CmpSyn, Id, KindType, Matcher, Pattern, ToNode};
 
+use crate::parser::parse::discouraged::Speculative;
+use crate::parser::parse::{ParseNode, ParseStream};
 use crate::rust_grammar::expr::Arm;
 use crate::rust_grammar::item::ImplItem;
-use crate::rust_grammar::parse::discouraged::Speculative;
-use crate::rust_grammar::parse::{ParseNode, ParseStream};
 use crate::rust_grammar::pat::Pat;
 use crate::rust_grammar::{
     Expr, Field, FieldNamed, FieldUnnamed, Ident, Item, Lit, PatMulti, Stmt, Type, Vis,
@@ -153,8 +153,8 @@ macro_rules! define_kind {
             )*
         }
 
-        impl crate::rust_grammar::parse::Parse for Kind {
-            fn parse(input:crate::rust_grammar::parse:: ParseStream) -> crate::rust_grammar::Result<Self> {
+        impl crate::parser::parse::Parse for Kind {
+            fn parse(input:crate::parser::parse:: ParseStream) -> crate::parser::Result<Self> {
                 $(
                     if input.peek(kind_kws::$variant_name) {
                         let _: kind_kws::$variant_name = input.parse()?;
@@ -172,7 +172,7 @@ macro_rules! define_kind {
             unreachable!()
         }
 
-        pub fn parse_node_with_kind(input: crate::rust_grammar::parse::ParseStream, kind: Kind) -> crate::rust_grammar::Result<Id> {
+        pub fn parse_node_with_kind(input: crate::parser::parse::ParseStream, kind: Kind) -> crate::parser::Result<Id> {
             $(
                 parse_impl!(input, kind, $variant_name, $parse_ty $(,$sub_ty)?);
             )*
@@ -280,7 +280,7 @@ impl CmpSyn<Node> for Node {
 impl ParseNode for Field {
     type Target = Field;
 
-    fn parse_node(input: ParseStream) -> crate::rust_grammar::Result<Self::Target> {
+    fn parse_node(input: ParseStream) -> crate::parser::Result<Self::Target> {
         // Let's see how this works out in practice.
         // We speculatively parse a named field and
         // if it doesn't work out, we parse an unnamed field.

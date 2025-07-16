@@ -3,18 +3,18 @@ use std::iter;
 
 use proc_macro2::{Delimiter, TokenStream};
 
-use crate::rust_grammar::parse::ParseStream;
+use crate::parser::parse::ParseStream;
 
 pub fn between<'a>(begin: ParseStream<'a>, end: ParseStream<'a>) -> TokenStream {
     let end = end.cursor();
     let mut cursor = begin.cursor();
-    assert!(crate::rust_grammar::buffer::same_buffer(end, cursor));
+    assert!(crate::parser::buffer::same_buffer(end, cursor));
 
     let mut tokens = TokenStream::new();
     while cursor != end {
         let (tt, next) = cursor.token_tree().unwrap();
 
-        if crate::rust_grammar::buffer::cmp_assuming_same_buffer(end, next) == Ordering::Less {
+        if crate::parser::buffer::cmp_assuming_same_buffer(end, next) == Ordering::Less {
             // A syntax node can cross the boundary of a None-delimited group
             // due to such groups being transparent to the parser in most cases.
             // Any time this occurs the group is known to be semantically

@@ -4,8 +4,8 @@ use std::cell::Cell;
 use std::mem;
 use std::rc::Rc;
 
-use crate::rust_grammar::buffer::Cursor;
-use crate::rust_grammar::parse::{ParseBuffer, Unexpected, inner_unexpected};
+use crate::parser::buffer::Cursor;
+use crate::parser::parse::{ParseBuffer, Unexpected, inner_unexpected};
 
 /// Extensions to the `ParseStream` API to support speculative parsing.
 pub trait Speculative {
@@ -15,7 +15,7 @@ pub trait Speculative {
 
 impl<'a> Speculative for ParseBuffer<'a> {
     fn advance_to(&self, fork: &Self) {
-        if !crate::rust_grammar::buffer::same_scope(self.cursor(), fork.cursor()) {
+        if !crate::parser::buffer::same_scope(self.cursor(), fork.cursor()) {
             panic!("fork was not derived from the advancing parse stream");
         }
 

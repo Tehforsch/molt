@@ -4,8 +4,14 @@ use crate::{CmpSyn, NodeId, NodeList, Pattern, SpannedPat, WithSpan, rule};
 use derive_macro::CmpSyn;
 use proc_macro2::TokenStream;
 
+use crate::parser::error::{Error, Result};
+use crate::parser::parse::ParseList;
+use crate::parser::parse::discouraged::Speculative as _;
+use crate::parser::parse::{Parse, ParseBuffer, ParseNode, ParseStream};
+use crate::parser::punctuated::Punctuated;
+use crate::parser::token;
+use crate::rust_grammar::attr::{self, Attribute};
 use crate::rust_grammar::data::{Fields, FieldsNamed, Variant};
-use crate::rust_grammar::error::{Error, Result};
 use crate::rust_grammar::expr::Expr;
 use crate::rust_grammar::generics::{Generics, TypeParamBound};
 use crate::rust_grammar::ident::{AnyIdent, Ident, TokenIdent};
@@ -14,19 +20,12 @@ use crate::rust_grammar::lit::LitStr;
 use crate::rust_grammar::mac::{
     Macro, {self},
 };
-use crate::rust_grammar::parse::discouraged::Speculative as _;
-use crate::rust_grammar::parse::{Parse, ParseBuffer, ParseNode, ParseStream};
 use crate::rust_grammar::pat::{Pat, PatSingle, PatType};
 use crate::rust_grammar::path::Path;
-use crate::rust_grammar::punctuated::Punctuated;
 use crate::rust_grammar::restriction::Vis;
 use crate::rust_grammar::stmt::Block;
 use crate::rust_grammar::ty::{Abi, ReturnType, Type, TypePath};
-use crate::rust_grammar::{
-    attr::{self, Attribute},
-    parse::ParseList,
-};
-use crate::rust_grammar::{derive, token, verbatim};
+use crate::rust_grammar::{derive, verbatim};
 
 #[derive(Debug, CmpSyn)]
 #[requires_rule]

@@ -3,11 +3,11 @@ use std::ops::ControlFlow;
 use crate::{NodeId, Pattern};
 use proc_macro2::{Delimiter, TokenStream, TokenTree};
 
+use crate::parser::parse::ParseStream;
+use crate::parser::punctuated::Punctuated;
 use crate::rust_grammar::expr::Expr;
 use crate::rust_grammar::generics::TypeParamBound;
-use crate::rust_grammar::parse::ParseStream;
 use crate::rust_grammar::path::{Path, PathArguments};
-use crate::rust_grammar::punctuated::Punctuated;
 use crate::rust_grammar::ty::{ReturnType, Type};
 
 pub(crate) fn requires_semi_to_be_stmt(input: ParseStream, expr: NodeId<Expr>) -> bool {

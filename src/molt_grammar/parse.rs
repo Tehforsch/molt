@@ -1,9 +1,10 @@
+use crate::parser::parse::{Parse, ParseStream};
+use crate::parser::token::Brace;
+use crate::parser::token::Paren;
+use crate::parser::{Error, Result};
 use crate::rule::Rule;
 use crate::rust_grammar::ext::IdentExt;
-use crate::rust_grammar::parse::{Parse, ParseStream};
-use crate::rust_grammar::token::Brace;
-use crate::rust_grammar::token::Paren;
-use crate::rust_grammar::{Error, Ident, Kind, Result, TokenStream, TokenTree};
+use crate::rust_grammar::{Ident, Kind, TokenStream, TokenTree};
 use crate::{Token, braced, parenthesized};
 
 use super::{

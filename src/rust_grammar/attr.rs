@@ -2,15 +2,16 @@ use crate::NodeId;
 use derive_macro::CmpSyn;
 use proc_macro2::TokenStream;
 
-use crate::rust_grammar::error::Result;
+use crate::parser::error::Result;
+use crate::parser::parse::discouraged::Speculative as _;
+use crate::parser::parse::{Parse, ParseNode, ParseStream};
+use crate::parser::token;
 use crate::rust_grammar::expr::{Expr, ExprLit};
 use crate::rust_grammar::ident::TokenIdent;
 use crate::rust_grammar::lit::Lit;
+use crate::rust_grammar::mac;
 use crate::rust_grammar::mac::MacroDelimiter;
-use crate::rust_grammar::parse::discouraged::Speculative as _;
-use crate::rust_grammar::parse::{Parse, ParseNode, ParseStream};
 use crate::rust_grammar::path::Path;
-use crate::rust_grammar::{mac, token};
 
 #[derive(Debug, CmpSyn)]
 /// An attribute, like `#[repr(transparent)]`.

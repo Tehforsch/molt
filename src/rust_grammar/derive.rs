@@ -1,9 +1,9 @@
+use crate::parser::error::Result;
+use crate::parser::parse::{Parse, ParseStream};
+use crate::parser::punctuated::Punctuated;
+use crate::parser::token;
 use crate::rust_grammar::data::{Fields, FieldsNamed, Variant};
-use crate::rust_grammar::error::Result;
 use crate::rust_grammar::generics::WhereClause;
-use crate::rust_grammar::parse::{Parse, ParseStream};
-use crate::rust_grammar::punctuated::Punctuated;
-use crate::rust_grammar::token;
 
 pub(crate) fn data_struct(
     input: ParseStream,

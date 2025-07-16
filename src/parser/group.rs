@@ -1,9 +1,9 @@
 use proc_macro2::Delimiter;
 use proc_macro2::extra::DelimSpan;
 
-use crate::rust_grammar::error::Result;
-use crate::rust_grammar::parse::ParseBuffer;
-use crate::rust_grammar::token;
+use crate::parser::error::Result;
+use crate::parser::parse::ParseBuffer;
+use crate::parser::token;
 
 // Not public API.
 #[doc(hidden)]
@@ -82,9 +82,9 @@ fn parse_delimited<'a>(
         if let Some((content, span, rest)) = cursor.group(delimiter) {
             let scope = span.close();
             let ctx = cursor.ctx.clone();
-            let nested = crate::rust_grammar::parse::advance_step_cursor(cursor, content);
-            let unexpected = crate::rust_grammar::parse::get_unexpected(input);
-            let content = crate::rust_grammar::parse::new_parse_buffer(
+            let nested = crate::parser::parse::advance_step_cursor(cursor, content);
+            let unexpected = crate::parser::parse::get_unexpected(input);
+            let content = crate::parser::parse::new_parse_buffer(
                 scope,
                 nested,
                 unexpected,
@@ -107,7 +107,7 @@ fn parse_delimited<'a>(
 #[macro_export]
 macro_rules! parenthesized {
     ($content:ident in $cursor:expr) => {
-        match $crate::rust_grammar::__private::parse_parens(&$cursor) {
+        match $crate::parser::__private::parse_parens(&$cursor) {
             Ok(parens) => {
                 $content = parens.content;
                 parens.token
@@ -122,7 +122,7 @@ macro_rules! parenthesized {
 #[macro_export]
 macro_rules! braced {
     ($content:ident in $cursor:expr) => {
-        match $crate::rust_grammar::__private::parse_braces(&$cursor) {
+        match $crate::parser::__private::parse_braces(&$cursor) {
             Ok(braces) => {
                 $content = braces.content;
                 braces.token
@@ -137,7 +137,7 @@ macro_rules! braced {
 #[macro_export]
 macro_rules! bracketed {
     ($content:ident in $cursor:expr) => {
-        match $crate::rust_grammar::__private::parse_brackets(&$cursor) {
+        match $crate::parser::__private::parse_brackets(&$cursor) {
             Ok(brackets) => {
                 $content = brackets.content;
                 brackets.token

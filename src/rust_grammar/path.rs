@@ -1,15 +1,15 @@
 use crate::{NodeId, NodeList, Pattern, WithSpan};
 use derive_macro::CmpSyn;
 
-use crate::rust_grammar::error::Result;
+use crate::parser::error::Result;
+use crate::parser::parse::{Parse, ParseStream};
+use crate::parser::punctuated::Punctuated;
+use crate::parser::token;
 use crate::rust_grammar::expr::{Expr, ExprBlock, ExprPath};
 use crate::rust_grammar::generics::TypeParamBound;
 use crate::rust_grammar::ident::{AnyIdent, Ident};
 use crate::rust_grammar::lifetime::Lifetime;
 use crate::rust_grammar::lit::Lit;
-use crate::rust_grammar::parse::{Parse, ParseStream};
-use crate::rust_grammar::punctuated::Punctuated;
-use crate::rust_grammar::token;
 use crate::rust_grammar::ty::{ReturnType, Type};
 
 #[derive(Debug, CmpSyn)]

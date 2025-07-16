@@ -1,3 +1,5 @@
+#[macro_use]
+mod parser;
 mod cmp_syn;
 mod config;
 mod ctx;
@@ -77,9 +79,8 @@ impl MoltFile {
     fn new(input: &Input) -> Result<(Self, PatCtx), Error> {
         let file_id = input.molt_file_id();
         let source = input.source(file_id).unwrap();
-        let unresolved: UnresolvedMoltFile =
-            crate::rust_grammar::parse_str(source, ParsingMode::Pat)
-                .map_err(|e| Error::parse(e, file_id))?;
+        let unresolved: UnresolvedMoltFile = crate::parser::parse_str(source, ParsingMode::Pat)
+            .map_err(|e| Error::parse(e, file_id))?;
         unresolved.resolve(file_id)
     }
 

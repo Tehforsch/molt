@@ -2,13 +2,13 @@ use std::cell::RefCell;
 
 use proc_macro2::{Delimiter, Span};
 
-use crate::rust_grammar::ParseCtx;
-use crate::rust_grammar::buffer::Cursor;
-use crate::rust_grammar::error::{self, Error};
-use crate::rust_grammar::parse::{PeekPat, peek_pat};
-use crate::rust_grammar::sealed::lookahead::Sealed;
-use crate::rust_grammar::span::IntoSpans;
-use crate::rust_grammar::token::Token;
+use crate::parser::ParseCtx;
+use crate::parser::buffer::Cursor;
+use crate::parser::error::{self, Error};
+use crate::parser::parse::{PeekPat, peek_pat};
+use crate::parser::sealed::lookahead::Sealed;
+use crate::parser::span::IntoSpans;
+use crate::parser::token::Token;
 
 /// Support for checking the next token in a stream to decide how to parse.
 ///
@@ -105,7 +105,7 @@ impl<'a> Lookahead1<'a> {
 ///
 /// This trait is sealed and cannot be implemented for types outside of Syn.
 ///
-/// [`ParseStream::peek`]: crate::rust_grammar::parse::ParseBuffer::peek
+/// [`ParseStream::peek`]: crate::parser::parse::ParseBuffer::peek
 pub trait Peek: Sealed {
     // Not public API.
     #[doc(hidden)]

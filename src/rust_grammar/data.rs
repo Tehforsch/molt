@@ -1,16 +1,15 @@
 use crate::{NodeId, NodeList, WithSpan};
 use derive_macro::CmpSyn;
 
+use crate::parser::error::Result;
+use crate::parser::parse::{Parse, ParseList, ParseNode, ParseStream, parse_punctuated_list_real};
+use crate::parser::token;
 use crate::rust_grammar::attr::Attribute;
-use crate::rust_grammar::error::Result;
 use crate::rust_grammar::expr::Expr;
 use crate::rust_grammar::ident::{AnyIdent, Ident};
-use crate::rust_grammar::parse::{
-    Parse, ParseList, ParseNode, ParseStream, parse_punctuated_list_real,
-};
 use crate::rust_grammar::restriction::{FieldMutability, Vis};
 use crate::rust_grammar::ty::Type;
-use crate::rust_grammar::{token, verbatim};
+use crate::rust_grammar::verbatim;
 
 #[derive(Debug, CmpSyn)]
 /// An enum variant.

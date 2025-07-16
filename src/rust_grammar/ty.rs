@@ -2,8 +2,14 @@ use crate::{NodeId, NodeList, Pattern, WithSpan};
 use derive_macro::CmpSyn;
 use proc_macro2::{Span, TokenStream};
 
+use crate::parser::error::{self, Result};
+use crate::parser::parse::{
+    ListOrItem, Parse, ParseList, ParseListOrItem, ParseNode, ParseStream,
+    parse_punctuated_list_real,
+};
+use crate::parser::punctuated::Punctuated;
+use crate::parser::token;
 use crate::rust_grammar::attr::Attribute;
-use crate::rust_grammar::error::{self, Result};
 use crate::rust_grammar::expr::Expr;
 use crate::rust_grammar::generics::{
     BoundLifetimes, TraitBound, TraitBoundModifier, TypeParamBound,
@@ -15,13 +21,8 @@ use crate::rust_grammar::lit::LitStr;
 use crate::rust_grammar::mac::{
     Macro, {self},
 };
-use crate::rust_grammar::parse::{
-    ListOrItem, Parse, ParseList, ParseListOrItem, ParseNode, ParseStream,
-    parse_punctuated_list_real,
-};
 use crate::rust_grammar::path::{ParenthesizedGenericArguments, Path, QSelf};
-use crate::rust_grammar::punctuated::Punctuated;
-use crate::rust_grammar::{path, token, verbatim};
+use crate::rust_grammar::{path, verbatim};
 
 #[derive(Debug, CmpSyn)]
 /// The possible types that a Rust value could have.

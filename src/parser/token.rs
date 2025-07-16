@@ -5,11 +5,11 @@ use proc_macro2::{Delimiter, Ident, Literal, Punct, Spacing, Span, TokenTree};
 
 pub use self::private::CustomToken;
 use self::private::WithSpan;
-use crate::rust_grammar::buffer::Cursor;
-use crate::rust_grammar::error::{Error, Result};
+use crate::parser::buffer::Cursor;
+use crate::parser::error::{Error, Result};
+use crate::parser::parse::{Parse, ParseStream};
+use crate::parser::span::IntoSpans;
 use crate::rust_grammar::lifetime::Lifetime;
-use crate::rust_grammar::parse::{Parse, ParseStream};
-use crate::rust_grammar::span::IntoSpans;
 
 /// Marker trait for types that represent single tokens.
 ///
@@ -28,7 +28,7 @@ pub(crate) mod private {
 
     use proc_macro2::Span;
 
-    use crate::rust_grammar::buffer::Cursor;
+    use crate::parser::buffer::Cursor;
 
     pub trait Sealed {}
 
@@ -94,7 +94,7 @@ macro_rules! define_keywords {
             /// Don't try to remember the name of this type &mdash; use the
             /// [`Token!`] macro instead.
             ///
-            /// [`Token!`]: crate::rust_grammar::token
+            /// [`Token!`]: crate::parser::token
             #[derive(Debug)]
             pub struct $name {
                 #[allow(unused)]
@@ -177,7 +177,7 @@ macro_rules! define_punctuation_structs {
             /// Don't try to remember the name of this type &mdash; use the
             /// [`Token!`] macro instead.
             ///
-            /// [`Token!`]: crate::rust_grammar::token
+            /// [`Token!`]: crate::parser::token
             #[derive(Debug)]
             pub struct $name {
                 #[allow(unused)]
@@ -487,106 +487,106 @@ define_delimiters! {
 /// tokens from a span.
 #[macro_export]
 macro_rules! Token {
-    [abstract]    => { $crate::rust_grammar::token::Abstract };
-    [as]          => { $crate::rust_grammar::token::As };
-    [async]       => { $crate::rust_grammar::token::Async };
-    [auto]        => { $crate::rust_grammar::token::Auto };
-    [await]       => { $crate::rust_grammar::token::Await };
-    [become]      => { $crate::rust_grammar::token::Become };
-    [box]         => { $crate::rust_grammar::token::Box };
-    [break]       => { $crate::rust_grammar::token::Break };
-    [const]       => { $crate::rust_grammar::token::Const };
-    [continue]    => { $crate::rust_grammar::token::Continue };
-    [crate]       => { $crate::rust_grammar::token::Crate };
-    [default]     => { $crate::rust_grammar::token::Default };
-    [do]          => { $crate::rust_grammar::token::Do };
-    [dyn]         => { $crate::rust_grammar::token::Dyn };
-    [else]        => { $crate::rust_grammar::token::Else };
-    [enum]        => { $crate::rust_grammar::token::Enum };
-    [extern]      => { $crate::rust_grammar::token::Extern };
-    [final]       => { $crate::rust_grammar::token::Final };
-    [fn]          => { $crate::rust_grammar::token::Fn };
-    [for]         => { $crate::rust_grammar::token::For };
-    [if]          => { $crate::rust_grammar::token::If };
-    [impl]        => { $crate::rust_grammar::token::Impl };
-    [in]          => { $crate::rust_grammar::token::In };
-    [let]         => { $crate::rust_grammar::token::Let };
-    [loop]        => { $crate::rust_grammar::token::Loop };
-    [macro]       => { $crate::rust_grammar::token::Macro };
-    [match]       => { $crate::rust_grammar::token::Match };
-    [mod]         => { $crate::rust_grammar::token::Mod };
-    [move]        => { $crate::rust_grammar::token::Move };
-    [mut]         => { $crate::rust_grammar::token::Mut };
-    [override]    => { $crate::rust_grammar::token::Override };
-    [priv]        => { $crate::rust_grammar::token::Priv };
-    [pub]         => { $crate::rust_grammar::token::Pub };
-    [raw]         => { $crate::rust_grammar::token::Raw };
-    [ref]         => { $crate::rust_grammar::token::Ref };
-    [return]      => { $crate::rust_grammar::token::Return };
-    [Self]        => { $crate::rust_grammar::token::SelfType };
-    [self]        => { $crate::rust_grammar::token::SelfValue };
-    [static]      => { $crate::rust_grammar::token::Static };
-    [struct]      => { $crate::rust_grammar::token::Struct };
-    [super]       => { $crate::rust_grammar::token::Super };
-    [trait]       => { $crate::rust_grammar::token::Trait };
-    [try]         => { $crate::rust_grammar::token::Try };
-    [type]        => { $crate::rust_grammar::token::Type };
-    [typeof]      => { $crate::rust_grammar::token::Typeof };
-    [union]       => { $crate::rust_grammar::token::Union };
-    [unsafe]      => { $crate::rust_grammar::token::Unsafe };
-    [unsized]     => { $crate::rust_grammar::token::Unsized };
-    [use]         => { $crate::rust_grammar::token::Use };
-    [virtual]     => { $crate::rust_grammar::token::Virtual };
-    [where]       => { $crate::rust_grammar::token::Where };
-    [while]       => { $crate::rust_grammar::token::While };
-    [yield]       => { $crate::rust_grammar::token::Yield };
-    [&]           => { $crate::rust_grammar::token::And };
-    [&&]          => { $crate::rust_grammar::token::AndAnd };
-    [&=]          => { $crate::rust_grammar::token::AndEq };
-    [@]           => { $crate::rust_grammar::token::At };
-    [^]           => { $crate::rust_grammar::token::Caret };
-    [^=]          => { $crate::rust_grammar::token::CaretEq };
-    [:]           => { $crate::rust_grammar::token::Colon };
-    [,]           => { $crate::rust_grammar::token::Comma };
-    [$]           => { $crate::rust_grammar::token::Dollar };
-    [.]           => { $crate::rust_grammar::token::Dot };
-    [..]          => { $crate::rust_grammar::token::DotDot };
-    [...]         => { $crate::rust_grammar::token::DotDotDot };
-    [..=]         => { $crate::rust_grammar::token::DotDotEq };
-    [=]           => { $crate::rust_grammar::token::Eq };
-    [==]          => { $crate::rust_grammar::token::EqEq };
-    [=>]          => { $crate::rust_grammar::token::FatArrow };
-    [>=]          => { $crate::rust_grammar::token::Ge };
-    [>]           => { $crate::rust_grammar::token::Gt };
-    [<-]          => { $crate::rust_grammar::token::LArrow };
-    [<=]          => { $crate::rust_grammar::token::Le };
-    [<]           => { $crate::rust_grammar::token::Lt };
-    [-]           => { $crate::rust_grammar::token::Minus };
-    [-=]          => { $crate::rust_grammar::token::MinusEq };
-    [!=]          => { $crate::rust_grammar::token::Ne };
-    [!]           => { $crate::rust_grammar::token::Not };
-    [|]           => { $crate::rust_grammar::token::Or };
-    [|=]          => { $crate::rust_grammar::token::OrEq };
-    [||]          => { $crate::rust_grammar::token::OrOr };
-    [::]          => { $crate::rust_grammar::token::PathSep };
-    [%]           => { $crate::rust_grammar::token::Percent };
-    [%=]          => { $crate::rust_grammar::token::PercentEq };
-    [+]           => { $crate::rust_grammar::token::Plus };
-    [+=]          => { $crate::rust_grammar::token::PlusEq };
-    [#]           => { $crate::rust_grammar::token::Pound };
-    [?]           => { $crate::rust_grammar::token::Question };
-    [->]          => { $crate::rust_grammar::token::RArrow };
-    [;]           => { $crate::rust_grammar::token::Semi };
-    [<<]          => { $crate::rust_grammar::token::Shl };
-    [<<=]         => { $crate::rust_grammar::token::ShlEq };
-    [>>]          => { $crate::rust_grammar::token::Shr };
-    [>>=]         => { $crate::rust_grammar::token::ShrEq };
-    [/]           => { $crate::rust_grammar::token::Slash };
-    [/=]          => { $crate::rust_grammar::token::SlashEq };
-    [*]           => { $crate::rust_grammar::token::Star };
-    [*=]          => { $crate::rust_grammar::token::StarEq };
-    [~]           => { $crate::rust_grammar::token::Tilde };
-    [_]           => { $crate::rust_grammar::token::Underscore };
+    [abstract]    => { $crate::parser::token::Abstract };
+    [as]          => { $crate::parser::token::As };
+    [async]       => { $crate::parser::token::Async };
+    [auto]        => { $crate::parser::token::Auto };
+    [await]       => { $crate::parser::token::Await };
+    [become]      => { $crate::parser::token::Become };
+    [box]         => { $crate::parser::token::Box };
+    [break]       => { $crate::parser::token::Break };
+    [const]       => { $crate::parser::token::Const };
+    [continue]    => { $crate::parser::token::Continue };
+    [crate]       => { $crate::parser::token::Crate };
+    [default]     => { $crate::parser::token::Default };
+    [do]          => { $crate::parser::token::Do };
+    [dyn]         => { $crate::parser::token::Dyn };
+    [else]        => { $crate::parser::token::Else };
+    [enum]        => { $crate::parser::token::Enum };
+    [extern]      => { $crate::parser::token::Extern };
+    [final]       => { $crate::parser::token::Final };
+    [fn]          => { $crate::parser::token::Fn };
+    [for]         => { $crate::parser::token::For };
+    [if]          => { $crate::parser::token::If };
+    [impl]        => { $crate::parser::token::Impl };
+    [in]          => { $crate::parser::token::In };
+    [let]         => { $crate::parser::token::Let };
+    [loop]        => { $crate::parser::token::Loop };
+    [macro]       => { $crate::parser::token::Macro };
+    [match]       => { $crate::parser::token::Match };
+    [mod]         => { $crate::parser::token::Mod };
+    [move]        => { $crate::parser::token::Move };
+    [mut]         => { $crate::parser::token::Mut };
+    [override]    => { $crate::parser::token::Override };
+    [priv]        => { $crate::parser::token::Priv };
+    [pub]         => { $crate::parser::token::Pub };
+    [raw]         => { $crate::parser::token::Raw };
+    [ref]         => { $crate::parser::token::Ref };
+    [return]      => { $crate::parser::token::Return };
+    [Self]        => { $crate::parser::token::SelfType };
+    [self]        => { $crate::parser::token::SelfValue };
+    [static]      => { $crate::parser::token::Static };
+    [struct]      => { $crate::parser::token::Struct };
+    [super]       => { $crate::parser::token::Super };
+    [trait]       => { $crate::parser::token::Trait };
+    [try]         => { $crate::parser::token::Try };
+    [type]        => { $crate::parser::token::Type };
+    [typeof]      => { $crate::parser::token::Typeof };
+    [union]       => { $crate::parser::token::Union };
+    [unsafe]      => { $crate::parser::token::Unsafe };
+    [unsized]     => { $crate::parser::token::Unsized };
+    [use]         => { $crate::parser::token::Use };
+    [virtual]     => { $crate::parser::token::Virtual };
+    [where]       => { $crate::parser::token::Where };
+    [while]       => { $crate::parser::token::While };
+    [yield]       => { $crate::parser::token::Yield };
+    [&]           => { $crate::parser::token::And };
+    [&&]          => { $crate::parser::token::AndAnd };
+    [&=]          => { $crate::parser::token::AndEq };
+    [@]           => { $crate::parser::token::At };
+    [^]           => { $crate::parser::token::Caret };
+    [^=]          => { $crate::parser::token::CaretEq };
+    [:]           => { $crate::parser::token::Colon };
+    [,]           => { $crate::parser::token::Comma };
+    [$]           => { $crate::parser::token::Dollar };
+    [.]           => { $crate::parser::token::Dot };
+    [..]          => { $crate::parser::token::DotDot };
+    [...]         => { $crate::parser::token::DotDotDot };
+    [..=]         => { $crate::parser::token::DotDotEq };
+    [=]           => { $crate::parser::token::Eq };
+    [==]          => { $crate::parser::token::EqEq };
+    [=>]          => { $crate::parser::token::FatArrow };
+    [>=]          => { $crate::parser::token::Ge };
+    [>]           => { $crate::parser::token::Gt };
+    [<-]          => { $crate::parser::token::LArrow };
+    [<=]          => { $crate::parser::token::Le };
+    [<]           => { $crate::parser::token::Lt };
+    [-]           => { $crate::parser::token::Minus };
+    [-=]          => { $crate::parser::token::MinusEq };
+    [!=]          => { $crate::parser::token::Ne };
+    [!]           => { $crate::parser::token::Not };
+    [|]           => { $crate::parser::token::Or };
+    [|=]          => { $crate::parser::token::OrEq };
+    [||]          => { $crate::parser::token::OrOr };
+    [::]          => { $crate::parser::token::PathSep };
+    [%]           => { $crate::parser::token::Percent };
+    [%=]          => { $crate::parser::token::PercentEq };
+    [+]           => { $crate::parser::token::Plus };
+    [+=]          => { $crate::parser::token::PlusEq };
+    [#]           => { $crate::parser::token::Pound };
+    [?]           => { $crate::parser::token::Question };
+    [->]          => { $crate::parser::token::RArrow };
+    [;]           => { $crate::parser::token::Semi };
+    [<<]          => { $crate::parser::token::Shl };
+    [<<=]         => { $crate::parser::token::ShlEq };
+    [>>]          => { $crate::parser::token::Shr };
+    [>>=]         => { $crate::parser::token::ShrEq };
+    [/]           => { $crate::parser::token::Slash };
+    [/=]          => { $crate::parser::token::SlashEq };
+    [*]           => { $crate::parser::token::Star };
+    [*=]          => { $crate::parser::token::StarEq };
+    [~]           => { $crate::parser::token::Tilde };
+    [_]           => { $crate::parser::token::Underscore };
 }
 
 pub(crate) fn keyword(input: ParseStream, token: &str) -> Result<Span> {

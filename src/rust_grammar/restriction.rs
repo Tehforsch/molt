@@ -1,11 +1,11 @@
 use derive_macro::CmpSyn;
 
-use crate::rust_grammar::error::Result;
+use crate::parser::error::Result;
+use crate::parser::parse::discouraged::Speculative as _;
+use crate::parser::parse::{ParseNode, ParseStream};
+use crate::parser::token;
 use crate::rust_grammar::ident::AnyIdent;
-use crate::rust_grammar::parse::discouraged::Speculative as _;
-use crate::rust_grammar::parse::{ParseNode, ParseStream};
 use crate::rust_grammar::path::Path;
-use crate::rust_grammar::token;
 
 #[derive(Debug, CmpSyn)]
 /// The visibility level of an item: inherited or `pub` or
@@ -57,7 +57,7 @@ impl ParseNode for Vis {
         // matcher that matched no tokens.
         if input.peek(token::Group) {
             let ahead = input.fork();
-            let group = crate::rust_grammar::group::parse_group(&ahead)?;
+            let group = crate::parser::group::parse_group(&ahead)?;
             if group.content.is_empty() {
                 input.advance_to(&ahead);
                 return Ok(Vis::Inherited);

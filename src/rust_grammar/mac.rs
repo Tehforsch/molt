@@ -2,10 +2,10 @@ use derive_macro::CmpSyn;
 use proc_macro2::extra::DelimSpan;
 use proc_macro2::{Delimiter, TokenStream, TokenTree};
 
-use crate::rust_grammar::error::Result;
-use crate::rust_grammar::parse::{Parse, ParseStream};
+use crate::parser::error::Result;
+use crate::parser::parse::{Parse, ParseStream};
+use crate::parser::token::{Brace, Bracket, Paren};
 use crate::rust_grammar::path::Path;
-use crate::rust_grammar::token::{Brace, Bracket, Paren};
 
 #[derive(Debug, CmpSyn)]
 /// A macro invocation: `println!("{}", mac)`.

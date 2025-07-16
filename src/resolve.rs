@@ -122,7 +122,7 @@ impl UnresolvedMoltFile {
             .map(|(id, kind, tokens)| {
                 let node = tokens
                     .map(|tokens| {
-                        crate::rust_grammar::parse_with_ctx(
+                        crate::parser::parse_with_ctx(
                             pat_ctx.clone(),
                             |stream| parse_node_with_kind(stream, kind),
                             tokens,
@@ -140,7 +140,7 @@ impl UnresolvedMoltFile {
             .map(|ann| {
                 Ok(TypeAnnotation {
                     var_name: ann.var_name,
-                    type_: crate::rust_grammar::parse_with_ctx(
+                    type_: crate::parser::parse_with_ctx(
                         pat_ctx.clone(),
                         |input| input.parse_id::<Type>(),
                         ann.type_,

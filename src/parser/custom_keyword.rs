@@ -4,18 +4,18 @@ macro_rules! custom_keyword {
         #[allow(non_camel_case_types)]
         pub struct $ident {
             #[allow(dead_code)]
-            pub span: $crate::rust_grammar::__private::Span,
+            pub span: $crate::parser::__private::Span,
         }
 
         #[doc(hidden)]
         #[allow(dead_code, non_snake_case)]
         pub fn $ident<
-            __S: $crate::rust_grammar::__private::IntoSpans<$crate::rust_grammar::__private::Span>,
+            __S: $crate::parser::__private::IntoSpans<$crate::parser::__private::Span>,
         >(
             span: __S,
         ) -> $ident {
             $ident {
-                span: $crate::rust_grammar::__private::IntoSpans::into_spans(span),
+                span: $crate::parser::__private::IntoSpans::into_spans(span),
             }
         }
 
@@ -23,7 +23,7 @@ macro_rules! custom_keyword {
             impl Default for $ident {
                 fn default() -> Self {
                     $ident {
-                        span: $crate::rust_grammar::__private::Span::call_site(),
+                        span: $crate::parser::__private::Span::call_site(),
                     }
                 }
             }
@@ -39,8 +39,8 @@ macro_rules! custom_keyword {
 macro_rules! impl_parse_for_custom_keyword {
     ($ident:ident) => {
         // For peek.
-        impl $crate::rust_grammar::__private::CustomToken for $ident {
-            fn peek(cursor: $crate::rust_grammar::buffer::Cursor) -> bool {
+        impl $crate::parser::__private::CustomToken for $ident {
+            fn peek(cursor: $crate::parser::buffer::Cursor) -> bool {
                 if let Some((ident, _rest)) = cursor.ident() {
                     ident == stringify!($ident)
                 } else {
@@ -49,21 +49,21 @@ macro_rules! impl_parse_for_custom_keyword {
             }
 
             fn display() -> &'static str {
-                $crate::rust_grammar::__private::concat!("`", stringify!($ident), "`")
+                $crate::parser::__private::concat!("`", stringify!($ident), "`")
             }
         }
 
-        impl $crate::rust_grammar::parse::Parse for $ident {
+        impl $crate::parser::parse::Parse for $ident {
             fn parse(
-                input: $crate::rust_grammar::parse::ParseStream,
-            ) -> $crate::rust_grammar::parse::Result<$ident> {
+                input: $crate::parser::parse::ParseStream,
+            ) -> $crate::parser::parse::Result<$ident> {
                 input.step(|cursor| {
                     if let Some((ident, rest)) = cursor.ident() {
                         if ident == stringify!($ident) {
                             return Ok(($ident { span: ident.span() }, rest));
                         }
                     }
-                    Err(cursor.error($crate::rust_grammar::__private::concat!(
+                    Err(cursor.error($crate::parser::__private::concat!(
                         "expected `",
                         stringify!($ident),
                         "`",

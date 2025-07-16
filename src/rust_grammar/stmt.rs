@@ -2,19 +2,20 @@ use crate::{NodeId, NodeList, Pattern, Spanned, WithSpan};
 use derive_macro::CmpSyn;
 use proc_macro2::TokenStream;
 
+use crate::parser::error::Result;
+use crate::parser::parse::discouraged::Speculative as _;
+use crate::parser::parse::{Parse, ParseList, ParseNode, ParseStream};
+use crate::parser::token;
 use crate::rust_grammar::attr::Attribute;
-use crate::rust_grammar::error::Result;
 use crate::rust_grammar::expr::{Expr, ExprBlock, ExprEarlierBoundaryRule, ExprMacro};
 use crate::rust_grammar::ident::Ident;
 use crate::rust_grammar::item::Item;
 use crate::rust_grammar::mac::{
     Macro, {self},
 };
-use crate::rust_grammar::parse::discouraged::Speculative as _;
-use crate::rust_grammar::parse::{Parse, ParseList, ParseNode, ParseStream};
 use crate::rust_grammar::pat::{Pat, PatSingle, PatType};
 use crate::rust_grammar::path::Path;
-use crate::rust_grammar::{classify, item, token};
+use crate::rust_grammar::{classify, item};
 
 #[derive(Debug, CmpSyn)]
 /// A braced block containing Rust statements.

@@ -1,10 +1,10 @@
 pub use proc_macro2::Ident;
 
-use crate::rust_grammar::buffer::Cursor;
-use crate::rust_grammar::error::Result;
-use crate::rust_grammar::lookahead;
-use crate::rust_grammar::parse::{Parse, ParseNode, ParseStream, PeekPat};
-use crate::rust_grammar::token::Token;
+use crate::parser::buffer::Cursor;
+use crate::parser::error::Result;
+use crate::parser::lookahead;
+use crate::parser::parse::{Parse, ParseNode, ParseStream, PeekPat};
+use crate::parser::token::Token;
 
 pub struct AnyIdent;
 pub struct TokenIdent<T>(T);

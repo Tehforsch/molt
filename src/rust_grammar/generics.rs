@@ -2,16 +2,17 @@ use crate::NodeId;
 use derive_macro::CmpSyn;
 use proc_macro2::TokenStream;
 
+use crate::parser::error::{self, Result};
+use crate::parser::parse::{Parse, ParseStream};
+use crate::parser::punctuated::Punctuated;
+use crate::parser::token;
 use crate::rust_grammar::attr::Attribute;
-use crate::rust_grammar::error::{self, Result};
 use crate::rust_grammar::expr::Expr;
 use crate::rust_grammar::ident::{AnyIdent, Ident};
 use crate::rust_grammar::lifetime::Lifetime;
-use crate::rust_grammar::parse::{Parse, ParseStream};
 use crate::rust_grammar::path::{self, ParenthesizedGenericArguments, Path, PathArguments};
-use crate::rust_grammar::punctuated::Punctuated;
 use crate::rust_grammar::ty::Type;
-use crate::rust_grammar::{token, verbatim};
+use crate::rust_grammar::verbatim;
 
 #[derive(Debug, CmpSyn, Default)]
 /// Lifetimes and type parameters attached to a declaration of a function,

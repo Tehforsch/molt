@@ -3,8 +3,8 @@ use std::vec;
 
 use proc_macro2::{LexError, Span};
 
-use crate::rust_grammar::buffer::Cursor;
-use crate::rust_grammar::thread::ThreadBound;
+use crate::parser::buffer::Cursor;
+use crate::parser::thread::ThreadBound;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -65,7 +65,7 @@ pub(crate) fn new_at<T: Display>(scope: Span, cursor: Cursor, message: T) -> Err
     if cursor.eof() {
         Error::new(scope, format!("unexpected end of input, {message}"))
     } else {
-        let span = crate::rust_grammar::buffer::open_span_of_group(cursor);
+        let span = crate::parser::buffer::open_span_of_group(cursor);
         Error::new(span, message)
     }
 }

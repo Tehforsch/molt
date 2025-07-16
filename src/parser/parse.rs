@@ -18,17 +18,18 @@ use crate::{
 use discouraged::Speculative;
 use proc_macro2::{Delimiter, Group, Literal, Punct, Span, TokenStream, TokenTree};
 
-use crate::rust_grammar::buffer::{Cursor, TokenBuffer};
+use crate::parser::buffer::{Cursor, TokenBuffer};
+use crate::parser::punctuated::Punctuated;
+use crate::parser::token::{Bracket, Paren, Token};
+use crate::parser::{error, lookahead};
+use crate::rust_grammar::Ident;
 use crate::rust_grammar::ext::IdentExt;
-use crate::rust_grammar::node::{Node, NodeKind};
-use crate::rust_grammar::punctuated::Punctuated;
-use crate::rust_grammar::token::{Bracket, Paren, Token};
-use crate::rust_grammar::{Ident, error, lookahead};
+use crate::rust_grammar::{Node, NodeKind};
 
 pub type ParseCtx = Rc<RefCell<Ctx<Node>>>;
 
-pub use crate::rust_grammar::error::{Error, Result};
-pub use crate::rust_grammar::lookahead::{Lookahead1, Peek};
+pub use crate::parser::error::{Error, Result};
+pub use crate::parser::lookahead::{Lookahead1, Peek};
 
 /// Parsing interface implemented by types that can be parsed in a default
 /// way from a token stream. This trait is for types that aren't represented
@@ -207,7 +208,7 @@ pub type ParseStream<'a> = &'a ParseBuffer<'a>;
 /// - One of [the `syn::parse*` functions][syn-parse]; or
 /// - A method of the [`Parser`] trait.
 ///
-/// [`parse_macro_input!`]: crate::rust_grammar::parse_macro_input!
+/// [`parse_macro_input!`]: crate::parser::parse_macro_input!
 /// [syn-parse]: self#the-synparse-functions
 pub struct ParseBuffer<'a> {
     scope: Span,
@@ -222,9 +223,9 @@ pub struct ParseBuffer<'a> {
     // By extension, it would not be safe to expose an API that accepts a
     // Cursor<'a> and trusts that it lives as long as the cursor currently in
     // the cell.
-    cell: Cell<Cursor<'static>>,
+    pub(super) cell: Cell<Cursor<'static>>,
     marker: PhantomData<Cursor<'a>>,
-    unexpected: Cell<Option<Rc<Cell<Unexpected>>>>,
+    pub(super) unexpected: Cell<Option<Rc<Cell<Unexpected>>>>,
     ctx: ParseCtx,
     mode: ParsingMode,
 }
@@ -358,7 +359,7 @@ fn cell_clone<T: Default + Clone>(cell: &Cell<T>) -> T {
     ret
 }
 
-fn inner_unexpected(buffer: &ParseBuffer) -> (Rc<Cell<Unexpected>>, Option<(Span, Delimiter)>) {
+pub fn inner_unexpected(buffer: &ParseBuffer) -> (Rc<Cell<Unexpected>>, Option<(Span, Delimiter)>) {
     let mut unexpected = get_unexpected(buffer);
     loop {
         match cell_clone(&unexpected) {
@@ -505,7 +506,7 @@ impl<'a> ParseBuffer<'a> {
         if cursor.eof() {
             self.scope
         } else {
-            crate::rust_grammar::buffer::open_span_of_group(cursor)
+            crate::parser::buffer::open_span_of_group(cursor)
         }
     }
 

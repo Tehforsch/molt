@@ -8,10 +8,11 @@ use crate::{CmpSyn, ParsingMode};
 use derive_macro::CmpSyn;
 use proc_macro2::{Literal, Punct, Span};
 
-use crate::rust_grammar::buffer::Cursor;
-use crate::rust_grammar::parse::{Parse, ParseCtx, ParseNode, ParseStream, PeekPat, Unexpected};
-use crate::rust_grammar::token::{self, Token};
-use crate::rust_grammar::{Error, Ident, Result, lookahead};
+use crate::parser::buffer::Cursor;
+use crate::parser::parse::{Parse, ParseCtx, ParseNode, ParseStream, PeekPat, Unexpected};
+use crate::parser::token::{self, Token};
+use crate::parser::{Error, Result, lookahead};
+use crate::rust_grammar::Ident;
 
 #[derive(Debug, CmpSyn)]
 /// A Rust literal such as a string or integer or boolean.
@@ -653,7 +654,7 @@ fn peek_impl(cursor: Cursor, peek: fn(ParseStream) -> bool) -> bool {
     let scope = Span::call_site();
     let unexpected = Rc::new(Cell::new(Unexpected::None));
     // TODO: Creating a new Ctx here is just a hack.
-    let buffer = crate::rust_grammar::parse::new_parse_buffer(
+    let buffer = crate::parser::parse::new_parse_buffer(
         scope,
         cursor,
         unexpected,
