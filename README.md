@@ -9,3 +9,7 @@ Molt provides a domain-specific language (DSL) for defining code transformations
 - **Code refactoring**: Automatically transform code patterns across your codebase
 - **API migrations**: Update function calls when APIs change
 - **Pattern finding**: Search for specific code patterns in your codebase
+
+## Attribution
+
+The Rust parser for this project is based on [syn](https://github.com/dtolnay/syn).
