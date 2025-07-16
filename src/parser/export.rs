@@ -1,7 +1,4 @@
 #[doc(hidden)]
-pub use std::concat;
-
-#[doc(hidden)]
 pub type Span = proc_macro2::Span;
 
 #[doc(hidden)]

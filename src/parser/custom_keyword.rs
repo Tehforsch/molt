@@ -49,7 +49,7 @@ macro_rules! impl_parse_for_custom_keyword {
             }
 
             fn display() -> &'static str {
-                $crate::parser::__private::concat!("`", stringify!($ident), "`")
+                std::concat!("`", stringify!($ident), "`")
             }
         }
 
@@ -63,11 +63,7 @@ macro_rules! impl_parse_for_custom_keyword {
                             return Ok(($ident { span: ident.span() }, rest));
                         }
                     }
-                    Err(cursor.error($crate::parser::__private::concat!(
-                        "expected `",
-                        stringify!($ident),
-                        "`",
-                    )))
+                    Err(cursor.error(std::concat!("expected `", stringify!($ident), "`",)))
                 })
             }
         }
