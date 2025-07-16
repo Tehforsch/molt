@@ -10,16 +10,16 @@ use crate::rust_grammar::{Node, whitespace};
 /// A complete file of Rust source code.
 pub struct File {
     pub shebang: Option<String>,
-    pub attrs: Vec<Attribute>,
-    pub items: NodeList<Item, Token![;]>,
+    pub _attrs: Vec<Attribute>,
+    pub _items: NodeList<Item, Token![;]>,
 }
 
 impl Parse for File {
     fn parse(input: ParseStream) -> Result<Self> {
         Ok(File {
             shebang: None,
-            attrs: input.call(Attribute::parse_inner)?,
-            items: input.parse_list::<Items>()?,
+            _attrs: input.call(Attribute::parse_inner)?,
+            _items: input.parse_list::<Items>()?,
         })
     }
 }

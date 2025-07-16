@@ -97,6 +97,7 @@ macro_rules! define_keywords {
             /// [`Token!`]: crate::rust_grammar::token
             #[derive(Debug)]
             pub struct $name {
+                #[allow(unused)]
                 pub span: Span,
             }
 
@@ -179,6 +180,7 @@ macro_rules! define_punctuation_structs {
             /// [`Token!`]: crate::rust_grammar::token
             #[derive(Debug)]
             pub struct $name {
+                #[allow(unused)]
                 pub spans: [Span; $len],
             }
 
@@ -374,7 +376,6 @@ impl Token for Group {
 }
 
 define_keywords! {
-    "abstract"    pub struct Abstract
     "as"          pub struct As
     "async"       pub struct Async
     "auto"        pub struct Auto
@@ -386,12 +387,10 @@ define_keywords! {
     "continue"    pub struct Continue
     "crate"       pub struct Crate
     "default"     pub struct Default
-    "do"          pub struct Do
     "dyn"         pub struct Dyn
     "else"        pub struct Else
     "enum"        pub struct Enum
     "extern"      pub struct Extern
-    "final"       pub struct Final
     "fn"          pub struct Fn
     "for"         pub struct For
     "if"          pub struct If
@@ -404,8 +403,6 @@ define_keywords! {
     "mod"         pub struct Mod
     "move"        pub struct Move
     "mut"         pub struct Mut
-    "override"    pub struct Override
-    "priv"        pub struct Priv
     "pub"         pub struct Pub
     "raw"         pub struct Raw
     "ref"         pub struct Ref
@@ -418,12 +415,9 @@ define_keywords! {
     "trait"       pub struct Trait
     "try"         pub struct Try
     "type"        pub struct Type
-    "typeof"      pub struct Typeof
     "union"       pub struct Union
     "unsafe"      pub struct Unsafe
-    "unsized"     pub struct Unsized
     "use"         pub struct Use
-    "virtual"     pub struct Virtual
     "where"       pub struct Where
     "while"       pub struct While
     "yield"       pub struct Yield
@@ -448,7 +442,6 @@ define_punctuation! {
     "=>"          pub struct FatArrow/2   /// match arms, macros
     ">="          pub struct Ge/2         /// greater than or equal to, generics
     ">"           pub struct Gt/1         /// greater than, generics, paths
-    "<-"          pub struct LArrow/2     /// unused
     "<="          pub struct Le/2         /// less than or equal to
     "<"           pub struct Lt/1         /// less than, generics, paths
     "-"           pub struct Minus/1      /// subtraction, negation

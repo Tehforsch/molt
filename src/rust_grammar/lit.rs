@@ -480,12 +480,6 @@ macro_rules! lit_extra_traits {
 lit_extra_traits!(LitStr);
 lit_extra_traits!(LitInt);
 
-#[doc(hidden)]
-#[allow(non_snake_case)]
-pub fn Lit(marker: lookahead::TokenMarker) -> Lit {
-    match marker {}
-}
-
 impl Parse for Lit {
     fn parse(input: ParseStream) -> Result<Self> {
         input.step(|cursor| {
