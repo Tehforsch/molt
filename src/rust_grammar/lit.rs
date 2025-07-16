@@ -10,7 +10,7 @@ use proc_macro2::{Literal, Punct, Span};
 
 use crate::parser::buffer::Cursor;
 use crate::parser::parse::{Parse, ParseCtx, ParseNode, ParseStream, PeekPat, Unexpected};
-use crate::parser::token::{self, Token};
+use crate::parser::token::Token;
 use crate::parser::{Error, Result, lookahead};
 use crate::rust_grammar::Ident;
 
@@ -678,8 +678,6 @@ macro_rules! impl_token {
                 $display
             }
         }
-
-        impl token::private::Sealed for $name {}
     };
 }
 

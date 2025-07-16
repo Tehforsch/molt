@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use proc_macro2::extra::DelimSpan;
-use proc_macro2::{Delimiter, Ident, Literal, Punct, Spacing, Span, TokenTree};
+use proc_macro2::{Delimiter, Literal, Punct, Spacing, Span, TokenTree};
 
 pub use self::private::CustomToken;
 use self::private::WithSpan;
@@ -12,9 +12,7 @@ use crate::parser::span::IntoSpans;
 use crate::rust_grammar::lifetime::Lifetime;
 
 /// Marker trait for types that represent single tokens.
-///
-/// This trait is sealed and cannot be implemented for types outside of Syn.
-pub trait Token: private::Sealed {
+pub trait Token {
     // Not public API.
     #[doc(hidden)]
     fn peek(cursor: Cursor) -> bool;
@@ -29,8 +27,6 @@ pub(crate) mod private {
     use proc_macro2::Span;
 
     use crate::parser::buffer::Cursor;
-
-    pub trait Sealed {}
 
     /// Support writing `token.span` rather than `token.spans[0]` on tokens that
     /// hold a single span.
@@ -48,8 +44,6 @@ pub(crate) mod private {
     }
 }
 
-impl private::Sealed for Ident {}
-
 macro_rules! impl_low_level_token {
     ($display:literal $($path:ident)::+ $get:ident) => {
 
@@ -63,8 +57,6 @@ macro_rules! impl_low_level_token {
             }
         }
 
-
-        impl private::Sealed for $($path)::+ {}
     };
 }
 
@@ -73,8 +65,6 @@ impl_low_level_token!("literal" Literal literal);
 impl_low_level_token!("token" TokenTree token_tree);
 impl_low_level_token!("group token" proc_macro2::Group any_group);
 impl_low_level_token!("lifetime" Lifetime lifetime);
-
-impl<T: CustomToken> private::Sealed for T {}
 
 impl<T: CustomToken> Token for T {
     fn peek(cursor: Cursor) -> bool {
@@ -138,9 +128,6 @@ macro_rules! define_keywords {
                     concat!("`", $token, "`")
                 }
             }
-
-
-            impl private::Sealed for $name {}
         )*
     };
 }
@@ -233,9 +220,6 @@ macro_rules! define_punctuation {
                     concat!("`", $token, "`")
                 }
             }
-
-
-            impl private::Sealed for $name {}
         )*
     };
 }
@@ -264,9 +248,6 @@ macro_rules! define_delimiters {
                     $name(Span::call_site())
                 }
             }
-
-
-            impl private::Sealed for $name {}
         )*
     };
 }
@@ -309,8 +290,6 @@ impl Token for Underscore {
     }
 }
 
-impl private::Sealed for Underscore {}
-
 /// None-delimited group
 #[derive(Debug)]
 pub struct Group {
@@ -332,8 +311,6 @@ impl std::default::Default for Group {
         }
     }
 }
-
-impl private::Sealed for Group {}
 
 impl Token for Paren {
     fn peek(cursor: Cursor) -> bool {
