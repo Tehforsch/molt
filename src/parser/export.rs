@@ -1,7 +1,4 @@
 #[doc(hidden)]
-pub type Span = proc_macro2::Span;
-
-#[doc(hidden)]
 pub use crate::parser::group::{parse_braces, parse_brackets, parse_parens};
 #[doc(hidden)]
 pub use crate::parser::span::IntoSpans;

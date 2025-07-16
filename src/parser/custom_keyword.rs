@@ -4,14 +4,12 @@ macro_rules! custom_keyword {
         #[allow(non_camel_case_types)]
         pub struct $ident {
             #[allow(dead_code)]
-            pub span: $crate::parser::__private::Span,
+            pub span: proc_macro2::Span,
         }
 
         #[doc(hidden)]
         #[allow(dead_code, non_snake_case)]
-        pub fn $ident<
-            __S: $crate::parser::__private::IntoSpans<$crate::parser::__private::Span>,
-        >(
+        pub fn $ident<__S: $crate::parser::__private::IntoSpans<proc_macro2::Span>>(
             span: __S,
         ) -> $ident {
             $ident {
@@ -23,7 +21,7 @@ macro_rules! custom_keyword {
             impl Default for $ident {
                 fn default() -> Self {
                     $ident {
-                        span: $crate::parser::__private::Span::call_site(),
+                        span: proc_macro2::Span::call_site(),
                     }
                 }
             }
