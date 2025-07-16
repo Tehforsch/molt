@@ -1,11 +1,10 @@
 use crate::parser::parse::{Parse, ParseStream};
 use crate::parser::token::Brace;
-use crate::parser::token::Paren;
 use crate::parser::{Error, Result};
-use crate::rule::Rule;
+use crate::rule::{ParseRuleKey, Rule};
 use crate::rust_grammar::ext::IdentExt;
 use crate::rust_grammar::{Ident, Kind, TokenStream, TokenTree};
-use crate::{Token, braced, parenthesized};
+use crate::{Token, braced};
 
 use super::{
     Command, Decl, MatchCommand, Ruleset, TokenVar, TransformCommand, UnresolvedMoltFile,
@@ -178,7 +177,7 @@ fn parse_until_semicolon(input: ParseStream) -> Result<TokenStream> {
 impl Parse for Ruleset {
     fn parse(input: ParseStream) -> Result<Self> {
         Ok(Ruleset {
-            rule: input.parse::<RuleWrap>()?.0,
+            rule: input.parse()?,
             keys: {
                 let mut keys = vec![];
                 while !input.peek(Token![;]) {
@@ -195,155 +194,16 @@ impl Parse for Ruleset {
     }
 }
 
-struct RuleWrap(Rule);
-
-impl Parse for RuleWrap {
+impl Parse for Rule {
     fn parse(input: ParseStream) -> Result<Self> {
         if input.peek(kw::ignore) {
             let _: kw::ignore = input.parse()?;
-            Ok(RuleWrap(Rule::Ignore))
+            Ok(Rule::Ignore)
         } else if input.peek(kw::strict) {
             let _: kw::strict = input.parse()?;
-            Ok(RuleWrap(Rule::Strict))
+            Ok(Rule::Strict)
         } else {
             unreachable!()
         }
     }
-}
-
-macro_rules! rules {
-    ($(($name: ident, $(($item: ident, $rule: ident)),* $(,)?),)* $(,)?) => {
-        pub enum ParseRuleKey {
-            Blanket(crate::rule::RuleKeyKind),
-            Concrete(Vec<crate::rule::RuleKey>),
-        }
-
-        impl ParseRuleKey {
-            fn into_keys(self) -> Vec<crate::rule::RuleKey> {
-                match self {
-                    Self::Blanket(key) => {
-                        match key {
-                            $(
-                                crate::rule::RuleKeyKind::$name => {
-                                    vec![
-                                        $(
-                                            crate::rule::RuleKey::$name(crate::rule::$name::$item),
-                                        )*
-                                    ]
-                                }
-                            )*
-                        }
-                    }
-                    Self::Concrete(keys) => {
-                        keys
-                    }
-                }
-            }
-        }
-
-        mod key_kws {
-            $(
-                crate::custom_keyword!($name);
-            )*
-            pub mod inner {
-                $(
-                    #[allow(non_snake_case)]
-                    pub mod $name {
-                        $(
-                            crate::custom_keyword!($item);
-                        )*
-                    }
-                )*
-            }
-        }
-
-        struct RuleKeyKindWrapper(crate::rule::RuleKeyKind);
-
-        impl Parse for RuleKeyKindWrapper {
-            fn parse(input: ParseStream) -> Result<RuleKeyKindWrapper> {
-                let lookahead = input.lookahead1();
-                $(
-                    if lookahead.peek(key_kws::$name) {
-                        let _ = input.parse::<key_kws::$name>()?;
-                        return Ok(RuleKeyKindWrapper(crate::rule::RuleKeyKind::$name))
-                    }
-                )*
-                return Err(lookahead.error());
-            }
-        }
-
-        impl Parse for ParseRuleKey {
-            fn parse(input: ParseStream) -> Result<Self> {
-                let key = input.parse::<RuleKeyKindWrapper>()?.0;
-                if input.peek(Paren) {
-                    let content;
-                    parenthesized!(content in input);
-                    let mut types = vec![];
-                    while !content.is_empty() {
-                        match key {
-                            $(
-                                crate::rule::RuleKeyKind::$name => {
-                                    let lookahead = content.lookahead1();
-                                    $(
-                                        if lookahead.peek(key_kws::inner::$name::$item) {
-                                            let _ = content.parse::<key_kws::inner::$name::$item>();
-                                            let inner = crate::rule::$name::$item;
-                                            types.push(crate::rule::RuleKey::$name(inner));
-                                            if content.peek(Token![,]) {
-                                                let _ = content.parse::<Token![,]>()?;
-                                                break
-                                            }
-                                            else {
-                                                continue
-                                            }
-                                        }
-                                    )*
-                                    return Err(lookahead.error());
-                                }
-                            )*
-                        }
-                    }
-                    Ok(ParseRuleKey::Concrete(types))
-                }
-                else {
-                    Ok(ParseRuleKey::Blanket(key))
-                }
-            }
-        }
-    }
-}
-
-// Unfortunately, this is split over crates for now.
-// Remember to update the corresponding macro call in
-// crates/molt_lib/src/rule.rs
-rules! {
-    (Vis,
-        (Const, Strict),
-        (Enum, Strict),
-        (ExternCrate, Strict),
-        (Fn, Strict),
-        (Mod, Strict),
-        (Static, Strict),
-        (Struct, Strict),
-        (Trait, Strict),
-        (TraitAlias, Strict),
-        (Type, Strict),
-        (Union, Strict),
-        (Use, Strict),
-        (Field, Strict),
-    ),
-    (Unsafe,
-        (Mod, Strict),
-        (Impl, Strict),
-        (Trait, Strict),
-        (Fn, Strict),
-    ),
-    (Async,
-        (Fn, Strict),
-        (Closure, Strict),
-    ),
-    (Const,
-        (Fn, Strict),
-        (Closure, Strict),
-    ),
 }
