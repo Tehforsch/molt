@@ -9,11 +9,11 @@ macro_rules! custom_keyword {
 
         #[doc(hidden)]
         #[allow(dead_code, non_snake_case)]
-        pub fn $ident<__S: $crate::parser::__private::IntoSpans<proc_macro2::Span>>(
+        pub fn $ident<__S: $crate::parser::span::IntoSpans<proc_macro2::Span>>(
             span: __S,
         ) -> $ident {
             $ident {
-                span: $crate::parser::__private::IntoSpans::into_spans(span),
+                span: $crate::parser::span::IntoSpans::into_spans(span),
             }
         }
 
@@ -37,7 +37,7 @@ macro_rules! custom_keyword {
 macro_rules! impl_parse_for_custom_keyword {
     ($ident:ident) => {
         // For peek.
-        impl $crate::parser::__private::CustomToken for $ident {
+        impl $crate::parser::token::private::CustomToken for $ident {
             fn peek(cursor: $crate::parser::buffer::Cursor) -> bool {
                 if let Some((ident, _rest)) = cursor.ident() {
                     ident == stringify!($ident)

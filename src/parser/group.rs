@@ -107,7 +107,7 @@ fn parse_delimited<'a>(
 #[macro_export]
 macro_rules! parenthesized {
     ($content:ident in $cursor:expr) => {
-        match $crate::parser::__private::parse_parens(&$cursor) {
+        match $crate::parser::group::parse_parens(&$cursor) {
             Ok(parens) => {
                 $content = parens.content;
                 parens.token
@@ -122,7 +122,7 @@ macro_rules! parenthesized {
 #[macro_export]
 macro_rules! braced {
     ($content:ident in $cursor:expr) => {
-        match $crate::parser::__private::parse_braces(&$cursor) {
+        match $crate::parser::group::parse_braces(&$cursor) {
             Ok(braces) => {
                 $content = braces.content;
                 braces.token
@@ -137,7 +137,7 @@ macro_rules! braced {
 #[macro_export]
 macro_rules! bracketed {
     ($content:ident in $cursor:expr) => {
-        match $crate::parser::__private::parse_brackets(&$cursor) {
+        match $crate::parser::group::parse_brackets(&$cursor) {
             Ok(brackets) => {
                 $content = brackets.content;
                 brackets.token
