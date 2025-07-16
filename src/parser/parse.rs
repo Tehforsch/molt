@@ -1,4 +1,3 @@
-#[path = "discouraged.rs"]
 pub mod discouraged;
 
 use std::cell::{Cell, Ref, RefCell, RefMut};
