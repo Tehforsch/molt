@@ -10,12 +10,12 @@ use std::panic::{RefUnwindSafe, UnwindSafe};
 use std::rc::Rc;
 use std::str::FromStr;
 
-use discouraged::Speculative;
-use molt_lib::{
+use crate::{
     Ctx, Id, KindType, List, ListMatchingMode, NodeId, NodeList, NodeType, ParsingMode,
     PatNodeList, Pattern, RealNodeList, Single, SingleMatchingMode, Spanned, SpannedPat, ToNode,
     Var, WithSpan,
 };
+use discouraged::Speculative;
 use proc_macro2::{Delimiter, Group, Literal, Punct, Span, TokenStream, TokenTree};
 
 use crate::rust_grammar::buffer::{Cursor, TokenBuffer};
@@ -576,7 +576,7 @@ impl<'a> ParseBuffer<'a> {
         self.ctx.borrow_mut().add_var(var)
     }
 
-    pub(crate) fn span_from_marker(&self, marker: PosMarker) -> molt_lib::Span {
+    pub(crate) fn span_from_marker(&self, marker: PosMarker) -> crate::Span {
         let end = self.cursor().prev_span().byte_range().end;
         // While parsing some items (notably visibilities),
         // we might end up parsing nothing (if no visibility
@@ -584,9 +584,9 @@ impl<'a> ParseBuffer<'a> {
         // returning an invalid span (with end < start), so we
         // add a special case here:
         if end < marker.start {
-            molt_lib::Span::new(marker.start, marker.start)
+            crate::Span::new(marker.start, marker.start)
         } else {
-            molt_lib::Span::new(marker.start, end)
+            crate::Span::new(marker.start, end)
         }
     }
 

@@ -1,7 +1,7 @@
 use std::mem;
 
+use crate::{CmpSyn, NodeId, NodeList, Pattern, SpannedPat, WithSpan, rule};
 use derive_macro::CmpSyn;
-use molt_lib::{CmpSyn, NodeId, NodeList, Pattern, SpannedPat, WithSpan, rule};
 use proc_macro2::TokenStream;
 
 use crate::rust_grammar::data::{Fields, FieldsNamed, Variant};
@@ -2684,7 +2684,7 @@ impl ParseList for ImplItems {
 }
 
 impl CmpSyn<Item> for ImplItem {
-    fn cmp_syn(&self, ctx: &mut molt_lib::Matcher, pat: &Item) {
+    fn cmp_syn(&self, ctx: &mut crate::Matcher, pat: &Item) {
         match (self, pat) {
             (ImplItem::Const(t1), Item::Const(t2)) => ctx.cmp_syn(t1, t2),
             (ImplItem::Fn(t1), Item::Fn(t2)) => ctx.cmp_syn(t1, t2),
@@ -2696,7 +2696,7 @@ impl CmpSyn<Item> for ImplItem {
 }
 
 impl CmpSyn<ItemConst> for ImplItemConst {
-    fn cmp_syn(&self, ctx: &mut molt_lib::Matcher, pat: &ItemConst) {
+    fn cmp_syn(&self, ctx: &mut crate::Matcher, pat: &ItemConst) {
         ctx.cmp_syn(&self.attrs, &pat.attrs);
         ctx.cmp_syn_with_rule(&self.vis, &pat.vis, rule::Vis::Const);
         ctx.cmp_syn(&self.const_token, &pat.const_token);
@@ -2712,7 +2712,7 @@ impl CmpSyn<ItemConst> for ImplItemConst {
 }
 
 impl CmpSyn<ItemFn> for ImplItemFn {
-    fn cmp_syn(&self, ctx: &mut molt_lib::Matcher, pat: &ItemFn) {
+    fn cmp_syn(&self, ctx: &mut crate::Matcher, pat: &ItemFn) {
         ctx.cmp_syn(&self.attrs, &pat.attrs);
         ctx.cmp_syn_with_rule(&self.vis, &pat.vis, rule::Vis::Fn);
         ctx.cmp_syn(&self.sig, &pat.sig);
@@ -2722,7 +2722,7 @@ impl CmpSyn<ItemFn> for ImplItemFn {
 }
 
 impl CmpSyn<ItemType> for ImplItemType {
-    fn cmp_syn(&self, ctx: &mut molt_lib::Matcher, pat: &ItemType) {
+    fn cmp_syn(&self, ctx: &mut crate::Matcher, pat: &ItemType) {
         ctx.cmp_syn(&self.attrs, &pat.attrs);
         ctx.cmp_syn_with_rule(&self.vis, &pat.vis, rule::Vis::Type);
         ctx.cmp_syn(&self.type_token, &pat.type_token);
@@ -2736,7 +2736,7 @@ impl CmpSyn<ItemType> for ImplItemType {
 }
 
 impl CmpSyn<ItemMacro> for ImplItemMacro {
-    fn cmp_syn(&self, ctx: &mut molt_lib::Matcher, pat: &ItemMacro) {
+    fn cmp_syn(&self, ctx: &mut crate::Matcher, pat: &ItemMacro) {
         ctx.cmp_syn(&None, &pat.ident);
         ctx.cmp_syn(&self.mac, &pat.mac);
         ctx.cmp_syn(&self.semi_token, &pat.semi_token);

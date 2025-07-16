@@ -1,7 +1,7 @@
 mod parse;
 
 use crate::rust_grammar::{Kind, TokenStream, Type};
-use molt_lib::{
+use crate::{
     Id, NodeId, Span, VarDecl,
     rule::{Rule, RuleKey},
 };

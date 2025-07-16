@@ -1,9 +1,9 @@
 use std::io;
 
+use crate::Span;
 use codespan_reporting::diagnostic::{Diagnostic, Label};
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
 use codespan_reporting::term::{self};
-use molt_lib::Span;
 
 use crate::input::{FileId, Input};
 use crate::resolve::ResolveError;

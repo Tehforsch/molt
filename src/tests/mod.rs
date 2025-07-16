@@ -3,7 +3,7 @@ mod download;
 use std::path::Path;
 use std::process::{self, Stdio};
 
-use molt_lib::Config;
+use crate::Config;
 
 use crate::error::{emit_diagnostic_str, make_error_diagnostic};
 use crate::input::{Contents, Input, MoltSource};

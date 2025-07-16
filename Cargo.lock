@@ -755,7 +755,6 @@ dependencies = [
  "flate2",
  "insta",
  "lsp-types",
- "molt_lib",
  "proc-macro2",
  "reqwest",
  "serde",
@@ -767,13 +766,6 @@ dependencies = [
  "unicode-ident",
  "uuid",
  "walkdir",
-]
-
-[[package]]
-name = "molt_lib"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
 ]
 
 [[package]]

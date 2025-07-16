@@ -6,20 +6,20 @@ use std::time::{Duration, Instant};
 
 use crate::rust_grammar::parse::ParseNode;
 use crate::rust_grammar::{Field, FieldNamed, Pat, Stmt, Type};
+use crate::{CtxR, NodeId, ParsingMode, Pattern};
 use lsp_types::notification::{Notification, PublishDiagnostics};
 use lsp_types::{
     ClientCapabilities, DidOpenTextDocumentParams, Hover, HoverContents, InitializeParams,
     InitializeResult, InitializedParams, Range, TextDocumentItem, Url, WorkDoneProgressParams,
     WorkspaceFolder,
 };
-use molt_lib::{NodeId, ParsingMode, Pattern};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
+use crate::Error;
 use crate::type_check::LspType;
-use crate::{Ctx, Error};
 
 type Result<T, E = Box<dyn std::error::Error>> = std::result::Result<T, E>;
 
@@ -302,8 +302,8 @@ impl RealLspClient {
 
 fn try_parse_as<T: ParseNode>(
     line: &str,
-    f: impl Fn(&Ctx, &<T as ParseNode>::Target) -> Option<NodeId<Type>>,
-) -> Option<(NodeId<Type>, Ctx)> {
+    f: impl Fn(&CtxR, &<T as ParseNode>::Target) -> Option<NodeId<Type>>,
+) -> Option<(NodeId<Type>, CtxR)> {
     let (id, ctx) =
         crate::rust_grammar::parse_ctx(|input| input.parse_id::<T>(), line, ParsingMode::Real)
             .ok()?;
@@ -315,7 +315,7 @@ fn parse_type_from_str(line: &str) -> Option<LspType> {
         .or_else(|| {
             // Ugly: Add a semicolon to allow parsing into a statement.
             let line = format!("{line};");
-            try_parse_as::<Stmt>(&line, |ctx: &Ctx, stmt: &Stmt| match stmt {
+            try_parse_as::<Stmt>(&line, |ctx: &CtxR, stmt: &Stmt| match stmt {
                 Stmt::Local(local) => match ctx.get(local.pat) {
                     Pattern::Real(Pat::Type(type_)) => Some(type_.ty),
                     _ => None,

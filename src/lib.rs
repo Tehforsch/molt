@@ -1,9 +1,19 @@
+mod cmp_syn;
+mod config;
+mod ctx;
 mod error;
 mod input;
 mod lsp;
+mod match_ctx;
+mod match_pattern;
 mod molt_grammar;
+mod node;
+mod node_list;
+mod pattern;
 mod resolve;
+pub mod rule;
 mod rust_grammar;
+mod span;
 #[cfg(test)]
 mod tests;
 mod transform;
@@ -13,21 +23,36 @@ mod utils;
 use std::path::{Path, PathBuf};
 
 use crate::rust_grammar::Node;
+pub use cmp_syn::CmpSyn;
 use codespan_reporting::diagnostic::Label;
 use codespan_reporting::files::Files;
+pub use config::Config;
+pub use ctx::{Ctx, Id, NodeId, Var, VarDecl};
 pub use error::{Error, emit_error};
 pub use input::{Diagnostic, FileId, Input, MoltSource};
 use lsp::LspClient;
+pub use match_ctx::{MatchCtx, MatchPatternData};
+pub use match_pattern::{Binding, Match, Matcher, PatType, match_pattern};
 use molt_grammar::{Command, MatchCommand, MoltFile, TransformCommand, UnresolvedMoltFile};
-use molt_lib::{
-    Config, Id, KindType, Match, MatchCtx, MatchPatternData, NodeType, ParsingMode, Pattern,
-    rule::Rules,
+pub use node::{KindType, NodeType, ToNode};
+pub use node_list::{
+    List, ListMatchingMode, NoPunct, NodeList, PatNodeList, RealNodeList, SetMatchingMode, Single,
+    SingleMatchingMode,
 };
+pub use pattern::Pattern;
+use rule::Rules;
+pub use span::{Span, Spanned, SpannedPat, WithSpan};
 
 struct RustFile;
 
-type Ctx = molt_lib::Ctx<Node>;
-type PatCtx = Ctx;
+type CtxR = crate::ctx::Ctx<Node>;
+type PatCtx = CtxR;
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum ParsingMode {
+    Real,
+    Pat,
+}
 
 fn match_pattern_data<'a>(
     input: &'a Input,
@@ -70,8 +95,8 @@ impl MoltFile {
 
     fn match_pattern<'a>(
         &'a self,
-        ast_ctx: &'a Ctx,
-        pat_ctx: &'a Ctx,
+        ast_ctx: &'a CtxR,
+        pat_ctx: &'a CtxR,
         var: Id,
         data: MatchPatternData<'a>,
         lsp_client: &'a mut LspClient,
@@ -88,15 +113,15 @@ impl MoltFile {
             .flat_map(|item| {
                 let node: Pattern<&Node, Id> = ctx.ast_ctx.get(item);
                 let is_of_kind = match node {
-                    molt_lib::Pattern::Real(node) => node.is_of_kind(pat_kind),
-                    molt_lib::Pattern::Pat(var) => ctx
+                    crate::Pattern::Real(node) => node.is_of_kind(pat_kind),
+                    crate::Pattern::Pat(var) => ctx
                         .ast_ctx
                         .get_var(var)
                         .kind()
                         .is_comparable_to(pat_kind.into_node_kind()),
                 };
                 if is_of_kind {
-                    molt_lib::match_pattern(&ctx, &self.vars, var, item, rules)
+                    crate::match_pattern(&ctx, &self.vars, var, item, rules)
                 } else {
                     vec![]
                 }
@@ -116,7 +141,7 @@ impl MoltFile {
 }
 
 impl RustFile {
-    fn new(input: &Input, file_id: FileId) -> Result<(Self, Ctx), Error> {
+    fn new(input: &Input, file_id: FileId) -> Result<(Self, CtxR), Error> {
         let source = input.source(file_id).unwrap();
         crate::rust_grammar::parse_file(source, ParsingMode::Real)
             .map_err(|e| Error::parse(e, file_id))

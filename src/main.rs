@@ -72,7 +72,7 @@ fn main() -> Result<()> {
     if let Some(ref root) = root {
         input = input.with_root(root.to_owned());
     }
-    let config = molt_lib::Config {
+    let config = molt::Config {
         debug_print: args.debug_print,
         cargo_fmt: args.cargo_fmt,
         interactive: args.interactive,

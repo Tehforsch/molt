@@ -5,8 +5,8 @@ use std::path::Path;
 use std::str::FromStr;
 
 use crate::rust_grammar::{Node, TokenStream};
+use crate::{Config, Id, Match, MatchCtx, Span};
 use codespan_reporting::files::Files;
-use molt_lib::{Config, Id, Match, MatchCtx, Span};
 
 use crate::molt_grammar::TokenVar;
 use crate::resolve::get_vars_in_token_stream;

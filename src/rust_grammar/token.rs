@@ -661,8 +661,8 @@ fn peek_punct(mut cursor: Cursor, token: &str) -> bool {
 
 macro_rules! impl_zst_cmp_syn {
     ($ty: ty) => {
-        impl molt_lib::CmpSyn for $ty {
-            fn cmp_syn(&self, _: &mut molt_lib::Matcher, _: &Self) {}
+        impl crate::CmpSyn for $ty {
+            fn cmp_syn(&self, _: &mut crate::Matcher, _: &Self) {}
         }
     };
 }

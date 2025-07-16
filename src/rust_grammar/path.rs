@@ -1,5 +1,5 @@
+use crate::{NodeId, NodeList, Pattern, WithSpan};
 use derive_macro::CmpSyn;
-use molt_lib::{NodeId, NodeList, Pattern, WithSpan};
 
 use crate::rust_grammar::error::Result;
 use crate::rust_grammar::expr::{Expr, ExprBlock, ExprPath};

@@ -1,10 +1,10 @@
+use crate::rule::Rule;
 use crate::rust_grammar::ext::IdentExt;
 use crate::rust_grammar::parse::{Parse, ParseStream};
 use crate::rust_grammar::token::Brace;
 use crate::rust_grammar::token::Paren;
 use crate::rust_grammar::{Error, Ident, Kind, Result, TokenStream, TokenTree};
 use crate::{Token, braced, parenthesized};
-use molt_lib::rule::Rule;
 
 use super::{
     Command, Decl, MatchCommand, Ruleset, TokenVar, TransformCommand, UnresolvedMoltFile,
@@ -213,20 +213,20 @@ impl Parse for RuleWrap {
 macro_rules! rules {
     ($(($name: ident, $(($item: ident, $rule: ident)),* $(,)?),)* $(,)?) => {
         pub enum ParseRuleKey {
-            Blanket(molt_lib::rule::RuleKeyKind),
-            Concrete(Vec<molt_lib::rule::RuleKey>),
+            Blanket(crate::rule::RuleKeyKind),
+            Concrete(Vec<crate::rule::RuleKey>),
         }
 
         impl ParseRuleKey {
-            fn into_keys(self) -> Vec<molt_lib::rule::RuleKey> {
+            fn into_keys(self) -> Vec<crate::rule::RuleKey> {
                 match self {
                     Self::Blanket(key) => {
                         match key {
                             $(
-                                molt_lib::rule::RuleKeyKind::$name => {
+                                crate::rule::RuleKeyKind::$name => {
                                     vec![
                                         $(
-                                            molt_lib::rule::RuleKey::$name(molt_lib::rule::$name::$item),
+                                            crate::rule::RuleKey::$name(crate::rule::$name::$item),
                                         )*
                                     ]
                                 }
@@ -256,7 +256,7 @@ macro_rules! rules {
             }
         }
 
-        struct RuleKeyKindWrapper(molt_lib::rule::RuleKeyKind);
+        struct RuleKeyKindWrapper(crate::rule::RuleKeyKind);
 
         impl Parse for RuleKeyKindWrapper {
             fn parse(input: ParseStream) -> Result<RuleKeyKindWrapper> {
@@ -264,7 +264,7 @@ macro_rules! rules {
                 $(
                     if lookahead.peek(key_kws::$name) {
                         let _ = input.parse::<key_kws::$name>()?;
-                        return Ok(RuleKeyKindWrapper(molt_lib::rule::RuleKeyKind::$name))
+                        return Ok(RuleKeyKindWrapper(crate::rule::RuleKeyKind::$name))
                     }
                 )*
                 return Err(lookahead.error());
@@ -281,13 +281,13 @@ macro_rules! rules {
                     while !content.is_empty() {
                         match key {
                             $(
-                                molt_lib::rule::RuleKeyKind::$name => {
+                                crate::rule::RuleKeyKind::$name => {
                                     let lookahead = content.lookahead1();
                                     $(
                                         if lookahead.peek(key_kws::inner::$name::$item) {
                                             let _ = content.parse::<key_kws::inner::$name::$item>();
-                                            let inner = molt_lib::rule::$name::$item;
-                                            types.push(molt_lib::rule::RuleKey::$name(inner));
+                                            let inner = crate::rule::$name::$item;
+                                            types.push(crate::rule::RuleKey::$name(inner));
                                             if content.peek(Token![,]) {
                                                 let _ = content.parse::<Token![,]>()?;
                                                 break

@@ -1,4 +1,4 @@
-use molt_lib::{CmpSyn, Matcher};
+use crate::{CmpSyn, Matcher};
 use proc_macro2::{Ident, Span};
 
 use crate::rust_grammar::error::Result;

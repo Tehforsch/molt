@@ -19,14 +19,14 @@ pub fn impl_cmp_syn(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     };
 
     let rule_ty = if requires_rule {
-        quote! { molt_lib::rule::RequiresRule }
+        quote! { crate::rule::RequiresRule }
     } else {
-        quote! { molt_lib::rule::DoesNotRequireRule }
+        quote! { crate::rule::DoesNotRequireRule }
     };
 
     let expanded = quote! {
-        impl molt_lib::CmpSyn<#name, #rule_ty> for #name {
-            fn cmp_syn(&self, ctx: &mut molt_lib::Matcher, pat: &Self) {
+        impl crate::CmpSyn<#name, #rule_ty> for #name {
+            fn cmp_syn(&self, ctx: &mut crate::Matcher, pat: &Self) {
                 #impl_
             }
         }
@@ -74,7 +74,7 @@ fn cmp_ty(field_name: &Ident, ty: &Type, rule: Option<Rule>) -> Option<TokenStre
         Some(rule) => {
             let rule_name = rule.rule_name;
             let surrounding_ty = rule.surrounding_ty;
-            quote! { , molt_lib::rule::RuleKey::#rule_name(molt_lib::rule::#rule_name::#surrounding_ty) }
+            quote! { , crate::rule::RuleKey::#rule_name(crate::rule::#rule_name::#surrounding_ty) }
         }
         None => quote! {},
     };

@@ -1,5 +1,5 @@
+use crate::{NodeId, NodeList, WithSpan};
 use derive_macro::CmpSyn;
-use molt_lib::{NodeId, NodeList, WithSpan};
 
 use crate::rust_grammar::attr::Attribute;
 use crate::rust_grammar::error::Result;
@@ -173,7 +173,7 @@ impl ParseNode for FieldNamed {
             input.parse_id::<AnyIdent>()?;
             input.parse::<FieldsNamed>()?;
             input.add(
-                Type::Verbatim(verbatim::between(&begin, input)).with_span(molt_lib::Span::fake()),
+                Type::Verbatim(verbatim::between(&begin, input)).with_span(crate::Span::fake()),
             )
         } else {
             input.parse()?

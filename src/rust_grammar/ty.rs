@@ -1,5 +1,5 @@
+use crate::{NodeId, NodeList, Pattern, WithSpan};
 use derive_macro::CmpSyn;
-use molt_lib::{NodeId, NodeList, Pattern, WithSpan};
 use proc_macro2::{Span, TokenStream};
 
 use crate::rust_grammar::attr::Attribute;
@@ -814,7 +814,7 @@ fn parse_bare_fn_arg(input: ParseStream, allow_self: bool) -> Result<BareFnArg> 
             name = None;
             input.add_pat(
                 Type::Verbatim(verbatim::between(&begin, input))
-                    .pattern_with_span(molt_lib::Span::fake()),
+                    .pattern_with_span(crate::Span::fake()),
             )
         }
     };

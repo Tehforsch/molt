@@ -1,7 +1,7 @@
 use std::ops::{Index, IndexMut};
 use std::{option, slice, vec};
 
-use molt_lib::CmpSyn;
+use crate::CmpSyn;
 
 use crate::rust_grammar::drops::{NoDrop, TrivialDrop};
 use crate::rust_grammar::error::Result;
@@ -630,7 +630,7 @@ impl<T, P> IndexMut<usize> for Punctuated<T, P> {
 }
 
 impl<T: CmpSyn, P> CmpSyn for Punctuated<T, P> {
-    fn cmp_syn(&self, ctx: &mut molt_lib::Matcher, pat: &Self) {
+    fn cmp_syn(&self, ctx: &mut crate::Matcher, pat: &Self) {
         // These should be replaced by NodeList wherever possible
         // but we'll leave the ones that havent been exchanged yet
         // exact.

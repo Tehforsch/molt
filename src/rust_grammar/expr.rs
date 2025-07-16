@@ -1,8 +1,8 @@
 use std::hash::{Hash, Hasher};
 use std::mem;
 
+use crate::{Id, NodeId, NodeList, Pattern, Spanned, SpannedPat, WithSpan};
 use derive_macro::CmpSyn;
-use molt_lib::{Id, NodeId, NodeList, Pattern, Spanned, SpannedPat, WithSpan};
 use proc_macro2::{Span, TokenStream};
 
 use crate::rust_grammar::attr::Attribute;
@@ -2551,10 +2551,7 @@ fn multi_index(
         let part_end = offset + part.len();
         index.span = float_token.subspan(offset..part_end).unwrap_or(float_span);
 
-        let base = mem::replace(
-            e,
-            Expr::PLACEHOLDER.pattern_with_span(molt_lib::Span::fake()),
-        );
+        let base = mem::replace(e, Expr::PLACEHOLDER.pattern_with_span(crate::Span::fake()));
         let span = base.span().join(index.span.byte_range());
         *e = Expr::Field(ExprField {
             attrs: Vec::new(),

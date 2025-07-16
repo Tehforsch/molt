@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::rust_grammar::{Node, TokenStream, TokenTree, Type, parse_node_with_kind};
-use molt_lib::{Id, ParsingMode, Span, Var, VarDecl};
+use crate::{Id, ParsingMode, Span, Var, VarDecl};
 
 use crate::molt_grammar::{
     MatchCommand, TokenVar, TransformCommand, TypeAnnotation, UnresolvedMoltFile, UnresolvedVarDecl,

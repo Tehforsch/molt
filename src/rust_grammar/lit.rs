@@ -4,8 +4,8 @@ use std::fmt::{self, Display};
 use std::rc::Rc;
 use std::str::{self, FromStr};
 
+use crate::{CmpSyn, ParsingMode};
 use derive_macro::CmpSyn;
-use molt_lib::{CmpSyn, ParsingMode};
 use proc_macro2::{Literal, Punct, Span};
 
 use crate::rust_grammar::buffer::Cursor;
@@ -83,7 +83,7 @@ struct LitRepr {
 }
 
 impl CmpSyn for LitRepr {
-    fn cmp_syn(&self, ctx: &mut molt_lib::Matcher, pat: &Self) {
+    fn cmp_syn(&self, ctx: &mut crate::Matcher, pat: &Self) {
         // TODO, suffix?
         ctx.cmp_syn(&self.token, &pat.token);
     }
@@ -103,7 +103,7 @@ struct LitIntRepr {
 }
 
 impl CmpSyn for LitIntRepr {
-    fn cmp_syn(&self, ctx: &mut molt_lib::Matcher, pat: &Self) {
+    fn cmp_syn(&self, ctx: &mut crate::Matcher, pat: &Self) {
         // TODO, suffix/digits?
         ctx.cmp_syn(&self.token, &pat.token);
     }
@@ -125,7 +125,7 @@ struct LitFloatRepr {
 }
 
 impl CmpSyn for LitFloatRepr {
-    fn cmp_syn(&self, ctx: &mut molt_lib::Matcher, pat: &Self) {
+    fn cmp_syn(&self, ctx: &mut crate::Matcher, pat: &Self) {
         // TODO, suffix/digits?
         ctx.cmp_syn(&self.token, &pat.token);
     }

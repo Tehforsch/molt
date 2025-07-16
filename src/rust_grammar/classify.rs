@@ -1,6 +1,6 @@
 use std::ops::ControlFlow;
 
-use molt_lib::{NodeId, Pattern};
+use crate::{NodeId, Pattern};
 use proc_macro2::{Delimiter, TokenStream, TokenTree};
 
 use crate::rust_grammar::expr::Expr;

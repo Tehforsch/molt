@@ -30,7 +30,6 @@ proc-macro2 = { version = "1.0.91", default-features = false, features = ["span-
 unicode-ident = "1"
 
 derive_macro = { path = "crates/derive_macro" }
-molt_lib = { path = "crates/molt_lib" }
 
 [features]
 debug-print = []

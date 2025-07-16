@@ -1,5 +1,5 @@
+use crate::{Id, NodeId, NodeList, Pattern, WithSpan};
 use derive_macro::CmpSyn;
-use molt_lib::{Id, NodeId, NodeList, Pattern, WithSpan};
 use proc_macro2::TokenStream;
 
 use crate::rust_grammar::attr::Attribute;

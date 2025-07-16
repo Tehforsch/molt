@@ -1,8 +1,8 @@
 use std::path::Path;
 
 use crate::rust_grammar::{Node, Type};
+use crate::{Ctx, Match, MatchPatternData, NodeId};
 use lsp_types::Range;
-use molt_lib::{Ctx, Match, MatchPatternData, NodeId};
 
 use crate::lsp::LspClient;
 use crate::molt_grammar::TypeAnnotation;
@@ -18,8 +18,8 @@ impl LspClient {
     pub fn check_type_annotations(
         &mut self,
         type_annotations: &[TypeAnnotation],
-        ast_ctx: &molt_lib::Ctx<Node>,
-        pat_ctx: &molt_lib::Ctx<Node>,
+        ast_ctx: &crate::Ctx<Node>,
+        pat_ctx: &crate::Ctx<Node>,
         data: &MatchPatternData,
         match_: &Match,
     ) -> bool {
@@ -88,7 +88,7 @@ impl From<Position> for lsp_types::Position {
     }
 }
 
-fn get_range_from_span(rust_src: &str, span: molt_lib::Span) -> Range {
+fn get_range_from_span(rust_src: &str, span: crate::Span) -> Range {
     let start = get_position_from_byte_offset(rust_src, span.byte_range().start).into();
     let end = get_position_from_byte_offset(rust_src, span.byte_range().end).into();
     Range { start, end }

@@ -1,5 +1,5 @@
+use crate::NodeId;
 use derive_macro::CmpSyn;
-use molt_lib::NodeId;
 use proc_macro2::TokenStream;
 
 use crate::rust_grammar::error::Result;

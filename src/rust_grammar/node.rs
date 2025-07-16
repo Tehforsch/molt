@@ -1,4 +1,4 @@
-use molt_lib::{CmpSyn, Id, KindType, Matcher, Pattern, ToNode};
+use crate::{CmpSyn, Id, KindType, Matcher, Pattern, ToNode};
 
 use crate::rust_grammar::expr::Arm;
 use crate::rust_grammar::item::ImplItem;
@@ -44,7 +44,7 @@ macro_rules! define_node {
             )*
         }
 
-        impl molt_lib::NodeType for Node {
+        impl crate::NodeType for Node {
             type Kind = Kind;
             type NodeKind = NodeKind;
 

@@ -1,4 +1,4 @@
-use molt_lib::{Ctx, NodeList, ParsingMode};
+use crate::{Ctx, NodeList, ParsingMode};
 
 use crate::rust_grammar::attr::Attribute;
 use crate::rust_grammar::error::Result;
