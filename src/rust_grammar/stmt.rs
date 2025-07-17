@@ -17,6 +17,8 @@ use crate::rust_grammar::pat::{Pat, PatSingle, PatType};
 use crate::rust_grammar::path::Path;
 use crate::rust_grammar::{classify, item};
 
+use super::classify::RequiresSemiToBeStmt;
+
 #[derive(Debug, CmpSyn)]
 /// A braced block containing Rust statements.
 pub struct Block {
@@ -109,7 +111,10 @@ impl ParseList for Block {
             }
             let stmt = input.parse_spanned_pat::<StmtAllowNoSemi>()?;
             let requires_semicolon = match stmt.real() {
-                Some(Stmt::Expr(stmt, None)) => classify::requires_semi_to_be_stmt(input, *stmt),
+                Some(Stmt::Expr(stmt, None)) => input
+                    .ctx()
+                    .get(*stmt)
+                    .get_property_ref::<RequiresSemiToBeStmt>(),
                 Some(Stmt::Macro(stmt)) => {
                     stmt.semi_token.is_none() && !stmt.mac.delimiter.is_brace()
                 }
@@ -391,11 +396,13 @@ fn stmt_expr(
             }))
         }
         _ => {
-            let e = input.add_pat(e.with_span(expr_span));
             if semi_token.is_some() {
-                Ok(Stmt::Expr(e, semi_token))
-            } else if allow_nosemi.0 || !classify::requires_semi_to_be_stmt(input, e) {
-                Ok(Stmt::Expr(e, None))
+                Ok(Stmt::Expr(
+                    input.add_pat(e.with_span(expr_span)),
+                    semi_token,
+                ))
+            } else if allow_nosemi.0 || e.get_property::<RequiresSemiToBeStmt>() {
+                Ok(Stmt::Expr(input.add_pat(e.with_span(expr_span)), None))
             } else {
                 Err(input.error("expected semicolon"))
             }

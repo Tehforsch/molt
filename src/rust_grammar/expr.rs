@@ -30,7 +30,9 @@ use crate::rust_grammar::path::{
 use crate::rust_grammar::precedence::Precedence;
 use crate::rust_grammar::stmt::Block;
 use crate::rust_grammar::ty::{NoPlus, ReturnType, Type};
-use crate::rust_grammar::{attr, classify, verbatim};
+use crate::rust_grammar::{attr, verbatim};
+
+use super::classify::RequiresCommaToBeMatchArm;
 
 /// An alternative to the primary `Expr::parse` parser (from the [`Parse`]
 /// trait) for ambiguous syntactic positions in which a trailing brace
@@ -2498,9 +2500,9 @@ impl ParseNode for Arm {
             },
             fat_arrow_token: input.parse()?,
             body: {
-                let body = input.parse_id::<ExprEarlierBoundaryRule>()?;
-                requires_comma = classify::requires_comma_to_be_match_arm(input, body);
-                body
+                let body = input.parse_spanned_pat::<ExprEarlierBoundaryRule>()?;
+                requires_comma = body.get_property::<RequiresCommaToBeMatchArm>();
+                input.add_pat(body)
             },
         });
         let _: Option<Token![,]> = {

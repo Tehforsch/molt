@@ -1,5 +1,6 @@
 use std::ops::ControlFlow;
 
+use crate::pattern::Property;
 use crate::{NodeId, Pattern};
 use proc_macro2::{Delimiter, TokenStream, TokenTree};
 
@@ -10,16 +11,30 @@ use crate::rust_grammar::generics::TypeParamBound;
 use crate::rust_grammar::path::{Path, PathArguments};
 use crate::rust_grammar::ty::{ReturnType, Type};
 
-pub(crate) fn requires_semi_to_be_stmt(input: ParseStream, expr: NodeId<Expr>) -> bool {
-    match input.ctx().get(expr).real() {
-        Some(Expr::Macro(expr)) => !expr.mac.delimiter.is_brace(),
-        _ => requires_comma_to_be_match_arm(input, expr),
+pub struct RequiresSemiToBeStmt;
+
+impl Property<Expr> for RequiresSemiToBeStmt {
+    // A variable is like an atomic expression,
+    // so we require a semicolon.
+    const VAR_DEFAULT: bool = true;
+
+    fn get(expr: &Expr) -> bool {
+        match expr {
+            Expr::Macro(expr) => !expr.mac.delimiter.is_brace(),
+            _ => RequiresCommaToBeMatchArm::get(expr),
+        }
     }
 }
 
-pub(crate) fn requires_comma_to_be_match_arm(input: ParseStream, expr: NodeId<Expr>) -> bool {
-    match input.ctx().get(expr).real() {
-        Some(e) => match e {
+pub struct RequiresCommaToBeMatchArm;
+
+impl Property<Expr> for RequiresCommaToBeMatchArm {
+    // A variable is like an atomic expression,
+    // so we require a comma.
+    const VAR_DEFAULT: bool = true;
+
+    fn get(expr: &Expr) -> bool {
+        match expr {
             Expr::If(_)
             | Expr::Match(_)
             | Expr::Block(_) | Expr::Unsafe(_) // both under ExprKind::Block in rustc
@@ -60,10 +75,7 @@ pub(crate) fn requires_comma_to_be_match_arm(input: ParseStream, expr: NodeId<Ex
             | Expr::Unary(_)
             | Expr::Yield(_)
             | Expr::Verbatim(_) => true,
-        },
-        // A variable is like an atomic expression,
-        // so we require a comma.
-        None => true,
+        }
     }
 }
 
