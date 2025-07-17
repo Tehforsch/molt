@@ -27,6 +27,7 @@ use crate::rust_grammar::stmt::Block;
 use crate::rust_grammar::ty::{Abi, ReturnType, Type, TypePath};
 use crate::rust_grammar::{derive, verbatim};
 
+use super::generics::WhereClause;
 use super::restriction::{IsInherited, IsSome};
 
 #[derive(Debug, CmpSyn)]
@@ -123,6 +124,7 @@ pub struct ItemConst {
     pub const_token: Token![const],
     pub ident: NodeId<Ident>,
     pub generics: Generics,
+    pub where_clause: Option<WhereClause>,
     pub colon_token: Token![:],
     pub ty: NodeId<Type>,
     pub eq_token: Token![=],
@@ -139,6 +141,7 @@ pub struct ItemEnum {
     pub enum_token: Token![enum],
     pub ident: NodeId<Ident>,
     pub generics: Generics,
+    pub where_clause: Option<WhereClause>,
     pub brace_token: token::Brace,
     pub variants: Punctuated<Variant, Token![,]>,
 }
@@ -187,6 +190,7 @@ pub struct ItemImpl {
     pub unsafety: Unsafety,
     pub impl_token: Token![impl],
     pub generics: Generics,
+    pub where_clause: Option<WhereClause>,
     /// Trait this impl implements.
     pub trait_: Option<(Option<Token![!]>, Path, Token![for])>,
     /// The Self type of the impl.
@@ -244,6 +248,7 @@ pub struct ItemStruct {
     pub struct_token: Token![struct],
     pub ident: NodeId<Ident>,
     pub generics: Generics,
+    pub where_clause: Option<WhereClause>,
     pub fields: Fields,
     pub semi_token: Option<Token![;]>,
 }
@@ -260,6 +265,7 @@ pub struct ItemTrait {
     pub trait_token: Token![trait],
     pub ident: NodeId<Ident>,
     pub generics: Generics,
+    pub where_clause: Option<WhereClause>,
     pub colon_token: Option<Token![:]>,
     pub supertraits: Punctuated<TypeParamBound, Token![+]>,
     pub brace_token: token::Brace,
@@ -275,6 +281,7 @@ pub struct ItemTraitAlias {
     pub trait_token: Token![trait],
     pub ident: NodeId<Ident>,
     pub generics: Generics,
+    pub where_clause: Option<WhereClause>,
     pub eq_token: Token![=],
     pub bounds: Punctuated<TypeParamBound, Token![+]>,
     pub semi_token: Token![;],
@@ -289,6 +296,7 @@ pub struct ItemType {
     pub type_token: Token![type],
     pub ident: NodeId<Ident>,
     pub generics: Generics,
+    pub where_clause: Option<WhereClause>,
     pub eq_token: Token![=],
     pub ty: NodeId<Type>,
     pub semi_token: Token![;],
@@ -303,6 +311,7 @@ pub struct ItemUnion {
     pub union_token: Token![union],
     pub ident: NodeId<Ident>,
     pub generics: Generics,
+    pub where_clause: Option<WhereClause>,
     pub fields: FieldsNamed,
 }
 
@@ -447,6 +456,7 @@ pub struct ForeignItemType {
     pub type_token: Token![type],
     pub ident: NodeId<Ident>,
     pub generics: Generics,
+    pub where_clause: Option<WhereClause>,
     pub semi_token: Token![;],
 }
 
@@ -484,6 +494,7 @@ pub struct TraitItemConst {
     pub const_token: Token![const],
     pub ident: NodeId<Ident>,
     pub generics: Generics,
+    pub where_clause: Option<WhereClause>,
     pub colon_token: Token![:],
     pub ty: NodeId<Type>,
     pub default: Option<(Token![=], NodeId<Expr>)>,
@@ -506,6 +517,7 @@ pub struct TraitItemType {
     pub type_token: Token![type],
     pub ident: NodeId<Ident>,
     pub generics: Generics,
+    pub where_clause: Option<WhereClause>,
     pub colon_token: Option<Token![:]>,
     pub bounds: Punctuated<TypeParamBound, Token![+]>,
     pub default: Option<(Token![=], NodeId<Type>)>,
@@ -549,6 +561,7 @@ pub struct ImplItemConst {
     pub const_token: Token![const],
     pub ident: NodeId<Ident>,
     pub generics: Generics,
+    pub where_clause: Option<WhereClause>,
     pub colon_token: Token![:],
     pub ty: NodeId<Type>,
     pub eq_token: Token![=],
@@ -577,6 +590,7 @@ pub struct ImplItemType {
     pub type_token: Token![type],
     pub ident: NodeId<Ident>,
     pub generics: Generics,
+    pub where_clause: Option<WhereClause>,
     pub eq_token: Token![=],
     pub ty: NodeId<Type>,
     pub semi_token: Token![;],
@@ -604,6 +618,7 @@ pub struct Signature {
     pub fn_token: Token![fn],
     pub ident: NodeId<Ident>,
     pub generics: Generics,
+    pub where_clause: Option<WhereClause>,
     pub paren_token: token::Paren,
     pub inputs: Punctuated<FnArg, Token![,]>,
     pub variadic: Option<Variadic>,
@@ -763,7 +778,7 @@ pub(crate) fn parse_rest_of_item(
         } else {
             return Err(lookahead.error());
         };
-        let mut generics: Generics = input.parse()?;
+        let generics = input.parse::<Generics>()?;
         let colon_token = input.parse()?;
         let ty = input.parse()?;
         let value = if let Some(eq_token) = input.parse::<Option<Token![=]>>()? {
@@ -772,7 +787,7 @@ pub(crate) fn parse_rest_of_item(
         } else {
             None
         };
-        generics.where_clause = input.parse()?;
+        let where_clause = input.parse::<Option<WhereClause>>()?;
         let semi_token: Token![;] = input.parse()?;
         match value {
             Some((eq_token, expr))
@@ -784,6 +799,7 @@ pub(crate) fn parse_rest_of_item(
                     const_token,
                     ident,
                     generics,
+                    where_clause,
                     colon_token,
                     ty,
                     eq_token,
@@ -864,6 +880,7 @@ struct FlexibleItemType {
     type_token: Token![type],
     ident: NodeId<Ident>,
     generics: Generics,
+    where_clause: Option<WhereClause>,
     colon_token: Option<Token![:]>,
     bounds: Punctuated<TypeParamBound, Token![+]>,
     ty: Option<(Token![=], NodeId<Type>)>,
@@ -897,26 +914,31 @@ impl FlexibleItemType {
         };
         let type_token: Token![type] = input.parse()?;
         let ident: NodeId<Ident> = input.parse()?;
-        let mut generics: Generics = input.parse()?;
+        let generics = input.parse::<Generics>()?;
         let (colon_token, bounds) = Self::parse_optional_bounds(input)?;
 
-        match where_clause_location {
-            WhereClauseLocation::BeforeEq | WhereClauseLocation::Both => {
-                generics.where_clause = input.parse()?;
+        let (where_clause, ty) = match where_clause_location {
+            WhereClauseLocation::BeforeEq => {
+                let where_clause = input.parse::<Option<WhereClause>>()?;
+                let ty = Self::parse_optional_definition(input)?;
+                (where_clause, ty)
             }
-            WhereClauseLocation::AfterEq => {}
-        }
-
-        let ty = Self::parse_optional_definition(input)?;
-
-        match where_clause_location {
-            WhereClauseLocation::AfterEq | WhereClauseLocation::Both
-                if generics.where_clause.is_none() =>
-            {
-                generics.where_clause = input.parse()?;
+            WhereClauseLocation::AfterEq => {
+                let ty = Self::parse_optional_definition(input)?;
+                let where_clause = input.parse::<Option<WhereClause>>()?;
+                (where_clause, ty)
             }
-            _ => {}
-        }
+            WhereClauseLocation::Both => {
+                let where_clause = input.parse::<Option<WhereClause>>()?;
+                let ty = Self::parse_optional_definition(input)?;
+                let where_clause = if where_clause.is_none() {
+                    input.parse::<Option<WhereClause>>()?
+                } else {
+                    where_clause
+                };
+                (where_clause, ty)
+            }
+        };
 
         let semi_token: Token![;] = input.parse()?;
 
@@ -926,6 +948,7 @@ impl FlexibleItemType {
             type_token,
             ident,
             generics,
+            where_clause,
             colon_token,
             bounds,
             ty,
@@ -1207,6 +1230,7 @@ impl Parse for ItemConst {
             const_token,
             ident,
             generics: Generics::default(),
+            where_clause: None,
             colon_token,
             ty,
             eq_token,
@@ -1246,14 +1270,14 @@ fn parse_signature(input: ParseStream, allow_safe: bool) -> Result<Option<Signat
     let abi: Option<Abi> = input.parse()?;
     let fn_token: Token![fn] = input.parse()?;
     let ident = input.parse_id::<Ident>()?;
-    let mut generics: Generics = input.parse()?;
+    let generics = input.parse::<Generics>()?;
 
     let content;
     let paren_token = parenthesized!(content in input);
     let (inputs, variadic) = parse_fn_args(&content)?;
 
     let output: ReturnType = input.parse()?;
-    generics.where_clause = input.parse()?;
+    let where_clause = input.parse::<Option<WhereClause>>()?;
 
     Ok(if safe {
         None
@@ -1266,6 +1290,7 @@ fn parse_signature(input: ParseStream, allow_safe: bool) -> Result<Option<Signat
             fn_token,
             ident,
             generics,
+            where_clause,
             paren_token,
             inputs,
             variadic,
@@ -1660,11 +1685,8 @@ impl Parse for ForeignItemType {
             vis: input.parse()?,
             type_token: input.parse()?,
             ident: input.parse()?,
-            generics: {
-                let mut generics: Generics = input.parse()?;
-                generics.where_clause = input.parse()?;
-                generics
-            },
+            generics: input.parse()?,
+            where_clause: input.parse::<Option<WhereClause>>()?,
             semi_token: input.parse()?,
         })
     }
@@ -1677,6 +1699,7 @@ fn parse_foreign_item_type(begin: ParseBuffer, input: ParseStream) -> Result<For
         type_token,
         ident,
         generics,
+        where_clause,
         colon_token,
         bounds: _,
         ty,
@@ -1696,6 +1719,7 @@ fn parse_foreign_item_type(begin: ParseBuffer, input: ParseStream) -> Result<For
             type_token,
             ident,
             generics,
+            where_clause,
             semi_token,
         }))
     }
@@ -1725,11 +1749,8 @@ impl Parse for ItemType {
             vis: input.parse()?,
             type_token: input.parse()?,
             ident: input.parse()?,
-            generics: {
-                let mut generics: Generics = input.parse()?;
-                generics.where_clause = input.parse()?;
-                generics
-            },
+            generics: input.parse()?,
+            where_clause: input.parse::<Option<WhereClause>>()?,
             eq_token: input.parse()?,
             ty: input.parse()?,
             semi_token: input.parse()?,
@@ -1744,6 +1765,7 @@ fn parse_item_type(begin: ParseBuffer, input: ParseStream) -> Result<Item> {
         type_token,
         ident,
         generics,
+        where_clause,
         colon_token,
         bounds: _,
         ty,
@@ -1765,6 +1787,7 @@ fn parse_item_type(begin: ParseBuffer, input: ParseStream) -> Result<Item> {
         type_token,
         ident,
         generics,
+        where_clause,
         eq_token,
         ty,
         semi_token,
@@ -1784,10 +1807,8 @@ impl Parse for ItemStruct {
             vis,
             struct_token,
             ident,
-            generics: Generics {
-                where_clause,
-                ..generics
-            },
+            generics,
+            where_clause,
             fields,
             semi_token,
         })
@@ -1807,10 +1828,8 @@ impl Parse for ItemEnum {
             vis,
             enum_token,
             ident,
-            generics: Generics {
-                where_clause,
-                ..generics
-            },
+            generics,
+            where_clause,
             brace_token,
             variants,
         })
@@ -1830,10 +1849,8 @@ impl Parse for ItemUnion {
             vis,
             union_token,
             ident,
-            generics: Generics {
-                where_clause,
-                ..generics
-            },
+            generics,
+            where_clause,
             fields,
         })
     }
@@ -1895,7 +1912,7 @@ fn parse_rest_of_trait(
     auto_token: Option<Token![auto]>,
     trait_token: Token![trait],
     ident: NodeId<Ident>,
-    mut generics: Generics,
+    generics: Generics,
 ) -> Result<ItemTrait> {
     let colon_token: Option<Token![:]> = input.parse()?;
 
@@ -1917,7 +1934,7 @@ fn parse_rest_of_trait(
         }
     }
 
-    generics.where_clause = input.parse()?;
+    let where_clause = input.parse::<Option<WhereClause>>()?;
 
     let content;
     let brace_token = braced!(content in input);
@@ -1935,6 +1952,7 @@ fn parse_rest_of_trait(
         trait_token,
         ident,
         generics,
+        where_clause,
         colon_token,
         supertraits,
         brace_token,
@@ -1973,7 +1991,7 @@ fn parse_rest_of_trait_alias(
     vis: NodeId<Vis>,
     trait_token: Token![trait],
     ident: NodeId<Ident>,
-    mut generics: Generics,
+    generics: Generics,
 ) -> Result<ItemTraitAlias> {
     let eq_token: Token![=] = input.parse()?;
 
@@ -1993,7 +2011,7 @@ fn parse_rest_of_trait_alias(
         bounds.push_punct(input.parse()?);
     }
 
-    generics.where_clause = input.parse()?;
+    let where_clause = input.parse::<Option<WhereClause>>()?;
     let semi_token: Token![;] = input.parse()?;
 
     Ok(ItemTraitAlias {
@@ -2002,6 +2020,7 @@ fn parse_rest_of_trait_alias(
         trait_token,
         ident,
         generics,
+        where_clause,
         eq_token,
         bounds,
         semi_token,
@@ -2026,7 +2045,7 @@ impl Parse for TraitItem {
             if lookahead.peek_pat::<Ident>() || lookahead.peek(Token![_]) {
                 input.advance_to(&ahead);
                 let ident = input.parse_id::<AnyIdent>()?;
-                let mut generics: Generics = input.parse()?;
+                let generics = input.parse::<Generics>()?;
                 let colon_token: Token![:] = input.parse()?;
                 let ty: NodeId<Type> = input.parse()?;
                 let default = if let Some(eq_token) = input.parse::<Option<Token![=]>>()? {
@@ -2035,7 +2054,7 @@ impl Parse for TraitItem {
                 } else {
                     None
                 };
-                generics.where_clause = input.parse()?;
+                let where_clause = input.parse::<Option<WhereClause>>()?;
                 let semi_token: Token![;] = input.parse()?;
                 if generics.lt_token.is_none() && generics.where_clause.is_none() {
                     Ok(TraitItem::Const(TraitItemConst {
@@ -2043,6 +2062,7 @@ impl Parse for TraitItem {
                         const_token,
                         ident,
                         generics,
+                        where_clause,
                         colon_token,
                         ty,
                         default,
@@ -2121,6 +2141,7 @@ impl Parse for TraitItemConst {
             const_token,
             ident,
             generics: Generics::default(),
+            where_clause: None,
             colon_token,
             ty,
             default,
@@ -2162,16 +2183,17 @@ impl Parse for TraitItemType {
         let attrs = input.call(Attribute::parse_outer)?;
         let type_token: Token![type] = input.parse()?;
         let ident: NodeId<Ident> = input.parse()?;
-        let mut generics: Generics = input.parse()?;
+        let generics = input.parse::<Generics>()?;
         let (colon_token, bounds) = FlexibleItemType::parse_optional_bounds(input)?;
         let default = FlexibleItemType::parse_optional_definition(input)?;
-        generics.where_clause = input.parse()?;
+        let where_clause = input.parse::<Option<WhereClause>>()?;
         let semi_token: Token![;] = input.parse()?;
         Ok(TraitItemType {
             attrs,
             type_token,
             ident,
             generics,
+            where_clause,
             colon_token,
             bounds,
             default,
@@ -2187,6 +2209,7 @@ fn parse_trait_item_type(begin: ParseBuffer, input: ParseStream) -> Result<Trait
         type_token,
         ident,
         generics,
+        where_clause,
         colon_token,
         bounds,
         ty,
@@ -2206,6 +2229,7 @@ fn parse_trait_item_type(begin: ParseBuffer, input: ParseStream) -> Result<Trait
             type_token,
             ident,
             generics,
+            where_clause,
             colon_token,
             bounds,
             default: ty,
@@ -2255,7 +2279,7 @@ fn parse_impl(input: ParseStream, allow_verbatim_impl: bool) -> Result<Option<It
                     || input.peek3(Token![>])
                     || input.peek3(Token![=]))
             || input.peek2(Token![const]));
-    let mut generics: Generics = if has_generics {
+    let generics: Generics = if has_generics {
         input.parse()?
     } else {
         Generics::default()
@@ -2318,7 +2342,7 @@ fn parse_impl(input: ParseStream, allow_verbatim_impl: bool) -> Result<Option<It
         };
     }
 
-    generics.where_clause = input.parse()?;
+    let where_clause = input.parse::<Option<WhereClause>>()?;
 
     let content;
     let brace_token = braced!(content in input);
@@ -2335,6 +2359,7 @@ fn parse_impl(input: ParseStream, allow_verbatim_impl: bool) -> Result<Option<It
             unsafety,
             impl_token,
             generics,
+            where_clause,
             trait_,
             self_ty,
             brace_token,
@@ -2379,7 +2404,7 @@ impl ParseNode for ImplItem {
             } else {
                 return Err(lookahead.error());
             };
-            let mut generics: Generics = input.parse()?;
+            let generics = input.parse::<Generics>()?;
             let colon_token: Token![:] = input.parse()?;
             let ty: NodeId<Type> = input.parse()?;
             let value = if let Some(eq_token) = input.parse::<Option<Token![=]>>()? {
@@ -2388,7 +2413,7 @@ impl ParseNode for ImplItem {
             } else {
                 None
             };
-            generics.where_clause = input.parse()?;
+            let where_clause = input.parse::<Option<WhereClause>>()?;
             let semi_token: Token![;] = input.parse()?;
             return match value {
                 Some((eq_token, expr))
@@ -2401,6 +2426,7 @@ impl ParseNode for ImplItem {
                         const_token,
                         ident,
                         generics,
+                        where_clause,
                         colon_token,
                         ty,
                         eq_token,
@@ -2468,6 +2494,7 @@ impl Parse for ImplItemConst {
             const_token,
             ident,
             generics: Generics::default(),
+            where_clause: None,
             colon_token,
             ty,
             eq_token,
@@ -2521,10 +2548,10 @@ impl Parse for ImplItemType {
         let defaultness: Option<Token![default]> = input.parse()?;
         let type_token: Token![type] = input.parse()?;
         let ident: NodeId<Ident> = input.parse()?;
-        let mut generics: Generics = input.parse()?;
+        let generics = input.parse::<Generics>()?;
         let eq_token: Token![=] = input.parse()?;
         let ty = input.parse()?;
-        generics.where_clause = input.parse()?;
+        let where_clause = input.parse::<Option<WhereClause>>()?;
         let semi_token: Token![;] = input.parse()?;
         Ok(ImplItemType {
             attrs,
@@ -2533,6 +2560,7 @@ impl Parse for ImplItemType {
             type_token,
             ident,
             generics,
+            where_clause,
             eq_token,
             ty,
             semi_token,
@@ -2547,6 +2575,7 @@ fn parse_impl_item_type(begin: ParseBuffer, input: ParseStream) -> Result<ImplIt
         type_token,
         ident,
         generics,
+        where_clause,
         colon_token,
         bounds: _,
         ty,
@@ -2569,6 +2598,7 @@ fn parse_impl_item_type(begin: ParseBuffer, input: ParseStream) -> Result<ImplIt
         type_token,
         ident,
         generics,
+        where_clause,
         eq_token,
         ty,
         semi_token,
