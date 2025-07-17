@@ -4,6 +4,7 @@ use crate::parser::error::Result;
 use crate::parser::parse::discouraged::Speculative as _;
 use crate::parser::parse::{ParseNode, ParseStream};
 use crate::parser::token;
+use crate::pattern::Property;
 use crate::rust_grammar::ident::AnyIdent;
 use crate::rust_grammar::path::Path;
 
@@ -47,6 +48,28 @@ pub enum FieldMutability {
     //     pub in_token: Option<Token![in]>,
     //     pub path: Box<Path>,
     // }
+}
+
+pub struct IsInherited;
+
+impl Property<Vis> for IsInherited {
+    // We don't consider visibility variables to be inherited.
+    const VAR_DEFAULT: bool = false;
+
+    fn get(p: &Vis) -> bool {
+        matches!(p, Vis::Inherited)
+    }
+}
+
+pub struct IsSome;
+
+impl Property<Vis> for IsSome {
+    // We consider visibility variables to be explicitly present.
+    const VAR_DEFAULT: bool = true;
+
+    fn get(p: &Vis) -> bool {
+        !matches!(p, Vis::Inherited)
+    }
 }
 
 impl ParseNode for Vis {
@@ -115,9 +138,5 @@ impl Vis {
         }
 
         Ok(Vis::Public(pub_token))
-    }
-
-    pub(crate) fn is_some(&self) -> bool {
-        !matches!(self, Vis::Inherited)
     }
 }

@@ -108,10 +108,6 @@ impl<T> Spanned<T> {
 pub type SpannedPat<T> = Spanned<Pattern<T, Id>>;
 
 impl<T> SpannedPat<T> {
-    pub fn get_property<S>(&self, f: impl Fn(&T) -> S, default: S) -> S {
-        self.item.real().map(f).unwrap_or(default)
-    }
-
     pub fn is_var(&self) -> bool {
         matches!(self.item, Pattern::Pat(_))
     }

@@ -27,6 +27,8 @@ use crate::rust_grammar::stmt::Block;
 use crate::rust_grammar::ty::{Abi, ReturnType, Type, TypePath};
 use crate::rust_grammar::{derive, verbatim};
 
+use super::restriction::{IsInherited, IsSome};
+
 #[derive(Debug, CmpSyn)]
 #[requires_rule]
 pub enum Unsafety {
@@ -839,9 +841,7 @@ pub(crate) fn parse_rest_of_item(
         input.advance_to(&ahead);
         let vis = input.parse_id::<Vis>()?;
         parse_macro2(begin, vis, input)
-    }
-    // We don't consider visibility variables to be inherited.
-    else if vis.get_property(Vis::is_inherited, false)
+    } else if vis.get_property::<IsInherited>()
         && (lookahead.peek_pat::<Ident>()
             || lookahead.peek(Token![self])
             || lookahead.peek(Token![super])
@@ -1597,7 +1597,7 @@ impl Parse for ForeignItem {
             }
         } else if lookahead.peek(Token![type]) {
             parse_foreign_item_type(begin, input)
-        } else if vis.get_property(Vis::is_inherited, false)
+        } else if vis.get_property::<IsInherited>()
             && (lookahead.peek_pat::<Ident>()
                 || lookahead.peek(Token![self])
                 || lookahead.peek(Token![super])
@@ -2062,7 +2062,7 @@ impl Parse for TraitItem {
             }
         } else if lookahead.peek(Token![type]) {
             parse_trait_item_type(begin.fork(), input)
-        } else if vis.get_property(Vis::is_inherited, false)
+        } else if vis.get_property::<IsInherited>()
             && defaultness.is_none()
             && (lookahead.peek_pat::<Ident>()
                 || lookahead.peek(Token![self])
@@ -2197,13 +2197,7 @@ fn parse_trait_item_type(begin: ParseBuffer, input: ParseStream) -> Result<Trait
         WhereClauseLocation::AfterEq,
     )?;
 
-    // We consider visibility variables to be explicit.
-    let vis_explicit = input
-        .ctx()
-        .get(vis)
-        .real()
-        .map(|vis: &&Vis| vis.is_some())
-        .unwrap_or(true);
+    let vis_explicit = input.ctx().get(vis).get_property_ref::<IsSome>();
     if vis_explicit {
         Ok(TraitItem::Verbatim(verbatim::between(&begin, input)))
     } else {
@@ -2246,10 +2240,8 @@ impl Parse for ItemImpl {
 
 fn parse_impl(input: ParseStream, allow_verbatim_impl: bool) -> Result<Option<ItemImpl>> {
     let mut attrs = input.call(Attribute::parse_outer)?;
-    let has_visibility = allow_verbatim_impl
-        && input
-            .parse_spanned_pat::<Vis>()?
-            .get_property(Vis::is_some, true);
+    let has_visibility =
+        allow_verbatim_impl && input.parse_spanned_pat::<Vis>()?.get_property::<IsSome>();
     let defaultness: Option<Token![default]> = input.parse()?;
     let unsafety: Unsafety = input.parse()?;
     let impl_token: Token![impl] = input.parse()?;
@@ -2420,7 +2412,7 @@ impl ParseNode for ImplItem {
             };
         } else if lookahead.peek(Token![type]) {
             parse_impl_item_type(begin, input)
-        } else if vis.get_property(Vis::is_inherited, false)
+        } else if vis.get_property::<IsInherited>()
             && defaultness.is_none()
             && (lookahead.peek_pat::<Ident>()
                 || lookahead.peek(Token![self])
@@ -2597,12 +2589,6 @@ impl Parse for ImplItemMacro {
             mac,
             semi_token,
         })
-    }
-}
-
-impl Vis {
-    fn is_inherited(&self) -> bool {
-        matches!(self, Vis::Inherited)
     }
 }
 
