@@ -38,14 +38,14 @@ impl<Real, Pat: Copy> Pattern<Real, Pat> {
 
 impl<Real, Pat> Pattern<Real, Pat> {
     /// Get a property of a syntactic item, see `Property`
-    pub fn get_property<P: Property<Real>>(&self) -> bool {
+    pub fn get_property<P: Property<Real>>(&self, _: P) -> bool {
         self.real().map(P::get).unwrap_or(P::VAR_DEFAULT)
     }
 }
 
 impl<Real, Pat> Pattern<&Real, Pat> {
     /// Get a property of a syntactic item, see `Property`
-    pub fn get_property_ref<P: Property<Real>>(&self) -> bool {
+    pub fn get_property_ref<P: Property<Real>>(&self, _: P) -> bool {
         self.real().map(|i| P::get(*i)).unwrap_or(P::VAR_DEFAULT)
     }
 }

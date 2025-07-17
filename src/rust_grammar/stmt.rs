@@ -114,7 +114,7 @@ impl ParseList for Block {
                 Some(Stmt::Expr(stmt, None)) => input
                     .ctx()
                     .get(*stmt)
-                    .get_property_ref::<RequiresSemiToBeStmt>(),
+                    .get_property_ref(RequiresSemiToBeStmt),
                 Some(Stmt::Macro(stmt)) => {
                     stmt.semi_token.is_none() && !stmt.mac.delimiter.is_brace()
                 }
@@ -401,7 +401,7 @@ fn stmt_expr(
                     input.add_pat(e.with_span(expr_span)),
                     semi_token,
                 ))
-            } else if allow_nosemi.0 || e.get_property::<RequiresSemiToBeStmt>() {
+            } else if allow_nosemi.0 || e.get_property(RequiresSemiToBeStmt) {
                 Ok(Stmt::Expr(input.add_pat(e.with_span(expr_span)), None))
             } else {
                 Err(input.error("expected semicolon"))

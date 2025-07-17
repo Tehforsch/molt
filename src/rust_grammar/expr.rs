@@ -2501,7 +2501,7 @@ impl ParseNode for Arm {
             fat_arrow_token: input.parse()?,
             body: {
                 let body = input.parse_spanned_pat::<ExprEarlierBoundaryRule>()?;
-                requires_comma = body.get_property::<RequiresCommaToBeMatchArm>();
+                requires_comma = body.get_property(RequiresCommaToBeMatchArm);
                 input.add_pat(body)
             },
         });
