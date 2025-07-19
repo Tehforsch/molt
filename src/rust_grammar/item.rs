@@ -123,7 +123,7 @@ pub struct ItemConst {
     pub vis: NodeId<Vis>,
     pub const_token: Token![const],
     pub ident: NodeId<Ident>,
-    pub generics: Generics,
+    pub generics: NodeId<Generics>,
     pub where_clause: Option<WhereClause>,
     pub colon_token: Token![:],
     pub ty: NodeId<Type>,
@@ -140,7 +140,7 @@ pub struct ItemEnum {
     pub vis: NodeId<Vis>,
     pub enum_token: Token![enum],
     pub ident: NodeId<Ident>,
-    pub generics: Generics,
+    pub generics: NodeId<Generics>,
     pub where_clause: Option<WhereClause>,
     pub brace_token: token::Brace,
     pub variants: Punctuated<Variant, Token![,]>,
@@ -189,7 +189,7 @@ pub struct ItemImpl {
     #[rule(Unsafe, Impl)]
     pub unsafety: Unsafety,
     pub impl_token: Token![impl],
-    pub generics: Generics,
+    pub generics: NodeId<Generics>,
     pub where_clause: Option<WhereClause>,
     /// Trait this impl implements.
     pub trait_: Option<(Option<Token![!]>, Path, Token![for])>,
@@ -247,7 +247,7 @@ pub struct ItemStruct {
     pub vis: NodeId<Vis>,
     pub struct_token: Token![struct],
     pub ident: NodeId<Ident>,
-    pub generics: Generics,
+    pub generics: NodeId<Generics>,
     pub where_clause: Option<WhereClause>,
     pub fields: Fields,
     pub semi_token: Option<Token![;]>,
@@ -264,7 +264,7 @@ pub struct ItemTrait {
     pub auto_token: Option<Token![auto]>,
     pub trait_token: Token![trait],
     pub ident: NodeId<Ident>,
-    pub generics: Generics,
+    pub generics: NodeId<Generics>,
     pub where_clause: Option<WhereClause>,
     pub colon_token: Option<Token![:]>,
     pub supertraits: Punctuated<TypeParamBound, Token![+]>,
@@ -280,7 +280,7 @@ pub struct ItemTraitAlias {
     pub vis: NodeId<Vis>,
     pub trait_token: Token![trait],
     pub ident: NodeId<Ident>,
-    pub generics: Generics,
+    pub generics: NodeId<Generics>,
     pub where_clause: Option<WhereClause>,
     pub eq_token: Token![=],
     pub bounds: Punctuated<TypeParamBound, Token![+]>,
@@ -295,7 +295,7 @@ pub struct ItemType {
     pub vis: NodeId<Vis>,
     pub type_token: Token![type],
     pub ident: NodeId<Ident>,
-    pub generics: Generics,
+    pub generics: NodeId<Generics>,
     pub where_clause: Option<WhereClause>,
     pub eq_token: Token![=],
     pub ty: NodeId<Type>,
@@ -310,7 +310,7 @@ pub struct ItemUnion {
     pub vis: NodeId<Vis>,
     pub union_token: Token![union],
     pub ident: NodeId<Ident>,
-    pub generics: Generics,
+    pub generics: NodeId<Generics>,
     pub where_clause: Option<WhereClause>,
     pub fields: FieldsNamed,
 }
@@ -455,7 +455,7 @@ pub struct ForeignItemType {
     pub vis: NodeId<Vis>,
     pub type_token: Token![type],
     pub ident: NodeId<Ident>,
-    pub generics: Generics,
+    pub generics: NodeId<Generics>,
     pub where_clause: Option<WhereClause>,
     pub semi_token: Token![;],
 }
@@ -493,7 +493,7 @@ pub struct TraitItemConst {
     pub attrs: Vec<Attribute>,
     pub const_token: Token![const],
     pub ident: NodeId<Ident>,
-    pub generics: Generics,
+    pub generics: NodeId<Generics>,
     pub where_clause: Option<WhereClause>,
     pub colon_token: Token![:],
     pub ty: NodeId<Type>,
@@ -516,7 +516,7 @@ pub struct TraitItemType {
     pub attrs: Vec<Attribute>,
     pub type_token: Token![type],
     pub ident: NodeId<Ident>,
-    pub generics: Generics,
+    pub generics: NodeId<Generics>,
     pub where_clause: Option<WhereClause>,
     pub colon_token: Option<Token![:]>,
     pub bounds: Punctuated<TypeParamBound, Token![+]>,
@@ -560,7 +560,7 @@ pub struct ImplItemConst {
     pub defaultness: Option<Token![default]>,
     pub const_token: Token![const],
     pub ident: NodeId<Ident>,
-    pub generics: Generics,
+    pub generics: NodeId<Generics>,
     pub where_clause: Option<WhereClause>,
     pub colon_token: Token![:],
     pub ty: NodeId<Type>,
@@ -589,7 +589,7 @@ pub struct ImplItemType {
     pub defaultness: Option<Token![default]>,
     pub type_token: Token![type],
     pub ident: NodeId<Ident>,
-    pub generics: Generics,
+    pub generics: NodeId<Generics>,
     pub where_clause: Option<WhereClause>,
     pub eq_token: Token![=],
     pub ty: NodeId<Type>,
@@ -617,7 +617,7 @@ pub struct Signature {
     pub abi: Option<Abi>,
     pub fn_token: Token![fn],
     pub ident: NodeId<Ident>,
-    pub generics: Generics,
+    pub generics: NodeId<Generics>,
     pub where_clause: Option<WhereClause>,
     pub paren_token: token::Paren,
     pub inputs: Punctuated<FnArg, Token![,]>,
@@ -778,7 +778,7 @@ pub(crate) fn parse_rest_of_item(
         } else {
             return Err(lookahead.error());
         };
-        let generics = input.parse::<Generics>()?;
+        let generics = input.parse_spanned_pat::<Generics>()?;
         let colon_token = input.parse()?;
         let ty = input.parse()?;
         let value = if let Some(eq_token) = input.parse::<Option<Token![=]>>()? {
@@ -790,15 +790,13 @@ pub(crate) fn parse_rest_of_item(
         let where_clause = input.parse::<Option<WhereClause>>()?;
         let semi_token: Token![;] = input.parse()?;
         match value {
-            Some((eq_token, expr))
-                if generics.lt_token.is_none() && generics.where_clause.is_none() =>
-            {
+            Some((eq_token, expr)) if !generics.get_property(IsSome) && where_clause.is_none() => {
                 Ok(Item::Const(ItemConst {
                     attrs: Vec::new(),
                     vis,
                     const_token,
                     ident,
-                    generics,
+                    generics: input.add_pat(generics),
                     where_clause,
                     colon_token,
                     ty,
@@ -879,7 +877,7 @@ struct FlexibleItemType {
     defaultness: Option<Token![default]>,
     type_token: Token![type],
     ident: NodeId<Ident>,
-    generics: Generics,
+    generics: NodeId<Generics>,
     where_clause: Option<WhereClause>,
     colon_token: Option<Token![:]>,
     bounds: Punctuated<TypeParamBound, Token![+]>,
@@ -914,7 +912,7 @@ impl FlexibleItemType {
         };
         let type_token: Token![type] = input.parse()?;
         let ident: NodeId<Ident> = input.parse()?;
-        let generics = input.parse::<Generics>()?;
+        let generics = input.parse::<NodeId<Generics>>()?;
         let (colon_token, bounds) = Self::parse_optional_bounds(input)?;
 
         let (where_clause, ty) = match where_clause_location {
@@ -1220,6 +1218,7 @@ impl Parse for ItemConst {
 
         let colon_token: Token![:] = input.parse()?;
         let ty = input.parse()?;
+        let generics = input.make_at_point(Generics::default());
         let eq_token: Token![=] = input.parse()?;
         let expr: NodeId<Expr> = input.parse()?;
         let semi_token: Token![;] = input.parse()?;
@@ -1229,7 +1228,7 @@ impl Parse for ItemConst {
             vis,
             const_token,
             ident,
-            generics: Generics::default(),
+            generics: input.add_pat(generics),
             where_clause: None,
             colon_token,
             ty,
@@ -1270,7 +1269,7 @@ fn parse_signature(input: ParseStream, allow_safe: bool) -> Result<Option<Signat
     let abi: Option<Abi> = input.parse()?;
     let fn_token: Token![fn] = input.parse()?;
     let ident = input.parse_id::<Ident>()?;
-    let generics = input.parse::<Generics>()?;
+    let generics = input.parse::<NodeId<Generics>>()?;
 
     let content;
     let paren_token = parenthesized!(content in input);
@@ -1800,7 +1799,7 @@ impl Parse for ItemStruct {
         let vis = input.parse_id::<Vis>()?;
         let struct_token = input.parse::<Token![struct]>()?;
         let ident = input.parse_id::<Ident>()?;
-        let generics = input.parse::<Generics>()?;
+        let generics = input.parse::<NodeId<Generics>>()?;
         let (where_clause, fields, semi_token) = derive::data_struct(input)?;
         Ok(ItemStruct {
             attrs,
@@ -1821,7 +1820,7 @@ impl Parse for ItemEnum {
         let vis = input.parse_id::<Vis>()?;
         let enum_token = input.parse::<Token![enum]>()?;
         let ident = input.parse_id::<Ident>()?;
-        let generics = input.parse::<Generics>()?;
+        let generics = input.parse::<NodeId<Generics>>()?;
         let (where_clause, brace_token, variants) = derive::data_enum(input)?;
         Ok(ItemEnum {
             attrs,
@@ -1842,7 +1841,7 @@ impl Parse for ItemUnion {
         let vis = input.parse_id::<Vis>()?;
         let union_token = input.parse::<Token![union]>()?;
         let ident = input.parse_id::<Ident>()?;
-        let generics = input.parse::<Generics>()?;
+        let generics = input.parse::<NodeId<Generics>>()?;
         let (where_clause, fields) = derive::data_union(input)?;
         Ok(ItemUnion {
             attrs,
@@ -1889,7 +1888,7 @@ impl Parse for ItemTrait {
         let auto_token: Option<Token![auto]> = input.parse()?;
         let trait_token: Token![trait] = input.parse()?;
         let ident = input.parse_id::<Ident>()?;
-        let generics: Generics = input.parse()?;
+        let generics = input.parse_id::<Generics>()?;
         parse_rest_of_trait(
             input,
             outer_attrs,
@@ -1912,7 +1911,7 @@ fn parse_rest_of_trait(
     auto_token: Option<Token![auto]>,
     trait_token: Token![trait],
     ident: NodeId<Ident>,
-    generics: Generics,
+    generics: NodeId<Generics>,
 ) -> Result<ItemTrait> {
     let colon_token: Option<Token![:]> = input.parse()?;
 
@@ -1975,13 +1974,13 @@ fn parse_start_of_trait_alias(
     NodeId<Vis>,
     Token![trait],
     NodeId<Ident>,
-    Generics,
+    NodeId<Generics>,
 )> {
     let attrs = input.call(Attribute::parse_outer)?;
     let vis = input.parse_id::<Vis>()?;
     let trait_token: Token![trait] = input.parse()?;
     let ident: NodeId<Ident> = input.parse()?;
-    let generics: Generics = input.parse()?;
+    let generics = input.parse_id::<Generics>()?;
     Ok((attrs, vis, trait_token, ident, generics))
 }
 
@@ -1991,7 +1990,7 @@ fn parse_rest_of_trait_alias(
     vis: NodeId<Vis>,
     trait_token: Token![trait],
     ident: NodeId<Ident>,
-    generics: Generics,
+    generics: NodeId<Generics>,
 ) -> Result<ItemTraitAlias> {
     let eq_token: Token![=] = input.parse()?;
 
@@ -2045,7 +2044,7 @@ impl Parse for TraitItem {
             if lookahead.peek_pat::<Ident>() || lookahead.peek(Token![_]) {
                 input.advance_to(&ahead);
                 let ident = input.parse_id::<AnyIdent>()?;
-                let generics = input.parse::<Generics>()?;
+                let generics = input.parse_spanned_pat::<Generics>()?;
                 let colon_token: Token![:] = input.parse()?;
                 let ty: NodeId<Type> = input.parse()?;
                 let default = if let Some(eq_token) = input.parse::<Option<Token![=]>>()? {
@@ -2056,12 +2055,12 @@ impl Parse for TraitItem {
                 };
                 let where_clause = input.parse::<Option<WhereClause>>()?;
                 let semi_token: Token![;] = input.parse()?;
-                if generics.lt_token.is_none() && generics.where_clause.is_none() {
+                if !generics.get_property(IsSome) && where_clause.is_none() {
                     Ok(TraitItem::Const(TraitItemConst {
                         attrs: Vec::new(),
                         const_token,
                         ident,
-                        generics,
+                        generics: input.add_pat(generics),
                         where_clause,
                         colon_token,
                         ty,
@@ -2127,6 +2126,7 @@ impl Parse for TraitItemConst {
 
         let colon_token: Token![:] = input.parse()?;
         let ty: NodeId<Type> = input.parse()?;
+        let generics = input.make_at_point(Generics::default());
         let default = if input.peek(Token![=]) {
             let eq_token: Token![=] = input.parse()?;
             let default: NodeId<Expr> = input.parse()?;
@@ -2140,7 +2140,7 @@ impl Parse for TraitItemConst {
             attrs,
             const_token,
             ident,
-            generics: Generics::default(),
+            generics: input.add_pat(generics),
             where_clause: None,
             colon_token,
             ty,
@@ -2183,7 +2183,7 @@ impl Parse for TraitItemType {
         let attrs = input.call(Attribute::parse_outer)?;
         let type_token: Token![type] = input.parse()?;
         let ident: NodeId<Ident> = input.parse()?;
-        let generics = input.parse::<Generics>()?;
+        let generics = input.parse::<NodeId<Generics>>()?;
         let (colon_token, bounds) = FlexibleItemType::parse_optional_bounds(input)?;
         let default = FlexibleItemType::parse_optional_definition(input)?;
         let where_clause = input.parse::<Option<WhereClause>>()?;
@@ -2220,7 +2220,7 @@ fn parse_trait_item_type(begin: ParseBuffer, input: ParseStream) -> Result<Trait
         WhereClauseLocation::AfterEq,
     )?;
 
-    let vis_explicit = input.ctx().get(vis).get_property_ref(IsSome);
+    let vis_explicit = input.ctx().get::<Vis>(vis).get_property_ref(IsSome);
     if vis_explicit {
         Ok(TraitItem::Verbatim(verbatim::between(&begin, input)))
     } else {
@@ -2279,10 +2279,10 @@ fn parse_impl(input: ParseStream, allow_verbatim_impl: bool) -> Result<Option<It
                     || input.peek3(Token![>])
                     || input.peek3(Token![=]))
             || input.peek2(Token![const]));
-    let generics: Generics = if has_generics {
-        input.parse()?
+    let generics: NodeId<Generics> = if has_generics {
+        input.parse_id::<Generics>()?
     } else {
-        Generics::default()
+        input.add_pat(input.make_at_point(Generics::default()))
     };
 
     let is_const_impl = allow_verbatim_impl
@@ -2404,7 +2404,7 @@ impl ParseNode for ImplItem {
             } else {
                 return Err(lookahead.error());
             };
-            let generics = input.parse::<Generics>()?;
+            let generics = input.parse_spanned_pat::<Generics>()?;
             let colon_token: Token![:] = input.parse()?;
             let ty: NodeId<Type> = input.parse()?;
             let value = if let Some(eq_token) = input.parse::<Option<Token![=]>>()? {
@@ -2417,7 +2417,7 @@ impl ParseNode for ImplItem {
             let semi_token: Token![;] = input.parse()?;
             return match value {
                 Some((eq_token, expr))
-                    if generics.lt_token.is_none() && generics.where_clause.is_none() =>
+                    if !generics.get_property(IsSome) && where_clause.is_none() =>
                 {
                     Ok(ImplItem::Const(ImplItemConst {
                         attrs,
@@ -2425,7 +2425,7 @@ impl ParseNode for ImplItem {
                         defaultness,
                         const_token,
                         ident,
-                        generics,
+                        generics: input.add_pat(generics),
                         where_clause,
                         colon_token,
                         ty,
@@ -2483,6 +2483,7 @@ impl Parse for ImplItemConst {
 
         let colon_token: Token![:] = input.parse()?;
         let ty: NodeId<Type> = input.parse()?;
+        let generics = input.make_at_point(Generics::default());
         let eq_token: Token![=] = input.parse()?;
         let expr: NodeId<Expr> = input.parse()?;
         let semi_token: Token![;] = input.parse()?;
@@ -2493,7 +2494,7 @@ impl Parse for ImplItemConst {
             defaultness,
             const_token,
             ident,
-            generics: Generics::default(),
+            generics: input.add_pat(generics),
             where_clause: None,
             colon_token,
             ty,
@@ -2548,7 +2549,7 @@ impl Parse for ImplItemType {
         let defaultness: Option<Token![default]> = input.parse()?;
         let type_token: Token![type] = input.parse()?;
         let ident: NodeId<Ident> = input.parse()?;
-        let generics = input.parse::<Generics>()?;
+        let generics = input.parse::<NodeId<Generics>>()?;
         let eq_token: Token![=] = input.parse()?;
         let ty = input.parse()?;
         let where_clause = input.parse::<Option<WhereClause>>()?;

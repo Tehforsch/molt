@@ -1,3 +1,4 @@
+use crate::rust_grammar::generics::Generics;
 use crate::{CmpSyn, Id, KindType, Matcher, Pattern, ToNode};
 
 use crate::parser::parse::discouraged::Speculative;
@@ -231,6 +232,7 @@ define_node! {
     (Stmt, Stmt),
     (Type, Type),
     (Vis, Vis),
+    (Generics, Generics),
 }
 
 define_kind! {
@@ -245,6 +247,7 @@ define_kind! {
     (Stmt, Stmt, Stmt),
     (Type, Type, Type),
     (Vis, Vis, Vis),
+    (Generics, Generics, Generics),
     // Subtypes
     (Fn, Item, Item, Fn),
     (Mod, Item, Item, Mod),
@@ -272,6 +275,7 @@ impl CmpSyn<Node> for Node {
             | (Node::Type(_), _)
             | (Node::Item(_), _)
             | (Node::ImplItem(_), _)
+            | (Node::Generics(_), _)
             | (Node::Vis(_), _) => ctx.no_match(),
         }
     }

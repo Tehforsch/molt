@@ -1,9 +1,10 @@
 use crate::NodeId;
+use crate::pattern::Property;
 use derive_macro::CmpSyn;
 use proc_macro2::TokenStream;
 
 use crate::parser::error::{self, Result};
-use crate::parser::parse::{Parse, ParseStream};
+use crate::parser::parse::{Parse, ParseNode, ParseStream};
 use crate::parser::punctuated::Punctuated;
 use crate::parser::token;
 use crate::rust_grammar::attr::Attribute;
@@ -13,6 +14,8 @@ use crate::rust_grammar::lifetime::Lifetime;
 use crate::rust_grammar::path::{self, ParenthesizedGenericArguments, Path, PathArguments};
 use crate::rust_grammar::ty::Type;
 use crate::rust_grammar::verbatim;
+
+use super::restriction::IsSome;
 
 #[derive(Debug, CmpSyn, Default)]
 /// Lifetimes and type parameters attached to a declaration of a function,
@@ -28,7 +31,6 @@ pub struct Generics {
     pub lt_token: Option<Token![<]>,
     pub params: Punctuated<GenericParam, Token![,]>,
     pub gt_token: Option<Token![>]>,
-    pub where_clause: Option<WhereClause>,
 }
 
 #[derive(Debug, CmpSyn)]
@@ -174,8 +176,18 @@ pub struct PredicateType {
     pub bounds: Punctuated<TypeParamBound, Token![+]>,
 }
 
-impl Parse for Generics {
-    fn parse(input: ParseStream) -> Result<Self> {
+impl Property<Generics> for IsSome {
+    const VAR_DEFAULT: bool = false;
+
+    fn get(p: &Generics) -> bool {
+        p.lt_token.is_some()
+    }
+}
+
+impl ParseNode for Generics {
+    type Target = Generics;
+
+    fn parse_node(input: ParseStream) -> Result<Self> {
         if !input.peek(Token![<]) {
             return Ok(Generics::default());
         }
@@ -231,7 +243,6 @@ impl Parse for Generics {
             lt_token: Some(lt_token),
             params,
             gt_token: Some(gt_token),
-            where_clause: None,
         })
     }
 }

@@ -707,6 +707,11 @@ impl<'a> ParseBuffer<'a> {
     pub(crate) fn mode(&self) -> ParsingMode {
         self.mode
     }
+
+    pub(crate) fn make_at_point<T>(&self, default: T) -> SpannedPat<T> {
+        let marker = self.marker();
+        self.make_spanned(marker, Pattern::Real(default))
+    }
 }
 
 #[derive(Clone, Copy)]
