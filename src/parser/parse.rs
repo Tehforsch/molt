@@ -526,7 +526,7 @@ impl<'a> ParseBuffer<'a> {
     }
 
     #[allow(unused)]
-    fn show(&self) {
+    pub fn show(&self) {
         println!("{}", self.cursor().token_stream());
     }
 

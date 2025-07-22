@@ -1,0 +1,17 @@
+---
+source: src/tests/mod.rs
+expression: "super :: super :: match_pattern(& name, stringify! (item_impl))"
+---
+note: Match
+   ┌─ "test_data/generics/main.rs":31:1
+   │  
+31 │ ╭ impl<T> MyClone<T> for Vec<T> 
+32 │ │ where 
+33 │ │     T: Copy
+34 │ │ {
+   · │
+37 │ │     }
+38 │ │ }
+   │ ╰─^ $pattern
+   │  
+   = $generics = <T>

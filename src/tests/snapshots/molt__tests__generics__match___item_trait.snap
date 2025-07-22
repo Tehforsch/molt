@@ -1,0 +1,13 @@
+---
+source: src/tests/mod.rs
+expression: "super :: super :: match_pattern(& name, stringify! (item_trait))"
+---
+note: Match
+   ┌─ "test_data/generics/main.rs":23:1
+   │  
+23 │ ╭ trait MyIterator<Item> {
+24 │ │     fn next(&mut self) -> Option<Item>;
+25 │ │ }
+   │ ╰─^ $pattern
+   │  
+   = $generics = <Item>

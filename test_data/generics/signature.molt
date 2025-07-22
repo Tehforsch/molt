@@ -1,0 +1,5 @@
+let generics: Generics;
+
+let pattern: Item = fn process$generics(input: T) -> T {
+    input.clone()
+};

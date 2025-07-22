@@ -1,0 +1,11 @@
+---
+source: src/tests/mod.rs
+expression: "super :: super :: match_pattern(& name, stringify! (item_type))"
+---
+note: Match
+   ┌─ "test_data/generics/main.rs":21:1
+   │
+21 │ type MyResult2<T> = Result<T, MyError>;
+   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ $pattern
+   │
+   = $generics = <T>
