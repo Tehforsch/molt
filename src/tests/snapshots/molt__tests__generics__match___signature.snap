@@ -1,0 +1,13 @@
+---
+source: src/tests/mod.rs
+expression: "super :: super :: match_pattern(& name, stringify! (signature))"
+---
+note: Match
+   ┌─ "test_data/generics/main.rs":46:1
+   │  
+46 │ ╭ fn process<T: Clone>(input: T) -> T {
+47 │ │     input.clone()
+48 │ │ }
+   │ ╰─^ $pattern
+   │  
+   = $generics = <T: Clone>

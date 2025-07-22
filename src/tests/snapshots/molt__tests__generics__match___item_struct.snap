@@ -1,0 +1,14 @@
+---
+source: src/tests/mod.rs
+expression: "super :: super :: match_pattern(& name, stringify! (item_struct))"
+---
+note: Match
+   ┌─ "test_data/generics/main.rs":11:1
+   │  
+11 │ ╭ struct Vec<T> {
+12 │ │     data: *const T,
+13 │ │     len: usize,
+14 │ │ }
+   │ ╰─^ $pattern
+   │  
+   = $generics = <T>

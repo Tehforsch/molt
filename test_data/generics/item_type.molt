@@ -1,0 +1,5 @@
+let generics: Generics;
+
+let pattern: Item = {
+    type MyResult2$generics = Result<T, MyError>;
+};

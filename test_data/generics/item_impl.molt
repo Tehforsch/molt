@@ -1,0 +1,11 @@
+let generics: Generics;
+let pattern: Item = {
+    impl $generics MyClone<T> for Vec<T> 
+    where 
+        T: Copy
+    {
+        fn clone(&self) -> T {
+            todo!()
+        }
+    }
+};

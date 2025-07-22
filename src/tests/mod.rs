@@ -322,6 +322,18 @@ test_match_pattern!(
     )
 );
 test_match_pattern!(fns, (fns, rule, unsafe_rule, async_rule, const_rule));
+test_match_pattern!(
+    generics,
+    (
+        item_enum,
+        item_impl,
+        item_struct,
+        item_trait,
+        item_type,
+        signature,
+        simple_enum
+    )
+);
 
 molt_grammar_test_err!(
     molt_grammar,

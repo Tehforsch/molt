@@ -1,0 +1,8 @@
+let generics: Generics;
+
+let pattern: Item = {
+    struct Vec$generics {
+        data: *const T,
+        len: usize,
+    }
+};

@@ -88,6 +88,10 @@ impl<T, P> NodeList<T, P> {
             ParsingMode::Pat => Self::Pat(PatNodeList::empty()),
         }
     }
+
+    pub fn empty_real() -> Self {
+        Self::Real(RealNodeList::empty())
+    }
 }
 
 impl<T, P> PatNodeList<T, P> {

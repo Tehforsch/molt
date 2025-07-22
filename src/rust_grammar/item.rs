@@ -2156,6 +2156,7 @@ impl Parse for TraitItemFn {
         let sig: Signature = input.parse()?;
 
         let lookahead = input.lookahead1();
+        input.show();
         let (brace_token, stmts, semi_token) = if lookahead.peek(token::Brace) {
             let content;
             let brace_token = braced!(content in input);
@@ -2164,7 +2165,7 @@ impl Parse for TraitItemFn {
             (Some(brace_token), stmts, None)
         } else if lookahead.peek(Token![;]) {
             let semi_token: Token![;] = input.parse()?;
-            (None, NodeList::empty(input.mode()), Some(semi_token))
+            (None, NodeList::empty_real(), Some(semi_token))
         } else {
             return Err(lookahead.error());
         };
@@ -2270,15 +2271,16 @@ fn parse_impl(input: ParseStream, allow_verbatim_impl: bool) -> Result<Option<It
     let unsafety: Unsafety = input.parse()?;
     let impl_token: Token![impl] = input.parse()?;
 
-    let has_generics = input.peek(Token![<])
-        && (input.peek2(Token![>])
-            || input.peek2(Token![#])
-            || (input.peek2(Ident) || input.peek2(Lifetime))
-                && (input.peek3(Token![:])
-                    || input.peek3(Token![,])
-                    || input.peek3(Token![>])
-                    || input.peek3(Token![=]))
-            || input.peek2(Token![const]));
+    let has_generics = input.peek_var::<Generics>()
+        || input.peek(Token![<])
+            && (input.peek2(Token![>])
+                || input.peek2(Token![#])
+                || (input.peek2(Ident) || input.peek2(Lifetime))
+                    && (input.peek3(Token![:])
+                        || input.peek3(Token![,])
+                        || input.peek3(Token![>])
+                        || input.peek3(Token![=]))
+                || input.peek2(Token![const]));
     let generics: NodeId<Generics> = if has_generics {
         input.parse_id::<Generics>()?
     } else {
