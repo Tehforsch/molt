@@ -3,7 +3,7 @@ pub struct Config {
     pub debug_print: bool,
     pub cargo_fmt: bool,
     pub interactive: bool,
-    pub check_compilation: bool,
+    pub check: Option<String>,
 }
 
 impl Config {
@@ -12,7 +12,7 @@ impl Config {
             debug_print: true,
             cargo_fmt: false,
             interactive: false,
-            check_compilation: false,
+            check: None,
         }
     }
 }
@@ -23,7 +23,7 @@ impl Default for Config {
             debug_print: false,
             cargo_fmt: true,
             interactive: false,
-            check_compilation: false,
+            check: None,
         }
     }
 }
