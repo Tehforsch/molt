@@ -15,5 +15,5 @@ pub struct CliArgs {
     #[clap(short, long)]
     pub interactive: bool,
     #[clap(long)]
-    pub check_compilation: bool,
+    pub check: Option<String>,
 }

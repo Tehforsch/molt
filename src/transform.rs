@@ -58,8 +58,8 @@ impl<'a> Transform<'a> {
             transformation.show_diff(&self.code, self.rust_file_path);
             let not_interactive_or_user_said_yes =
                 !self.config.interactive || ask_user_for_confirmation();
-            let no_compile_check_or_code_still_compiles = !self.config.check_compilation
-                || self.check_transformation_compiles(transformation)?;
+            let no_compile_check_or_code_still_compiles =
+                self.config.check.is_none() || self.post_transformation_check_ok(transformation)?;
             if not_interactive_or_user_said_yes && no_compile_check_or_code_still_compiles {
                 self.code = transformation.apply(self.code.clone());
             }
@@ -77,16 +77,16 @@ impl<'a> Transform<'a> {
         Ok(diff_output)
     }
 
-    fn check_transformation_compiles(
-        &self,
-        transformation: &Transformation,
-    ) -> Result<bool, Error> {
+    fn post_transformation_check_ok(&self, transformation: &Transformation) -> Result<bool, Error> {
+        let command = self.config.check.as_ref().unwrap();
         let original_code = &self.code;
         let new_code = transformation.apply(original_code.clone());
         self.write_code_to_file(new_code)?;
-        let mut cmd = std::process::Command::new("cargo");
-        cmd.arg("check");
-        cmd.arg("--all-targets");
+
+        // TODO: This is probably not the right way to
+        // do this, but I am not sure how to do this robustly.
+        let mut cmd = std::process::Command::new("/usr/bin/env");
+        cmd.arg("sh").arg("-c").arg(command);
         if let Some(root) = self.cargo_root {
             cmd.current_dir(root);
         }
