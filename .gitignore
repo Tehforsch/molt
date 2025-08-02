@@ -2,3 +2,4 @@
 *.snap.new
 molt.md
 /*.molt
+!*/*.molt
