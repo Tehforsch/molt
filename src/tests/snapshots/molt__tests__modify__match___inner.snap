@@ -1,14 +1,15 @@
 ---
-source: src/lib.rs
-expression: "super :: super :: transform(stringify! (transform), stringify! (rename))"
+source: src/tests/mod.rs
+expression: "super :: super :: modify_code(stringify! (modify), stringify! (inner))"
+snapshot_kind: text
 ---
 fn main() {
-    let new_name = 42;
-    let result = new_name + 1;
+    let old_name = 42;
+    let result = old_name + 1;
 
     // intentionally misformatted code to make sure rustfmt is
     // run on the code.
-    let new_name = 10;
+    let old_name = 10;
 }
 
 fn example10() {
@@ -18,5 +19,5 @@ fn example10() {
         None => Ok(0),
     };
 
-    bar.foo::<Foo1>()?;
+    bar.foo::<Foo2>()?;
 }

@@ -14,39 +14,39 @@ use crate::resolve::get_vars_in_token_stream;
 use crate::{Error, FileId, Input, MatchResult};
 
 #[derive(Debug, thiserror::Error)]
-pub enum TransformError {
+pub enum ModifyError {
     #[error("Overlapping spans.")]
     Overlap,
 }
 
 #[derive(Debug)]
-struct Transformation {
+struct Modification {
     span: Span,
     new_code: String,
 }
 
-pub struct Transform<'a> {
-    transformations: Vec<Transformation>,
+pub struct Modify<'a> {
+    modifications: Vec<Modification>,
     code: String,
     rust_file_path: &'a Path,
     config: &'a Config,
     cargo_root: Option<&'a Path>,
 }
 
-impl<'a> Transform<'a> {
+impl<'a> Modify<'a> {
     pub fn new(
         input: &'a Input,
         config: &'a Config,
         rust_file_id: FileId,
         cargo_root: Option<&'a Path>,
         match_result: MatchResult<'a>,
-        transforms: &'a [(Id, Id)],
+        modifies: &'a [(Id, Id)],
     ) -> Result<Self, Error> {
         let code = input.source(rust_file_id).unwrap().to_owned();
         let filename = input.name(rust_file_id).unwrap().unwrap_path();
-        let transformations = prepare_transformations(&match_result, transforms)?;
+        let modifications = prepare_modifications(&match_result, modifies)?;
         Ok(Self {
-            transformations,
+            modifications,
             code,
             rust_file_path: filename,
             config,
@@ -54,15 +54,15 @@ impl<'a> Transform<'a> {
         })
     }
 
-    pub fn get_transformed_contents(mut self) -> Result<String, Error> {
-        for transformation in self.transformations.iter().rev() {
-            transformation.show_diff(&self.code, self.rust_file_path);
+    pub fn get_modified_contents(mut self) -> Result<String, Error> {
+        for modification in self.modifications.iter().rev() {
+            modification.show_diff(&self.code, self.rust_file_path);
             let not_interactive_or_user_said_yes =
                 !self.config.interactive || ask_user_for_confirmation();
             let no_compile_check_or_code_still_compiles =
-                self.config.check.is_none() || self.post_transformation_check_ok(transformation)?;
+                self.config.check.is_none() || self.post_modification_check_ok(modification)?;
             if not_interactive_or_user_said_yes && no_compile_check_or_code_still_compiles {
-                self.code = transformation.apply(self.code.clone());
+                self.code = modification.apply(self.code.clone());
             }
         }
         Ok(self.code.clone())
@@ -71,17 +71,17 @@ impl<'a> Transform<'a> {
     #[cfg(test)]
     pub fn get_diff_output(self) -> Result<String, Error> {
         let mut diff_output = String::new();
-        for transformation in self.transformations.into_iter().rev() {
-            let diff_str = transformation.get_diff(&self.code, self.rust_file_path, false);
+        for modification in self.modifications.into_iter().rev() {
+            let diff_str = modification.get_diff(&self.code, self.rust_file_path, false);
             diff_output.push_str(&diff_str);
         }
         Ok(diff_output)
     }
 
-    fn post_transformation_check_ok(&self, transformation: &Transformation) -> Result<bool, Error> {
+    fn post_modification_check_ok(&self, modification: &Modification) -> Result<bool, Error> {
         let command = self.config.check.as_ref().unwrap();
         let original_code = &self.code;
-        let new_code = transformation.apply(original_code.clone());
+        let new_code = modification.apply(original_code.clone());
         self.write_temporary_code_to_file(new_code, original_code.clone())?;
 
         // TODO: This is probably not the right way to
@@ -124,7 +124,7 @@ impl<'a> Transform<'a> {
     }
 }
 
-impl Transformation {
+impl Modification {
     fn apply(&self, mut code: String) -> String {
         let range = self.span.byte_range();
         code.replace_range(range, &self.new_code);
@@ -132,31 +132,31 @@ impl Transformation {
     }
 }
 
-pub fn transform(
+pub fn modify(
     input: &Input,
     config: &Config,
     rust_file_id: FileId,
     match_result: MatchResult,
-    transforms: Vec<(Id, Id)>,
+    modifies: Vec<(Id, Id)>,
     cargo_root: Option<&Path>,
 ) -> Result<(), Error> {
-    let transform = Transform::new(
+    let modify = Modify::new(
         input,
         config,
         rust_file_id,
         cargo_root,
         match_result,
-        &transforms,
+        &modifies,
     )?;
-    if !transform.transformations.is_empty() {
-        let new_code = transform.get_transformed_contents()?;
+    if !modify.modifications.is_empty() {
+        let new_code = modify.get_modified_contents()?;
         write_to_file(input, rust_file_id, new_code)?;
     }
     Ok(())
 }
 
 fn ask_user_for_confirmation() -> bool {
-    print!("Apply this transformation? (y/N): ");
+    print!("Apply this modification? (y/N): ");
     io::stdout().flush().unwrap();
 
     let mut input = String::new();
@@ -172,32 +172,33 @@ fn write_to_file(input: &Input, rust_file_id: FileId, code: String) -> Result<()
     Ok(())
 }
 
-fn prepare_transformations(
+fn prepare_modifications(
     match_result: &MatchResult,
-    transforms: &[(Id, Id)],
-) -> Result<Vec<Transformation>, Error> {
-    let mut all_transformations: Vec<_> = transforms
+    modifies: &[(Id, Id)],
+) -> Result<Vec<Modification>, Error> {
+    let mut all_modifications: Vec<_> = modifies
         .iter()
         .flat_map(|(input_var, output_var)| {
-            match_result.matches.iter().map(|match_| {
-                make_transformation(&match_result.ctx, match_, *input_var, *output_var)
-            })
+            match_result
+                .matches
+                .iter()
+                .map(|match_| make_modification(&match_result.ctx, match_, *input_var, *output_var))
         })
         .collect();
 
-    // Sort transformations by their spans to ensure proper ordering
-    all_transformations.sort_by_key(|t| t.span.byte_range().start);
+    // Sort modifications by their spans to ensure proper ordering
+    all_modifications.sort_by_key(|t| t.span.byte_range().start);
 
-    check_overlap(&all_transformations)?;
-    Ok(all_transformations)
+    check_overlap(&all_modifications)?;
+    Ok(all_modifications)
 }
 
-fn check_overlap(transformations: &[Transformation]) -> Result<(), Error> {
+fn check_overlap(modifications: &[Modification]) -> Result<(), Error> {
     let mut last_byte = None;
-    for tf in transformations.iter() {
+    for tf in modifications.iter() {
         if let Some(last_byte) = last_byte {
             if tf.span.byte_range().start <= last_byte {
-                return Err(TransformError::Overlap.into());
+                return Err(ModifyError::Overlap.into());
             }
         }
         last_byte = Some(tf.span.byte_range().end);
@@ -205,28 +206,23 @@ fn check_overlap(transformations: &[Transformation]) -> Result<(), Error> {
     Ok(())
 }
 
-fn make_transformation(
-    ctx: &MatchCtx<Node>,
-    match_: &Match,
-    input: Id,
-    output: Id,
-) -> Transformation {
+fn make_modification(ctx: &MatchCtx<Node>, match_: &Match, input: Id, output: Id) -> Modification {
     let ast = *match_.get_binding(input).ast.first().unwrap();
     let ast_span = ctx.ast_ctx.get_span(ast);
-    Transformation {
+    Modification {
         span: ast_span,
-        new_code: get_transformed_code(ctx, match_, output),
+        new_code: get_modified_code(ctx, match_, output),
     }
 }
 
-fn get_transformed_code(ctx: &MatchCtx<Node>, match_: &Match, output: Id) -> String {
+fn get_modified_code(ctx: &MatchCtx<Node>, match_: &Match, output: Id) -> String {
     let binding = match_.get_binding(output);
     let mut code = if let Some(ast_binding) = binding.ast.first() {
         ctx.print_ast(*ast_binding).to_string()
     } else {
         let pat_id = binding.pat.unwrap();
         if pat_id.is_pat() {
-            get_transformed_code(ctx, match_, pat_id)
+            get_modified_code(ctx, match_, pat_id)
         } else {
             ctx.print_pat(binding.pat.unwrap()).to_string()
         }
@@ -249,7 +245,7 @@ fn replace_first_variable(
 ) {
     if let Some(var) = vars.pop() {
         let var_id = ctx.pat_ctx.get_id_by_name(&var.name);
-        let new_code = get_transformed_code(ctx, match_, var_id);
+        let new_code = get_modified_code(ctx, match_, var_id);
         sc.replace_range(var.span.byte_range(), &new_code);
     }
 }

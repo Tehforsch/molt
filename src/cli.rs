@@ -5,7 +5,7 @@ use clap::Parser;
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 pub struct CliArgs {
-    pub transform_file: PathBuf,
+    pub molt_file: PathBuf,
     pub input_files: Vec<PathBuf>,
     #[clap(short, long)]
     pub debug_print: bool,

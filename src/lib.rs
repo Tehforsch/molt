@@ -9,6 +9,7 @@ mod input;
 mod lsp;
 mod match_ctx;
 mod match_pattern;
+mod modify;
 mod molt_grammar;
 mod node;
 mod node_list;
@@ -19,7 +20,6 @@ mod rust_grammar;
 mod span;
 #[cfg(test)]
 mod tests;
-mod transform;
 mod type_check;
 mod utils;
 
@@ -36,7 +36,7 @@ pub use input::{Diagnostic, FileId, Input, MoltSource};
 use lsp::LspClient;
 pub use match_ctx::{MatchCtx, MatchPatternData};
 pub use match_pattern::{Binding, Match, Matcher, PatType, match_pattern};
-use molt_grammar::{Command, MatchCommand, MoltFile, TransformCommand, UnresolvedMoltFile};
+use molt_grammar::{Command, MatchCommand, ModifyCommand, MoltFile, UnresolvedMoltFile};
 pub use node::{KindType, NodeType, ToNode};
 pub use node_list::{
     List, ListMatchingMode, NoPunct, NodeList, PatNodeList, RealNodeList, SetMatchingMode, Single,
@@ -222,7 +222,7 @@ pub fn run(
                 );
                 diagnostics.extend(match_result.make_diagnostics(rust_file_id, print));
             }
-            Command::Transform(TransformCommand { transforms, match_ }) => {
+            Command::Modify(ModifyCommand { modifies, match_ }) => {
                 let match_result = molt_file.match_pattern(
                     &ast_ctx,
                     &pat_ctx,
@@ -230,12 +230,12 @@ pub fn run(
                     data,
                     &mut lsp_client,
                 );
-                transform::transform(
+                modify::modify(
                     input,
                     &config,
                     rust_file_id,
                     match_result,
-                    transforms,
+                    modifies,
                     cargo_root.map(|v| &**v),
                 )?;
                 if let Some(cargo_root) = cargo_root
