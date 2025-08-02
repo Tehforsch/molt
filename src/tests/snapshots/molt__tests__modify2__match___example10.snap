@@ -1,9 +1,10 @@
 ---
-source: src/lib.rs
+source: src/tests/mod.rs
 expression: "super :: super :: match_pattern(& name, stringify! (example10))"
+snapshot_kind: text
 ---
 note: Match
-  ┌─ "test_data/transform2/main.rs":2:5
+  ┌─ "test_data/modify2/main.rs":2:5
   │  
 2 │ ╭     match value {
 3 │ │         Some(x) => Ok(x * 2),

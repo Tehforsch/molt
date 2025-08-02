@@ -86,7 +86,7 @@ fn main() -> Result<()> {
     } else {
         (None, get_rust_files_from_paths(&args.input_files)?)
     };
-    let mut input = Input::new(MoltSource::file(&args.transform_file).unwrap())
+    let mut input = Input::new(MoltSource::file(&args.molt_file).unwrap())
         .with_rust_src_files(source_files.iter())
         .unwrap();
     if let Some(ref root) = root {

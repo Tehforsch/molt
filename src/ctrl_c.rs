@@ -16,7 +16,7 @@ enum Command {
     RestoreAll,
 }
 
-/// Handles temporary file modifications (for transformations with the
+/// Handles temporary file modifications (for modifications with the
 /// `--check` flag) and ensures that the original file state is
 /// restored when SIGINT is received (ctrl-c pressed).
 pub struct FileRestorer {

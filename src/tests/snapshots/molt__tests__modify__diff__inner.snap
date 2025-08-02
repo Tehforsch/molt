@@ -1,8 +1,9 @@
 ---
 source: src/tests/mod.rs
-expression: "super :: super :: transform_diff(stringify! (transform), stringify! (inner))"
+expression: "super :: super :: modify_diff(stringify! (modify), stringify! (inner))"
+snapshot_kind: text
 ---
---- test_data/transform/main.rs
+--- test_data/modify/main.rs
   16,  16          Some(x) => Ok(x * 2),
   17,  17          None => Ok(0),
   18,  18      };

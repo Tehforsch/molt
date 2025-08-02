@@ -6,15 +6,15 @@ use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
 use codespan_reporting::term::{self};
 
 use crate::input::{FileId, Input};
+use crate::modify::ModifyError;
 use crate::resolve::ResolveError;
-use crate::transform::TransformError;
 
 #[derive(Debug)]
 pub enum Error {
     Parse(crate::parser::Error, FileId),
     Resolve(ResolveError, FileId),
     Misc(String),
-    Transform(TransformError),
+    Modify(ModifyError),
     Io(io::Error),
 }
 
@@ -27,7 +27,7 @@ impl Error {
                 _ => None,
             },
             Error::Misc(_) => None,
-            Error::Transform(_) => None,
+            Error::Modify(_) => None,
             Error::Io(_) => None,
         }
     }
@@ -67,9 +67,9 @@ pub(crate) fn emit_diagnostic_str(input: &Input, diagnostic: Diagnostic<FileId>)
     String::from_utf8(writer.into_inner()).unwrap()
 }
 
-impl From<TransformError> for Error {
-    fn from(t: TransformError) -> Self {
-        Self::Transform(t)
+impl From<ModifyError> for Error {
+    fn from(t: ModifyError) -> Self {
+        Self::Modify(t)
     }
 }
 
@@ -91,7 +91,7 @@ impl std::fmt::Display for Error {
             Error::Parse(error, _) => write!(f, "{error}"),
             Error::Resolve(error, _) => write!(f, "{error}"),
             Error::Misc(s) => write!(f, "{s}"),
-            Error::Transform(s) => write!(f, "{s}"),
+            Error::Modify(s) => write!(f, "{s}"),
             Error::Io(s) => write!(f, "{s}"),
         }
     }

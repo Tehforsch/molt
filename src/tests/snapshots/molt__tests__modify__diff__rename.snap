@@ -1,8 +1,9 @@
 ---
 source: src/tests/mod.rs
-expression: "super :: super :: transform_diff(stringify! (transform), stringify! (rename))"
+expression: "super :: super :: modify_diff(stringify! (modify), stringify! (rename))"
+snapshot_kind: text
 ---
---- test_data/transform/main.rs
+--- test_data/modify/main.rs
    4,   4  
    5,   5      // intentionally misformatted code to make sure rustfmt is
    6,   6      // run on the code.
@@ -14,7 +15,7 @@ expression: "super :: super :: transform_diff(stringify! (transform), stringify!
   11,  11  }
   12,  12  
 
---- test_data/transform/main.rs
+--- test_data/modify/main.rs
    1,   1  fn main() {
    2,   2      let old_name = 42;
    3,-    -    let result = old_name + 1;
@@ -24,7 +25,7 @@ expression: "super :: super :: transform_diff(stringify! (transform), stringify!
    6,   6      // run on the code.
    7,   7      let
 
---- test_data/transform/main.rs
+--- test_data/modify/main.rs
    1,   1  fn main() {
    2,-    -    let old_name = 42;
 -   ,   2 +    let new_name = 42;

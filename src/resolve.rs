@@ -6,7 +6,7 @@ use crate::rust_grammar::{Node, TokenStream, TokenTree, Type, parse_node_with_ki
 use crate::{Id, ParsingMode, Span, Var, VarDecl};
 
 use crate::molt_grammar::{
-    MatchCommand, TokenVar, TransformCommand, TypeAnnotation, UnresolvedMoltFile, UnresolvedVarDecl,
+    MatchCommand, ModifyCommand, TokenVar, TypeAnnotation, UnresolvedMoltFile, UnresolvedVarDecl,
 };
 use crate::{Command, Error, FileId, MoltFile, PatCtx};
 
@@ -196,17 +196,17 @@ fn get_command(
                 match_: Some(infer_var(vars, map, vec![], file_id)?),
                 print,
             }),
-            Command::Transform(TransformCommand {
-                transforms,
+            Command::Modify(ModifyCommand {
+                modifies,
                 match_: None,
-            }) => Command::Transform(TransformCommand {
+            }) => Command::Modify(ModifyCommand {
                 match_: Some(infer_var(
                     vars,
                     map,
-                    transforms.iter().map(|(_, output)| output).collect(),
+                    modifies.iter().map(|(_, output)| output).collect(),
                     file_id,
                 )?),
-                transforms,
+                modifies,
             }),
             _ => unreachable!(),
         })
