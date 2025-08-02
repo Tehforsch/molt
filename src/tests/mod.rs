@@ -8,7 +8,7 @@ use crate::Config;
 use crate::error::{emit_diagnostic_str, make_error_diagnostic};
 use crate::input::{Contents, Input, MoltSource};
 use crate::lsp::LspClient;
-use crate::transform::Transform;
+use crate::modify::Modify;
 use crate::{Command, Error, MoltFile, RustFile, match_pattern_data};
 
 fn parse_rust(path: &str) {
@@ -84,13 +84,13 @@ fn format_code(code: String) -> Result<String, Error> {
     Ok(String::from_utf8(output.stdout).unwrap_or(code))
 }
 
-fn run_transform_with<T>(path: &str, fname: &str, f: impl FnOnce(Transform) -> T) -> T {
+fn run_modify_with<T>(path: &str, fname: &str, f: impl FnOnce(Modify) -> T) -> T {
     let input = make_input(path, fname);
     let (molt_file, pat_ctx) = MoltFile::new(&input).unwrap();
     let rust_file_id = input.iter_rust_src().next().unwrap();
     let (_, ast_ctx) = RustFile::new(&input, rust_file_id).unwrap();
     let config = Config::default();
-    let Command::Transform(ref tr) = molt_file.command else {
+    let Command::Modify(ref tr) = molt_file.command else {
         panic!()
     };
 
@@ -106,29 +106,27 @@ fn run_transform_with<T>(path: &str, fname: &str, f: impl FnOnce(Transform) -> T
         &mut lsp_client,
     );
 
-    let transform = Transform::new(
+    let modify = Modify::new(
         &input,
         &config,
         rust_file_id,
         None,
         match_result,
-        &tr.transforms,
+        &tr.modifies,
     )
     .unwrap();
-    f(transform)
+    f(modify)
 }
 
-fn transform(path: &str, fname: &str) -> String {
-    run_transform_with(path, fname, |transform| {
-        let code = transform.get_transformed_contents().unwrap();
+fn modify_code(path: &str, fname: &str) -> String {
+    run_modify_with(path, fname, |modify| {
+        let code = modify.get_modified_contents().unwrap();
         format_code(code).unwrap()
     })
 }
 
-fn transform_diff(path: &str, fname: &str) -> String {
-    run_transform_with(path, fname, |transform| {
-        transform.get_diff_output().unwrap()
-    })
+fn modify_diff(path: &str, fname: &str) -> String {
+    run_modify_with(path, fname, |modify| modify.get_diff_output().unwrap())
 }
 
 macro_rules! test_match_pattern {
@@ -161,14 +159,14 @@ macro_rules! test_match_pattern {
     };
 }
 
-macro_rules! test_transform {
+macro_rules! test_modify {
     ($dir_name: ident, ($($test_name: ident),* $(,)?)) => {
         mod $dir_name {
             mod match_ {
                 $(
                     #[test]
                     fn $test_name() {
-                        insta::assert_snapshot!(super::super::transform(stringify!($dir_name), stringify!($test_name)));
+                        insta::assert_snapshot!(super::super::modify_code(stringify!($dir_name), stringify!($test_name)));
                     }
                 )*
             }
@@ -177,7 +175,7 @@ macro_rules! test_transform {
                 $(
                     #[test]
                     fn $test_name() {
-                        insta::assert_snapshot!(super::super::transform_diff(stringify!($dir_name), stringify!($test_name)));
+                        insta::assert_snapshot!(super::super::modify_diff(stringify!($dir_name), stringify!($test_name)));
                     }
                 )*
             }
@@ -304,8 +302,8 @@ test_match_pattern!(
         slice_list,
     )
 );
-test_transform!(transform, (rename, inner));
-test_match_pattern!(transform2, (example10)); // TODO: Make this a transform test once the functionality exists.
+test_modify!(modify, (rename, inner));
+test_match_pattern!(modify2, (example10)); // TODO: Make this a modify test once the functionality exists.
 
 test_match_pattern!(array_elements, (elements));
 test_match_pattern!(function_args, (fn_));

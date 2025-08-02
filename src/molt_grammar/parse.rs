@@ -6,12 +6,11 @@ use crate::rust_grammar::ext::IdentExt;
 use crate::rust_grammar::{Ident, Kind, TokenStream, TokenTree};
 
 use super::{
-    Command, Decl, MatchCommand, Ruleset, TokenVar, TransformCommand, UnresolvedMoltFile,
+    Command, Decl, MatchCommand, ModifyCommand, Ruleset, TokenVar, UnresolvedMoltFile,
     UnresolvedTypeAnnotation, UnresolvedVarDecl,
 };
 
 mod kw {
-    crate::custom_keyword!(transform);
     crate::custom_keyword!(strict);
     crate::custom_keyword!(ignore);
 }
@@ -42,7 +41,7 @@ impl Parse for UnresolvedMoltFile {
 impl Parse for Decl {
     fn parse(parser: ParseStream) -> Result<Self> {
         let lookahead = parser.lookahead1();
-        if lookahead.peek(Token![match]) || lookahead.peek(kw::transform) {
+        if lookahead.peek(Token![match]) || lookahead.peek(Token![mod]) {
             Ok(Self::Command(parser.parse()?))
         } else if lookahead.peek(Token![type]) {
             Ok(Self::TypeAnnotation(parser.parse()?))
@@ -107,13 +106,13 @@ impl Parse for TokenVar {
 
 impl Parse for Command<TokenVar> {
     fn parse(parser: ParseStream) -> Result<Self> {
-        let command = if parser.peek(kw::transform) {
-            let _: kw::transform = parser.parse()?;
+        let command = if parser.peek(Token![mod]) {
+            let _: Token![mod] = parser.parse()?;
             let input: TokenVar = parser.parse()?;
             let _: Token![->] = parser.parse()?;
             let output: TokenVar = parser.parse()?;
-            Command::Transform(TransformCommand {
-                transforms: vec![(input, output)],
+            Command::Modify(ModifyCommand {
+                modifies: vec![(input, output)],
                 match_: None,
             })
         } else {

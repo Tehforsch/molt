@@ -2,7 +2,7 @@ use std::path::Path;
 
 use similar::{ChangeTag, TextDiff};
 
-use crate::transform::Transformation;
+use crate::modify::Modification;
 
 #[derive(Clone)]
 enum Color {
@@ -48,7 +48,7 @@ impl ColoredText {
 
 const NUM_LINES_CONTEXT: usize = 4;
 
-impl Transformation {
+impl Modification {
     pub fn get_diff(&self, old_code: &str, filename: &Path, colorized: bool) -> String {
         let range = self.span.byte_range();
         let new_excerpt = &self.new_code;

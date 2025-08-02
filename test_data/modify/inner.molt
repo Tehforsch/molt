@@ -2,4 +2,4 @@ let ident: Ident;
 let x: Expr = $ident.foo::<$old_ty>()?;
 let old_ty: Type = Foo1;
 let new_ty: Type = Foo2;
-transform old_ty -> new_ty;
+mod old_ty -> new_ty;
