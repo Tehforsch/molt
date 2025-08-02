@@ -28,6 +28,7 @@ lsp-types = "0.95.0" # 0.96 introduces a different URI type which makes life hel
 similar = "2.4"
 proc-macro2 = { version = "1.0.91", default-features = false, features = ["span-locations"] }
 unicode-ident = "1"
+ctrlc = "3.4"
 
 derive_macro = { path = "crates/derive_macro" }
 

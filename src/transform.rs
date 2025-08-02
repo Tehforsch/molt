@@ -8,6 +8,7 @@ use crate::rust_grammar::{Node, TokenStream};
 use crate::{Config, Id, Match, MatchCtx, Span};
 use codespan_reporting::files::Files;
 
+use crate::ctrl_c::FileRestorer;
 use crate::molt_grammar::TokenVar;
 use crate::resolve::get_vars_in_token_stream;
 use crate::{Error, FileId, Input, MatchResult};
@@ -81,7 +82,7 @@ impl<'a> Transform<'a> {
         let command = self.config.check.as_ref().unwrap();
         let original_code = &self.code;
         let new_code = transformation.apply(original_code.clone());
-        self.write_code_to_file(new_code)?;
+        self.write_temporary_code_to_file(new_code, original_code.clone())?;
 
         // TODO: This is probably not the right way to
         // do this, but I am not sure how to do this robustly.
@@ -92,16 +93,34 @@ impl<'a> Transform<'a> {
         }
         let output = cmd.output()?;
         if output.status.success() {
+            self.forget_temporary_modification()?;
             Ok(true)
         } else {
-            self.write_code_to_file(original_code.to_string())?;
+            self.restore_temporary_modification(original_code)?;
             Ok(false)
         }
     }
 
-    fn write_code_to_file(&self, original_code: String) -> Result<(), Error> {
+    fn write_temporary_code_to_file(
+        &self,
+        new_code: String,
+        original_code: String,
+    ) -> Result<(), Error> {
+        std::fs::write(self.rust_file_path, new_code)?;
+        FileRestorer::global()
+            .remember_original_file_contents(self.rust_file_path, original_code)
+            .map_err(|e| Error::Io(e))
+    }
+
+    fn forget_temporary_modification(&self) -> Result<(), Error> {
+        FileRestorer::global()
+            .forget_file(self.rust_file_path)
+            .map_err(|e| Error::Io(e))
+    }
+
+    fn restore_temporary_modification(&self, original_code: &str) -> Result<(), Error> {
         std::fs::write(self.rust_file_path, original_code)?;
-        Ok(())
+        self.forget_temporary_modification()
     }
 }
 

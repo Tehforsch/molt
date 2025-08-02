@@ -2,6 +2,7 @@
 mod parser;
 mod cmp_syn;
 mod config;
+mod ctrl_c;
 mod ctx;
 mod error;
 mod input;
