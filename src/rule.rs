@@ -170,9 +170,6 @@ macro_rules! rules {
     }
 }
 
-// Unfortunately, this is split over crates for now.
-// Remember to update the corresponding macro call in
-// src/molt_grammar/parse.rs
 rules! {
     (Vis,
         (Const, Strict),
