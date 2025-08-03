@@ -26,11 +26,11 @@ impl LspClient {
         for type_annotation in type_annotations {
             let var_id = pat_ctx.get_id_by_name(&type_annotation.var_name);
             let binding = match_.get_binding(var_id);
-            for ast_node in binding.ast.iter() {
+            for ast_node in binding.real.iter() {
                 let span = ast_ctx.get_span(*ast_node);
-                let range = get_range_from_span(data.rust_src, span);
+                let range = get_range_from_span(data.real_src, span);
                 let type_ = loop {
-                    match self.query_type(data.rust_path, range) {
+                    match self.query_type(data.real_path, range) {
                         Ok(type_) => break type_,
                         Err(e) if e.to_string().contains("content modified") => {
                             // Retry if content was modified
