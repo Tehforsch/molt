@@ -5,6 +5,7 @@ use crate::parser::error::Result;
 use crate::parser::parse::{Parse, ParseStream};
 use crate::parser::punctuated::Punctuated;
 use crate::parser::token;
+use crate::rust_grammar::Node;
 use crate::rust_grammar::expr::{Expr, ExprBlock, ExprPath};
 use crate::rust_grammar::generics::TypeParamBound;
 use crate::rust_grammar::ident::{AnyIdent, Ident};
@@ -13,6 +14,7 @@ use crate::rust_grammar::lit::Lit;
 use crate::rust_grammar::ty::{ReturnType, Type};
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A path at which a named item is exported (e.g. `std::collections::HashMap`).
 pub struct Path {
     pub leading_colon: Option<Token![::]>,
@@ -34,6 +36,7 @@ where
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A segment of a path together with any path arguments on that segment.
 pub struct PathSegment {
     pub ident: NodeId<Ident>,
@@ -53,6 +56,7 @@ where
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// Angle bracketed or parenthesized arguments of a path segment.
 ///
 /// ## Angle bracketed
@@ -90,6 +94,7 @@ impl PathArguments {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An individual generic argument, like `'a`, `T`, or `Item = T`.
 pub enum GenericArgument {
     /// A lifetime argument.
@@ -112,6 +117,7 @@ pub enum GenericArgument {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// Angle bracketed arguments of a path segment: the `<K, V>` in `HashMap<K,
 /// V>`.
 pub struct AngleBracketedGenericArguments {
@@ -122,6 +128,7 @@ pub struct AngleBracketedGenericArguments {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A binding (equality constraint) on an associated type: the `Item = u8`
 /// in `Iterator<Item = u8>`.
 pub struct AssocType {
@@ -132,6 +139,7 @@ pub struct AssocType {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An equality constraint on an associated constant: the `PANIC = false` in
 /// `Trait<PANIC = false>`.
 pub struct AssocConst {
@@ -142,6 +150,7 @@ pub struct AssocConst {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An associated type bound: `Iterator<Item: Display>`.
 pub struct Constraint {
     pub ident: NodeId<Ident>,
@@ -151,6 +160,7 @@ pub struct Constraint {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// Arguments of a function path segment: the `(A, B) -> C` in `Fn(A,B) ->
 /// C`.
 pub struct ParenthesizedGenericArguments {
@@ -162,6 +172,7 @@ pub struct ParenthesizedGenericArguments {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// The explicit Self type in a qualified path: the `T` in `<T as
 /// Display>::fmt`.
 ///
