@@ -5,7 +5,7 @@ use std::rc::Rc;
 use std::str::{self, FromStr};
 
 use crate::match_pattern::IsMatch;
-use crate::{CmpSyn, Ctx, ParsingMode};
+use crate::{CmpSyn, Ctx, Mode};
 use derive_macro::CmpSyn;
 use proc_macro2::{Literal, Punct, Span};
 
@@ -669,8 +669,8 @@ fn peek_impl(cursor: Cursor, peek: fn(ParseStream) -> bool) -> bool {
         scope,
         cursor,
         unexpected,
-        Rc::new(RefCell::new(Ctx::new(ParsingMode::Real))),
-        ParsingMode::Pat,
+        Rc::new(RefCell::new(Ctx::new(Mode::Real))),
+        Mode::Molt,
     );
     peek(&buffer)
 }

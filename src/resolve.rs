@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::rust_grammar::{Node, TokenStream, TokenTree, Type, parse_node_with_kind};
-use crate::{Ctx, Id, ParsingMode, Span, Var, VarDecl};
+use crate::{Ctx, Id, Mode, Span, Var, VarDecl};
 
 use crate::molt_grammar::{
     MatchCommand, ModifyCommand, TokenVar, TypeAnnotation, UnresolvedMoltFile, UnresolvedVarDecl,
@@ -96,7 +96,7 @@ impl UnresolvedMoltFile {
         let command = get_command(self.commands, &vars, &map, file_id)?;
         // TODO: Warn unused
         // Populate the context with all variables.
-        let mut pat_ctx = PatCtx::new(ParsingMode::Pat);
+        let mut pat_ctx = PatCtx::new(Mode::Molt);
         let vars: Vec<_> = vars
             .into_iter()
             .map(|var| {
@@ -126,7 +126,7 @@ impl UnresolvedMoltFile {
                             pat_ctx.clone(),
                             |stream| parse_node_with_kind(stream, kind),
                             tokens,
-                            ParsingMode::Pat,
+                            Mode::Molt,
                         )
                     })
                     .transpose()
@@ -144,7 +144,7 @@ impl UnresolvedMoltFile {
                         pat_ctx.clone(),
                         |input| input.parse_id::<Type>(),
                         ann.type_,
-                        ParsingMode::Pat,
+                        Mode::Molt,
                     )
                     .map_err(|e| Error::parse(e, file_id))?,
                 })
@@ -157,7 +157,7 @@ impl UnresolvedMoltFile {
                 type_annotations: type_annotations?,
                 rulesets: self.rules,
             },
-            pat_ctx.replace(Ctx::new(ParsingMode::Pat)),
+            pat_ctx.replace(Ctx::new(Mode::Molt)),
         ))
     }
 }

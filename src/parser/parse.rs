@@ -10,9 +10,8 @@ use std::rc::Rc;
 use std::str::FromStr;
 
 use crate::{
-    Ctx, Id, KindType, List, ListMatchingMode, NodeId, NodeList, NodeType, ParsingMode,
-    PatNodeList, Pattern, RealNodeList, Single, SingleMatchingMode, Spanned, SpannedPat, ToNode,
-    Var, WithSpan,
+    Ctx, Id, KindType, List, ListMatchingMode, Mode, NodeId, NodeList, NodeType, PatNodeList,
+    Pattern, RealNodeList, Single, SingleMatchingMode, Spanned, SpannedPat, ToNode, Var, WithSpan,
 };
 use discouraged::Speculative;
 use proc_macro2::{Delimiter, Group, Literal, Punct, Span, TokenStream, TokenTree};
@@ -226,7 +225,7 @@ pub struct ParseBuffer<'a> {
     marker: PhantomData<Cursor<'a>>,
     pub(super) unexpected: Cell<Option<Rc<Cell<Unexpected>>>>,
     ctx: ParseCtx,
-    mode: ParsingMode,
+    mode: Mode,
 }
 
 impl<'a> Drop for ParseBuffer<'a> {
@@ -318,7 +317,7 @@ pub(crate) fn new_parse_buffer(
     cursor: Cursor,
     unexpected: Rc<Cell<Unexpected>>,
     ctx: ParseCtx,
-    mode: ParsingMode,
+    mode: Mode,
 ) -> ParseBuffer {
     ParseBuffer {
         scope,
@@ -704,7 +703,7 @@ impl<'a> ParseBuffer<'a> {
         }
     }
 
-    pub(crate) fn mode(&self) -> ParsingMode {
+    pub(crate) fn mode(&self) -> Mode {
         self.mode
     }
 
@@ -796,7 +795,7 @@ impl Parse for Literal {
     }
 }
 
-fn tokens_to_parse_buffer(ctx: ParseCtx, tokens: &TokenBuffer, mode: ParsingMode) -> ParseBuffer {
+fn tokens_to_parse_buffer(ctx: ParseCtx, tokens: &TokenBuffer, mode: Mode) -> ParseBuffer {
     let scope = Span::call_site();
     let cursor = tokens.begin();
     let unexpected = Rc::new(Cell::new(Unexpected::None));
@@ -807,7 +806,7 @@ fn parse2_impl<T>(
     ctx: ParseCtx,
     f: impl FnOnce(ParseStream) -> Result<T>,
     tokens: TokenStream,
-    mode: ParsingMode,
+    mode: Mode,
 ) -> Result<T> {
     let buf = TokenBuffer::new2(tokens);
     let state = tokens_to_parse_buffer(ctx.clone(), &buf, mode);
@@ -820,12 +819,12 @@ fn parse2_impl<T>(
     }
 }
 
-pub fn parse_str<T: Parse>(s: &str, mode: ParsingMode) -> Result<T> {
+pub fn parse_str<T: Parse>(s: &str, mode: Mode) -> Result<T> {
     let ctx = Rc::new(RefCell::new(Ctx::new(mode)));
     parse2_impl(ctx, T::parse, proc_macro2::TokenStream::from_str(s)?, mode)
 }
 
-pub(crate) fn parse_str_ctx<T: Parse>(s: &str, mode: ParsingMode) -> Result<(T, Ctx<Node>)> {
+pub(crate) fn parse_str_ctx<T: Parse>(s: &str, mode: Mode) -> Result<(T, Ctx<Node>)> {
     let ctx = Rc::new(RefCell::new(Ctx::new(mode)));
     parse2_impl(
         ctx.clone(),
@@ -839,7 +838,7 @@ pub(crate) fn parse_str_ctx<T: Parse>(s: &str, mode: ParsingMode) -> Result<(T, 
 pub fn parse_ctx<T>(
     f: impl FnOnce(ParseStream) -> Result<T>,
     s: &str,
-    mode: ParsingMode,
+    mode: Mode,
 ) -> Result<(T, Ctx<Node>)> {
     let ctx = Rc::new(RefCell::new(Ctx::new(mode)));
     parse2_impl(ctx.clone(), f, proc_macro2::TokenStream::from_str(s)?, mode)
@@ -850,7 +849,7 @@ pub fn parse_with_ctx<T>(
     ctx: ParseCtx,
     f: impl FnOnce(ParseStream) -> Result<T>,
     tokens: TokenStream,
-    mode: ParsingMode,
+    mode: Mode,
 ) -> Result<T> {
     parse2_impl(ctx.clone(), f, tokens, mode)
 }
