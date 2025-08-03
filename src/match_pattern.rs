@@ -14,20 +14,20 @@ pub type IsMatch<T = ()> = Result<T, ()>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Binding {
-    pat: Option<Id>,
-    ast: Option<Id>,
+    molt: Option<Id>,
+    real: Option<Id>,
 }
 
 impl Binding {
-    fn new(pat: Option<Id>) -> Self {
-        Self { pat, ast: None }
+    fn new(molt: Option<Id>) -> Self {
+        Self { molt, real: None }
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct MultiBinding {
-    pub pat: Option<Id>,
-    pub ast: Vec<Id>,
+    pub molt: Option<Id>,
+    pub real: Vec<Id>,
 }
 
 #[derive(Debug)]
@@ -63,40 +63,40 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
         }
     }
 
-    fn add_binding(&mut self, key: Id, ast_id: Id) -> IsMatch {
+    fn add_binding(&mut self, key: Id, real_id: Id) -> IsMatch {
         if self.ctx.config().debug_print {
             println!(
                 "\tBind ${} to {}",
                 &self.ctx.get_var(key).name(),
-                self.ctx.print(ast_id)
+                self.ctx.print(real_id)
             );
         }
         let binding = self.bindings.get_mut(&key).unwrap();
-        if let Some(ast_id_2) = binding.ast {
-            self.cmp_ids(ast_id, ast_id_2)
+        if let Some(real_id_2) = binding.real {
+            self.cmp_ids(real_id, real_id_2)
         } else {
-            binding.ast = Some(ast_id);
-            if let Some(pat_id) = binding.pat {
-                self.cmp_ids(ast_id, pat_id)
+            binding.real = Some(real_id);
+            if let Some(molt_id) = binding.molt {
+                self.cmp_ids(real_id, molt_id)
             } else {
                 IsMatch::Ok(())
             }
         }
     }
 
-    fn cmp_ids(&mut self, ast_id: Id, pat_id: Id) -> IsMatch {
+    fn cmp_ids(&mut self, real_id: Id, id: Id) -> IsMatch {
         if self.ctx.config().debug_print {
             println!(
                 "Compare \n\t{}\n\t{}",
-                self.ctx.print(ast_id).replace("\n", " "),
-                self.ctx.print(pat_id),
+                self.ctx.print(real_id).replace("\n", " "),
+                self.ctx.print(id),
             );
         }
 
-        match self.ctx.get::<Node>(pat_id) {
-            Pattern::Pat(var) => self.add_binding(var, ast_id),
+        match self.ctx.get::<Node>(id) {
+            Pattern::Pat(var) => self.add_binding(var, real_id),
             Pattern::Real(pat) => {
-                self.cmp_syn::<Node, Node>(self.ctx.ast_ctx.get(ast_id).unwrap_real(), pat)
+                self.cmp_syn::<Node, Node>(self.ctx.real_ctx.get(real_id).unwrap_real(), pat)
             }
         }
     }
@@ -118,10 +118,10 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
 
     pub fn cmp_nodes<T: CmpSyn<Node, T, R>, R>(
         &mut self,
-        ast: NodeId<T>,
-        pat: NodeId<T>,
+        real: NodeId<T>,
+        molt: NodeId<T>,
     ) -> IsMatch {
-        self.cmp_ids(ast.into(), pat.into())
+        self.cmp_ids(real.into(), molt.into())
     }
 
     pub fn cmp_lists<T: CmpSyn<Node>, P>(
@@ -230,12 +230,12 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
 pub fn match_pattern<N: NodeType + CmpSyn<N>>(
     ctx: &MatchCtx<N>,
     vars: &[VarDecl],
-    var: Id,
-    ast: Id,
+    molt_var: Id,
+    real: Id,
     rules: &Rules,
 ) -> Vec<Match> {
     let mut match_ = Matcher::new_root(vars, rules, ctx);
-    match match_.add_binding(var, ast) {
+    match match_.add_binding(molt_var, real) {
         Ok(_) => vec![Match {
             bindings: match_
                 .bindings
@@ -244,8 +244,8 @@ pub fn match_pattern<N: NodeType + CmpSyn<N>>(
                     (
                         id,
                         MultiBinding {
-                            pat: bind.pat,
-                            ast: bind.ast.into_iter().collect(),
+                            molt: bind.molt,
+                            real: bind.real.into_iter().collect(),
                         },
                     )
                 })
@@ -283,21 +283,21 @@ pub fn match_pattern<N: NodeType + CmpSyn<N>>(
 
 fn make_single_binding(bind: Binding) -> MultiBinding {
     MultiBinding {
-        pat: bind.pat,
-        ast: bind.ast.into_iter().collect(),
+        molt: bind.molt,
+        real: bind.real.into_iter().collect(),
     }
 }
 
 fn make_multi_binding(bindings: Vec<Binding>) -> MultiBinding {
     // assert!(bindings.iter().all(|bind| bind.pat.is_none()));
     MultiBinding {
-        pat: None,
+        molt: None,
         // The previous .pop() operations will reverse the order, so
         // to restore the original order, we reverse here
-        ast: bindings
+        real: bindings
             .into_iter()
             .rev()
-            .map(|bind| bind.ast.unwrap())
+            .map(|bind| bind.real.unwrap())
             .collect(),
     }
 }

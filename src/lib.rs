@@ -68,8 +68,8 @@ fn match_pattern_data<'a>(
     config: &'a Config,
 ) -> MatchPatternData<'a> {
     MatchPatternData {
-        rust_path: input.name(rust_file_id).unwrap().unwrap_path(),
-        rust_src: input.source(rust_file_id).unwrap(),
+        real_path: input.name(rust_file_id).unwrap().unwrap_path(),
+        real_src: input.source(rust_file_id).unwrap(),
         molt_src: input.source(input.molt_file_id()).unwrap(),
         config,
     }
@@ -102,27 +102,27 @@ impl MoltFile {
 
     fn match_pattern<'a>(
         &'a self,
-        ast_ctx: &'a CtxR,
-        pat_ctx: &'a CtxR,
+        real_ctx: &'a CtxR,
+        molt_ctx: &'a CtxR,
         var: Id,
         data: MatchPatternData<'a>,
         lsp_client: &'a mut LspClient,
     ) -> MatchResult<'a> {
         let rules = &self.get_rules();
-        let ctx = MatchCtx::new(pat_ctx, ast_ctx, data.clone());
+        let ctx = MatchCtx::new(molt_ctx, real_ctx, data.clone());
         if ctx.config().debug_print {
             ctx.dump();
         }
-        let pat_kind = ctx.pat_ctx.get_var(var).kind();
+        let pat_kind = ctx.molt_ctx.get_var(var).kind();
         let matches = ctx
-            .ast_ctx
+            .real_ctx
             .iter()
             .flat_map(|item| {
-                let node: Pattern<&Node, Id> = ctx.ast_ctx.get(item);
+                let node: Pattern<&Node, Id> = ctx.real_ctx.get(item);
                 let is_of_kind = match node {
                     crate::Pattern::Real(node) => node.is_of_kind(pat_kind),
                     crate::Pattern::Pat(var) => ctx
-                        .ast_ctx
+                        .real_ctx
                         .get_var(var)
                         .kind()
                         .is_comparable_to(pat_kind.into_node_kind()),
@@ -136,8 +136,8 @@ impl MoltFile {
             .filter(|match_| {
                 lsp_client.check_type_annotations(
                     &self.type_annotations,
-                    ast_ctx,
-                    pat_ctx,
+                    real_ctx,
+                    molt_ctx,
                     &data,
                     match_,
                 )
@@ -163,7 +163,7 @@ impl<'a> MatchResult<'a> {
             .map(|match_| {
                 let match_var = print.unwrap_or(self.var);
                 let binding = match_.get_binding(match_var);
-                let span = self.ctx.ast_ctx.get_span(*binding.ast.first().unwrap());
+                let span = self.ctx.real_ctx.get_span(*binding.real.first().unwrap());
                 let var_name = |var| format!("${}", self.ctx.get_var(var).name());
                 let mut diagnostic = Diagnostic::note().with_message("Match").with_labels(vec![
                     Label::primary(file_id, span.byte_range()).with_message(var_name(match_var)),
@@ -175,7 +175,7 @@ impl<'a> MatchResult<'a> {
                     if key == match_var {
                         continue;
                     }
-                    for node in binding.ast.iter() {
+                    for node in binding.real.iter() {
                         diagnostic = diagnostic.with_note(format!(
                             "{} = {}",
                             var_name(key),
@@ -211,7 +211,7 @@ pub fn run(
     };
 
     for rust_file_id in input.iter_rust_src() {
-        let (_, ast_ctx) = RustFile::new(input, rust_file_id)?;
+        let (_, real_ctx) = RustFile::new(input, rust_file_id)?;
         let data = match_pattern_data(input, rust_file_id, &config);
         match molt_file.command() {
             Command::Match(MatchCommand {
@@ -219,7 +219,7 @@ pub fn run(
                 print,
             }) => {
                 let match_result = molt_file.match_pattern(
-                    &ast_ctx,
+                    &real_ctx,
                     &pat_ctx,
                     pat_var.unwrap(),
                     data,
@@ -229,7 +229,7 @@ pub fn run(
             }
             Command::Modify(ModifyCommand { modifies, match_ }) => {
                 let match_result = molt_file.match_pattern(
-                    &ast_ctx,
+                    &real_ctx,
                     &pat_ctx,
                     match_.unwrap(),
                     data,

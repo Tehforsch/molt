@@ -207,8 +207,8 @@ fn check_overlap(modifications: &[Modification]) -> Result<(), Error> {
 }
 
 fn make_modification(ctx: &MatchCtx<Node>, match_: &Match, input: Id, output: Id) -> Modification {
-    let ast = *match_.get_binding(input).ast.first().unwrap();
-    let ast_span = ctx.ast_ctx.get_span(ast);
+    let ast = *match_.get_binding(input).real.first().unwrap();
+    let ast_span = ctx.real_ctx.get_span(ast);
     Modification {
         span: ast_span,
         new_code: get_modified_code(ctx, match_, output),
@@ -217,14 +217,14 @@ fn make_modification(ctx: &MatchCtx<Node>, match_: &Match, input: Id, output: Id
 
 fn get_modified_code(ctx: &MatchCtx<Node>, match_: &Match, output: Id) -> String {
     let binding = match_.get_binding(output);
-    let mut code = if let Some(ast_binding) = binding.ast.first() {
+    let mut code = if let Some(ast_binding) = binding.real.first() {
         ctx.print(*ast_binding).to_string()
     } else {
-        let pat_id = binding.pat.unwrap();
+        let pat_id = binding.molt.unwrap();
         if pat_id.is_var() {
             get_modified_code(ctx, match_, pat_id)
         } else {
-            ctx.print(binding.pat.unwrap()).to_string()
+            ctx.print(binding.molt.unwrap()).to_string()
         }
     };
     loop {
@@ -244,7 +244,7 @@ fn replace_first_variable(
     mut vars: Vec<TokenVar>,
 ) {
     if let Some(var) = vars.pop() {
-        let var_id = ctx.pat_ctx.get_id_by_name(&var.name);
+        let var_id = ctx.molt_ctx.get_id_by_name(&var.name);
         let new_code = get_modified_code(ctx, match_, var_id);
         sc.replace_range(var.span.byte_range(), &new_code);
     }

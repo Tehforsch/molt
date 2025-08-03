@@ -5,23 +5,27 @@ use crate::{Ctx, Id, Mode, NodeType, Pattern, ToNode, Var};
 
 #[derive(Clone)]
 pub struct MatchPatternData<'a> {
-    pub rust_src: &'a str,
+    pub real_src: &'a str,
     pub molt_src: &'a str,
-    pub rust_path: &'a Path,
+    pub real_path: &'a Path,
     pub config: &'a Config,
 }
 
 pub struct MatchCtx<'a, Node: NodeType> {
-    pub pat_ctx: &'a Ctx<Node>,
-    pub ast_ctx: &'a Ctx<Node>,
+    pub molt_ctx: &'a Ctx<Node>,
+    pub real_ctx: &'a Ctx<Node>,
     data: MatchPatternData<'a>,
 }
 
 impl<'a, Node: NodeType> MatchCtx<'a, Node> {
-    pub fn new(pat_ctx: &'a Ctx<Node>, ast_ctx: &'a Ctx<Node>, data: MatchPatternData<'a>) -> Self {
+    pub fn new(
+        molt_ctx: &'a Ctx<Node>,
+        real_ctx: &'a Ctx<Node>,
+        data: MatchPatternData<'a>,
+    ) -> Self {
         Self {
-            pat_ctx,
-            ast_ctx,
+            molt_ctx,
+            real_ctx,
             data,
         }
     }
@@ -32,60 +36,60 @@ impl<'a, Node: NodeType> MatchCtx<'a, Node> {
 
     pub fn dump(&self) {
         println!("--------------------------------");
-        for id in self.ast_ctx.iter() {
-            let node = self.ast_ctx.get::<Node>(id).unwrap_real();
+        for id in self.real_ctx.iter() {
+            let node = self.real_ctx.get::<Node>(id).unwrap_real();
             let kind_str = format!("{:?}", node.node_kind());
             println!(
-                "AstNode({:02}): {:13} = {}",
+                "RealNode({:02}): {:13} = {}",
                 id.unwrap_idx(),
                 kind_str,
-                self.print_ast(id)
+                self.print_real(id)
             );
         }
         println!("--------------------------------");
-        for id in self.pat_ctx.iter() {
-            let node = self.pat_ctx.get::<Node>(id).unwrap_real();
+        for id in self.molt_ctx.iter() {
+            let node = self.molt_ctx.get::<Node>(id).unwrap_real();
             let kind_str = format!("{:?}", node.node_kind());
             println!(
-                "PatNode({:02}): {:13} = {}",
+                "MoltNode({:02}): {:13} = {}",
                 id.unwrap_idx(),
                 kind_str,
-                self.print_pat(id)
+                self.print_molt(id)
             );
         }
         println!("--------------------------------");
-        for (idx, var) in self.pat_ctx.iter_vars().enumerate() {
-            println!("PatVar({:02}): {:14} = {:?}", idx, "", var.name());
+        for (idx, var) in self.molt_ctx.iter_vars().enumerate() {
+            println!("MoltVar({:02}): {:14} = {:?}", idx, "", var.name());
         }
     }
 
-    fn print_ast(&self, id: Id) -> &str {
-        self.ast_ctx.print(id, self.data.rust_src)
+    fn print_real(&self, id: Id) -> &str {
+        self.real_ctx.print(id, self.data.real_src)
     }
 
-    fn print_pat(&self, id: Id) -> &str {
+    fn print_molt(&self, id: Id) -> &str {
         if id.is_var() {
-            self.pat_ctx.get_var(id).name()
+            self.molt_ctx.get_var(id).name()
         } else {
-            self.pat_ctx.print(id, self.data.molt_src)
+            self.molt_ctx.print(id, self.data.molt_src)
         }
     }
 
     pub fn print(&self, id: Id) -> &str {
         match id.mode() {
-            Mode::Real => self.print_ast(id),
-            Mode::Molt => self.print_pat(id),
+            Mode::Real => self.print_real(id),
+            Mode::Molt => self.print_molt(id),
         }
     }
 
     pub fn get<T: ToNode<Node>>(&self, id: Id) -> Pattern<&T, Id> {
         match id.mode() {
-            Mode::Real => self.ast_ctx.get(id),
-            Mode::Molt => self.pat_ctx.get(id),
+            Mode::Real => self.real_ctx.get(id),
+            Mode::Molt => self.molt_ctx.get(id),
         }
     }
 
     pub fn get_var(&self, var: Id) -> &Var<Node::Kind> {
-        self.pat_ctx.get_var(var)
+        self.molt_ctx.get_var(var)
     }
 }
