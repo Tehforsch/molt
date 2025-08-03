@@ -35,7 +35,7 @@ pub use error::{Error, emit_error};
 pub use input::{Diagnostic, FileId, Input, MoltSource};
 use lsp::LspClient;
 pub use match_ctx::{MatchCtx, MatchPatternData};
-pub use match_pattern::{Binding, Match, Matcher, PatType, match_pattern};
+pub use match_pattern::{Binding, Match, Matcher, match_pattern};
 use molt_grammar::{Command, MatchCommand, ModifyCommand, MoltFile, UnresolvedMoltFile};
 pub use node::{KindType, NodeType, ToNode};
 pub use node_list::{
@@ -51,9 +51,11 @@ struct RustFile;
 type CtxR = crate::ctx::Ctx<Node>;
 type PatCtx = CtxR;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum ParsingMode {
+    /// For parsing the real source code.
     Real,
+    /// For parsing source code within patterns in molt files.
     Pat,
 }
 
@@ -174,7 +176,7 @@ impl<'a> MatchResult<'a> {
                         diagnostic = diagnostic.with_note(format!(
                             "{} = {}",
                             var_name(key),
-                            self.ctx.print_ast(*node),
+                            self.ctx.print(*node),
                         ));
                     }
                 }

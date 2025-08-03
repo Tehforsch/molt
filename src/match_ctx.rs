@@ -1,8 +1,7 @@
 use std::path::Path;
 
 use crate::config::Config;
-use crate::match_pattern::PatType;
-use crate::{Ctx, Id, NodeType, Pattern, ToNode, Var};
+use crate::{Ctx, Id, NodeType, ParsingMode, Pattern, ToNode, Var};
 
 #[derive(Clone)]
 pub struct MatchPatternData<'a> {
@@ -60,22 +59,29 @@ impl<'a, Node: NodeType> MatchCtx<'a, Node> {
         }
     }
 
-    pub fn print_ast(&self, id: Id) -> &str {
+    fn print_ast(&self, id: Id) -> &str {
         self.ast_ctx.print(id, self.data.rust_src)
     }
 
-    pub fn print_pat(&self, id: Id) -> &str {
-        if id.is_pat() {
+    fn print_pat(&self, id: Id) -> &str {
+        if id.is_var() {
             self.pat_ctx.get_var(id).name()
         } else {
             self.pat_ctx.print(id, self.data.molt_src)
         }
     }
 
-    pub fn get<T: ToNode<Node>>(&self, pat_id: Id, pat_type: PatType) -> Pattern<&T, Id> {
-        match pat_type {
-            PatType::FromAst => self.ast_ctx.get(pat_id),
-            PatType::FromPat => self.pat_ctx.get(pat_id),
+    pub fn print(&self, id: Id) -> &str {
+        match id.mode() {
+            ParsingMode::Real => self.print_ast(id),
+            ParsingMode::Pat => self.print_pat(id),
+        }
+    }
+
+    pub fn get<T: ToNode<Node>>(&self, id: Id) -> Pattern<&T, Id> {
+        match id.mode() {
+            ParsingMode::Real => self.ast_ctx.get(id),
+            ParsingMode::Pat => self.pat_ctx.get(id),
         }
     }
 

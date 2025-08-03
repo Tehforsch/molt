@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::collections::hash_map::Entry;
 
 use crate::cmp_syn::CmpSyn;
 use crate::match_ctx::MatchCtx;
@@ -31,12 +30,6 @@ pub struct MultiBinding {
     pub ast: Vec<Id>,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub enum PatType {
-    FromAst,
-    FromPat,
-}
-
 #[derive(Debug)]
 pub struct Match {
     bindings: HashMap<Id, MultiBinding>,
@@ -56,9 +49,6 @@ pub struct Matcher<'a, Node: NodeType> {
     rules: &'a Rules,
     ctx: &'a MatchCtx<'a, Node>,
     bindings: HashMap<Id, Binding>,
-    // TODO: Get rid of this? Probably by making the id type contain
-    // information about which ctx it belongs to.
-    pat_type: PatType,
 }
 
 impl<'a, Node: NodeType> Matcher<'a, Node> {
@@ -70,7 +60,6 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
                 .map(|var| (var.id, Binding::new(var.node)))
                 .collect(),
             ctx,
-            pat_type: PatType::FromPat,
         }
     }
 
@@ -79,44 +68,32 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
             println!(
                 "\tBind ${} to {}",
                 &self.ctx.get_var(key).name(),
-                self.ctx.print_ast(ast_id)
+                self.ctx.print(ast_id)
             );
         }
         let binding = self.bindings.get_mut(&key).unwrap();
         if let Some(ast_id_2) = binding.ast {
-            self.cmp_ids(ast_id, ast_id_2, PatType::FromAst)
+            self.cmp_ids(ast_id, ast_id_2)
         } else {
             binding.ast = Some(ast_id);
             if let Some(pat_id) = binding.pat {
-                self.cmp_ids(ast_id, pat_id, PatType::FromPat)
+                self.cmp_ids(ast_id, pat_id)
             } else {
                 IsMatch::Ok(())
             }
         }
     }
 
-    fn cmp_ids(&mut self, ast_id: Id, pat_id: Id, pat_type: PatType) -> IsMatch {
-        // Need to double check this logic, but the idea here is that
-        // as long as we're comparing things with a given pat type,
-        // this won't change for any calls further down the line
-        // (unless it explicitly changes it via add_binding).  The
-        // conventional thing to do here would be to pass the pat type
-        // down the line in the `cmp_*` calls, but this is quite
-        // cumbersome given that it appears absolutely everywhere, so
-        // I'm doing this.
-        self.pat_type = pat_type;
+    fn cmp_ids(&mut self, ast_id: Id, pat_id: Id) -> IsMatch {
         if self.ctx.config().debug_print {
             println!(
                 "Compare \n\t{}\n\t{}",
-                self.ctx.print_ast(ast_id).replace("\n", " "),
-                match pat_type {
-                    PatType::FromAst => self.ctx.print_ast(pat_id).replace("\n", " "),
-                    PatType::FromPat => self.ctx.print_pat(pat_id).replace("\n", " "),
-                }
+                self.ctx.print(ast_id).replace("\n", " "),
+                self.ctx.print(pat_id),
             );
         }
 
-        match self.ctx.get::<Node>(pat_id, pat_type) {
+        match self.ctx.get::<Node>(pat_id) {
             Pattern::Pat(var) => self.add_binding(var, ast_id),
             Pattern::Real(pat) => {
                 self.cmp_syn::<Node, Node>(self.ctx.ast_ctx.get(ast_id).unwrap_real(), pat)
@@ -144,7 +121,7 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
         ast: NodeId<T>,
         pat: NodeId<T>,
     ) -> IsMatch {
-        self.cmp_ids(ast.into(), pat.into(), self.pat_type)
+        self.cmp_ids(ast.into(), pat.into())
     }
 
     pub fn cmp_lists<T: CmpSyn<Node>, P>(
@@ -181,7 +158,7 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
             SingleMatchingMode::Any => todo!(),
             SingleMatchingMode::All => {
                 for item1 in ts1.iter() {
-                    self.cmp_ids((*item1).into(), ts2.item().into(), self.pat_type)?;
+                    self.cmp_ids((*item1).into(), ts2.item().into())?;
                 }
             }
         }

@@ -218,13 +218,13 @@ fn make_modification(ctx: &MatchCtx<Node>, match_: &Match, input: Id, output: Id
 fn get_modified_code(ctx: &MatchCtx<Node>, match_: &Match, output: Id) -> String {
     let binding = match_.get_binding(output);
     let mut code = if let Some(ast_binding) = binding.ast.first() {
-        ctx.print_ast(*ast_binding).to_string()
+        ctx.print(*ast_binding).to_string()
     } else {
         let pat_id = binding.pat.unwrap();
-        if pat_id.is_pat() {
+        if pat_id.is_var() {
             get_modified_code(ctx, match_, pat_id)
         } else {
-            ctx.print_pat(binding.pat.unwrap()).to_string()
+            ctx.print(binding.pat.unwrap()).to_string()
         }
     };
     loop {

@@ -821,19 +821,19 @@ fn parse2_impl<T>(
 }
 
 pub fn parse_str<T: Parse>(s: &str, mode: ParsingMode) -> Result<T> {
-    let ctx = ParseCtx::default();
+    let ctx = Rc::new(RefCell::new(Ctx::new(mode)));
     parse2_impl(ctx, T::parse, proc_macro2::TokenStream::from_str(s)?, mode)
 }
 
 pub(crate) fn parse_str_ctx<T: Parse>(s: &str, mode: ParsingMode) -> Result<(T, Ctx<Node>)> {
-    let ctx = ParseCtx::default();
+    let ctx = Rc::new(RefCell::new(Ctx::new(mode)));
     parse2_impl(
         ctx.clone(),
         T::parse,
         proc_macro2::TokenStream::from_str(s)?,
         mode,
     )
-    .map(|t| (t, ctx.take()))
+    .map(|t| (t, ctx.replace(Ctx::new(mode))))
 }
 
 pub fn parse_ctx<T>(
@@ -841,9 +841,9 @@ pub fn parse_ctx<T>(
     s: &str,
     mode: ParsingMode,
 ) -> Result<(T, Ctx<Node>)> {
-    let ctx = ParseCtx::default();
+    let ctx = Rc::new(RefCell::new(Ctx::new(mode)));
     parse2_impl(ctx.clone(), f, proc_macro2::TokenStream::from_str(s)?, mode)
-        .map(|t| (t, ctx.take()))
+        .map(|t| (t, ctx.replace(Ctx::new(mode))))
 }
 
 pub fn parse_with_ctx<T>(

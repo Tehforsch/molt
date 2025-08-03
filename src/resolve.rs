@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::rust_grammar::{Node, TokenStream, TokenTree, Type, parse_node_with_kind};
-use crate::{Id, ParsingMode, Span, Var, VarDecl};
+use crate::{Ctx, Id, ParsingMode, Span, Var, VarDecl};
 
 use crate::molt_grammar::{
     MatchCommand, ModifyCommand, TokenVar, TypeAnnotation, UnresolvedMoltFile, UnresolvedVarDecl,
@@ -96,7 +96,7 @@ impl UnresolvedMoltFile {
         let command = get_command(self.commands, &vars, &map, file_id)?;
         // TODO: Warn unused
         // Populate the context with all variables.
-        let mut pat_ctx = PatCtx::default();
+        let mut pat_ctx = PatCtx::new(ParsingMode::Pat);
         let vars: Vec<_> = vars
             .into_iter()
             .map(|var| {
@@ -157,7 +157,7 @@ impl UnresolvedMoltFile {
                 type_annotations: type_annotations?,
                 rulesets: self.rules,
             },
-            pat_ctx.take(),
+            pat_ctx.replace(Ctx::new(ParsingMode::Pat)),
         ))
     }
 }
