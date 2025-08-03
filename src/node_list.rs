@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::{NodeId, ParsingMode, Pattern};
+use crate::{Mode, NodeId, Pattern};
 
 #[derive(Debug)]
 pub struct NoPunct;
@@ -82,10 +82,10 @@ impl<T, P> List<T, P> {
 }
 
 impl<T, P> NodeList<T, P> {
-    pub fn empty(mode: ParsingMode) -> Self {
+    pub fn empty(mode: Mode) -> Self {
         match mode {
-            ParsingMode::Real => Self::Real(RealNodeList::empty()),
-            ParsingMode::Pat => Self::Pat(PatNodeList::empty()),
+            Mode::Real => Self::Real(RealNodeList::empty()),
+            Mode::Molt => Self::Pat(PatNodeList::empty()),
         }
     }
 

@@ -51,12 +51,15 @@ struct RustFile;
 type CtxR = crate::ctx::Ctx<Node>;
 type PatCtx = CtxR;
 
+/// Used in the parsing logic and the AST context
+/// to remember whether an item or variable belongs
+/// to real source code or code within molt patterns.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub enum ParsingMode {
-    /// For parsing the real source code.
+pub enum Mode {
+    /// Represents something within the real source code.
     Real,
-    /// For parsing source code within patterns in molt files.
-    Pat,
+    /// Represents something within a pattern in the molt code.
+    Molt,
 }
 
 fn match_pattern_data<'a>(
@@ -82,8 +85,8 @@ impl MoltFile {
     fn new(input: &Input) -> Result<(Self, PatCtx), Error> {
         let file_id = input.molt_file_id();
         let source = input.source(file_id).unwrap();
-        let unresolved: UnresolvedMoltFile = crate::parser::parse_str(source, ParsingMode::Pat)
-            .map_err(|e| Error::parse(e, file_id))?;
+        let unresolved: UnresolvedMoltFile =
+            crate::parser::parse_str(source, Mode::Molt).map_err(|e| Error::parse(e, file_id))?;
         unresolved.resolve(file_id)
     }
 
@@ -147,7 +150,7 @@ impl MoltFile {
 impl RustFile {
     fn new(input: &Input, file_id: FileId) -> Result<(Self, CtxR), Error> {
         let source = input.source(file_id).unwrap();
-        crate::rust_grammar::parse_file(source, ParsingMode::Real)
+        crate::rust_grammar::parse_file(source, Mode::Real)
             .map_err(|e| Error::parse(e, file_id))
             .map(|(_, ctx)| (RustFile, ctx))
     }
