@@ -1,11 +1,11 @@
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::ffi::{CStr, CString};
 use std::fmt::{self, Display};
 use std::rc::Rc;
 use std::str::{self, FromStr};
 
 use crate::match_pattern::IsMatch;
-use crate::{CmpSyn, ParsingMode};
+use crate::{CmpSyn, Ctx, ParsingMode};
 use derive_macro::CmpSyn;
 use proc_macro2::{Literal, Punct, Span};
 
@@ -669,7 +669,7 @@ fn peek_impl(cursor: Cursor, peek: fn(ParseStream) -> bool) -> bool {
         scope,
         cursor,
         unexpected,
-        ParseCtx::default(),
+        Rc::new(RefCell::new(Ctx::new(ParsingMode::Real))),
         ParsingMode::Pat,
     );
     peek(&buffer)

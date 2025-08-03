@@ -1,18 +1,22 @@
 use std::marker::PhantomData;
 
-use crate::{NodeType, Pattern, Span, Spanned, ToNode, span::SpannedPat};
+use crate::{NodeType, ParsingMode, Pattern, Span, Spanned, ToNode, span::SpannedPat};
 
 type InternalId = Pattern<usize, usize>;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct Id(InternalId);
+pub struct Id(InternalId, ParsingMode);
 
 impl Id {
-    pub fn is_pat(&self) -> bool {
+    pub fn is_var(&self) -> bool {
         match self.0 {
             Pattern::Real(_) => false,
             Pattern::Pat(_) => true,
         }
+    }
+
+    pub(crate) fn mode(&self) -> ParsingMode {
+        self.1
     }
 }
 
@@ -25,7 +29,7 @@ impl<T> NodeId<T> {
     // used instead of Expr::PLACEHOLDER in parsing.
     pub fn placeholder() -> Self {
         Self {
-            id: Id(InternalId::Real(usize::MAX)),
+            id: Id(InternalId::Real(usize::MAX), ParsingMode::Real),
             _marker: PhantomData,
         }
     }
@@ -117,13 +121,14 @@ pub struct Ctx<Node: NodeType> {
     nodes: Vec<Node>,
     vars: Vec<Var<Node::Kind>>,
     spans: Vec<Span>,
+    mode: ParsingMode,
 }
 
 impl<Node: NodeType> Ctx<Node> {
     fn add_node(&mut self, node: Spanned<Node>) -> Id {
         self.spans.push(node.span());
         self.nodes.push(node.item());
-        Id(InternalId::Real(self.nodes.len() - 1))
+        Id(InternalId::Real(self.nodes.len() - 1), self.mode)
     }
 
     pub fn add<T: ToNode<Node>>(&mut self, t: Spanned<T>) -> NodeId<T> {
@@ -132,7 +137,7 @@ impl<Node: NodeType> Ctx<Node> {
 
     fn add_var_internal(&mut self, var: Var<Node::Kind>) -> Id {
         self.vars.push(var);
-        Id(InternalId::Pat(self.vars.len() - 1))
+        Id(InternalId::Pat(self.vars.len() - 1), self.mode)
     }
 
     pub fn add_var<T: ToNode<Node>>(&mut self, var: Var<Node::Kind>) -> NodeId<T> {
@@ -188,7 +193,7 @@ impl<Node: NodeType> Ctx<Node> {
             .iter()
             .enumerate()
             .find(|(_, var)| var.name == name)
-            .map(|(i, var)| (Id(InternalId::Pat(i)), var))
+            .map(|(i, var)| (Id(InternalId::Pat(i), self.mode), var))
     }
 
     pub fn get_kind_by_name(&self, name: &str) -> Node::Kind {
@@ -200,7 +205,7 @@ impl<Node: NodeType> Ctx<Node> {
     }
 
     pub fn iter(&self) -> impl Iterator<Item = Id> {
-        (0..self.nodes.len()).map(|id| Id(InternalId::Real(id)))
+        (0..self.nodes.len()).map(|id| Id(InternalId::Real(id), self.mode))
     }
 
     pub(crate) fn iter_vars(&self) -> impl Iterator<Item = &Var<Node::Kind>> {
@@ -220,12 +225,13 @@ impl<Node: NodeType> Ctx<Node> {
     }
 }
 
-impl<Node: NodeType> Default for Ctx<Node> {
-    fn default() -> Self {
+impl<Node: NodeType> Ctx<Node> {
+    pub fn new(mode: ParsingMode) -> Self {
         Self {
             nodes: vec![],
             vars: vec![],
             spans: vec![],
+            mode,
         }
     }
 }
