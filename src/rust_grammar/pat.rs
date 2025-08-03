@@ -8,6 +8,7 @@ use crate::parser::parse::{
 };
 use crate::parser::punctuated::Punctuated;
 use crate::parser::token;
+use crate::rust_grammar::Node;
 use crate::rust_grammar::attr::Attribute;
 use crate::rust_grammar::expr::{
     Expr, ExprConst, ExprLit, ExprMacro, ExprPath, ExprRange, Member, RangeLimits,
@@ -25,6 +26,7 @@ use crate::rust_grammar::ty::Type;
 use crate::rust_grammar::verbatim;
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A pattern in a local binding, function signature, match expression, or
 /// various other places.
 pub enum Pat {
@@ -160,6 +162,7 @@ pub struct PatMulti;
 pub struct PatMultiLeadingVert;
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A pattern that binds a new variable: `ref mut binding @ SUBPATTERN`.
 ///
 /// It may also be a unit struct or struct variant (e.g. `None`), or a
@@ -173,6 +176,7 @@ pub struct PatIdent {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A pattern that matches any one of a set of cases.
 pub struct PatOr {
     pub attrs: Vec<Attribute>,
@@ -181,6 +185,7 @@ pub struct PatOr {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A parenthesized pattern: `(A | B)`.
 pub struct PatParen {
     pub attrs: Vec<Attribute>,
@@ -188,6 +193,7 @@ pub struct PatParen {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A reference pattern: `&mut var`.
 pub struct PatReference {
     pub attrs: Vec<Attribute>,
@@ -197,6 +203,7 @@ pub struct PatReference {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// The dots in a tuple or slice pattern: `[0, 1, ..]`.
 pub struct PatRest {
     pub attrs: Vec<Attribute>,
@@ -204,6 +211,7 @@ pub struct PatRest {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A dynamically sized slice pattern: `[a, b, ref i @ .., y, z]`.
 pub struct PatSlice {
     pub attrs: Vec<Attribute>,
@@ -211,6 +219,7 @@ pub struct PatSlice {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A struct or struct variant pattern: `Variant { x, y, .. }`.
 pub struct PatStruct {
     pub attrs: Vec<Attribute>,
@@ -222,6 +231,7 @@ pub struct PatStruct {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A tuple pattern: `(a, b)`.
 pub struct PatTuple {
     pub attrs: Vec<Attribute>,
@@ -229,6 +239,7 @@ pub struct PatTuple {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A tuple struct or tuple variant pattern: `Variant(x, y, .., z)`.
 pub struct PatTupleStruct {
     pub attrs: Vec<Attribute>,
@@ -239,6 +250,7 @@ pub struct PatTupleStruct {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A type ascription pattern: `foo: f64`.
 pub struct PatType {
     pub attrs: Vec<Attribute>,
@@ -248,6 +260,7 @@ pub struct PatType {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A pattern that matches any value: `_`.
 pub struct PatWild {
     pub attrs: Vec<Attribute>,
@@ -255,6 +268,7 @@ pub struct PatWild {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A single field in a struct pattern.
 ///
 /// Patterns like the fields of Foo `{ x, ref y, ref mut z }` are treated

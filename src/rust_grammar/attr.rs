@@ -6,6 +6,7 @@ use crate::parser::error::Result;
 use crate::parser::parse::discouraged::Speculative as _;
 use crate::parser::parse::{Parse, ParseNode, ParseStream};
 use crate::parser::token;
+use crate::rust_grammar::Node;
 use crate::rust_grammar::expr::{Expr, ExprLit};
 use crate::rust_grammar::ident::TokenIdent;
 use crate::rust_grammar::lit::Lit;
@@ -14,6 +15,7 @@ use crate::rust_grammar::mac::MacroDelimiter;
 use crate::rust_grammar::path::Path;
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An attribute, like `#[repr(transparent)]`.
 ///
 /// <br>
@@ -107,6 +109,7 @@ impl Attribute {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// Distinguishes between attributes that decorate an item and attributes
 /// that are contained within an item.
 ///
@@ -127,6 +130,7 @@ pub enum AttrStyle {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// Content of a compile-time structured attribute.
 ///
 /// ## Path
@@ -152,6 +156,7 @@ pub enum Meta {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A structured list within an attribute, like `derive(Copy, Clone)`.
 pub struct MetaList {
     pub path: Path,
@@ -160,6 +165,7 @@ pub struct MetaList {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A name-value pair within an attribute, like `feature = "nightly"`.
 pub struct MetaNameValue {
     pub path: Path,

@@ -5,6 +5,7 @@ use crate::{Id, NodeId, NodeList, Pattern, Spanned, SpannedPat, WithSpan};
 use derive_macro::CmpSyn;
 use proc_macro2::{Span, TokenStream};
 
+use crate::Node;
 use crate::parser::error::{Error, Result};
 use crate::parser::parse::discouraged::Speculative as _;
 use crate::parser::parse::{
@@ -176,6 +177,7 @@ struct ExprNoEagerBrace;
 pub struct ExprEarlierBoundaryRule;
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A Rust expression.
 pub enum Expr {
     /// A slice literal expression: `[a, b, c, d]`.
@@ -316,6 +318,7 @@ pub enum Expr {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A slice literal expression: `[a, b, c, d]`.
 pub struct ExprArray {
     pub attrs: Vec<Attribute>,
@@ -324,6 +327,7 @@ pub struct ExprArray {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An assignment expression: `a = compute()`.
 pub struct ExprAssign {
     pub attrs: Vec<Attribute>,
@@ -333,6 +337,7 @@ pub struct ExprAssign {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An async block: `async { ... }`.
 pub struct ExprAsync {
     pub attrs: Vec<Attribute>,
@@ -342,6 +347,7 @@ pub struct ExprAsync {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An await expression: `fut.await`.
 pub struct ExprAwait {
     pub attrs: Vec<Attribute>,
@@ -351,6 +357,7 @@ pub struct ExprAwait {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A binary operation: `a + b`, `a += b`.
 pub struct ExprBinary {
     pub attrs: Vec<Attribute>,
@@ -360,6 +367,7 @@ pub struct ExprBinary {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A blocked scope: `{ ... }`.
 pub struct ExprBlock {
     pub attrs: Vec<Attribute>,
@@ -368,6 +376,7 @@ pub struct ExprBlock {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A `break`, with an optional label to break and an optional
 /// expression.
 pub struct ExprBreak {
@@ -378,6 +387,7 @@ pub struct ExprBreak {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A function call expression: `invoke(a, b)`.
 pub struct ExprCall {
     pub attrs: Vec<Attribute>,
@@ -387,6 +397,7 @@ pub struct ExprCall {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A cast expression: `foo as f64`.
 pub struct ExprCast {
     pub attrs: Vec<Attribute>,
@@ -396,6 +407,7 @@ pub struct ExprCast {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A closure expression: `|a, b| a + b`.
 pub struct ExprClosure {
     pub attrs: Vec<Attribute>,
@@ -414,6 +426,7 @@ pub struct ExprClosure {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A const block: `const { ... }`.
 pub struct ExprConst {
     pub attrs: Vec<Attribute>,
@@ -422,6 +435,7 @@ pub struct ExprConst {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A `continue`, with an optional label.
 pub struct ExprContinue {
     pub attrs: Vec<Attribute>,
@@ -430,6 +444,7 @@ pub struct ExprContinue {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// Access of a named struct field (`obj.k`) or unnamed tuple struct
 /// field (`obj.0`).
 pub struct ExprField {
@@ -440,6 +455,7 @@ pub struct ExprField {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A for loop: `for pat in expr { ... }`.
 pub struct ExprForLoop {
     pub attrs: Vec<Attribute>,
@@ -452,6 +468,7 @@ pub struct ExprForLoop {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An expression contained within invisible delimiters.
 ///
 /// This variant is important for faithfully representing the precedence
@@ -464,6 +481,7 @@ pub struct ExprGroup {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An `if` expression with an optional `else` block: `if expr { ... }
 /// else { ... }`.
 ///
@@ -478,6 +496,7 @@ pub struct ExprIf {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A square bracketed indexing expression: `vector[2]`.
 pub struct ExprIndex {
     pub attrs: Vec<Attribute>,
@@ -487,6 +506,7 @@ pub struct ExprIndex {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// The inferred value of a const generic argument, denoted `_`.
 pub struct ExprInfer {
     pub attrs: Vec<Attribute>,
@@ -494,6 +514,7 @@ pub struct ExprInfer {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A `let` guard: `let Some(x) = opt`.
 pub struct ExprLet {
     pub attrs: Vec<Attribute>,
@@ -504,6 +525,7 @@ pub struct ExprLet {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A literal in place of an expression: `1`, `"foo"`.
 pub struct ExprLit {
     pub attrs: Vec<Attribute>,
@@ -511,6 +533,7 @@ pub struct ExprLit {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// Conditionless loop: `loop { ... }`.
 pub struct ExprLoop {
     pub attrs: Vec<Attribute>,
@@ -520,6 +543,7 @@ pub struct ExprLoop {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A macro invocation expression: `format!("{}", q)`.
 pub struct ExprMacro {
     pub attrs: Vec<Attribute>,
@@ -527,6 +551,7 @@ pub struct ExprMacro {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A `match` expression: `match n { Some(n) => {}, None => {} }`.
 pub struct ExprMatch {
     pub attrs: Vec<Attribute>,
@@ -537,6 +562,7 @@ pub struct ExprMatch {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A method call expression: `x.foo::<T>(a, b)`.
 pub struct ExprMethodCall {
     pub attrs: Vec<Attribute>,
@@ -549,6 +575,7 @@ pub struct ExprMethodCall {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A parenthesized expression: `(a + b)`.
 pub struct ExprParen {
     pub attrs: Vec<Attribute>,
@@ -557,6 +584,7 @@ pub struct ExprParen {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A path like `std::mem::replace` possibly containing generic
 /// parameters and a qualified self-type.
 ///
@@ -568,6 +596,7 @@ pub struct ExprPath {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A range expression: `1..2`, `1..`, `..2`, `1..=2`, `..=2`.
 pub struct ExprRange {
     pub attrs: Vec<Attribute>,
@@ -577,6 +606,7 @@ pub struct ExprRange {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// Address-of operation: `&raw const place` or `&raw mut place`.
 pub struct ExprRawAddr {
     pub attrs: Vec<Attribute>,
@@ -587,6 +617,7 @@ pub struct ExprRawAddr {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A referencing operation: `&a` or `&mut a`.
 pub struct ExprReference {
     pub attrs: Vec<Attribute>,
@@ -596,6 +627,7 @@ pub struct ExprReference {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An array literal constructed from one repeated element: `[0u8; N]`.
 pub struct ExprRepeat {
     pub attrs: Vec<Attribute>,
@@ -606,6 +638,7 @@ pub struct ExprRepeat {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A `return`, with an optional value to be returned.
 pub struct ExprReturn {
     pub attrs: Vec<Attribute>,
@@ -614,6 +647,7 @@ pub struct ExprReturn {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A struct literal expression: `Point { x: 1, y: 1 }`.
 ///
 /// The `rest` provides the value of the remaining fields as in `S { a:
@@ -629,6 +663,7 @@ pub struct ExprStruct {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A try-expression: `expr?`.
 pub struct ExprTry {
     pub attrs: Vec<Attribute>,
@@ -637,6 +672,7 @@ pub struct ExprTry {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A try block: `try { ... }`.
 pub struct ExprTryBlock {
     pub attrs: Vec<Attribute>,
@@ -645,6 +681,7 @@ pub struct ExprTryBlock {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A tuple expression: `(a, b, c, d)`.
 pub struct ExprTuple {
     pub attrs: Vec<Attribute>,
@@ -653,6 +690,7 @@ pub struct ExprTuple {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A unary operation: `!x`, `*x`.
 pub struct ExprUnary {
     pub attrs: Vec<Attribute>,
@@ -661,6 +699,7 @@ pub struct ExprUnary {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An unsafe block: `unsafe { ... }`.
 pub struct ExprUnsafe {
     pub attrs: Vec<Attribute>,
@@ -669,6 +708,7 @@ pub struct ExprUnsafe {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A while loop: `while expr { ... }`.
 pub struct ExprWhile {
     pub attrs: Vec<Attribute>,
@@ -679,6 +719,7 @@ pub struct ExprWhile {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A yield expression: `yield expr`.
 pub struct ExprYield {
     pub attrs: Vec<Attribute>,
@@ -772,6 +813,7 @@ impl Expr {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A struct or tuple struct field accessed in a struct literal or field
 /// expression.
 pub enum Member {
@@ -830,6 +872,7 @@ impl Member {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// The index of an unnamed tuple struct field.
 pub struct Index {
     pub index: u32,
@@ -861,6 +904,7 @@ impl Hash for Index {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A field-value pair in a struct literal.
 pub struct FieldValue {
     pub attrs: Vec<Attribute>,
@@ -874,6 +918,7 @@ pub struct FieldValue {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A lifetime labeling a `for`, `while`, or `loop`.
 pub struct Label {
     pub name: Lifetime,
@@ -881,6 +926,7 @@ pub struct Label {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// One arm of a `match` expression: `0..=10 => { return true; }`.
 ///
 /// As in:
@@ -907,6 +953,7 @@ pub struct Arm {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// Limit types of a range, inclusive or exclusive.
 pub enum RangeLimits {
     /// Inclusive at the beginning, exclusive at the end.
@@ -916,6 +963,7 @@ pub enum RangeLimits {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// Mutability of a raw pointer (`*const T`, `*mut T`), in which non-mutable
 /// isn't the implicit default.
 pub enum PointerMutability {

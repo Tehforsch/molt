@@ -7,6 +7,7 @@ use crate::parser::error::{self, Result};
 use crate::parser::parse::{Parse, ParseNode, ParseStream};
 use crate::parser::punctuated::Punctuated;
 use crate::parser::token;
+use crate::rust_grammar::Node;
 use crate::rust_grammar::attr::Attribute;
 use crate::rust_grammar::expr::Expr;
 use crate::rust_grammar::ident::{AnyIdent, Ident};
@@ -18,6 +19,7 @@ use crate::rust_grammar::verbatim;
 use super::restriction::IsSome;
 
 #[derive(Debug, CmpSyn, Default)]
+#[node(Node)]
 /// Lifetimes and type parameters attached to a declaration of a function,
 /// enum, trait, etc.
 ///
@@ -34,6 +36,8 @@ pub struct Generics {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
+#[node(CmpSyn)]
 /// A generic type parameter, lifetime, or const generic: `T: Into<String>`,
 /// `'a: 'b`, `const LEN: usize`.
 pub enum GenericParam {
@@ -48,6 +52,7 @@ pub enum GenericParam {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A lifetime definition: `'a: 'b + 'c + 'd`.
 pub struct LifetimeParam {
     pub attrs: Vec<Attribute>,
@@ -57,6 +62,7 @@ pub struct LifetimeParam {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A generic type parameter: `T: Into<String>`.
 pub struct TypeParam {
     pub attrs: Vec<Attribute>,
@@ -68,6 +74,7 @@ pub struct TypeParam {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A const generic parameter: `const LENGTH: usize`.
 pub struct ConstParam {
     pub attrs: Vec<Attribute>,
@@ -80,6 +87,7 @@ pub struct ConstParam {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A set of bound lifetimes: `for<'a, 'b, 'c>`.
 pub struct BoundLifetimes {
     pub for_token: Token![for],
@@ -89,6 +97,7 @@ pub struct BoundLifetimes {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A trait used as a bound on a type parameter.
 pub struct TraitBound {
     pub paren_token: Option<token::Paren>,
@@ -100,6 +109,7 @@ pub struct TraitBound {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A trait or lifetime used as a bound on a type parameter.
 pub enum TypeParamBound {
     Trait(TraitBound),
@@ -109,6 +119,7 @@ pub enum TypeParamBound {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A modifier on a trait bound, currently only used for the `?` in
 /// `?Sized`.
 pub enum TraitBoundModifier {
@@ -117,6 +128,7 @@ pub enum TraitBoundModifier {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// Precise capturing bound: the 'use&lt;&hellip;&gt;' in `impl Trait +
 /// use<'a, T>`.
 pub struct PreciseCapture {
@@ -127,6 +139,7 @@ pub struct PreciseCapture {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// Single parameter in a precise capturing bound.
 pub enum CapturedParam {
     /// A lifetime parameter in precise capturing bound: `fn f<'a>() -> impl
@@ -139,6 +152,7 @@ pub enum CapturedParam {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A `where` clause in a definition: `where T: Deserialize<'de>, D:
 /// 'static`.
 pub struct WhereClause {
@@ -147,6 +161,7 @@ pub struct WhereClause {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A single predicate in a `where` clause: `T: Deserialize<'de>`.
 pub enum WherePredicate {
     /// A lifetime predicate in a `where` clause: `'a: 'b + 'c`.
@@ -157,6 +172,7 @@ pub enum WherePredicate {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A lifetime predicate in a `where` clause: `'a: 'b + 'c`.
 pub struct PredicateLifetime {
     pub lifetime: Lifetime,
@@ -165,6 +181,7 @@ pub struct PredicateLifetime {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A type predicate in a `where` clause: `for<'c> Foo<'c>: Trait<'c>`.
 pub struct PredicateType {
     /// Any lifetimes from a `for` binding

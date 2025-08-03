@@ -5,9 +5,11 @@ use proc_macro2::{Delimiter, TokenStream, TokenTree};
 use crate::parser::error::Result;
 use crate::parser::parse::{Parse, ParseStream};
 use crate::parser::token::{Brace, Bracket, Paren};
+use crate::rust_grammar::Node;
 use crate::rust_grammar::path::Path;
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A macro invocation: `println!("{}", mac)`.
 pub struct Macro {
     pub path: Path,
@@ -17,6 +19,7 @@ pub struct Macro {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A grouping token that surrounds a macro body: `m!(...)` or `m!{...}` or `m![...]`.
 pub enum MacroDelimiter {
     Paren(Paren),

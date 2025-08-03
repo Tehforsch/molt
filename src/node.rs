@@ -22,6 +22,8 @@
 //! which returns a `NodeKind` struct which can be converted to the
 //! corresponding `Kind`.
 
+use crate::CmpSyn;
+
 pub trait ToNode<Node: NodeType>: Sized {
     fn to_node(self) -> Node;
     fn from_node(node: Node) -> Option<Self>;
@@ -52,7 +54,7 @@ impl<T: NodeType> ToNode<T> for T {
     }
 }
 
-pub trait NodeType {
+pub trait NodeType: CmpSyn<Self> + Sized {
     type NodeKind: Copy + std::fmt::Debug + Into<Self::Kind>;
     type Kind: Copy + KindType<Self::NodeKind>;
 

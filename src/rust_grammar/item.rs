@@ -1,5 +1,6 @@
 use std::mem;
 
+use crate::match_pattern::IsMatch;
 use crate::{CmpSyn, NodeId, NodeList, Pattern, SpannedPat, WithSpan, rule};
 use derive_macro::CmpSyn;
 use proc_macro2::TokenStream;
@@ -10,6 +11,7 @@ use crate::parser::parse::discouraged::Speculative as _;
 use crate::parser::parse::{Parse, ParseBuffer, ParseNode, ParseStream};
 use crate::parser::punctuated::Punctuated;
 use crate::parser::token;
+use crate::rust_grammar::Node;
 use crate::rust_grammar::attr::{self, Attribute};
 use crate::rust_grammar::data::{Fields, FieldsNamed, Variant};
 use crate::rust_grammar::expr::Expr;
@@ -31,6 +33,7 @@ use super::generics::WhereClause;
 use super::restriction::{IsInherited, IsSome};
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 #[requires_rule]
 pub enum Unsafety {
     Unsafe,
@@ -48,6 +51,7 @@ impl Unsafety {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 #[requires_rule]
 pub enum Asyncness {
     Async,
@@ -55,6 +59,7 @@ pub enum Asyncness {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 #[requires_rule]
 pub enum Constness {
     Const,
@@ -62,6 +67,7 @@ pub enum Constness {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// Things that can appear directly inside of a module or scope.
 pub enum Item {
     /// A constant item: `const MAX: u16 = 65535`.
@@ -116,6 +122,7 @@ pub enum Item {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A constant item: `const MAX: u16 = 65535`.
 pub struct ItemConst {
     pub attrs: Vec<Attribute>,
@@ -133,6 +140,7 @@ pub struct ItemConst {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An enum definition: `enum Foo<A, B> { A(A), B(B) }`.
 pub struct ItemEnum {
     pub attrs: Vec<Attribute>,
@@ -147,6 +155,7 @@ pub struct ItemEnum {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An `extern crate` item: `extern crate serde`.
 pub struct ItemExternCrate {
     pub attrs: Vec<Attribute>,
@@ -160,6 +169,7 @@ pub struct ItemExternCrate {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A free-standing function: `fn process(n: usize) -> Result<()> { ... }`.
 pub struct ItemFn {
     pub attrs: Vec<Attribute>,
@@ -170,6 +180,7 @@ pub struct ItemFn {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A block of foreign items: `extern "C" { ... }`.
 pub struct ItemForeignMod {
     pub attrs: Vec<Attribute>,
@@ -181,6 +192,7 @@ pub struct ItemForeignMod {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An impl block providing trait or associated items: `impl<A> Trait
 /// for Data<A> { ... }`.
 pub struct ItemImpl {
@@ -200,6 +212,7 @@ pub struct ItemImpl {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A macro invocation, which includes `macro_rules!` definitions.
 pub struct ItemMacro {
     pub attrs: Vec<Attribute>,
@@ -210,6 +223,7 @@ pub struct ItemMacro {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A module or module declaration: `mod m` or `mod m { ... }`.
 pub struct ItemMod {
     pub attrs: Vec<Attribute>,
@@ -224,6 +238,7 @@ pub struct ItemMod {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A static item: `static BIKE: Shed = Shed(42)`.
 pub struct ItemStatic {
     pub attrs: Vec<Attribute>,
@@ -240,6 +255,7 @@ pub struct ItemStatic {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A struct definition: `struct Foo<A> { x: A }`.
 pub struct ItemStruct {
     pub attrs: Vec<Attribute>,
@@ -254,6 +270,7 @@ pub struct ItemStruct {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A trait definition: `pub trait Iterator { ... }`.
 pub struct ItemTrait {
     pub attrs: Vec<Attribute>,
@@ -273,6 +290,7 @@ pub struct ItemTrait {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A trait alias: `pub trait SharableIterator = Iterator + Sync`.
 pub struct ItemTraitAlias {
     pub attrs: Vec<Attribute>,
@@ -288,6 +306,7 @@ pub struct ItemTraitAlias {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A type alias: `type Result<T> = std::result::Result<T, MyError>`.
 pub struct ItemType {
     pub attrs: Vec<Attribute>,
@@ -303,6 +322,7 @@ pub struct ItemType {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A union definition: `union Foo<A, B> { x: A, y: B }`.
 pub struct ItemUnion {
     pub attrs: Vec<Attribute>,
@@ -316,6 +336,7 @@ pub struct ItemUnion {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A use declaration: `use std::collections::HashMap`.
 pub struct ItemUse {
     pub attrs: Vec<Attribute>,
@@ -351,6 +372,7 @@ impl Item {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A suffix of an import tree in a `use` item: `Type as Renamed` or `*`.
 pub enum UseTree {
     /// A path prefix of imports in a `use` item: `std::...`.
@@ -370,6 +392,7 @@ pub enum UseTree {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A path prefix of imports in a `use` item: `std::...`.
 pub struct UsePath {
     pub ident: NodeId<Ident>,
@@ -378,12 +401,14 @@ pub struct UsePath {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An identifier imported by a `use` item: `HashMap`.
 pub struct UseName {
     pub ident: NodeId<Ident>,
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An renamed identifier imported by a `use` item: `HashMap as Map`.
 pub struct UseRename {
     pub ident: NodeId<Ident>,
@@ -392,12 +417,14 @@ pub struct UseRename {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A glob import in a `use` item: `*`.
 pub struct UseGlob {
     pub star_token: Token![*],
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A braced group of imports in a `use` item: `{A, B, C}`.
 pub struct UseGroup {
     pub brace_token: token::Brace,
@@ -405,6 +432,7 @@ pub struct UseGroup {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An item within an `extern` block.
 pub enum ForeignItem {
     /// A foreign function in an `extern` block.
@@ -424,6 +452,7 @@ pub enum ForeignItem {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A foreign function in an `extern` block.
 pub struct ForeignItemFn {
     pub attrs: Vec<Attribute>,
@@ -434,6 +463,7 @@ pub struct ForeignItemFn {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A foreign static item in an `extern` block: `static ext: u8`.
 pub struct ForeignItemStatic {
     pub attrs: Vec<Attribute>,
@@ -448,6 +478,7 @@ pub struct ForeignItemStatic {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A foreign type in an `extern` block: `type void`.
 pub struct ForeignItemType {
     pub attrs: Vec<Attribute>,
@@ -461,6 +492,7 @@ pub struct ForeignItemType {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A macro invocation within an extern block.
 pub struct ForeignItemMacro {
     pub attrs: Vec<Attribute>,
@@ -469,6 +501,7 @@ pub struct ForeignItemMacro {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An item declaration within the definition of a trait.
 pub enum TraitItem {
     /// An associated constant within the definition of a trait.
@@ -488,6 +521,7 @@ pub enum TraitItem {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An associated constant within the definition of a trait.
 pub struct TraitItemConst {
     pub attrs: Vec<Attribute>,
@@ -502,6 +536,7 @@ pub struct TraitItemConst {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An associated function within the definition of a trait.
 pub struct TraitItemFn {
     pub attrs: Vec<Attribute>,
@@ -511,6 +546,7 @@ pub struct TraitItemFn {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An associated type within the definition of a trait.
 pub struct TraitItemType {
     pub attrs: Vec<Attribute>,
@@ -525,6 +561,7 @@ pub struct TraitItemType {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A macro invocation within the definition of a trait.
 pub struct TraitItemMacro {
     pub attrs: Vec<Attribute>,
@@ -533,6 +570,7 @@ pub struct TraitItemMacro {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An item within an impl block.
 pub enum ImplItem {
     /// An associated constant within an impl block.
@@ -552,6 +590,7 @@ pub enum ImplItem {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An associated constant within an impl block.
 pub struct ImplItemConst {
     pub attrs: Vec<Attribute>,
@@ -570,6 +609,7 @@ pub struct ImplItemConst {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An associated function within an impl block.
 pub struct ImplItemFn {
     pub attrs: Vec<Attribute>,
@@ -581,6 +621,7 @@ pub struct ImplItemFn {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An associated type within an impl block.
 pub struct ImplItemType {
     pub attrs: Vec<Attribute>,
@@ -597,6 +638,7 @@ pub struct ImplItemType {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A macro invocation within an impl block.
 pub struct ImplItemMacro {
     pub attrs: Vec<Attribute>,
@@ -605,6 +647,7 @@ pub struct ImplItemMacro {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A function signature in a trait or implementation: `unsafe fn
 /// initialize(&self)`.
 pub struct Signature {
@@ -637,6 +680,7 @@ impl Signature {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An argument in a function signature: the `n: usize` in `fn f(n: usize)`.
 pub enum FnArg {
     /// The `self` argument of an associated method.
@@ -647,6 +691,7 @@ pub enum FnArg {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// The `self` argument of an associated method.
 ///
 /// If `colon_token` is present, the receiver is written with an explicit
@@ -664,6 +709,7 @@ pub struct Receiver {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// The variadic argument of a foreign function.
 pub struct Variadic {
     pub attrs: Vec<Attribute>,
@@ -673,6 +719,7 @@ pub struct Variadic {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// The mutability of an `Item::Static` or `ForeignItem::Static`.
 pub enum StaticMutability {
     Mut(Token![mut]),
@@ -2700,8 +2747,8 @@ impl ParseList for ImplItems {
     }
 }
 
-impl CmpSyn<Item> for ImplItem {
-    fn cmp_syn(&self, ctx: &mut crate::Matcher, pat: &Item) {
+impl CmpSyn<Node, Item> for ImplItem {
+    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, pat: &Item) -> IsMatch {
         match (self, pat) {
             (ImplItem::Const(t1), Item::Const(t2)) => ctx.cmp_syn(t1, t2),
             (ImplItem::Fn(t1), Item::Fn(t2)) => ctx.cmp_syn(t1, t2),
@@ -2712,50 +2759,54 @@ impl CmpSyn<Item> for ImplItem {
     }
 }
 
-impl CmpSyn<ItemConst> for ImplItemConst {
-    fn cmp_syn(&self, ctx: &mut crate::Matcher, pat: &ItemConst) {
-        ctx.cmp_syn(&self.attrs, &pat.attrs);
-        ctx.cmp_syn_with_rule(&self.vis, &pat.vis, rule::Vis::Const);
-        ctx.cmp_syn(&self.const_token, &pat.const_token);
-        ctx.cmp_syn(&self.ident, &pat.ident);
-        ctx.cmp_syn(&self.generics, &pat.generics);
-        ctx.cmp_syn(&self.colon_token, &pat.colon_token);
-        ctx.cmp_syn(&self.ty, &pat.ty);
-        ctx.cmp_syn(&self.eq_token, &pat.eq_token);
-        ctx.cmp_syn(&self.expr, &pat.expr);
-        ctx.cmp_syn(&self.semi_token, &pat.semi_token);
-        ctx.cmp_syn(&self.defaultness, &None);
+impl CmpSyn<Node, ItemConst> for ImplItemConst {
+    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, pat: &ItemConst) -> IsMatch {
+        ctx.cmp_syn(&self.attrs, &pat.attrs)?;
+        ctx.cmp_syn_with_rule(&self.vis, &pat.vis, rule::Vis::Const)?;
+        ctx.cmp_syn(&self.const_token, &pat.const_token)?;
+        ctx.cmp_syn(&self.ident, &pat.ident)?;
+        ctx.cmp_syn(&self.generics, &pat.generics)?;
+        ctx.cmp_syn(&self.colon_token, &pat.colon_token)?;
+        ctx.cmp_syn(&self.ty, &pat.ty)?;
+        ctx.cmp_syn(&self.eq_token, &pat.eq_token)?;
+        ctx.cmp_syn(&self.expr, &pat.expr)?;
+        ctx.cmp_syn(&self.semi_token, &pat.semi_token)?;
+        ctx.cmp_syn(&self.defaultness, &None)?;
+        IsMatch::Ok(())
     }
 }
 
-impl CmpSyn<ItemFn> for ImplItemFn {
-    fn cmp_syn(&self, ctx: &mut crate::Matcher, pat: &ItemFn) {
-        ctx.cmp_syn(&self.attrs, &pat.attrs);
-        ctx.cmp_syn_with_rule(&self.vis, &pat.vis, rule::Vis::Fn);
-        ctx.cmp_syn(&self.sig, &pat.sig);
-        ctx.cmp_syn(&self.block, &pat.block);
-        ctx.cmp_syn(&self.defaultness, &None);
+impl CmpSyn<Node, ItemFn> for ImplItemFn {
+    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, pat: &ItemFn) -> IsMatch {
+        ctx.cmp_syn(&self.attrs, &pat.attrs)?;
+        ctx.cmp_syn_with_rule(&self.vis, &pat.vis, rule::Vis::Fn)?;
+        ctx.cmp_syn(&self.sig, &pat.sig)?;
+        ctx.cmp_syn(&self.block, &pat.block)?;
+        ctx.cmp_syn(&self.defaultness, &None)?;
+        IsMatch::Ok(())
     }
 }
 
-impl CmpSyn<ItemType> for ImplItemType {
-    fn cmp_syn(&self, ctx: &mut crate::Matcher, pat: &ItemType) {
-        ctx.cmp_syn(&self.attrs, &pat.attrs);
-        ctx.cmp_syn_with_rule(&self.vis, &pat.vis, rule::Vis::Type);
-        ctx.cmp_syn(&self.type_token, &pat.type_token);
-        ctx.cmp_syn(&self.ident, &pat.ident);
-        ctx.cmp_syn(&self.generics, &pat.generics);
-        ctx.cmp_syn(&self.eq_token, &pat.eq_token);
-        ctx.cmp_syn(&self.ty, &pat.ty);
-        ctx.cmp_syn(&self.semi_token, &pat.semi_token);
-        ctx.cmp_syn(&self.defaultness, &None);
+impl CmpSyn<Node, ItemType> for ImplItemType {
+    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, pat: &ItemType) -> IsMatch {
+        ctx.cmp_syn(&self.attrs, &pat.attrs)?;
+        ctx.cmp_syn_with_rule(&self.vis, &pat.vis, rule::Vis::Type)?;
+        ctx.cmp_syn(&self.type_token, &pat.type_token)?;
+        ctx.cmp_syn(&self.ident, &pat.ident)?;
+        ctx.cmp_syn(&self.generics, &pat.generics)?;
+        ctx.cmp_syn(&self.eq_token, &pat.eq_token)?;
+        ctx.cmp_syn(&self.ty, &pat.ty)?;
+        ctx.cmp_syn(&self.semi_token, &pat.semi_token)?;
+        ctx.cmp_syn(&self.defaultness, &None)?;
+        IsMatch::Ok(())
     }
 }
 
-impl CmpSyn<ItemMacro> for ImplItemMacro {
-    fn cmp_syn(&self, ctx: &mut crate::Matcher, pat: &ItemMacro) {
-        ctx.cmp_syn(&None, &pat.ident);
-        ctx.cmp_syn(&self.mac, &pat.mac);
-        ctx.cmp_syn(&self.semi_token, &pat.semi_token);
+impl CmpSyn<Node, ItemMacro> for ImplItemMacro {
+    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, pat: &ItemMacro) -> IsMatch {
+        ctx.cmp_syn(&None, &pat.ident)?;
+        ctx.cmp_syn(&self.mac, &pat.mac)?;
+        ctx.cmp_syn(&self.semi_token, &pat.semi_token)?;
+        IsMatch::Ok(())
     }
 }

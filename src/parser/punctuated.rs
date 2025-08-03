@@ -1,7 +1,8 @@
 use std::ops::{Index, IndexMut};
 use std::{option, slice, vec};
 
-use crate::CmpSyn;
+use crate::match_pattern::IsMatch;
+use crate::{CmpSyn, NodeType};
 
 use crate::parser::drops::{NoDrop, TrivialDrop};
 use crate::parser::error::Result;
@@ -629,14 +630,15 @@ impl<T, P> IndexMut<usize> for Punctuated<T, P> {
     }
 }
 
-impl<T: CmpSyn, P> CmpSyn for Punctuated<T, P> {
-    fn cmp_syn(&self, ctx: &mut crate::Matcher, pat: &Self) {
+impl<Node: NodeType, T: CmpSyn<Node>, P> CmpSyn<Node> for Punctuated<T, P> {
+    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, pat: &Self) -> IsMatch {
         // These should be replaced by NodeList wherever possible
         // but we'll leave the ones that havent been exchanged yet
         // exact.
-        ctx.eq(self.len(), pat.len());
+        ctx.eq(self.len(), pat.len())?;
         for (s1, s2) in self.iter().zip(pat.iter()) {
-            ctx.cmp_syn(s1, s2);
+            ctx.cmp_syn(s1, s2)?;
         }
+        IsMatch::Ok(())
     }
 }

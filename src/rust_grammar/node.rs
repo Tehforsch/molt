@@ -1,3 +1,4 @@
+use crate::match_pattern::IsMatch;
 use crate::rust_grammar::generics::Generics;
 use crate::{CmpSyn, Id, KindType, Matcher, Pattern, ToNode};
 
@@ -23,18 +24,18 @@ macro_rules! define_node {
             /// full `CmpSyn` implementation, because off-diagonal
             /// comparisons exists (such as `Item` and `ImplItem`.)
             /// These are checked in the real `CmpSyn` impl below.
-            fn cmp_syn_diagonal(&self, ctx: &mut Matcher, pat: &Self) -> bool {
+            fn cmp_syn_diagonal(&self, ctx: &mut Matcher<Node>, pat: &Self) -> IsMatch<bool> {
                 match self {
                     $(
                         Node::$variant_name(t1) => {
                             if let Node::$variant_name(t2) = pat {
-                                ctx.cmp_syn_ignore_rule(t1, t2);
-                                return true
+                                ctx.cmp_syn_ignore_rule(t1, t2)?;
+                                return Ok(true)
                             }
                         }
                     )*
                 }
-                false
+                Ok(false)
             }
         }
 
@@ -254,11 +255,11 @@ define_kind! {
 }
 
 impl CmpSyn<Node> for Node {
-    fn cmp_syn(&self, ctx: &mut Matcher, pat: &Self) {
-        if self.cmp_syn_diagonal(ctx, pat) {
+    fn cmp_syn(&self, ctx: &mut Matcher<Node>, pat: &Self) -> IsMatch {
+        if self.cmp_syn_diagonal(ctx, pat)? {
             // Two nodes with equal variants have already
             // been compared. We're done.
-            return;
+            return IsMatch::Ok(());
         }
         // Explicitly keep this exhaustive to make sure
         // we don't miss this impl when we add a new variant.

@@ -4,6 +4,7 @@ use std::fmt::{self, Display};
 use std::rc::Rc;
 use std::str::{self, FromStr};
 
+use crate::match_pattern::IsMatch;
 use crate::{CmpSyn, ParsingMode};
 use derive_macro::CmpSyn;
 use proc_macro2::{Literal, Punct, Span};
@@ -13,8 +14,10 @@ use crate::parser::parse::{Parse, ParseCtx, ParseNode, ParseStream, PeekPat, Une
 use crate::parser::token::Token;
 use crate::parser::{Error, Result, lookahead};
 use crate::rust_grammar::Ident;
+use crate::rust_grammar::Node;
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A Rust literal such as a string or integer or boolean.
 pub enum Lit {
     /// A UTF-8 string literal: `"foo"`.
@@ -48,30 +51,35 @@ pub enum Lit {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A UTF-8 string literal: `"foo"`.
 pub struct LitStr {
     repr: Box<LitRepr>,
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A byte string literal: `b"foo"`.
 pub struct LitByteStr {
     repr: Box<LitRepr>,
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A nul-terminated C-string literal: `c"foo"`.
 pub struct LitCStr {
     repr: Box<LitRepr>,
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A byte literal: `b'f'`.
 pub struct LitByte {
     repr: Box<LitRepr>,
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A character literal: `'a'`.
 pub struct LitChar {
     repr: Box<LitRepr>,
@@ -83,14 +91,15 @@ struct LitRepr {
     suffix: Box<str>,
 }
 
-impl CmpSyn for LitRepr {
-    fn cmp_syn(&self, ctx: &mut crate::Matcher, pat: &Self) {
+impl CmpSyn<Node> for LitRepr {
+    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, pat: &Self) -> IsMatch {
         // TODO, suffix?
-        ctx.cmp_syn(&self.token, &pat.token);
+        ctx.cmp_syn(&self.token, &pat.token)
     }
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An integer literal: `1` or `1u16`.
 pub struct LitInt {
     repr: Box<LitIntRepr>,
@@ -103,14 +112,15 @@ struct LitIntRepr {
     suffix: Box<str>,
 }
 
-impl CmpSyn for LitIntRepr {
-    fn cmp_syn(&self, ctx: &mut crate::Matcher, pat: &Self) {
+impl CmpSyn<Node> for LitIntRepr {
+    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, pat: &Self) -> IsMatch {
         // TODO, suffix/digits?
-        ctx.cmp_syn(&self.token, &pat.token);
+        ctx.cmp_syn(&self.token, &pat.token)
     }
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A floating point literal: `1f64` or `1.0e10f64`.
 ///
 /// Must be finite. May not be infinite or NaN.
@@ -125,14 +135,15 @@ struct LitFloatRepr {
     suffix: Box<str>,
 }
 
-impl CmpSyn for LitFloatRepr {
-    fn cmp_syn(&self, ctx: &mut crate::Matcher, pat: &Self) {
+impl CmpSyn<Node> for LitFloatRepr {
+    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, pat: &Self) -> IsMatch {
         // TODO, suffix/digits?
-        ctx.cmp_syn(&self.token, &pat.token);
+        ctx.cmp_syn(&self.token, &pat.token)
     }
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A boolean literal: `true` or `false`.
 pub struct LitBool {
     pub value: bool,

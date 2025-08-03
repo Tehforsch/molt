@@ -6,6 +6,7 @@ use crate::utils::{is_box, is_node_list, is_token, is_vec_attribute};
 
 pub fn impl_cmp_syn(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
+    let node = get_node_from_attr(&input);
     let requires_rule = input
         .attrs
         .iter()
@@ -25,14 +26,23 @@ pub fn impl_cmp_syn(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     };
 
     let expanded = quote! {
-        impl crate::CmpSyn<#name, #rule_ty> for #name {
-            fn cmp_syn(&self, ctx: &mut crate::Matcher, pat: &Self) {
+        impl crate::CmpSyn<#node, #name, #rule_ty> for #name {
+            fn cmp_syn(&self, ctx: &mut crate::Matcher<#node>, pat: &Self) -> crate::match_pattern::IsMatch {
                 #impl_
             }
         }
     };
 
     proc_macro::TokenStream::from(expanded)
+}
+
+fn get_node_from_attr(input: &DeriveInput) -> Type {
+    input
+        .attrs
+        .iter()
+        .find(|attr| attr.path().is_ident("node"))
+        .map(|attr| attr.parse_args().unwrap())
+        .expect("No node type given. Add #[node(...)] attribute.")
 }
 
 pub struct Rule {
@@ -62,6 +72,7 @@ fn impl_struct(data_struct: syn::DataStruct) -> TokenStream {
     });
     quote! {
         #(#calls)*
+        crate::match_pattern::IsMatch::Ok(())
     }
 }
 
@@ -79,13 +90,13 @@ fn cmp_ty(field_name: &Ident, ty: &Type, rule: Option<Rule>) -> Option<TokenStre
         None => quote! {},
     };
     if is_node_list(ty) {
-        Some(quote! { ctx.cmp_lists(&self. #field_name, &pat. #field_name ); })
+        Some(quote! { ctx.cmp_lists(&self. #field_name, &pat. #field_name )?; })
     } else if is_vec_attribute(ty) || is_token(ty) {
         None
     } else if is_box(ty) {
-        Some(quote! { ctx.#cmp_fn(&*self. #field_name, &*pat. #field_name #rule_arg ); })
+        Some(quote! { ctx.#cmp_fn(&*self. #field_name, &*pat. #field_name #rule_arg )?; })
     } else {
-        Some(quote! { ctx.#cmp_fn(&self. #field_name, &pat. #field_name #rule_arg ); })
+        Some(quote! { ctx.#cmp_fn(&self. #field_name, &pat. #field_name #rule_arg )?; })
     }
 }
 
@@ -113,8 +124,8 @@ fn impl_enum(data_enum: syn::DataEnum) -> TokenStream {
                     else if fields.unnamed.len() == 2 {
                         quote! {
                             (Self::#ident(s11, s12), Self::#ident(s21, s22)) => {
-                                ctx.cmp_syn(s11, s21);
-                                ctx.cmp_syn(s12, s22);
+                                ctx.cmp_syn(s11, s21)?;
+                                ctx.cmp_syn(s12, s22)
                             },
                         }
                     }
@@ -124,7 +135,7 @@ fn impl_enum(data_enum: syn::DataEnum) -> TokenStream {
                 }
                 Fields::Unit => {
                     quote! {
-                        (Self::#ident, Self::#ident) => {},
+                        (Self::#ident, Self::#ident) => { Ok(()) },
                     }
                 }
             }

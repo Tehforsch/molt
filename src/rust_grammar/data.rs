@@ -4,6 +4,7 @@ use derive_macro::CmpSyn;
 use crate::parser::error::Result;
 use crate::parser::parse::{Parse, ParseList, ParseNode, ParseStream, parse_punctuated_list_real};
 use crate::parser::token;
+use crate::rust_grammar::Node;
 use crate::rust_grammar::attr::Attribute;
 use crate::rust_grammar::expr::Expr;
 use crate::rust_grammar::ident::{AnyIdent, Ident};
@@ -12,6 +13,7 @@ use crate::rust_grammar::ty::Type;
 use crate::rust_grammar::verbatim;
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An enum variant.
 pub struct Variant {
     pub attrs: Vec<Attribute>,
@@ -27,6 +29,7 @@ pub struct Variant {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// Data stored within an enum variant or struct.
 pub enum Fields {
     /// Named fields of a struct or struct variant such as `Point { x: f64,
@@ -45,6 +48,7 @@ pub struct FieldNamed;
 pub struct FieldUnnamed;
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// Named fields of a struct or struct variant such as `Point { x: f64,
 /// y: f64 }`.
 pub struct FieldsNamed {
@@ -53,6 +57,7 @@ pub struct FieldsNamed {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// Unnamed fields of a tuple struct or tuple variant such as `Some(T)`.
 pub struct FieldsUnnamed {
     pub paren_token: token::Paren,
@@ -60,6 +65,7 @@ pub struct FieldsUnnamed {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A field of a struct or enum variant.
 pub struct Field {
     pub attrs: Vec<Attribute>,

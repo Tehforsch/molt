@@ -2,8 +2,10 @@ use derive_macro::CmpSyn;
 
 use crate::parser::error::Result;
 use crate::parser::parse::{Parse, ParseStream};
+use crate::rust_grammar::Node;
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A binary operator: `+`, `+=`, `&`.
 pub enum BinOp {
     /// The `+` operator (addition)
@@ -65,6 +67,7 @@ pub enum BinOp {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A unary operator: `*`, `!`, `-`.
 pub enum UnOp {
     /// The `*` operator for dereferencing

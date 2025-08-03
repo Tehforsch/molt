@@ -1,9 +1,12 @@
+use crate::match_pattern::IsMatch;
 use crate::{CmpSyn, Matcher};
 use proc_macro2::{Ident, Span};
 
 use crate::parser::error::Result;
 use crate::parser::lookahead;
 use crate::parser::parse::{Parse, ParseStream};
+
+use super::Node;
 
 /// A Rust lifetime: `'a`.
 ///
@@ -37,8 +40,8 @@ impl Parse for Lifetime {
     }
 }
 
-impl CmpSyn for Lifetime {
-    fn cmp_syn(&self, ctx: &mut Matcher, pat: &Self) {
-        ctx.cmp_syn(&self.ident, &pat.ident);
+impl CmpSyn<Node> for Lifetime {
+    fn cmp_syn(&self, ctx: &mut Matcher<Node>, pat: &Self) -> IsMatch {
+        ctx.cmp_syn(&self.ident, &pat.ident)
     }
 }

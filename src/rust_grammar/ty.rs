@@ -9,6 +9,7 @@ use crate::parser::parse::{
 };
 use crate::parser::punctuated::Punctuated;
 use crate::parser::token;
+use crate::rust_grammar::Node;
 use crate::rust_grammar::attr::Attribute;
 use crate::rust_grammar::expr::Expr;
 use crate::rust_grammar::generics::{
@@ -25,6 +26,7 @@ use crate::rust_grammar::path::{ParenthesizedGenericArguments, Path, QSelf};
 use crate::rust_grammar::{path, verbatim};
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// The possible types that a Rust value could have.
 pub enum Type {
     /// A fixed size array type: `[T; n]`.
@@ -77,6 +79,7 @@ pub enum Type {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A fixed size array type: `[T; n]`.
 pub struct TypeArray {
     pub bracket_token: token::Bracket,
@@ -86,6 +89,7 @@ pub struct TypeArray {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A bare function type: `fn(usize) -> bool`.
 pub struct TypeBareFn {
     pub lifetimes: Option<BoundLifetimes>,
@@ -100,6 +104,7 @@ pub struct TypeBareFn {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A type contained within invisible delimiters.
 pub struct TypeGroup {
     pub group_token: token::Group,
@@ -107,6 +112,7 @@ pub struct TypeGroup {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An `impl Bound1 + Bound2 + Bound3` type where `Bound` is a trait or
 /// a lifetime.
 pub struct TypeImplTrait {
@@ -115,24 +121,28 @@ pub struct TypeImplTrait {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// Indication that a type should be inferred by the compiler: `_`.
 pub struct TypeInfer {
     pub underscore_token: Token![_],
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A macro in the type position.
 pub struct TypeMacro {
     pub mac: Macro,
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// The never type: `!`.
 pub struct TypeNever {
     pub bang_token: Token![!],
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A parenthesized type equivalent to the inner type.
 pub struct TypeParen {
     pub paren_token: token::Paren,
@@ -140,6 +150,7 @@ pub struct TypeParen {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A path like `std::slice::Iter`, optionally qualified with a
 /// self-type as in `<Vec<T> as SomeTrait>::Associated`.
 pub struct TypePath {
@@ -148,6 +159,7 @@ pub struct TypePath {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A raw pointer type: `*const T` or `*mut T`.
 pub struct TypePtr {
     pub star_token: Token![*],
@@ -157,6 +169,7 @@ pub struct TypePtr {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A reference type: `&'a T` or `&'a mut T`.
 pub struct TypeReference {
     pub and_token: Token![&],
@@ -166,6 +179,7 @@ pub struct TypeReference {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A dynamically sized slice type: `[T]`.
 pub struct TypeSlice {
     pub bracket_token: token::Bracket,
@@ -173,6 +187,7 @@ pub struct TypeSlice {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A trait object type `dyn Bound1 + Bound2 + Bound3` where `Bound` is a
 /// trait or a lifetime.
 pub struct TypeTraitObject {
@@ -181,6 +196,7 @@ pub struct TypeTraitObject {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A tuple type: `(A, B, C, String)`.
 pub struct TypeTuple {
     pub paren_token: token::Paren,
@@ -188,6 +204,7 @@ pub struct TypeTuple {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// The binary interface of a function: `extern "C"`.
 pub struct Abi {
     pub extern_token: Token![extern],
@@ -195,6 +212,7 @@ pub struct Abi {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// An argument in a function type: the `usize` in `fn(usize) -> bool`.
 pub struct BareFnArg {
     pub attrs: Vec<Attribute>,
@@ -203,6 +221,7 @@ pub struct BareFnArg {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// The variadic argument of a function pointer like `fn(usize, ...)`.
 pub struct BareVariadic {
     pub attrs: Vec<Attribute>,
@@ -212,6 +231,7 @@ pub struct BareVariadic {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// Return type of a function signature.
 pub enum ReturnType {
     /// Return type is not specified.

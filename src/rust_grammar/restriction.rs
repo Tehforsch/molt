@@ -5,10 +5,12 @@ use crate::parser::parse::discouraged::Speculative as _;
 use crate::parser::parse::{ParseNode, ParseStream};
 use crate::parser::token;
 use crate::pattern::Property;
+use crate::rust_grammar::Node;
 use crate::rust_grammar::ident::AnyIdent;
 use crate::rust_grammar::path::Path;
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// The visibility level of an item: inherited or `pub` or
 /// `pub(restricted)`.
 #[requires_rule]
@@ -25,6 +27,7 @@ pub enum Vis {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A visibility level restricted to some path: `pub(self)` or
 /// `pub(super)` or `pub(crate)` or `pub(in some::module)`.
 pub struct VisRestricted {
@@ -35,6 +38,7 @@ pub struct VisRestricted {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// Unused, but reserved for RFC 3323 restrictions.
 pub enum FieldMutability {
     None,
