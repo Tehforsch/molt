@@ -295,7 +295,7 @@ fn parse_meta_name_value_after_path(path: Path, input: ParseStream) -> Result<Me
     } else if input.peek(Token![#]) && input.peek2(token::Bracket) {
         return Err(input.error("unexpected attribute inside of attribute"));
     } else {
-        Expr::parse_pat(input)?.unwrap_real()
+        Expr::parse_pat(input)?.unwrap_item()
     };
     Ok(MetaNameValue {
         path,

@@ -57,7 +57,7 @@ pub trait ParseNode {
         if let Some(var) = input.parse_var() {
             return var;
         }
-        Ok(Pattern::Real(Self::parse_node(input)?))
+        Ok(Pattern::Item(Self::parse_node(input)?))
     }
 }
 
@@ -129,7 +129,7 @@ fn parse_list<T: ParseListOrItem>(input: ParseStream) -> Result<Vec<NodeId<T::Ta
         ListOrItem::Item(item) => {
             vec![input.add_pat(item)]
         }
-        ListOrItem::List(list) => list.unwrap_real().into(),
+        ListOrItem::List(list) => list.unwrap_item().into(),
     })
 }
 
@@ -627,7 +627,7 @@ impl<'a> ParseBuffer<'a> {
                 let id = self
                     .add_var::<T>(Var::new(ident.to_string(), T::node_kind().into()))
                     .into();
-                Ok(Some(Pattern::Pat(id)))
+                Ok(Some(Pattern::Var(id)))
             } else {
                 Ok(None)
             }
@@ -679,13 +679,13 @@ impl<'a> ParseBuffer<'a> {
 
     pub(crate) fn parse_list<T: ParseList>(&self) -> Result<NodeList<T::Item, T::Punct>> {
         if self.peek_list_var(T::Item::node_kind()) {
-            Ok(NodeList::Pat(self.parse_list_var::<T::Item, T::Punct>(
+            Ok(NodeList::Var(self.parse_list_var::<T::Item, T::Punct>(
                 T::parse_list_real,
                 |input| input.parse_id::<T::ParseItem>(),
             )?))
         } else {
             let list = T::parse_list_real(self)?;
-            Ok(NodeList::Real(RealNodeList::new(list)))
+            Ok(NodeList::Item(RealNodeList::new(list)))
         }
     }
 
@@ -693,7 +693,7 @@ impl<'a> ParseBuffer<'a> {
         &self,
     ) -> Result<ListOrItem<T::Target, T::Punct>> {
         if self.peek_list_var(<T as ParseListOrItem>::Target::node_kind()) {
-            Ok(ListOrItem::List(NodeList::Pat(
+            Ok(ListOrItem::List(NodeList::Var(
                 self.parse_list_var::<<T as ParseListOrItem>::Target, <T as ParseListOrItem>::Punct>(
                     parse_list::<T>, parse_single::<T>
                 )?,
@@ -709,7 +709,7 @@ impl<'a> ParseBuffer<'a> {
 
     pub(crate) fn make_at_point<T>(&self, default: T) -> SpannedPat<T> {
         let marker = self.marker();
-        self.make_spanned(marker, Pattern::Real(default))
+        self.make_spanned(marker, Pattern::Item(default))
     }
 }
 

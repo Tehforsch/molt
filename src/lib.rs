@@ -120,8 +120,8 @@ impl MoltFile {
             .flat_map(|item| {
                 let node: Pattern<&Node, Id> = ctx.real_ctx.get(item);
                 let is_of_kind = match node {
-                    crate::Pattern::Real(node) => node.is_of_kind(pat_kind),
-                    crate::Pattern::Pat(var) => ctx
+                    crate::Pattern::Item(node) => node.is_of_kind(pat_kind),
+                    crate::Pattern::Var(var) => ctx
                         .real_ctx
                         .get_var(var)
                         .kind()

@@ -2142,7 +2142,7 @@ impl Parse for TraitItem {
         }?;
 
         match (&*vis, defaultness) {
-            (Pattern::Real(Vis::Inherited), None) => {}
+            (Pattern::Item(Vis::Inherited), None) => {}
             _ => return Ok(TraitItem::Verbatim(verbatim::between(&begin, input))),
         }
 
@@ -2358,17 +2358,17 @@ fn parse_impl(input: ParseStream, allow_verbatim_impl: bool) -> Result<Option<It
             let ctx = input.ctx();
             let for_token: Token![for] = input.parse()?;
             let mut first_ty_ref = first_ty.as_ref();
-            while let Pattern::Real(Type::Group(ty)) = first_ty_ref {
+            while let Pattern::Item(Type::Group(ty)) = first_ty_ref {
                 first_ty_ref = ctx.get(ty.elem);
             }
-            if let Pattern::Real(Type::Path(TypePath { qself: None, .. })) = first_ty_ref {
-                if let Pattern::Real(Type::Group(_)) = first_ty {
+            if let Pattern::Item(Type::Path(TypePath { qself: None, .. })) = first_ty_ref {
+                if let Pattern::Item(Type::Group(_)) = first_ty {
                     // This is related to none-delimited types.
                     // These may occur in the result from macro expansion,
                     // which we currently do not treat anyways.
                     unimplemented!("Parsing macro output not supported")
                 }
-                if let Pattern::Real(Type::Path(TypePath { qself: None, path })) = first_ty {
+                if let Pattern::Item(Type::Path(TypePath { qself: None, path })) = first_ty {
                     trait_ = Some((polarity, path, for_token));
                 } else {
                     unreachable!();

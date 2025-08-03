@@ -337,7 +337,7 @@ fn parse_pat_multi<T: ParseListOrItem<Target = Pat, Punct = token::Or>>(
     let pat = input.parse_list_or_item::<T>()?;
     Ok(match pat {
         ListOrItem::Item(item) => item.item(),
-        ListOrItem::List(cases) => Pattern::Real(Pat::Or(PatOr {
+        ListOrItem::List(cases) => Pattern::Item(Pat::Or(PatOr {
             attrs: Vec::new(),
             leading_vert: None,
             cases,
@@ -423,7 +423,7 @@ fn multi_pat_impl(
             let pat = input.parse_id::<PatSingle>()?;
             cases.push_value(pat);
         }
-        Ok(ListOrItem::List(NodeList::Real(
+        Ok(ListOrItem::List(NodeList::Item(
             cases.into_iter().collect(),
         )))
     } else {
@@ -695,7 +695,7 @@ impl ParseListOrItem for PatParenOrTuple {
         while !content.is_empty() {
             let value = content.parse_spanned_pat::<PatMultiLeadingVert>()?;
             if content.is_empty() {
-                if elems.is_empty() && !matches!(&*value, Pattern::Real(Pat::Rest(_))) {
+                if elems.is_empty() && !matches!(&*value, Pattern::Item(Pat::Rest(_))) {
                     return Ok(ListOrItem::Item(value));
                 }
                 elems.push_value(value);
@@ -705,7 +705,7 @@ impl ParseListOrItem for PatParenOrTuple {
             let punct: Token![,] = content.parse()?;
             elems.push_punct(punct);
         }
-        Ok(ListOrItem::List(NodeList::Real(
+        Ok(ListOrItem::List(NodeList::Item(
             elems.into_iter().map(|ty| input.add_pat(ty)).collect(),
         )))
     }
@@ -820,7 +820,7 @@ impl ParseList for PatSlice {
         while !input.is_empty() {
             let value = input.parse_spanned_pat::<PatMultiLeadingVert>()?;
             match &*value {
-                Pattern::Real(Pat::Range(pat)) if pat.start.is_none() || pat.end.is_none() => {
+                Pattern::Item(Pat::Range(pat)) if pat.start.is_none() || pat.end.is_none() => {
                     let (start, end) = match &pat.limits {
                         RangeLimits::HalfOpen(dot_dot) => (dot_dot.spans[0], dot_dot.spans[1]),
                         RangeLimits::Closed(dot_dot_eq) => {
