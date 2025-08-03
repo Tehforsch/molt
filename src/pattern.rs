@@ -1,52 +1,61 @@
+/// This type represents either a concrete item in the AST, or a molt
+/// variable.
+///
+/// This distinction is separate from the `Mode` type, which
+/// represents whether a given item originated within real source
+/// code, or molt source code. The two are related, since the
+/// `Pattern::Var` variant can only occur within molt source code.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub enum Pattern<Real, Pat> {
-    Real(Real),
-    Pat(Pat),
+pub enum Pattern<Item, Var> {
+    Item(Item),
+    Var(Var),
 }
 
-impl<Real, Pat> Pattern<Real, Pat> {
-    pub fn unwrap_real(self) -> Real {
+impl<Item, Var> Pattern<Item, Var> {
+    pub fn unwrap_item(self) -> Item {
         match self {
-            Pattern::Real(real) => real,
-            Pattern::Pat(_) => panic!("unwrap called on pattern variant."),
+            Pattern::Item(item) => item,
+            Pattern::Var(_) => panic!("unwrap called on pattern variant."),
         }
     }
 
-    pub fn real(&self) -> Option<&Real> {
+    pub fn get_item(&self) -> Option<&Item> {
         match &self {
-            Pattern::Real(t) => Some(t),
-            Pattern::Pat(_) => None,
+            Pattern::Item(t) => Some(t),
+            Pattern::Var(_) => None,
         }
     }
 }
 
-impl<Real, Pat: Copy> Pattern<Real, Pat> {
-    pub fn as_ref(&self) -> Pattern<&Real, Pat> {
+impl<Item, Var: Copy> Pattern<Item, Var> {
+    pub fn as_ref(&self) -> Pattern<&Item, Var> {
         match self {
-            Pattern::Real(real) => Pattern::Real(real),
-            Pattern::Pat(var) => Pattern::Pat(*var),
+            Pattern::Item(item) => Pattern::Item(item),
+            Pattern::Var(var) => Pattern::Var(*var),
         }
     }
 
-    pub fn as_mut(&mut self) -> Pattern<&mut Real, Pat> {
+    pub fn as_mut(&mut self) -> Pattern<&mut Item, Var> {
         match self {
-            Pattern::Real(real) => Pattern::Real(real),
-            Pattern::Pat(var) => Pattern::Pat(*var),
+            Pattern::Item(item) => Pattern::Item(item),
+            Pattern::Var(var) => Pattern::Var(*var),
         }
     }
 }
 
-impl<Real, Pat> Pattern<Real, Pat> {
+impl<Item, Var> Pattern<Item, Var> {
     /// Get a property of a syntactic item, see `Property`
-    pub fn get_property<P: Property<Real>>(&self, _: P) -> bool {
-        self.real().map(P::get).unwrap_or(P::VAR_DEFAULT)
+    pub fn get_property<P: Property<Item>>(&self, _: P) -> bool {
+        self.get_item().map(P::get).unwrap_or(P::VAR_DEFAULT)
     }
 }
 
-impl<Real, Pat> Pattern<&Real, Pat> {
+impl<Item, Var> Pattern<&Item, Var> {
     /// Get a property of a syntactic item, see `Property`
-    pub fn get_property_ref<P: Property<Real>>(&self, _: P) -> bool {
-        self.real().map(|i| P::get(*i)).unwrap_or(P::VAR_DEFAULT)
+    pub fn get_property_ref<P: Property<Item>>(&self, _: P) -> bool {
+        self.get_item()
+            .map(|i| P::get(*i))
+            .unwrap_or(P::VAR_DEFAULT)
     }
 }
 

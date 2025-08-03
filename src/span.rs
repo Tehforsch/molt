@@ -97,7 +97,7 @@ impl<T> Spanned<T> {
     }
 
     pub fn as_pattern(self) -> SpannedPat<T> {
-        self.map(|item| Pattern::Real(item))
+        self.map(|item| Pattern::Item(item))
     }
 
     pub fn decompose(self) -> (Span, T) {
@@ -109,17 +109,17 @@ pub type SpannedPat<T> = Spanned<Pattern<T, Id>>;
 
 impl<T> SpannedPat<T> {
     pub fn is_var(&self) -> bool {
-        matches!(self.item, Pattern::Pat(_))
+        matches!(self.item, Pattern::Var(_))
     }
 
     pub fn unwrap_real(self) -> Spanned<T> {
-        self.map(|item| item.unwrap_real())
+        self.map(|item| item.unwrap_item())
     }
 
     pub fn map_real<S>(self, f: impl Fn(T) -> S) -> SpannedPat<S> {
         self.map(|item| match item {
-            Pattern::Real(t) => Pattern::Real(f(t)),
-            Pattern::Pat(id) => Pattern::Pat(id),
+            Pattern::Item(t) => Pattern::Item(f(t)),
+            Pattern::Var(id) => Pattern::Var(id),
         })
     }
 }

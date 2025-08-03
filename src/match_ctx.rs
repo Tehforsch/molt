@@ -37,7 +37,7 @@ impl<'a, Node: NodeType> MatchCtx<'a, Node> {
     pub fn dump(&self) {
         println!("--------------------------------");
         for id in self.real_ctx.iter() {
-            let node = self.real_ctx.get::<Node>(id).unwrap_real();
+            let node = self.real_ctx.get::<Node>(id).unwrap_item();
             let kind_str = format!("{:?}", node.node_kind());
             println!(
                 "RealNode({:02}): {:13} = {}",
@@ -48,7 +48,7 @@ impl<'a, Node: NodeType> MatchCtx<'a, Node> {
         }
         println!("--------------------------------");
         for id in self.molt_ctx.iter() {
-            let node = self.molt_ctx.get::<Node>(id).unwrap_real();
+            let node = self.molt_ctx.get::<Node>(id).unwrap_item();
             let kind_str = format!("{:?}", node.node_kind());
             println!(
                 "MoltNode({:02}): {:13} = {}",

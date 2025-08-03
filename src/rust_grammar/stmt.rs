@@ -116,7 +116,7 @@ impl ParseList for Block {
                 break;
             }
             let stmt = input.parse_spanned_pat::<StmtAllowNoSemi>()?;
-            let requires_semicolon = match stmt.real() {
+            let requires_semicolon = match stmt.get_item() {
                 Some(Stmt::Expr(stmt, None)) => input
                     .ctx()
                     .get(*stmt)
@@ -322,7 +322,7 @@ fn stmt_expr(
             Some(id) => ctx.get(id),
             None => e.as_ref(),
         };
-        let Pattern::Real(e) = e else {
+        let Pattern::Item(e) = e else {
             break;
         };
         attr_target = match e {
@@ -376,11 +376,11 @@ fn stmt_expr(
             None => e.as_mut(),
         };
         match attr_target {
-            Pattern::Real(attr_target) => {
+            Pattern::Item(attr_target) => {
                 attrs.extend(attr_target.replace_attrs(Vec::new()));
                 attr_target.replace_attrs(attrs);
             }
-            Pattern::Pat(_) => {
+            Pattern::Var(_) => {
                 if !attrs.is_empty() {
                     panic!("Attr on var")
                 }
@@ -392,7 +392,7 @@ fn stmt_expr(
     let semi_token: Option<Token![;]> = input.parse()?;
 
     match e {
-        Pattern::Real(Expr::Macro(ExprMacro { attrs, mac }))
+        Pattern::Item(Expr::Macro(ExprMacro { attrs, mac }))
             if semi_token.is_some() || mac.delimiter.is_brace() =>
         {
             Ok(Stmt::Macro(StmtMacro {

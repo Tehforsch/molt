@@ -356,7 +356,7 @@ fn ambig_ty(input: ParseStream, allow_plus: bool) -> Result<Type> {
             #[allow(clippy::never_loop)]
             loop {
                 let first = match first {
-                    Pattern::Real(Type::Path(TypePath { qself: None, path })) => {
+                    Pattern::Item(Type::Path(TypePath { qself: None, path })) => {
                         TypeParamBound::Trait(TraitBound {
                             paren_token: Some(paren_token),
                             modifier: TraitBoundModifier::None,
@@ -364,12 +364,12 @@ fn ambig_ty(input: ParseStream, allow_plus: bool) -> Result<Type> {
                             path,
                         })
                     }
-                    Pattern::Real(Type::TraitObject(TypeTraitObject {
+                    Pattern::Item(Type::TraitObject(TypeTraitObject {
                         dyn_token: None,
                         bounds,
                     })) => {
                         if bounds.len() > 1 || bounds.trailing_punct() {
-                            first = Pattern::Real(Type::TraitObject(TypeTraitObject {
+                            first = Pattern::Item(Type::TraitObject(TypeTraitObject {
                                 dyn_token: None,
                                 bounds,
                             }));
@@ -550,7 +550,7 @@ impl ParseListOrItem for TypeTuple {
                 }
                 elems.push_punct(input.parse()?);
             }
-            Ok(ListOrItem::List(NodeList::Real(
+            Ok(ListOrItem::List(NodeList::Item(
                 elems.into_iter().map(|ty| input.add_pat(ty)).collect(),
             )))
         } else {

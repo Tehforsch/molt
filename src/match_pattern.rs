@@ -94,9 +94,9 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
         }
 
         match self.ctx.get::<Node>(id) {
-            Pattern::Pat(var) => self.add_binding(var, real_id),
-            Pattern::Real(pat) => {
-                self.cmp_syn::<Node, Node>(self.ctx.real_ctx.get(real_id).unwrap_real(), pat)
+            Pattern::Var(var) => self.add_binding(var, real_id),
+            Pattern::Item(pat) => {
+                self.cmp_syn::<Node, Node>(self.ctx.real_ctx.get(real_id).unwrap_item(), pat)
             }
         }
     }
@@ -130,14 +130,14 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
         ts2: &NodeList<T, P>,
     ) -> IsMatch {
         match (ts1, ts2) {
-            (Pattern::Real(ts1), Pattern::Real(ts2)) => {
+            (Pattern::Item(ts1), Pattern::Item(ts2)) => {
                 self.cmp_lists_real(ts1.items(), ts2.items())
             }
-            (Pattern::Real(ts1), Pattern::Pat(ts2)) => match ts2 {
+            (Pattern::Item(ts1), Pattern::Var(ts2)) => match ts2 {
                 PatNodeList::Single(single) => self.cmp_lists_single(ts1, single),
                 PatNodeList::List(list) => self.cmp_lists_list(ts1, list),
             },
-            (Pattern::Pat(_), _) => unreachable!(),
+            (Pattern::Var(_), _) => unreachable!(),
         }
     }
 

@@ -1043,7 +1043,7 @@ pub(super) fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<Spa
         let allow_struct = AllowStruct(true);
         let atom = input
             .call_spanned(|input| expr_group(input, allow_struct))?
-            .map(Pattern::Real);
+            .map(Pattern::Item);
         if continue_parsing_early(input, &atom) {
             trailer_helper(input, atom)?
         } else {
@@ -1070,14 +1070,14 @@ pub(super) fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<Spa
     } else if input.peek(token::Brace) {
         input.parse_span_with(Expr::Block)?
     } else if input.peek(Lifetime) {
-        input.call_spanned(atom_labeled)?.map(Pattern::Real)
+        input.call_spanned(atom_labeled)?.map(Pattern::Item)
     } else {
         let allow_struct = AllowStruct(true);
         unary_expr(input, allow_struct)?
     };
 
     if continue_parsing_early(input, &expr) {
-        if let Pattern::Real(expr) = &mut *expr {
+        if let Pattern::Item(expr) = &mut *expr {
             attrs.extend(expr.replace_attrs(Vec::new()));
             expr.replace_attrs(attrs);
         }
@@ -1089,7 +1089,7 @@ pub(super) fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<Spa
     if input.peek(Token![.]) && !input.peek(Token![..]) || input.peek(Token![?]) {
         expr = trailer_helper(input, expr)?;
 
-        if let Pattern::Real(expr) = &mut *expr {
+        if let Pattern::Item(expr) = &mut *expr {
             attrs.extend(expr.replace_attrs(Vec::new()));
             expr.replace_attrs(attrs);
         }
@@ -1098,7 +1098,7 @@ pub(super) fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<Spa
         return parse_expr(input, expr, allow_struct, Precedence::MIN);
     }
 
-    if let Pattern::Real(expr) = &mut *expr {
+    if let Pattern::Item(expr) = &mut *expr {
         attrs.extend(expr.replace_attrs(Vec::new()));
         expr.replace_attrs(attrs);
     }
@@ -1121,7 +1121,7 @@ fn parse_expr(
 ) -> Result<SpannedPat<Expr>> {
     loop {
         let ahead = input.fork();
-        if let Some(Expr::Range(_)) = lhs.real() {
+        if let Some(Expr::Range(_)) = lhs.get_item() {
             // A range cannot be the left-hand side of another binary operator.
             break;
         } else if let Ok(op) = ahead.parse::<BinOp>() {
@@ -1130,12 +1130,12 @@ fn parse_expr(
                 break;
             }
             if precedence == Precedence::Assign {
-                if let Some(Expr::Range(_)) = lhs.real() {
+                if let Some(Expr::Range(_)) = lhs.get_item() {
                     break;
                 }
             }
             if precedence == Precedence::Compare {
-                if let Some(Expr::Binary(lhs)) = lhs.real() {
+                if let Some(Expr::Binary(lhs)) = lhs.get_item() {
                     if Precedence::of_binop(&lhs.op) == Precedence::Compare {
                         return Err(input.error("comparison operators cannot be chained"));
                     }
@@ -1154,7 +1154,7 @@ fn parse_expr(
         } else if Precedence::Assign >= base
             && input.peek(Token![=])
             && !input.peek(Token![=>])
-            && !matches!(lhs.real(), Some(Expr::Range(_)))
+            && !matches!(lhs.get_item(), Some(Expr::Range(_)))
         {
             let eq_token: Token![=] = input.parse()?;
             let right = parse_binop_rhs(input, allow_struct, Precedence::Assign)?;
@@ -1361,7 +1361,7 @@ fn trailer_helper(input: ParseStream, mut e: SpannedPat<Expr>) -> Result<Spanned
             e = e2.pattern_with_span(span);
         } else if input.peek(Token![.])
             && !input.peek(Token![..])
-            && !matches!(e.real(), Some(Expr::Range(_)))
+            && !matches!(e.get_item(), Some(Expr::Range(_)))
         {
             let mut dot_token: Token![.] = input.parse()?;
 
@@ -1428,7 +1428,7 @@ fn trailer_helper(input: ParseStream, mut e: SpannedPat<Expr>) -> Result<Spanned
             });
             let span = input.span_from_marker(marker).join(orig_span);
             e = e2.pattern_with_span(span);
-        } else if input.peek(Token![?]) && !matches!(e.real(), Some(Expr::Range(_))) {
+        } else if input.peek(Token![?]) && !matches!(e.get_item(), Some(Expr::Range(_))) {
             let e2 = Expr::Try(ExprTry {
                 attrs: Vec::new(),
                 expr: input.add_pat(e),
@@ -1449,7 +1449,7 @@ fn atom_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<Pattern<Ex
     if let Some(var) = input.parse_var() {
         return var;
     }
-    atom_expr_inner(input, allow_struct).map(Pattern::Real)
+    atom_expr_inner(input, allow_struct).map(Pattern::Item)
 }
 
 fn atom_expr_inner(input: ParseStream, allow_struct: AllowStruct) -> Result<Expr> {
@@ -1642,7 +1642,7 @@ impl ParseListOrItem for ExprTuple {
             let value = input.parse()?;
             elems.push_value(value);
         }
-        Ok(ListOrItem::List(NodeList::Real(
+        Ok(ListOrItem::List(NodeList::Item(
             elems.into_iter().collect(),
         )))
     }
@@ -1704,7 +1704,7 @@ impl ParseListOrItem for ExprArray {
                 let value: NodeId<Expr> = input.parse()?;
                 elems.push_value(value);
             }
-            Ok(ListOrItem::List(NodeList::Real(
+            Ok(ListOrItem::List(NodeList::Item(
                 elems.into_iter().collect(),
             )))
         } else if input.peek(Token![;]) {
@@ -1730,7 +1730,7 @@ impl Parse for ExprRepeat {
 
 fn continue_parsing_early(input: ParseStream, expr: &SpannedPat<Expr>) -> bool {
     let ctx = input.ctx();
-    let mut expr: Option<&Expr> = expr.real();
+    let mut expr: Option<&Expr> = expr.get_item();
     while let Some(Expr::Group(group)) = expr {
         expr = if let Some(expr) = ctx.get_real(group.expr) {
             Some(expr)
@@ -1777,12 +1777,12 @@ fn expr_group(input: ParseStream, allow_struct: AllowStruct) -> Result<Expr> {
         }))
     };
     match inner {
-        Pattern::Real(Expr::Path(mut expr)) if expr.attrs.is_empty() => {
+        Pattern::Item(Expr::Path(mut expr)) if expr.attrs.is_empty() => {
             let grouped_len = expr.path.segments.len();
             Path::parse_rest(input, &mut expr.path, true)?;
             match rest_of_path_or_macro_or_struct(expr.qself, expr.path, input, allow_struct)? {
                 Expr::Path(expr) if expr.path.segments.len() == grouped_len => {
-                    make_group_expr(Pattern::Real(Expr::Path(expr)))
+                    make_group_expr(Pattern::Item(Expr::Path(expr)))
                 }
                 extended => Ok(extended),
             }
@@ -2076,7 +2076,7 @@ impl ParseNode for ClosureInput {
         let mut pat = input.parse_spanned_pat::<PatSingle>()?;
 
         if input.peek(Token![:]) {
-            Ok(Pattern::Real(Pat::Type(PatType {
+            Ok(Pattern::Item(Pat::Type(PatType {
                 attrs,
                 pat: input.add_pat(pat),
                 colon_token: input.parse()?,
@@ -2084,24 +2084,24 @@ impl ParseNode for ClosureInput {
             })))
         } else {
             match &mut *pat {
-                Pattern::Pat(_) => {}
-                Pattern::Real(Pat::Const(pat)) => pat.attrs = attrs,
-                Pattern::Real(Pat::Ident(pat)) => pat.attrs = attrs,
-                Pattern::Real(Pat::Lit(pat)) => pat.attrs = attrs,
-                Pattern::Real(Pat::Macro(pat)) => pat.attrs = attrs,
-                Pattern::Real(Pat::Or(pat)) => pat.attrs = attrs,
-                Pattern::Real(Pat::Paren(pat)) => pat.attrs = attrs,
-                Pattern::Real(Pat::Path(pat)) => pat.attrs = attrs,
-                Pattern::Real(Pat::Range(pat)) => pat.attrs = attrs,
-                Pattern::Real(Pat::Reference(pat)) => pat.attrs = attrs,
-                Pattern::Real(Pat::Rest(pat)) => pat.attrs = attrs,
-                Pattern::Real(Pat::Slice(pat)) => pat.attrs = attrs,
-                Pattern::Real(Pat::Struct(pat)) => pat.attrs = attrs,
-                Pattern::Real(Pat::Tuple(pat)) => pat.attrs = attrs,
-                Pattern::Real(Pat::TupleStruct(pat)) => pat.attrs = attrs,
-                Pattern::Real(Pat::Type(_)) => unreachable!(),
-                Pattern::Real(Pat::Verbatim(_)) => {}
-                Pattern::Real(Pat::Wild(pat)) => pat.attrs = attrs,
+                Pattern::Var(_) => {}
+                Pattern::Item(Pat::Const(pat)) => pat.attrs = attrs,
+                Pattern::Item(Pat::Ident(pat)) => pat.attrs = attrs,
+                Pattern::Item(Pat::Lit(pat)) => pat.attrs = attrs,
+                Pattern::Item(Pat::Macro(pat)) => pat.attrs = attrs,
+                Pattern::Item(Pat::Or(pat)) => pat.attrs = attrs,
+                Pattern::Item(Pat::Paren(pat)) => pat.attrs = attrs,
+                Pattern::Item(Pat::Path(pat)) => pat.attrs = attrs,
+                Pattern::Item(Pat::Range(pat)) => pat.attrs = attrs,
+                Pattern::Item(Pat::Reference(pat)) => pat.attrs = attrs,
+                Pattern::Item(Pat::Rest(pat)) => pat.attrs = attrs,
+                Pattern::Item(Pat::Slice(pat)) => pat.attrs = attrs,
+                Pattern::Item(Pat::Struct(pat)) => pat.attrs = attrs,
+                Pattern::Item(Pat::Tuple(pat)) => pat.attrs = attrs,
+                Pattern::Item(Pat::TupleStruct(pat)) => pat.attrs = attrs,
+                Pattern::Item(Pat::Type(_)) => unreachable!(),
+                Pattern::Item(Pat::Verbatim(_)) => {}
+                Pattern::Item(Pat::Wild(pat)) => pat.attrs = attrs,
             }
             Ok(pat.item())
         }

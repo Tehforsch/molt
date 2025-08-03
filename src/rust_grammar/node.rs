@@ -194,12 +194,12 @@ macro_rules! parse_impl {
         if let Kind::$variant_name = $kind {
             let id = $input.parse_id::<$parse_ty>()?;
             match $input.ctx().get(id) {
-                Pattern::Real(node) => {
+                Pattern::Item(node) => {
                     if !<$sub_ty>::is_of_sub_kind(&node) {
                         return Err($input.error(format!("Expected {}", <$sub_ty>::expected_str())));
                     }
                 }
-                Pattern::Pat(_) => {
+                Pattern::Var(_) => {
                     // TODO: Do we need to do anything here?
                 }
             }

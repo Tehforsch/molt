@@ -85,8 +85,8 @@ pub(crate) fn expr_trailing_brace(input: ParseStream, mut expr: NodeId<Expr>) ->
         match input.ctx().get(expr) {
             // We count a variable as an atomic expression,
             // so it doesn't have trailing braces.
-            Pattern::Pat(_) => return false,
-            Pattern::Real(e) => match e {
+            Pattern::Var(_) => return false,
+            Pattern::Item(e) => match e {
                 Expr::Async(_)
                 | Expr::Block(_)
                 | Expr::Const(_)
@@ -152,8 +152,8 @@ pub(crate) fn expr_trailing_brace(input: ParseStream, mut expr: NodeId<Expr>) ->
     fn type_trailing_brace(input: ParseStream, mut ty: NodeId<Type>) -> bool {
         loop {
             match input.ctx().get(ty) {
-                Pattern::Pat(_) => return false,
-                Pattern::Real(t) => match t {
+                Pattern::Var(_) => return false,
+                Pattern::Item(t) => match t {
                     Type::BareFn(t) => match &t.output {
                         ReturnType::Default => return false,
                         ReturnType::Type(_, ret) => ty = *ret,
