@@ -1,11 +1,11 @@
 use std::marker::PhantomData;
 
-use crate::{NodeType, ParsingMode, Pattern, Span, Spanned, ToNode, span::SpannedPat};
+use crate::{Mode, NodeType, Pattern, Span, Spanned, ToNode, span::SpannedPat};
 
 type InternalId = Pattern<usize, usize>;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct Id(InternalId, ParsingMode);
+pub struct Id(InternalId, Mode);
 
 impl Id {
     pub fn is_var(&self) -> bool {
@@ -15,7 +15,7 @@ impl Id {
         }
     }
 
-    pub(crate) fn mode(&self) -> ParsingMode {
+    pub(crate) fn mode(&self) -> Mode {
         self.1
     }
 }
@@ -29,7 +29,7 @@ impl<T> NodeId<T> {
     // used instead of Expr::PLACEHOLDER in parsing.
     pub fn placeholder() -> Self {
         Self {
-            id: Id(InternalId::Real(usize::MAX), ParsingMode::Real),
+            id: Id(InternalId::Real(usize::MAX), Mode::Real),
             _marker: PhantomData,
         }
     }
@@ -121,7 +121,7 @@ pub struct Ctx<Node: NodeType> {
     nodes: Vec<Node>,
     vars: Vec<Var<Node::Kind>>,
     spans: Vec<Span>,
-    mode: ParsingMode,
+    mode: Mode,
 }
 
 impl<Node: NodeType> Ctx<Node> {
@@ -226,7 +226,7 @@ impl<Node: NodeType> Ctx<Node> {
 }
 
 impl<Node: NodeType> Ctx<Node> {
-    pub fn new(mode: ParsingMode) -> Self {
+    pub fn new(mode: Mode) -> Self {
         Self {
             nodes: vec![],
             vars: vec![],

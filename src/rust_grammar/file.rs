@@ -1,4 +1,4 @@
-use crate::{Ctx, NodeList, ParsingMode};
+use crate::{Ctx, Mode, NodeList};
 
 use crate::parser::error::Result;
 use crate::parser::parse::{Parse, ParseStream, parse_str_ctx};
@@ -24,7 +24,7 @@ impl Parse for File {
     }
 }
 
-pub fn parse_file(mut content: &str, mode: ParsingMode) -> Result<(File, Ctx<Node>)> {
+pub fn parse_file(mut content: &str, mode: Mode) -> Result<(File, Ctx<Node>)> {
     // Strip the BOM if it is present
     const BOM: &str = "\u{feff}";
     if content.starts_with(BOM) {

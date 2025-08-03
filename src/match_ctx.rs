@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::config::Config;
-use crate::{Ctx, Id, NodeType, ParsingMode, Pattern, ToNode, Var};
+use crate::{Ctx, Id, Mode, NodeType, Pattern, ToNode, Var};
 
 #[derive(Clone)]
 pub struct MatchPatternData<'a> {
@@ -73,15 +73,15 @@ impl<'a, Node: NodeType> MatchCtx<'a, Node> {
 
     pub fn print(&self, id: Id) -> &str {
         match id.mode() {
-            ParsingMode::Real => self.print_ast(id),
-            ParsingMode::Pat => self.print_pat(id),
+            Mode::Real => self.print_ast(id),
+            Mode::Molt => self.print_pat(id),
         }
     }
 
     pub fn get<T: ToNode<Node>>(&self, id: Id) -> Pattern<&T, Id> {
         match id.mode() {
-            ParsingMode::Real => self.ast_ctx.get(id),
-            ParsingMode::Pat => self.pat_ctx.get(id),
+            Mode::Real => self.ast_ctx.get(id),
+            Mode::Molt => self.pat_ctx.get(id),
         }
     }
 
