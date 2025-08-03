@@ -6,6 +6,7 @@ use crate::parser::error::Result;
 use crate::parser::parse::discouraged::Speculative as _;
 use crate::parser::parse::{Parse, ParseList, ParseNode, ParseStream};
 use crate::parser::token;
+use crate::rust_grammar::Node;
 use crate::rust_grammar::attr::Attribute;
 use crate::rust_grammar::expr::{Expr, ExprBlock, ExprEarlierBoundaryRule, ExprMacro};
 use crate::rust_grammar::ident::Ident;
@@ -20,6 +21,7 @@ use crate::rust_grammar::{classify, item};
 use super::classify::RequiresSemiToBeStmt;
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A braced block containing Rust statements.
 pub struct Block {
     pub brace_token: token::Brace,
@@ -30,6 +32,7 @@ pub struct Block {
 struct StmtAllowNoSemi;
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A statement, usually ending in a semicolon.
 pub enum Stmt {
     /// A local (let) binding.
@@ -50,6 +53,7 @@ pub enum Stmt {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A local `let` binding: `let x: u64 = s.parse()?;`.
 pub struct Local {
     pub attrs: Vec<Attribute>,
@@ -60,6 +64,7 @@ pub struct Local {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// The expression assigned in a local `let` binding, including optional
 /// diverging `else` block.
 ///
@@ -72,6 +77,7 @@ pub struct LocalInit {
 }
 
 #[derive(Debug, CmpSyn)]
+#[node(Node)]
 /// A macro invocation in statement position.
 ///
 /// Syntactically it's ambiguous which other kind of statement this macro

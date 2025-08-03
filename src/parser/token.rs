@@ -9,6 +9,7 @@ use crate::parser::buffer::Cursor;
 use crate::parser::error::{Error, Result};
 use crate::parser::parse::{Parse, ParseStream};
 use crate::parser::span::IntoSpans;
+use crate::rust_grammar::Node;
 use crate::rust_grammar::lifetime::Lifetime;
 
 /// Marker trait for types that represent single tokens.
@@ -638,8 +639,14 @@ fn peek_punct(mut cursor: Cursor, token: &str) -> bool {
 
 macro_rules! impl_zst_cmp_syn {
     ($ty: ty) => {
-        impl crate::CmpSyn for $ty {
-            fn cmp_syn(&self, _: &mut crate::Matcher, _: &Self) {}
+        impl crate::CmpSyn<Node> for $ty {
+            fn cmp_syn(
+                &self,
+                _: &mut crate::Matcher<Node>,
+                _: &Self,
+            ) -> crate::match_pattern::IsMatch {
+                crate::match_pattern::IsMatch::Ok(())
+            }
         }
     };
 }
