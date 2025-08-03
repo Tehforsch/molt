@@ -84,13 +84,13 @@ impl<T, P> List<T, P> {
 impl<T, P> NodeList<T, P> {
     pub fn empty(mode: Mode) -> Self {
         match mode {
-            Mode::Real => Self::Real(RealNodeList::empty()),
-            Mode::Molt => Self::Pat(PatNodeList::empty()),
+            Mode::Real => Self::Item(RealNodeList::empty()),
+            Mode::Molt => Self::Var(PatNodeList::empty()),
         }
     }
 
     pub fn empty_real() -> Self {
-        Self::Real(RealNodeList::empty())
+        Self::Item(RealNodeList::empty())
     }
 }
 

@@ -306,7 +306,7 @@ fn try_parse_as<T: ParseNode>(
 ) -> Option<(NodeId<Type>, CtxR)> {
     let (id, ctx) =
         crate::parser::parse::parse_ctx(|input| input.parse_id::<T>(), line, Mode::Real).ok()?;
-    f(&ctx, ctx.get(id).unwrap_real()).map(|item| (item, ctx))
+    f(&ctx, ctx.get(id).unwrap_item()).map(|item| (item, ctx))
 }
 
 fn parse_type_from_str(line: &str) -> Option<LspType> {
@@ -316,7 +316,7 @@ fn parse_type_from_str(line: &str) -> Option<LspType> {
             let line = format!("{line};");
             try_parse_as::<Stmt>(&line, |ctx: &CtxR, stmt: &Stmt| match stmt {
                 Stmt::Local(local) => match ctx.get(local.pat) {
-                    Pattern::Real(Pat::Type(type_)) => Some(type_.ty),
+                    Pattern::Item(Pat::Type(type_)) => Some(type_.ty),
                     _ => None,
                 },
                 _ => None,

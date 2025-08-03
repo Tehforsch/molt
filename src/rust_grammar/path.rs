@@ -216,7 +216,7 @@ impl Parse for GenericArgument {
         let (span, mut argument) = input.parse_spanned_pat::<Type>()?.decompose();
 
         match argument {
-            Pattern::Real(Type::Path(mut ty))
+            Pattern::Item(Type::Path(mut ty))
                 if ty.qself.is_none()
                     && ty.path.leading_colon.is_none()
                     && ty.path.segments.len() == 1
@@ -286,7 +286,7 @@ impl Parse for GenericArgument {
                     }));
                 }
 
-                argument = Pattern::Real(Type::Path(ty));
+                argument = Pattern::Item(Type::Path(ty));
             }
             _ => {}
         }
