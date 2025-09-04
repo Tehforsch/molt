@@ -796,7 +796,7 @@ impl Parse for Literal {
     }
 }
 
-fn tokens_to_parse_buffer(ctx: ParseCtx, tokens: &TokenBuffer, mode: ParsingMode) -> ParseBuffer {
+fn tokens_to_parse_buffer(ctx: ParseCtx, tokens: &TokenBuffer, mode: ParsingMode) -> ParseBuffer<'_> {
     let scope = Span::call_site();
     let cursor = tokens.begin();
     let unexpected = Rc::new(Cell::new(Unexpected::None));
