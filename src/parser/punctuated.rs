@@ -55,7 +55,7 @@ impl<T, P> Punctuated<T, P> {
     }
 
     /// Returns an iterator over borrowed syntax tree nodes of type `&T`.
-    pub fn iter(&self) -> Iter<T> {
+    pub fn iter(&self) -> Iter<'_, T> {
         Iter {
             inner: Box::new(NoDrop::new(PrivateIter {
                 inner: self.inner.iter(),
@@ -66,7 +66,7 @@ impl<T, P> Punctuated<T, P> {
 
     /// Returns an iterator over mutably borrowed syntax tree nodes of type
     /// `&mut T`.
-    fn iter_mut(&mut self) -> IterMut<T> {
+    fn iter_mut(&mut self) -> IterMut<'_, T> {
         IterMut {
             inner: Box::new(NoDrop::new(PrivateIterMut {
                 inner: self.inner.iter_mut(),
