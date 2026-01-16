@@ -7,8 +7,8 @@ use clap::Parser;
 use cli::CliArgs;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
 use codespan_reporting::term::{self, Config};
+use ignore::WalkBuilder;
 use molt::{Input, MoltSource, emit_error, run};
-use walkdir::WalkDir;
 
 #[derive(Debug, thiserror::Error)]
 enum Error {
@@ -17,7 +17,7 @@ enum Error {
     #[error("{0}")]
     Io(#[from] io::Error),
     #[error("{0}")]
-    Walkdir(#[from] walkdir::Error),
+    Ignore(#[from] ignore::Error),
     #[error("No Cargo.toml found.")]
     CargoTomlNotFound,
     #[error("Unknown file type for input file: {0}")]
@@ -41,11 +41,10 @@ fn get_cargo_toml(mut path: PathBuf) -> Result<PathBuf> {
 
 fn get_rust_files_from_dir(dir: &Path) -> Result<Vec<PathBuf>> {
     let mut src_files = vec![];
-    for entry in WalkDir::new(dir) {
+    for entry in WalkBuilder::new(dir).build() {
         let entry = entry?;
         let path = entry.path();
-        let is_rust_src = path.extension().is_some_and(|ext| ext == "rs");
-        if is_rust_src {
+        if path.is_file() && path.extension().is_some_and(|ext| ext == "rs") {
             src_files.push(path.to_owned());
         }
     }
