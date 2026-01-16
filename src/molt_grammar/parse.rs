@@ -4,7 +4,6 @@ use crate::parser::{Error, Result};
 use crate::rule::{ParseRuleKey, Rule};
 use crate::rust_grammar::ext::IdentExt;
 use crate::rust_grammar::{Ident, Kind, TokenStream, TokenTree};
-use crate::{Token, braced};
 
 use super::{
     Command, Decl, MatchCommand, Ruleset, TokenVar, TransformCommand, UnresolvedMoltFile,

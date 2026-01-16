@@ -11,7 +11,7 @@ use proc_macro2::{Literal, Punct, Span};
 use crate::parser::buffer::Cursor;
 use crate::parser::parse::{Parse, ParseNode, ParseStream, PeekPat, Unexpected};
 use crate::parser::token::Token;
-use crate::parser::{lookahead, Error, ParseCtx, Result};
+use crate::parser::{Error, ParseCtx, Result, lookahead};
 use crate::rust_grammar::Ident;
 
 #[derive(Debug, CmpSyn)]
