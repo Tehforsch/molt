@@ -4,10 +4,11 @@ Molt is a syntax-aware search and replace tool for Rust. Molt is experimental so
 
 ## Overview
 
-Molt provides a simple pattern-matching language for the Rust programming language. 
+Molt provides a simple pattern-matching language for the Rust programming language.
 It's particularly useful for mechanical refactorings, API migrations and pattern finding across large code bases.
 
-## Example
+## Examples
+### Replace method call
 Suppose you have a `main.rs` containing:
 ```rust
 fn main() {
@@ -38,17 +39,6 @@ fn main() {
     let x = foo.insert_at_key("key", "value");
     let y = bar.get_map().insert_at_key(CustomEnum::Key, 10);
 }
-```
-
-## More Examples
-
-### Simple Variable Renaming
-
-```rust
-let input: Ident = old_name;
-let output: Ident = new_name;
-
-transform input -> output;
 ```
 
 ### Type-aware Transformations (WIP)
@@ -92,6 +82,19 @@ transform input -> output;
 ```
 
 The machinery to do this exists, but transforming the output requires carefully analyzing the "tree" of transformations and doing them in the right order, which is not implemented yet.
+
+## Installation
+
+Molt is not currently published on crates.io. To install, clone the repository and use `cargo install`:
+
+```bash
+git clone https://github.com/tehforsch/molt.git
+cd molt
+cargo install --path .
+```
+
+This will install the `molt` binary in your Cargo bin directory (usually `~/.cargo/bin`).
+
 
 ## Molt Syntax
 
