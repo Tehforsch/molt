@@ -109,13 +109,13 @@ impl<'a> Transform<'a> {
         std::fs::write(self.rust_file_path, new_code)?;
         FileRestorer::global()
             .remember_original_file_contents(self.rust_file_path, original_code)
-            .map_err(|e| Error::Io(e))
+            .map_err(Error::Io)
     }
 
     fn forget_temporary_modification(&self) -> Result<(), Error> {
         FileRestorer::global()
             .forget_file(self.rust_file_path)
-            .map_err(|e| Error::Io(e))
+            .map_err(Error::Io)
     }
 
     fn restore_temporary_modification(&self, original_code: &str) -> Result<(), Error> {
@@ -195,10 +195,10 @@ fn prepare_transformations(
 fn check_overlap(transformations: &[Transformation]) -> Result<(), Error> {
     let mut last_byte = None;
     for tf in transformations.iter() {
-        if let Some(last_byte) = last_byte {
-            if tf.span.byte_range().start <= last_byte {
-                return Err(TransformError::Overlap.into());
-            }
+        if let Some(last_byte) = last_byte
+            && tf.span.byte_range().start <= last_byte
+        {
+            return Err(TransformError::Overlap.into());
         }
         last_byte = Some(tf.span.byte_range().end);
     }

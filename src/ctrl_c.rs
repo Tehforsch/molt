@@ -51,7 +51,7 @@ impl FileRestorer {
     }
 
     pub fn global() -> &'static FileRestorer {
-        CTRL_C_HANDLER.get_or_init(|| FileRestorer::new())
+        CTRL_C_HANDLER.get_or_init(FileRestorer::new)
     }
 
     pub fn remember_original_file_contents(
@@ -113,7 +113,7 @@ impl CtrlCHandlerThread {
 }
 
 fn restore_file(path: &Path, original_code: String) {
-    if let Err(e) = std::fs::write(&path, original_code) {
+    if let Err(e) = std::fs::write(path, original_code) {
         eprintln!("Failed to restore file {:?}: {}", path, e);
     }
 }

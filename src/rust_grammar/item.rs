@@ -1357,15 +1357,13 @@ fn parse_fn_arg_or_variadic(
     let pat = input.parse_id::<PatSingle>()?;
     let colon_token: Token![:] = input.parse()?;
 
-    if allow_variadic {
-        if let Some(dots) = input.parse::<Option<Token![...]>>()? {
-            return Ok(FnArgOrVariadic::Variadic(Variadic {
-                attrs,
-                pat: Some((pat, colon_token)),
-                dots,
-                comma: None,
-            }));
-        }
+    if allow_variadic && let Some(dots) = input.parse::<Option<Token![...]>>()? {
+        return Ok(FnArgOrVariadic::Variadic(Variadic {
+            attrs,
+            pat: Some((pat, colon_token)),
+            dots,
+            comma: None,
+        }));
     }
 
     Ok(FnArgOrVariadic::FnArg(FnArg::Typed(PatType {

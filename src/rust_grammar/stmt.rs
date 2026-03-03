@@ -167,16 +167,16 @@ fn parse_stmt(input: ParseStream, allow_nosemi: AllowNoSemi) -> Result<Stmt> {
     // expression statements.
     let ahead = input.fork();
     let mut is_item_macro = false;
-    if let Ok(path) = ahead.call(Path::parse_mod_style) {
-        if ahead.peek(Token![!]) {
-            if ahead.peek2(Ident) || ahead.peek2(Token![try]) {
-                is_item_macro = true;
-            } else if ahead.peek2(token::Brace)
-                && !(ahead.peek3(Token![.]) && !ahead.peek3(Token![..]) || ahead.peek3(Token![?]))
-            {
-                input.advance_to(&ahead);
-                return stmt_mac(input, attrs, path);
-            }
+    if let Ok(path) = ahead.call(Path::parse_mod_style)
+        && ahead.peek(Token![!])
+    {
+        if ahead.peek2(Ident) || ahead.peek2(Token![try]) {
+            is_item_macro = true;
+        } else if ahead.peek2(token::Brace)
+            && !(ahead.peek3(Token![.]) && !ahead.peek3(Token![..]) || ahead.peek3(Token![?]))
+        {
+            input.advance_to(&ahead);
+            return stmt_mac(input, attrs, path);
         }
     }
 

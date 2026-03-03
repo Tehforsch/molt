@@ -499,12 +499,11 @@ impl Parse for Lit {
                 }
             }
 
-            if let Some((punct, rest)) = cursor.punct() {
-                if punct.as_char() == '-' {
-                    if let Some((lit, rest)) = parse_negative_lit(punct, rest) {
-                        return Ok((lit, rest));
-                    }
-                }
+            if let Some((punct, rest)) = cursor.punct()
+                && punct.as_char() == '-'
+                && let Some((lit, rest)) = parse_negative_lit(punct, rest)
+            {
+                return Ok((lit, rest));
             }
 
             Err(cursor.error("expected literal"))

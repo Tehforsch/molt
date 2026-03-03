@@ -1081,17 +1081,16 @@ fn parse_expr(
             if precedence < base {
                 break;
             }
-            if precedence == Precedence::Assign {
-                if let Some(Expr::Range(_)) = lhs.real() {
-                    break;
-                }
+            if precedence == Precedence::Assign
+                && let Some(Expr::Range(_)) = lhs.real()
+            {
+                break;
             }
-            if precedence == Precedence::Compare {
-                if let Some(Expr::Binary(lhs)) = lhs.real() {
-                    if Precedence::of_binop(&lhs.op) == Precedence::Compare {
-                        return Err(input.error("comparison operators cannot be chained"));
-                    }
-                }
+            if precedence == Precedence::Compare
+                && let Some(Expr::Binary(lhs)) = lhs.real()
+                && Precedence::of_binop(&lhs.op) == Precedence::Compare
+            {
+                return Err(input.error("comparison operators cannot be chained"));
             }
             input.advance_to(&ahead);
             let right = parse_binop_rhs(input, allow_struct, precedence)?;
@@ -1318,10 +1317,10 @@ fn trailer_helper(input: ParseStream, mut e: SpannedPat<Expr>) -> Result<Spanned
             let mut dot_token: Token![.] = input.parse()?;
 
             let float_token: Option<LitFloat> = input.parse()?;
-            if let Some(float_token) = float_token {
-                if multi_index(input, &mut e, &mut dot_token, float_token)? {
-                    continue;
-                }
+            if let Some(float_token) = float_token
+                && multi_index(input, &mut e, &mut dot_token, float_token)?
+            {
+                continue;
             }
 
             let await_token: Option<Token![await]> = input.parse()?;
@@ -1344,22 +1343,22 @@ fn trailer_helper(input: ParseStream, mut e: SpannedPat<Expr>) -> Result<Spanned
                 None
             };
 
-            if turbofish.is_some() || input.peek(token::Paren) {
-                if let Member::Named(method) = member {
-                    let content;
-                    let e2 = Expr::MethodCall(ExprMethodCall {
-                        attrs: Vec::new(),
-                        receiver: input.add_pat(e),
-                        dot_token,
-                        method,
-                        turbofish,
-                        paren_token: parenthesized!(content in input),
-                        args: content.parse_list::<FnArgs>()?,
-                    });
-                    let span = input.span_from_marker(marker).join(orig_span);
-                    e = e2.pattern_with_span(span);
-                    continue;
-                }
+            if (turbofish.is_some() || input.peek(token::Paren))
+                && let Member::Named(method) = member
+            {
+                let content;
+                let e2 = Expr::MethodCall(ExprMethodCall {
+                    attrs: Vec::new(),
+                    receiver: input.add_pat(e),
+                    dot_token,
+                    method,
+                    turbofish,
+                    paren_token: parenthesized!(content in input),
+                    args: content.parse_list::<FnArgs>()?,
+                });
+                let span = input.span_from_marker(marker).join(orig_span);
+                e = e2.pattern_with_span(span);
+                continue;
             }
 
             let e2 = Expr::Field(ExprField {
@@ -2216,11 +2215,13 @@ fn expr_break(input: ParseStream, allow_struct: AllowStruct) -> Result<ExprBreak
 
     let ahead = input.fork();
     let label: Option<Lifetime> = ahead.parse()?;
-    if label.is_some() && ahead.peek(Token![:]) {
+    if let Some(ref label) = label
+        && ahead.peek(Token![:])
+    {
         // Not allowed: `break 'label: loop {...}`
         // Parentheses are required. `break ('label: loop {...})`
         let _: NodeId<Expr> = input.parse()?;
-        let start_span = label.unwrap().apostrophe;
+        let start_span = label.apostrophe;
         let end_span = input.cursor().prev_span();
         return Err(crate::parser::error::new2(
             start_span,

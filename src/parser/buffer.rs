@@ -236,14 +236,14 @@ impl<'a> Cursor<'a> {
             self.ignore_none();
         }
 
-        if let Entry::Group(group, end_offset) = self.entry() {
-            if group.delimiter() == delim {
-                let span = group.delim_span();
-                let end_of_group = unsafe { self.ptr.add(*end_offset) };
-                let inside_of_group = unsafe { Cursor::create(self.ptr.add(1), end_of_group) };
-                let after_group = unsafe { Cursor::create(end_of_group, self.scope) };
-                return Some((inside_of_group, span, after_group));
-            }
+        if let Entry::Group(group, end_offset) = self.entry()
+            && group.delimiter() == delim
+        {
+            let span = group.delim_span();
+            let end_of_group = unsafe { self.ptr.add(*end_offset) };
+            let inside_of_group = unsafe { Cursor::create(self.ptr.add(1), end_of_group) };
+            let after_group = unsafe { Cursor::create(end_of_group, self.scope) };
+            return Some((inside_of_group, span, after_group));
         }
 
         None

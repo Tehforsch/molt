@@ -135,12 +135,11 @@ fn parse_list<T: ParseListOrItem>(input: ParseStream) -> Result<Vec<NodeId<T::Ta
 }
 
 fn peek_var(cursor: Cursor, ctx: &Ctx<Node>, kind: NodeKind) -> bool {
-    if let Some((punct, _)) = cursor.punct() {
-        if punct.as_char() == '$' {
-            if let Some((ident, _)) = cursor.skip().and_then(|cursor| cursor.ident()) {
-                return kind_matches(ctx, &ident, kind);
-            }
-        }
+    if let Some((punct, _)) = cursor.punct()
+        && punct.as_char() == '$'
+        && let Some((ident, _)) = cursor.skip().and_then(|cursor| cursor.ident())
+    {
+        return kind_matches(ctx, &ident, kind);
     }
     false
 }
@@ -768,10 +767,10 @@ impl Parse for TokenTree {
 impl Parse for Group {
     fn parse(input: ParseStream) -> Result<Self> {
         input.step(|cursor| {
-            if let Some((group, rest)) = cursor.any_group_token() {
-                if group.delimiter() != Delimiter::None {
-                    return Ok((group, rest));
-                }
+            if let Some((group, rest)) = cursor.any_group_token()
+                && group.delimiter() != Delimiter::None
+            {
+                return Ok((group, rest));
             }
             Err(cursor.error("expected group token"))
         })
