@@ -655,8 +655,9 @@ impl<'a> ParseBuffer<'a> {
             let content;
             let _ = bracketed!(content in self);
             let items = parse_list(&content)?;
-            let mode = self.parse()?;
-            Ok(PatNodeList::List(List::new(items, mode)))
+            // TODO: Remove
+            let _mode: ListMatchingMode = self.parse()?;
+            Ok(PatNodeList::List(List::new(items)))
         } else {
             Err(lookahead.error())
         }

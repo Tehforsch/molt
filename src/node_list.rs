@@ -23,7 +23,6 @@ pub struct Single<T, P> {
 #[derive(Debug)]
 pub struct List<T, P> {
     items: Vec<NodeId<T>>,
-    mode: ListMatchingMode,
     _marker: PhantomData<P>,
 }
 
@@ -52,20 +51,11 @@ impl<T, P> Single<T, P> {
 }
 
 impl<T, P> List<T, P> {
-    pub fn new(items: Vec<NodeId<T>>, mode: ListMatchingMode) -> Self {
+    pub fn new(items: Vec<NodeId<T>>) -> Self {
         Self {
             items,
-            mode,
             _marker: PhantomData,
         }
-    }
-
-    pub(crate) fn mode(&self) -> ListMatchingMode {
-        self.mode
-    }
-
-    pub(crate) fn items(&self) -> &[NodeId<T>] {
-        &self.items
     }
 
     pub fn len(&self) -> usize {

@@ -163,7 +163,7 @@ impl<'a> MatchResult<'a> {
             .map(|match_| {
                 let match_var = print.unwrap_or(self.var);
                 let binding = match_.get_binding(match_var);
-                let span = self.ctx.real_ctx.get_span(*binding.real.first().unwrap());
+                let span = self.ctx.real_ctx.get_span(binding.real.unwrap());
                 let var_name = |var| format!("${}", self.ctx.get_var(var).name());
                 let mut diagnostic = Diagnostic::note().with_message("Match").with_labels(vec![
                     Label::primary(file_id, span.byte_range()).with_message(var_name(match_var)),

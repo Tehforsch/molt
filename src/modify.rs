@@ -207,7 +207,7 @@ fn check_overlap(modifications: &[Modification]) -> Result<(), Error> {
 }
 
 fn make_modification(ctx: &MatchCtx<Node>, match_: &Match, input: Id, output: Id) -> Modification {
-    let ast = *match_.get_binding(input).real.first().unwrap();
+    let ast = match_.get_binding(input).real.unwrap();
     let ast_span = ctx.real_ctx.get_span(ast);
     Modification {
         span: ast_span,
@@ -217,8 +217,8 @@ fn make_modification(ctx: &MatchCtx<Node>, match_: &Match, input: Id, output: Id
 
 fn get_modified_code(ctx: &MatchCtx<Node>, match_: &Match, output: Id) -> String {
     let binding = match_.get_binding(output);
-    let mut code = if let Some(ast_binding) = binding.real.first() {
-        ctx.print(*ast_binding).to_string()
+    let mut code = if let Some(real_binding) = binding.real {
+        ctx.print(real_binding).to_string()
     } else {
         let pat_id = binding.molt.unwrap();
         if pat_id.is_var() {

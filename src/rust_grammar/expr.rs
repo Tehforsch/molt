@@ -1129,17 +1129,16 @@ fn parse_expr(
             if precedence < base {
                 break;
             }
-            if precedence == Precedence::Assign {
-                if let Some(Expr::Range(_)) = lhs.get_item() {
-                    break;
-                }
+            if precedence == Precedence::Assign
+                && let Some(Expr::Range(_)) = lhs.get_item()
+            {
+                break;
             }
-            if precedence == Precedence::Compare {
-                if let Some(Expr::Binary(lhs)) = lhs.get_item() {
-                    if Precedence::of_binop(&lhs.op) == Precedence::Compare {
-                        return Err(input.error("comparison operators cannot be chained"));
-                    }
-                }
+            if precedence == Precedence::Compare
+                && let Some(Expr::Binary(lhs)) = lhs.get_item()
+                && Precedence::of_binop(&lhs.op) == Precedence::Compare
+            {
+                return Err(input.error("comparison operators cannot be chained"));
             }
             input.advance_to(&ahead);
             let right = parse_binop_rhs(input, allow_struct, precedence)?;
