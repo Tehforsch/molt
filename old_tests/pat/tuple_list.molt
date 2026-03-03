@@ -1,0 +1,2 @@
+let ident: Pat;
+let pat: Pat = Color($($ident)*);

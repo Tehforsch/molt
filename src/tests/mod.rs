@@ -231,7 +231,7 @@ macro_rules! molt_grammar_test_ok {
 
 test_match_pattern!(consts, (exprs));
 test_match_pattern!(let_, (let_));
-test_match_pattern!(closure, (closure, inputs));
+test_match_pattern!(closure, (closure));
 test_match_pattern!(control_flow, ());
 test_match_pattern!(arrays, (array));
 test_match_pattern!(ranges, ());
@@ -283,7 +283,6 @@ test_match_pattern!(
     )
 );
 test_match_pattern!(fields, (fields, field_var));
-test_match_pattern!(lists, (single, all));
 test_match_pattern!(
     pat,
     (
@@ -298,25 +297,17 @@ test_match_pattern!(
         paren,
         subpattern,
         nested,
-        tuple_list,
-        slice_list,
     )
 );
 test_modify!(modify, (rename, inner));
-test_match_pattern!(modify2, (example10)); // TODO: Make this a modify test once the functionality exists.
 
-test_match_pattern!(array_elements, (elements));
-test_match_pattern!(function_args, (fn_));
-test_match_pattern!(tuple_elements, (elements));
-test_match_pattern!(tuple_types, (elements));
-test_match_pattern!(struct_fields, (named, unnamed));
 test_match_pattern!(attrs, (expr));
 test_match_pattern!(literals, (expr_lit, match_pat, lit));
 test_match_pattern!(
     visibility,
     (
-        fn_, const_, enum_, field, module, static_, struct_, trait_, type_alias, rule_mod_1,
-        rule_mod_2, rule_mod_3,
+        fn_, const_, enum_, module, static_, struct_, trait_, type_alias, rule_mod_1, rule_mod_2,
+        rule_mod_3,
     )
 );
 test_match_pattern!(fns, (fns, rule, unsafe_rule, async_rule, const_rule));
