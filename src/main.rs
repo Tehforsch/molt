@@ -8,7 +8,7 @@ use cli::CliArgs;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
 use codespan_reporting::term::{self, Config};
 use ignore::WalkBuilder;
-use molt::{Input, MoltSource, emit_error, run};
+use molt::{Input, MoltSource, emit_error, run, run_new};
 
 #[derive(Debug, thiserror::Error)]
 enum Error {
@@ -97,11 +97,17 @@ fn main() -> Result<()> {
         interactive: args.interactive,
         check: args.check,
     };
-    let diagnostics = emit_error(&input, run(&input, config, root.as_ref()))?;
-    let writer = StandardStream::stderr(ColorChoice::Always);
-    let config = Config::default();
-    for diagnostic in diagnostics {
-        term::emit(&mut writer.lock(), &config, &input, &diagnostic).unwrap();
+    // Temporary to make transition easier
+    if args.new {
+        run_new(&input, config, root.as_ref())?;
+        Ok(())
+    } else {
+        let diagnostics = emit_error(&input, run(&input, config, root.as_ref()))?;
+        let writer = StandardStream::stderr(ColorChoice::Always);
+        let config = Config::default();
+        for diagnostic in diagnostics {
+            term::emit(&mut writer.lock(), &config, &input, &diagnostic).unwrap();
+        }
+        Ok(())
     }
-    Ok(())
 }

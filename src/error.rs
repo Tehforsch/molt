@@ -16,6 +16,7 @@ pub enum Error {
     Misc(String),
     Modify(ModifyError),
     Io(io::Error),
+    Interpreter(crate::interpreter::Error),
 }
 
 impl Error {
@@ -29,6 +30,7 @@ impl Error {
             Error::Misc(_) => None,
             Error::Modify(_) => None,
             Error::Io(_) => None,
+            Error::Interpreter(_) => todo!(),
         }
     }
 }
@@ -93,6 +95,7 @@ impl std::fmt::Display for Error {
             Error::Misc(s) => write!(f, "{s}"),
             Error::Modify(s) => write!(f, "{s}"),
             Error::Io(s) => write!(f, "{s}"),
+            Error::Interpreter(s) => write!(f, "{s}"),
         }
     }
 }

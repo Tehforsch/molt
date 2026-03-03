@@ -6,11 +6,13 @@ mod ctrl_c;
 mod ctx;
 mod error;
 mod input;
+mod interpreter;
 mod lsp;
 mod match_ctx;
 mod match_pattern;
 mod modify;
 mod molt_grammar;
+mod molt_lang;
 mod node;
 mod node_list;
 mod pattern;
@@ -25,7 +27,7 @@ mod utils;
 
 use std::path::{Path, PathBuf};
 
-use crate::rust_grammar::Node;
+use crate::{interpreter::Interpreter, rust_grammar::Node};
 pub use cmp_syn::CmpSyn;
 use codespan_reporting::diagnostic::Label;
 use codespan_reporting::files::Files;
@@ -250,6 +252,23 @@ pub fn run(
                 }
             }
         };
+    }
+    Ok(diagnostics)
+}
+
+pub fn run_new(
+    input: &Input,
+    config: crate::Config,
+    _cargo_root: Option<&PathBuf>,
+) -> Result<Vec<Diagnostic>, Error> {
+    let mut diagnostics = vec![];
+    let molt_file = molt_lang::MoltFile::new(input)?;
+
+    for rust_file_id in input.iter_rust_src() {
+        let (_, real_ctx) = RustFile::new(input, rust_file_id)?;
+        let data = match_pattern_data(input, rust_file_id, &config);
+        diagnostics
+            .extend(Interpreter::run(&molt_file, data, &real_ctx).map_err(Error::Interpreter)?);
     }
     Ok(diagnostics)
 }
