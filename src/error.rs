@@ -62,16 +62,6 @@ pub fn emit_error<T>(input: &Input, err: Result<T, Error>) -> Result<T, Error> {
     }
 }
 
-#[cfg(test)]
-pub(crate) fn emit_diagnostic_str(input: &Input, diagnostic: Diagnostic<FileId>) -> String {
-    use codespan_reporting::term::termcolor::Buffer;
-
-    let mut writer = Buffer::no_color();
-    let config = codespan_reporting::term::Config::default();
-    term::emit(&mut writer, &config, input, &diagnostic).unwrap();
-    String::from_utf8(writer.into_inner()).unwrap()
-}
-
 impl From<ModifyError> for Error {
     fn from(t: ModifyError) -> Self {
         Self::Modify(t)

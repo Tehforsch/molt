@@ -1,9 +1,0 @@
----
-source: src/lib.rs
-expression: "super :: super :: match_pattern(stringify! (let_), stringify! (let_))"
----
-note: Match
-  ┌─ "test_data/let_/main.rs":4:5
-  │
-4 │     let foo = 3;
-  │     ^^^^^^^^^^^^ $pat

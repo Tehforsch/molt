@@ -1,9 +1,0 @@
----
-source: src/tests/mod.rs
-expression: "emit_diagnostic_str(& input, make_error_diagnostic(& err))"
----
-error: Expected `;`.
-  ┌─ "test_data/molt_grammar/syntax_error3.molt":1:35
-  │
-1 │ let field: Field = pub $ident: Lit,
-  │                                   ^ Expected `;`.

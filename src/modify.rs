@@ -68,16 +68,6 @@ impl<'a> Modify<'a> {
         Ok(self.code.clone())
     }
 
-    #[cfg(test)]
-    pub fn get_diff_output(self) -> Result<String, Error> {
-        let mut diff_output = String::new();
-        for modification in self.modifications.into_iter().rev() {
-            let diff_str = modification.get_diff(&self.code, self.rust_file_path, false);
-            diff_output.push_str(&diff_str);
-        }
-        Ok(diff_output)
-    }
-
     fn post_modification_check_ok(&self, modification: &Modification) -> Result<bool, Error> {
         let command = self.config.check.as_ref().unwrap();
         let original_code = &self.code;

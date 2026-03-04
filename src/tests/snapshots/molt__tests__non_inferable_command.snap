@@ -1,5 +1,0 @@
----
-source: src/lib.rs
-expression: "emit_diagnostic_str(& input, make_error_diagnostic(& err))"
----
-error: There were multiple candidates for the inferred match variable.
