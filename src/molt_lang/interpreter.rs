@@ -19,7 +19,7 @@ use {
 use error::Result;
 
 pub(crate) use error::Error;
-pub(crate) use function::{RuntimeFn, UserFn};
+pub(crate) use function::RuntimeFn;
 
 type ScopeIndex = usize;
 
@@ -86,10 +86,8 @@ impl<'src> Interpreter<'src> {
     }
 
     fn eval_fn_def(&mut self, f: &'src MoltFn) -> Result<()> {
-        self.fns.insert(
-            f.name.to_string(),
-            RuntimeFn::UserDefined(UserFn { inner: f }),
-        );
+        self.fns
+            .insert(f.name.to_string(), RuntimeFn::UserDefined(f));
         Ok(())
     }
 
@@ -118,10 +116,10 @@ impl<'src> Interpreter<'src> {
         Ok(StmtValue::Value(Value::Null))
     }
 
-    fn eval_user_defined_fn(&mut self, args: &[Value], user_fn: UserFn<'_>) -> Result<(), Error> {
+    fn eval_user_defined_fn(&mut self, args: &[Value], user_fn: &MoltFn) -> Result<(), Error> {
         let mut scope = Scope::child_of(self.active_scope(), self.next_scope_index());
-        assert_eq!(user_fn.inner.args.len(), args.len());
-        for (arg, val) in user_fn.inner.args.iter().zip(args.iter()) {
+        assert_eq!(user_fn.args.len(), args.len());
+        for (arg, val) in user_fn.args.iter().zip(args.iter()) {
             scope.insert(arg.var_name.clone(), val);
         }
         self.scopes.push(scope);
@@ -130,8 +128,8 @@ impl<'src> Interpreter<'src> {
         Ok(())
     }
 
-    fn eval_block(&mut self, user_fn: UserFn<'_>) -> Result<(), Error> {
-        for stmt in user_fn.inner.stmts.iter() {
+    fn eval_block(&mut self, user_fn: &MoltFn) -> Result<(), Error> {
+        for stmt in user_fn.stmts.iter() {
             match self.eval_stmt(stmt)? {
                 StmtValue::Return => break,
                 StmtValue::Value(_) => {}

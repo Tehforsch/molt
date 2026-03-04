@@ -4,13 +4,8 @@ use crate::molt_lang::{Interpreter, MoltFn, interpreter::value::Value};
 
 #[derive(Clone, Copy)]
 pub enum RuntimeFn<'a> {
-    UserDefined(UserFn<'a>),
+    UserDefined(&'a MoltFn,),
     Builtin(BuiltinFn),
-}
-
-#[derive(Clone, Copy)]
-pub struct UserFn<'a> {
-    pub inner: &'a MoltFn,
 }
 
 #[derive(Clone, Copy)]
