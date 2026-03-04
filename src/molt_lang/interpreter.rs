@@ -10,13 +10,14 @@ use crate::{
     rust_grammar::{Ident, Node},
 };
 use {
-    function::{BuiltinFn, RuntimeFn, UserFn, builtins},
+    function::{BuiltinFn, builtins},
     value::Value,
 };
 
 use error::Result;
 
 pub(crate) use error::Error;
+pub(crate) use function::{RuntimeFn, UserFn};
 
 type ScopeIndex = usize;
 
@@ -102,7 +103,7 @@ impl<'src> Interpreter<'src> {
     }
 
     fn eval_fn_call(&mut self, fn_name: &str, args: &[Value]) -> Result<()> {
-        match self.fns.get(fn_name).ok_or(Error::UndefinedFn)? {
+        match self.fns.get(fn_name).ok_or(Error::undefined_fn(fn_name))? {
             // Inlining to make borrow checker happy. A simple alternative
             // would be to clone the fn definitions.
             RuntimeFn::UserDefined(user_fn) => {

@@ -31,7 +31,7 @@ impl Error {
             Error::Misc(_) => None,
             Error::Modify(_) => None,
             Error::Io(_) => None,
-            Error::Interpreter(_) => todo!(),
+            Error::Interpreter(_) => None,
         }
     }
 }
