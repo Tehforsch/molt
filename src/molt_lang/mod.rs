@@ -246,21 +246,20 @@ fn resolve_pat(p: grammar::Pat, type_: &Type) -> Result<Pat> {
     for var in vars.0.into_iter() {
         pat_ctx.add_var::<Node>(Var::new(var.name.to_string(), var.kind));
     }
-    let pat_ctx = Rc::new(RefCell::new(pat_ctx));
+    let ctx = Rc::new(RefCell::new(pat_ctx));
     let Type::Kind(kind) = type_;
     let node = crate::parser::parse_with_ctx(
-        pat_ctx.clone(),
+        ctx.clone(),
         |stream| parse_node_with_kind(stream, *kind),
         p.tokens,
         Mode::Molt,
     )
     .map_err(|_| todo!())?;
     // ...
-    let ctx = pat_ctx.replace(Ctx::new(Mode::Molt));
+    let ctx = ctx.replace(Ctx::new(Mode::Molt));
 
     Ok(Pat {
-        vars: pat_ctx
-            .borrow()
+        vars: ctx
             .iter_vars_ids()
             .map(|(id, var)| TokenVar {
                 id,
