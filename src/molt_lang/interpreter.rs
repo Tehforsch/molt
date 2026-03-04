@@ -105,29 +105,39 @@ impl<'src> Interpreter<'src> {
     }
 
     fn eval_fn_call(&mut self, fn_name: &str, args: &[Value]) -> Result<StmtValue> {
-        match self.fns.get(fn_name).ok_or(Error::undefined_fn(fn_name))? {
+        match self.lookup_fn(fn_name)? {
             // Inlining to make borrow checker happy. A simple alternative
             // would be to clone the fn definitions.
             RuntimeFn::UserDefined(user_fn) => {
-                let mut scope = Scope::child_of(self.active_scope(), self.next_scope_index());
-                assert_eq!(user_fn.inner.args.len(), args.len()); // TODO check
-                for (arg, val) in user_fn.inner.args.iter().zip(args.iter()) {
-                    scope.insert(arg.var_name.clone(), val);
-                }
-                self.scopes.push(scope);
-                for stmt in user_fn.inner.stmts.iter() {
-                    match self.eval_stmt(stmt)? {
-                        StmtValue::Return => break,
-                        StmtValue::Value(_) => {}
-                    }
-                }
-                self.scopes.pop();
+                self.eval_user_defined_fn(args, user_fn)?;
             }
             RuntimeFn::Builtin(builtin_fn) => match builtin_fn {
                 BuiltinFn::Print => self.eval_print(args),
             },
         }
         Ok(StmtValue::Value(Value::Null))
+    }
+
+    fn eval_user_defined_fn(&mut self, args: &[Value], user_fn: UserFn<'_>) -> Result<(), Error> {
+        let mut scope = Scope::child_of(self.active_scope(), self.next_scope_index());
+        assert_eq!(user_fn.inner.args.len(), args.len());
+        for (arg, val) in user_fn.inner.args.iter().zip(args.iter()) {
+            scope.insert(arg.var_name.clone(), val);
+        }
+        self.scopes.push(scope);
+        self.eval_block(user_fn)?;
+        self.scopes.pop();
+        Ok(())
+    }
+
+    fn eval_block(&mut self, user_fn: UserFn<'_>) -> Result<(), Error> {
+        for stmt in user_fn.inner.stmts.iter() {
+            match self.eval_stmt(stmt)? {
+                StmtValue::Return => break,
+                StmtValue::Value(_) => {}
+            }
+        }
+        Ok(())
     }
 
     fn make_fn_args(&mut self, args: &[Expr]) -> Result<Vec<Value>> {
@@ -163,6 +173,13 @@ impl<'src> Interpreter<'src> {
 
     fn next_scope_index(&self) -> usize {
         self.scopes.len() - 1
+    }
+
+    fn lookup_fn(&mut self, fn_name: &str) -> std::result::Result<RuntimeFn<'src>, Error> {
+        self.fns
+            .get(fn_name)
+            .cloned()
+            .ok_or(Error::undefined_fn(fn_name))
     }
 
     fn lookup_var(&self, name: &Ident) -> Result<&Value> {
