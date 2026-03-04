@@ -59,67 +59,107 @@ pub struct Pat {
     pub _pat: TokenStream,
 }
 
-fn resolve_file(file: grammar::MoltFile) -> MoltFile {
-    MoltFile {
-        fns: file.fns.into_iter().map(resolve_fn).collect(),
-        stmts: file.stmts.into_iter().map(resolve_stmt).collect(),
+#[derive(Debug)]
+pub enum ResolveError {
+    MainFnAndTopLevelStmtExist,
+}
+
+impl std::fmt::Display for ResolveError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ResolveError::MainFnAndTopLevelStmtExist => {
+                write!(f, "Both a main function and top level statements exist")
+            }
+        }
     }
 }
 
-fn resolve_fn(f: grammar::MoltFn) -> MoltFn {
-    MoltFn {
+type ResolveResult<T> = Result<T, ResolveError>;
+
+fn resolve_file(file: grammar::MoltFile) -> ResolveResult<MoltFile> {
+    if file.fns.iter().any(|f| f.name == MAIN_FN_NAME) && !file.stmts.is_empty() {
+        return Err(ResolveError::MainFnAndTopLevelStmtExist);
+    }
+    Ok(MoltFile {
+        fns: file
+            .fns
+            .into_iter()
+            .map(resolve_fn)
+            .collect::<ResolveResult<_>>()?,
+        stmts: file
+            .stmts
+            .into_iter()
+            .map(resolve_stmt)
+            .collect::<ResolveResult<_>>()?,
+    })
+}
+
+fn resolve_fn(f: grammar::MoltFn) -> ResolveResult<MoltFn> {
+    Ok(MoltFn {
         name: f.name,
-        args: f.args.into_iter().map(resolve_fn_arg).collect(),
-        stmts: f.stmts.into_iter().map(resolve_stmt).collect(),
-    }
+        args: f
+            .args
+            .into_iter()
+            .map(resolve_fn_arg)
+            .collect::<ResolveResult<_>>()?,
+        stmts: f
+            .stmts
+            .into_iter()
+            .map(resolve_stmt)
+            .collect::<ResolveResult<_>>()?,
+    })
 }
 
-fn resolve_fn_arg(arg: grammar::FnArg) -> FnArg {
-    FnArg {
+fn resolve_fn_arg(arg: grammar::FnArg) -> ResolveResult<FnArg> {
+    Ok(FnArg {
         var_name: arg.var_name,
         _type_: arg.type_,
-    }
+    })
 }
 
-fn resolve_stmt(stmt: grammar::Stmt) -> Stmt {
+fn resolve_stmt(stmt: grammar::Stmt) -> ResolveResult<Stmt> {
     match stmt {
-        grammar::Stmt::Assignment(a) => Stmt::Assignment(resolve_assignment(a)),
-        grammar::Stmt::FnCall(f) => Stmt::FnCall(resolve_fn_call(f)),
-        grammar::Stmt::Let(l) => Stmt::Let(resolve_let_stmt(l)),
+        grammar::Stmt::Assignment(a) => Ok(Stmt::Assignment(resolve_assignment(a)?)),
+        grammar::Stmt::FnCall(f) => Ok(Stmt::FnCall(resolve_fn_call(f)?)),
+        grammar::Stmt::Let(l) => Ok(Stmt::Let(resolve_let_stmt(l)?)),
     }
 }
 
-fn resolve_let_stmt(l: grammar::LetStmt) -> LetStmt {
-    LetStmt {
+fn resolve_let_stmt(l: grammar::LetStmt) -> ResolveResult<LetStmt> {
+    Ok(LetStmt {
         lhs: l.lhs,
         type_: l.type_,
-        rhs: l.rhs.map(resolve_expr),
-    }
+        rhs: l.rhs.map(resolve_expr).transpose()?,
+    })
 }
 
-fn resolve_assignment(a: grammar::Assignment) -> Assignment {
-    Assignment {
+fn resolve_assignment(a: grammar::Assignment) -> ResolveResult<Assignment> {
+    Ok(Assignment {
         _lhs: a.lhs,
-        _rhs: resolve_expr(a.rhs),
-    }
+        _rhs: resolve_expr(a.rhs)?,
+    })
 }
 
-fn resolve_fn_call(f: grammar::FnCall) -> FnCall {
-    FnCall {
+fn resolve_fn_call(f: grammar::FnCall) -> ResolveResult<FnCall> {
+    Ok(FnCall {
         fn_name: f.fn_name,
-        args: f.args.into_iter().map(resolve_expr).collect(),
-    }
+        args: f
+            .args
+            .into_iter()
+            .map(resolve_expr)
+            .collect::<ResolveResult<_>>()?,
+    })
 }
 
-fn resolve_expr(expr: grammar::Expr) -> Expr {
+fn resolve_expr(expr: grammar::Expr) -> ResolveResult<Expr> {
     match expr {
-        grammar::Expr::Pattern(p) => Expr::Pattern(resolve_pat(p)),
-        grammar::Expr::Atom(name) => Expr::Atom(name),
+        grammar::Expr::Pattern(p) => Ok(Expr::Pattern(resolve_pat(p)?)),
+        grammar::Expr::Atom(name) => Ok(Expr::Atom(name)),
     }
 }
 
-fn resolve_pat(p: grammar::Pat) -> Pat {
-    Pat { _pat: p.pat }
+fn resolve_pat(p: grammar::Pat) -> ResolveResult<Pat> {
+    Ok(Pat { _pat: p.pat })
 }
 
 impl MoltFile {
@@ -128,6 +168,6 @@ impl MoltFile {
         let source = input.source(file_id).unwrap();
         let file: grammar::MoltFile =
             crate::parser::parse_str(source, Mode::Molt).map_err(|e| Error::parse(e, file_id))?;
-        Ok(resolve_file(file))
+        resolve_file(file).map_err(|e| Error::Misc(e.to_string()))
     }
 }
