@@ -1,5 +1,5 @@
 use crate::parser::parse::{Parse, ParseStream};
-use crate::parser::token::{Brace, Paren};
+use crate::parser::token::Brace;
 use crate::parser::{Error, Result};
 use crate::rule::{ParseRuleKey, Rule};
 use crate::rust_grammar::ext::IdentExt;

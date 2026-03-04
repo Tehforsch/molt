@@ -216,7 +216,7 @@ impl<Node: NodeType> Ctx<Node> {
         self.vars
             .iter()
             .enumerate()
-            .map(|(i, v)| (Id(InternalId::Var(i), self.mode), v.clone()))
+            .map(|(i, v)| (Id(InternalId::Var(i), self.mode), v))
     }
 
     pub fn get_span(&self, id: impl Into<Id>) -> Span {

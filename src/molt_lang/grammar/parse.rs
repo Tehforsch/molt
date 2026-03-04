@@ -1,13 +1,12 @@
 use proc_macro2::TokenStream;
 
-use crate::Mode;
 use crate::molt_lang::grammar::{FnCall, TokenVar, TokenVars, Type};
-use crate::parser::parse::{Parse, ParseStream, parse_tokens};
+use crate::parser::parse::{Parse, ParseStream};
 use crate::parser::punctuated::Punctuated;
 use crate::parser::{Result, token};
 use crate::rust_grammar::{Ident, Kind};
 
-use super::{Assignment, Expr, FnArg, LetLhs, LetStmt, MoltFile, MoltFn, Pat, Stmt};
+use super::{Expr, FnArg, LetLhs, LetStmt, MoltFile, MoltFn, Pat, Stmt};
 
 impl Parse for MoltFile {
     fn parse(input: ParseStream) -> Result<Self> {
@@ -63,8 +62,6 @@ impl Parse for Stmt {
         let lookahead = input.lookahead1();
         if lookahead.peek(Token![let]) {
             Ok(Stmt::Let(input.parse()?))
-        } else if input.peek2(Token![=]) {
-            Ok(Stmt::Assignment(input.parse()?))
         } else {
             Ok(Stmt::FnCall(input.parse()?))
         }
@@ -96,16 +93,6 @@ impl Parse for LetLhs {
         } else {
             Ok(LetLhs::Var(input.parse()?))
         }
-    }
-}
-
-impl Parse for Assignment {
-    fn parse(input: ParseStream) -> Result<Self> {
-        let lhs: Ident = input.parse()?;
-        let _: Token![=] = input.parse()?;
-        let rhs: Expr = input.parse()?;
-        let _: Token![;] = input.parse()?;
-        Ok(Assignment { lhs, rhs })
     }
 }
 

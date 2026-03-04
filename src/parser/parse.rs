@@ -143,7 +143,7 @@ fn peek_var(cursor: Cursor, ctx: &Ctx<Node>, kind: NodeKind) -> bool {
         }
         // $(ident: Kind) syntax. TODO: Delete this and replace this whole
         // concept
-        if let Ok((var, _)) = parse_tokens::<TempVar>(cursor.token_stream().clone(), ctx.mode()) {
+        if let Ok(var) = parse_tokens::<TempVar>(cursor.token_stream().clone(), ctx.mode()) {
             return kind_matches(ctx, &var.0, kind);
         }
     }
@@ -650,7 +650,7 @@ impl<'a> ParseBuffer<'a> {
                     let ident = content.parse()?;
                     let _: Token![:] = content.parse()?;
                     // TODO remove this
-                    let kind: Kind = content.parse()?;
+                    let _: Kind = content.parse()?;
                     ident
                 } else {
                     return Err(lookahead.error());
@@ -860,9 +860,9 @@ pub fn parse_str<T: Parse>(s: &str, mode: Mode) -> Result<T> {
     parse2_impl(ctx, T::parse, proc_macro2::TokenStream::from_str(s)?, mode)
 }
 
-pub fn parse_tokens<T: Parse>(s: TokenStream, mode: Mode) -> Result<(T, Ctx<Node>)> {
+pub fn parse_tokens<T: Parse>(s: TokenStream, mode: Mode) -> Result<T> {
     let ctx = Rc::new(RefCell::new(Ctx::new(mode)));
-    parse2_impl(ctx.clone(), T::parse, s, mode).map(|t| (t, ctx.replace(Ctx::new(mode))))
+    parse2_impl(ctx.clone(), T::parse, s, mode)
 }
 
 pub(crate) fn parse_str_ctx<T: Parse>(s: &str, mode: Mode) -> Result<(T, Ctx<Node>)> {

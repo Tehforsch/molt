@@ -121,7 +121,6 @@ impl<'src> Interpreter<'src> {
 
     fn eval_stmt(&mut self, stmt: &Stmt) -> Result<StmtValue> {
         match stmt {
-            Stmt::Assignment(_) => todo!(),
             Stmt::Let(let_stmt) => self.eval_let(let_stmt),
             Stmt::FnCall(fn_call) => {
                 let args = self.make_fn_args(&fn_call.args)?;

@@ -63,7 +63,6 @@ pub enum Type {
 
 #[derive(Debug)]
 pub enum Stmt {
-    Assignment(Assignment),
     FnCall(FnCall),
     Let(LetStmt),
 }
@@ -71,7 +70,7 @@ pub enum Stmt {
 #[derive(Debug)]
 pub struct LetStmt {
     pub lhs: LetLhs,
-    pub type_: Type,
+    pub _type_: Type,
     pub rhs: Option<Expr>,
 }
 
@@ -79,12 +78,6 @@ pub struct LetStmt {
 pub enum LetLhs {
     Var(Ident),
     Pat(Pat),
-}
-
-#[derive(Debug)]
-pub struct Assignment {
-    pub _lhs: Ident,
-    pub _rhs: Expr,
 }
 
 #[derive(Debug)]
@@ -151,10 +144,10 @@ fn resolve_file(file: grammar::MoltFile) -> Result<MoltFile> {
         }
         if let grammar::Stmt::Let(l) = stmts.remove(0) {
             let grammar::LetLhs::Var(ref var_name) = l.lhs else {
-                return Err(ResolveError::InvalidInputVarName.into());
+                return Err(ResolveError::InvalidInputVarName);
             };
             if *var_name != INPUT_VAR_NAME {
-                return Err(ResolveError::InvalidInputVarName.into());
+                return Err(ResolveError::InvalidInputVarName);
             }
             fns.push(MoltFn {
                 name: FnName::ImplicitMain,
@@ -168,7 +161,7 @@ fn resolve_file(file: grammar::MoltFile) -> Result<MoltFile> {
                     .collect::<Result<Vec<_>>>()?,
             });
         } else {
-            return Err(ResolveError::NoInputVarName.into());
+            return Err(ResolveError::NoInputVarName);
         }
     }
     Ok(MoltFile { fns })
@@ -205,7 +198,6 @@ fn resolve_type(arg: grammar::Type) -> Result<Type> {
 
 fn resolve_stmt(stmt: grammar::Stmt) -> Result<Stmt> {
     match stmt {
-        grammar::Stmt::Assignment(a) => Ok(Stmt::Assignment(resolve_assignment(a)?)),
         grammar::Stmt::FnCall(f) => Ok(Stmt::FnCall(resolve_fn_call(f)?)),
         grammar::Stmt::Let(l) => Ok(Stmt::Let(resolve_let_stmt(l)?)),
     }
@@ -215,7 +207,7 @@ fn resolve_let_stmt(l: grammar::LetStmt) -> Result<LetStmt> {
     let type_ = resolve_type(l.type_)?;
     Ok(LetStmt {
         lhs: resolve_let_lhs(l.lhs, &type_)?,
-        type_,
+        _type_: type_,
         rhs: l.rhs.map(resolve_expr).transpose()?,
     })
 }
@@ -223,14 +215,7 @@ fn resolve_let_stmt(l: grammar::LetStmt) -> Result<LetStmt> {
 fn resolve_let_lhs(lhs: grammar::LetLhs, type_: &Type) -> Result<LetLhs> {
     Ok(match lhs {
         grammar::LetLhs::Var(ident) => LetLhs::Var(ident),
-        grammar::LetLhs::Pat(pat) => LetLhs::Pat(resolve_pat(pat, &type_)?),
-    })
-}
-
-fn resolve_assignment(a: grammar::Assignment) -> Result<Assignment> {
-    Ok(Assignment {
-        _lhs: a.lhs,
-        _rhs: resolve_expr(a.rhs)?,
+        grammar::LetLhs::Pat(pat) => LetLhs::Pat(resolve_pat(pat, type_)?),
     })
 }
 
@@ -257,7 +242,7 @@ fn resolve_pat(p: grammar::Pat, type_: &Type) -> Result<Pat> {
     // Add all vars to ctx with their kind (for now, while we have
     // no inference).
     let mut pat_ctx = PatCtx::new(Mode::Molt);
-    let (vars, ctx) = parse_tokens::<grammar::TokenVars>(p.tokens.clone(), Mode::Molt).unwrap();
+    let vars = parse_tokens::<grammar::TokenVars>(p.tokens.clone(), Mode::Molt).unwrap();
     for var in vars.0.into_iter() {
         pat_ctx.add_var::<Node>(Var::new(var.name.to_string(), var.kind));
     }
@@ -279,7 +264,7 @@ fn resolve_pat(p: grammar::Pat, type_: &Type) -> Result<Pat> {
             .iter_vars_ids()
             .map(|(id, var)| TokenVar {
                 id,
-                kind: var.kind(),
+                _kind: var.kind(),
             })
             .collect(),
         ctx,
@@ -290,7 +275,7 @@ fn resolve_pat(p: grammar::Pat, type_: &Type) -> Result<Pat> {
 #[derive(Debug, Clone)]
 pub struct TokenVar {
     pub id: Id,
-    pub kind: Kind,
+    pub _kind: Kind,
 }
 
 impl MoltFile {

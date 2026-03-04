@@ -2,7 +2,6 @@ mod parse;
 
 use proc_macro2::TokenStream;
 
-use crate::PatCtx;
 use crate::parser::punctuated::Punctuated;
 use crate::parser::token::Comma;
 use crate::rust_grammar::{Ident, Kind};
@@ -33,7 +32,6 @@ pub enum Type {
 
 #[derive(Debug)]
 pub enum Stmt {
-    Assignment(Assignment),
     FnCall(FnCall),
     Let(LetStmt),
 }
@@ -49,12 +47,6 @@ pub struct LetStmt {
 pub enum LetLhs {
     Var(Ident),
     Pat(Pat),
-}
-
-#[derive(Debug)]
-pub struct Assignment {
-    pub lhs: Ident,
-    pub rhs: Expr,
 }
 
 #[derive(Debug)]
