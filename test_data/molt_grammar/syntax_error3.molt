@@ -1,1 +1,1 @@
-let x: Type = Foo;;
+let field: Field = pub $ident: Lit,

@@ -1,6 +1,6 @@
 ---
-source: src/lib.rs
-expression: "super :: super :: match_pattern(stringify! (expr), stringify! (if_))"
+source: src/tests/mod.rs
+expression: "super :: super :: match_pattern(& name, stringify! (if_))"
 ---
 note: Match
    ┌─ "test_data/expr/main.rs":28:12
@@ -14,5 +14,5 @@ note: Match
    │ ╰─────^ $expr
    │  
    = $cond = cond4
-   = $else = expr5
+   = $else_ = expr5
    = $then = expr4

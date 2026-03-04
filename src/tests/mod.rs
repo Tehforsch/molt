@@ -7,7 +7,6 @@ use crate::Config;
 
 use crate::error::{emit_diagnostic_str, make_error_diagnostic};
 use crate::input::{Contents, Input, MoltSource};
-use crate::lsp::LspClient;
 use crate::modify::Modify;
 use crate::{Command, Error, MoltFile, RustFile, match_pattern_data};
 
@@ -94,17 +93,9 @@ fn run_modify_with<T>(path: &str, fname: &str, f: impl FnOnce(Modify) -> T) -> T
         panic!()
     };
 
-    let mut lsp_client = LspClient::uninitialized();
-
     let data = match_pattern_data(&input, rust_file_id, &config);
 
-    let match_result = molt_file.match_pattern(
-        &ast_ctx,
-        &pat_ctx,
-        tr.match_.unwrap(),
-        data,
-        &mut lsp_client,
-    );
+    let match_result = molt_file.match_pattern(&ast_ctx, &pat_ctx, tr.match_.unwrap(), data);
 
     let modify = Modify::new(
         &input,
@@ -235,7 +226,6 @@ test_match_pattern!(closure, (closure));
 test_match_pattern!(control_flow, ());
 test_match_pattern!(arrays, (array));
 test_match_pattern!(ranges, ());
-test_match_pattern!(type_annotations, (ident, expr), "/src");
 test_match_pattern!(
     expr,
     (
@@ -333,7 +323,6 @@ molt_grammar_test_err!(
         syntax_error1,
         syntax_error2,
         syntax_error3,
-        syntax_error4,
     )
 );
 

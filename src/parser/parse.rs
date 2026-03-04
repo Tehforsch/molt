@@ -835,16 +835,6 @@ pub(crate) fn parse_str_ctx<T: Parse>(s: &str, mode: Mode) -> Result<(T, Ctx<Nod
     .map(|t| (t, ctx.replace(Ctx::new(mode))))
 }
 
-pub fn parse_ctx<T>(
-    f: impl FnOnce(ParseStream) -> Result<T>,
-    s: &str,
-    mode: Mode,
-) -> Result<(T, Ctx<Node>)> {
-    let ctx = Rc::new(RefCell::new(Ctx::new(mode)));
-    parse2_impl(ctx.clone(), f, proc_macro2::TokenStream::from_str(s)?, mode)
-        .map(|t| (t, ctx.replace(Ctx::new(mode))))
-}
-
 pub fn parse_with_ctx<T>(
     ctx: ParseCtx,
     f: impl FnOnce(ParseStream) -> Result<T>,

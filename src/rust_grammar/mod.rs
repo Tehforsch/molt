@@ -21,7 +21,7 @@ pub use crate::rust_grammar::lit::Lit;
 mod mac;
 mod op;
 mod pat;
-pub use pat::{Pat, PatMulti};
+pub use pat::PatMulti;
 mod path;
 mod precedence;
 mod restriction;

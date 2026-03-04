@@ -2,11 +2,11 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::rust_grammar::{Node, TokenStream, TokenTree, Type, parse_node_with_kind};
+use crate::rust_grammar::{Node, TokenStream, TokenTree, parse_node_with_kind};
 use crate::{Ctx, Id, Mode, Span, Var, VarDecl};
 
 use crate::molt_grammar::{
-    MatchCommand, ModifyCommand, TokenVar, TypeAnnotation, UnresolvedMoltFile, UnresolvedVarDecl,
+    MatchCommand, ModifyCommand, TokenVar, UnresolvedMoltFile, UnresolvedVarDecl,
 };
 use crate::{Command, Error, FileId, MoltFile, PatCtx};
 
@@ -134,27 +134,10 @@ impl UnresolvedMoltFile {
                 Ok(VarDecl { id, node })
             })
             .collect();
-        let type_annotations: Result<Vec<_>, Error> = self
-            .type_annotations
-            .into_iter()
-            .map(|ann| {
-                Ok(TypeAnnotation {
-                    var_name: ann.var_name,
-                    type_: crate::parser::parse_with_ctx(
-                        pat_ctx.clone(),
-                        |input| input.parse_id::<Type>(),
-                        ann.type_,
-                        Mode::Molt,
-                    )
-                    .map_err(|e| Error::parse(e, file_id))?,
-                })
-            })
-            .collect();
         Ok((
             MoltFile {
                 vars: vars?,
                 command,
-                type_annotations: type_annotations?,
                 rulesets: self.rules,
             },
             pat_ctx.replace(Ctx::new(Mode::Molt)),

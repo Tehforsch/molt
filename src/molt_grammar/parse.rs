@@ -7,7 +7,7 @@ use crate::rust_grammar::{Ident, Kind, TokenStream, TokenTree};
 
 use super::{
     Command, Decl, MatchCommand, ModifyCommand, Ruleset, TokenVar, UnresolvedMoltFile,
-    UnresolvedTypeAnnotation, UnresolvedVarDecl,
+    UnresolvedVarDecl,
 };
 
 mod kw {
@@ -19,20 +19,17 @@ impl Parse for UnresolvedMoltFile {
     fn parse(parser: ParseStream) -> Result<Self> {
         let mut commands = vec![];
         let mut vars = vec![];
-        let mut type_annotations = vec![];
         let mut rules = vec![];
         while !parser.is_empty() {
             match parser.parse()? {
                 Decl::Var(new_vars) => vars.extend(new_vars.0.into_iter()),
                 Decl::Command(command) => commands.push(command),
-                Decl::TypeAnnotation(type_annotation) => type_annotations.push(type_annotation),
                 Decl::Ruleset(rule) => rules.push(rule),
             }
         }
         Ok(UnresolvedMoltFile {
             vars,
             commands,
-            type_annotations,
             rules,
         })
     }
@@ -43,8 +40,6 @@ impl Parse for Decl {
         let lookahead = parser.lookahead1();
         if lookahead.peek(Token![match]) || lookahead.peek(Token![mod]) {
             Ok(Self::Command(parser.parse()?))
-        } else if lookahead.peek(Token![type]) {
-            Ok(Self::TypeAnnotation(parser.parse()?))
         } else if lookahead.peek(Token![let]) {
             Ok(Self::Var(parser.parse()?))
         } else if lookahead.peek(kw::strict) || lookahead.peek(kw::ignore) {
@@ -125,26 +120,6 @@ impl Parse for Command<TokenVar> {
         };
         let _: Token![;] = parser.parse()?;
         Ok(command)
-    }
-}
-
-impl Parse for UnresolvedTypeAnnotation {
-    fn parse(input: ParseStream) -> Result<Self> {
-        let _: Token![type] = input.parse()?;
-        let var_name: Ident = input.parse()?;
-        let _: Token![=] = input.parse()?;
-        let type_ = if input.peek(Brace) {
-            let content;
-            braced!(content in input);
-            content.parse()?
-        } else {
-            parse_until_semicolon(input)?
-        };
-        let _: Token![;] = input.parse()?;
-        Ok(UnresolvedTypeAnnotation {
-            var_name: var_name.to_string(),
-            type_,
-        })
     }
 }
 

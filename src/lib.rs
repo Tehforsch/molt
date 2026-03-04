@@ -6,7 +6,6 @@ mod ctrl_c;
 mod ctx;
 mod error;
 mod input;
-mod lsp;
 mod match_ctx;
 mod match_pattern;
 mod modify;
@@ -21,8 +20,6 @@ mod rust_grammar;
 mod span;
 #[cfg(test)]
 mod tests;
-mod type_check;
-mod utils;
 
 use std::path::{Path, PathBuf};
 
@@ -34,7 +31,6 @@ pub use config::Config;
 pub use ctx::{Ctx, Id, NodeId, Var, VarDecl};
 pub use error::{Error, emit_error};
 pub use input::{Diagnostic, FileId, Input, MoltSource};
-use lsp::LspClient;
 pub use match_ctx::{MatchCtx, MatchPatternData};
 pub use match_pattern::{Binding, Match, Matcher, match_pattern};
 use molt_grammar::{Command, MatchCommand, ModifyCommand, MoltFile, UnresolvedMoltFile};
@@ -107,7 +103,6 @@ impl MoltFile {
         molt_ctx: &'a CtxR,
         var: Id,
         data: MatchPatternData<'a>,
-        lsp_client: &'a mut LspClient,
     ) -> MatchResult<'a> {
         let rules = &self.get_rules();
         let ctx = MatchCtx::new(molt_ctx, real_ctx, data.clone());
@@ -133,15 +128,6 @@ impl MoltFile {
                 } else {
                     vec![]
                 }
-            })
-            .filter(|match_| {
-                lsp_client.check_type_annotations(
-                    &self.type_annotations,
-                    real_ctx,
-                    molt_ctx,
-                    &data,
-                    match_,
-                )
             })
             .collect();
         MatchResult { matches, ctx, var }
@@ -198,19 +184,6 @@ pub fn run(
     let mut diagnostics = vec![];
     let (mut molt_file, pat_ctx) = MoltFile::new(input)?;
 
-    let mut lsp_client = {
-        if molt_file.type_annotations.is_empty() {
-            LspClient::uninitialized()
-        } else {
-            LspClient::new(
-                input
-                    .root()
-                    .unwrap_or_else(|| panic!("Required LSP but no root directory given.")),
-            )
-            .map_err(|e| Error::Misc(format!("Failed to create LSP client: {e}")))?
-        }
-    };
-
     for rust_file_id in input.iter_rust_src() {
         let (_, real_ctx) = RustFile::new(input, rust_file_id)?;
         let data = match_pattern_data(input, rust_file_id, &config);
@@ -219,23 +192,13 @@ pub fn run(
                 match_: pat_var,
                 print,
             }) => {
-                let match_result = molt_file.match_pattern(
-                    &real_ctx,
-                    &pat_ctx,
-                    pat_var.unwrap(),
-                    data,
-                    &mut lsp_client,
-                );
+                let match_result =
+                    molt_file.match_pattern(&real_ctx, &pat_ctx, pat_var.unwrap(), data);
                 diagnostics.extend(match_result.make_diagnostics(rust_file_id, print));
             }
             Command::Modify(ModifyCommand { modifies, match_ }) => {
-                let match_result = molt_file.match_pattern(
-                    &real_ctx,
-                    &pat_ctx,
-                    match_.unwrap(),
-                    data,
-                    &mut lsp_client,
-                );
+                let match_result =
+                    molt_file.match_pattern(&real_ctx, &pat_ctx, match_.unwrap(), data);
                 modify::modify(
                     input,
                     &config,

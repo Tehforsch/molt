@@ -1,8 +1,8 @@
 mod parse;
 
-use crate::rust_grammar::{Kind, TokenStream, Type};
+use crate::rust_grammar::{Kind, TokenStream};
 use crate::{
-    Id, NodeId, Span, VarDecl,
+    Id, Span, VarDecl,
     rule::{Rule, RuleKey},
 };
 use parse::UnresolvedVarDecls;
@@ -14,18 +14,6 @@ pub struct TokenVar {
 }
 
 #[derive(Debug)]
-pub struct UnresolvedTypeAnnotation {
-    pub var_name: String,
-    pub type_: TokenStream,
-}
-
-#[derive(Debug)]
-pub struct TypeAnnotation {
-    pub var_name: String,
-    pub type_: NodeId<Type>,
-}
-
-#[derive(Debug)]
 pub(crate) struct Ruleset {
     pub rule: Rule,
     pub keys: Vec<RuleKey>,
@@ -34,7 +22,6 @@ pub(crate) struct Ruleset {
 pub(crate) struct UnresolvedMoltFile {
     pub vars: Vec<UnresolvedVarDecl>,
     pub commands: Vec<Command<TokenVar>>,
-    pub type_annotations: Vec<UnresolvedTypeAnnotation>,
     pub rules: Vec<Ruleset>,
 }
 
@@ -48,7 +35,6 @@ pub struct UnresolvedVarDecl {
 enum Decl {
     Var(UnresolvedVarDecls),
     Command(Command<TokenVar>),
-    TypeAnnotation(UnresolvedTypeAnnotation),
     Ruleset(Ruleset),
 }
 
@@ -56,7 +42,6 @@ enum Decl {
 pub(crate) struct MoltFile {
     pub vars: Vec<VarDecl>,
     pub command: Command<Id>,
-    pub type_annotations: Vec<TypeAnnotation>,
     pub rulesets: Vec<Ruleset>,
 }
 

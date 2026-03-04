@@ -1,8 +1,8 @@
-let cond, then, else: Expr;
+let cond, then, else_: Expr;
 let expr: Expr = {
     if $cond {
         $then
     } else {
-        $else
+        $else_
     }
 };

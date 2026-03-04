@@ -1,3 +1,0 @@
-let x: Ident = foo;
-type x = usize;
-match x;

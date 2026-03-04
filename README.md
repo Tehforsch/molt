@@ -41,19 +41,6 @@ fn main() {
 }
 ```
 
-### Type-aware Transformations (WIP)
-A lot of times, simply matching for syntactic patterns is not enough, and we need to add type annotations:
-
-```rust
-let ident: Ident;
-type ident = Foo; // Only match variables with type `Foo`
-let old: Expr = $ident.foo();
-let new: Expr = $ident.bar();
-transform old -> new;
-```
-
-This works, but is currently implemented by asking rust-analyzer via a "hover request" to obtain the type of the identifier. Unsurprisngly, this turns out to be quite fragile since the info rust-analyzer returns is meant for human consumption. Therefore, this will have to be replaced by directly using rust-analyzer or rustc bindings.
-
 ### List matching (WIP)
 Molt can match multiple items at the same syntactic levels at once:
 
