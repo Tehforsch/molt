@@ -98,16 +98,16 @@ fn main() -> Result<()> {
         check: args.check,
     };
     // Temporary to make transition easier
-    if args.new {
-        run_new(&input, config, root.as_ref())?;
-        Ok(())
+    let diagnostics = if args.new {
+        run_new(&input, config, root.as_ref())
     } else {
-        let diagnostics = emit_error(&input, run(&input, config, root.as_ref()))?;
-        let writer = StandardStream::stderr(ColorChoice::Always);
-        let config = Config::default();
-        for diagnostic in diagnostics {
-            term::emit(&mut writer.lock(), &config, &input, &diagnostic).unwrap();
-        }
-        Ok(())
+        run(&input, config, root.as_ref())
+    };
+    let diagnostics = emit_error(&input, diagnostics)?;
+    let writer = StandardStream::stderr(ColorChoice::Always);
+    let config = Config::default();
+    for diagnostic in diagnostics {
+        term::emit(&mut writer.lock(), &config, &input, &diagnostic).unwrap();
     }
+    Ok(())
 }
