@@ -6,8 +6,8 @@ use std::collections::HashMap;
 
 use super::LetStmt;
 use crate::{
-    Ctx, Diagnostic, Id,
-    molt_lang::{Expr, MAIN_FN_NAME, MoltFile, MoltFn, Stmt, interpreter::value::StmtValue},
+    Ctx, Diagnostic, Id, NodeType,
+    molt_lang::{Expr, MAIN_FN_NAME, MoltFile, MoltFn, Stmt, Type, interpreter::value::StmtValue},
     rust_grammar::{Ident, Node},
 };
 
@@ -79,10 +79,35 @@ impl<'src> Interpreter<'src> {
             interpreter.eval_fn_def(f)?;
         }
         for node in ctx.iter() {
-            let value = Value::Node(node);
-            interpreter.eval_fn_call(MAIN_FN_NAME, &[value])?;
+            interpreter.eval_main_fn_on_node(node)?;
         }
         Ok(interpreter.diagnostics)
+    }
+
+    fn eval_main_fn_on_node(&mut self, node: Id) -> Result<()> {
+        let value = Value::Node(node);
+        // Special handling to filter out non-matching node types
+        // in the main function
+        let main_fn = self.lookup_fn(MAIN_FN_NAME)?;
+        let RuntimeFn::UserDefined(f) = main_fn else {
+            unreachable!()
+        };
+        if f.args.len() != 1 {
+            return Err(Error::InvalidMainFn);
+        } else {
+            let Type::Kind(kind) = &f.args[0].type_;
+            if !self
+                .src
+                .ctx
+                .get::<Node>(node)
+                .unwrap_item()
+                .is_of_kind(*kind)
+            {
+                return Ok(());
+            }
+        }
+        self.eval_fn_call(MAIN_FN_NAME, &[value])?;
+        Ok(())
     }
 
     fn eval_fn_def(&mut self, f: &'src MoltFn) -> Result<()> {

@@ -7,7 +7,8 @@ pub(crate) use interpreter::Interpreter;
 use codespan_reporting::files::Files;
 use proc_macro2::TokenStream;
 
-use crate::rust_grammar::{Ident, Type};
+use crate::rust_grammar::Ident;
+use crate::rust_grammar::Kind;
 use crate::{Error, Input, Mode};
 
 const MAIN_FN_NAME: &str = "main";
@@ -43,7 +44,12 @@ pub struct MoltFn {
 #[derive(Debug)]
 pub struct FnArg {
     pub var_name: Ident,
-    pub _type_: Type,
+    pub type_: Type,
+}
+
+#[derive(Debug)]
+pub enum Type {
+    Kind(Kind),
 }
 
 #[derive(Debug)]
@@ -130,7 +136,7 @@ fn resolve_file(file: grammar::MoltFile) -> Result<MoltFile> {
                 name: FnName::ImplicitMain,
                 args: vec![FnArg {
                     var_name: l.lhs.clone(),
-                    _type_: l.type_,
+                    type_: resolve_type(l.type_)?,
                 }],
                 stmts: stmts
                     .into_iter()
@@ -163,7 +169,13 @@ fn resolve_fn(f: grammar::MoltFn) -> Result<MoltFn> {
 fn resolve_fn_arg(arg: grammar::FnArg) -> Result<FnArg> {
     Ok(FnArg {
         var_name: arg.var_name,
-        _type_: arg.type_,
+        type_: resolve_type(arg.type_)?,
+    })
+}
+
+fn resolve_type(arg: grammar::Type) -> Result<Type> {
+    Ok(match arg {
+        grammar::Type::Kind(ident) => Type::Kind(ident),
     })
 }
 
@@ -178,7 +190,7 @@ fn resolve_stmt(stmt: grammar::Stmt) -> Result<Stmt> {
 fn resolve_let_stmt(l: grammar::LetStmt) -> Result<LetStmt> {
     Ok(LetStmt {
         lhs: l.lhs,
-        type_: l.type_,
+        type_: resolve_type(l.type_)?,
         rhs: l.rhs.map(resolve_expr).transpose()?,
     })
 }

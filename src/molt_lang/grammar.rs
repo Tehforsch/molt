@@ -4,7 +4,7 @@ use proc_macro2::TokenStream;
 
 use crate::parser::punctuated::Punctuated;
 use crate::parser::token::Comma;
-use crate::rust_grammar::{Ident, Type};
+use crate::rust_grammar::{Ident, Kind};
 
 #[derive(Debug)]
 pub(crate) struct MoltFile {
@@ -23,6 +23,11 @@ pub struct MoltFn {
 pub struct FnArg {
     pub var_name: Ident,
     pub type_: Type,
+}
+
+#[derive(Debug)]
+pub enum Type {
+    Kind(Kind),
 }
 
 #[derive(Debug)]

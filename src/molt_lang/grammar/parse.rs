@@ -1,10 +1,10 @@
 use proc_macro2::TokenStream;
 
-use crate::molt_lang::grammar::FnCall;
+use crate::molt_lang::grammar::{FnCall, Type};
 use crate::parser::parse::{Parse, ParseStream};
 use crate::parser::punctuated::Punctuated;
 use crate::parser::{Result, token};
-use crate::rust_grammar::{Ident, Type};
+use crate::rust_grammar::{Ident, Kind};
 
 use super::{Assignment, Expr, FnArg, LetStmt, MoltFile, MoltFn, Pat, Stmt};
 
@@ -45,8 +45,15 @@ impl Parse for FnArg {
     fn parse(input: ParseStream) -> Result<Self> {
         let var_name: Ident = input.parse()?;
         let _: Token![:] = input.parse()?;
-        let type_: Type = input.parse_node::<Type>()?;
+        let type_: Type = input.parse::<Type>()?;
         Ok(FnArg { var_name, type_ })
+    }
+}
+
+impl Parse for Type {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let kind: Kind = input.parse()?;
+        Ok(Type::Kind(kind))
     }
 }
 
@@ -68,7 +75,7 @@ impl Parse for LetStmt {
         let _: Token![let] = input.parse()?;
         let lhs: Ident = input.parse()?;
         let _: Token![:] = input.parse()?;
-        let type_: Type = input.parse_node::<Type>()?;
+        let type_: Type = input.parse::<Type>()?;
         let rhs = if input.peek(Token![=]) {
             let _: Token![=] = input.parse()?;
             Some(input.parse()?)
