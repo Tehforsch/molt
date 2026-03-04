@@ -20,8 +20,8 @@ use crate::parser::buffer::{Cursor, TokenBuffer};
 use crate::parser::punctuated::Punctuated;
 use crate::parser::token::{Bracket, Paren, Token};
 use crate::parser::{error, lookahead};
-use crate::rust_grammar::Ident;
 use crate::rust_grammar::ext::IdentExt;
+use crate::rust_grammar::{Ident, Kind};
 use crate::rust_grammar::{Node, NodeKind};
 
 pub type ParseCtx = Rc<RefCell<Ctx<Node>>>;
@@ -136,11 +136,32 @@ fn parse_list<T: ParseListOrItem>(input: ParseStream) -> Result<Vec<NodeId<T::Ta
 fn peek_var(cursor: Cursor, ctx: &Ctx<Node>, kind: NodeKind) -> bool {
     if let Some((punct, _)) = cursor.punct()
         && punct.as_char() == '$'
-        && let Some((ident, _)) = cursor.skip().and_then(|cursor| cursor.ident())
     {
-        return kind_matches(ctx, &ident, kind);
+        // $ident syntax
+        if let Some((ident, _)) = cursor.skip().and_then(|cursor| cursor.ident()) {
+            return kind_matches(ctx, &ident, kind);
+        }
+        // $(ident: Kind) syntax. TODO: Delete this and replace this whole
+        // concept
+        if let Ok((var, _)) = parse_tokens::<TempVar>(cursor.token_stream().clone(), ctx.mode()) {
+            return kind_matches(ctx, &var.0, kind);
+        }
     }
     false
+}
+
+// TODO remove
+struct TempVar(Ident);
+
+impl Parse for TempVar {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let content;
+        parenthesized!(content in input);
+        let ident = content.parse()?;
+        let _: Token![:] = content.parse()?;
+        let _: Kind = content.parse()?;
+        Ok(Self(ident))
+    }
 }
 
 impl<T: ToNode<Node> + ParseNode<Target = T>> Parse for NodeId<T> {
@@ -618,7 +639,22 @@ impl<'a> ParseBuffer<'a> {
             let ahead = self.fork();
             if ahead.peek(Token![$]) {
                 let _: Token![$] = ahead.parse()?;
-                let ident: Ident = Ident::parse_any(&ahead)?;
+                let lookahead = ahead.lookahead1();
+                let ident = if lookahead.peek(Ident) {
+                    // $ident syntax
+                    Ident::parse_any(&ahead)?
+                } else if lookahead.peek(Paren) {
+                    // $(ident: Kind) syntax - remove
+                    let content;
+                    parenthesized!(content in ahead);
+                    let ident = content.parse()?;
+                    let _: Token![:] = content.parse()?;
+                    // TODO remove this
+                    let kind: Kind = content.parse()?;
+                    ident
+                } else {
+                    return Err(lookahead.error());
+                };
                 if !kind_matches(&ahead.ctx.borrow(), &ident, T::node_kind()) {
                     return Ok(None);
                 }
