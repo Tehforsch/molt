@@ -15,13 +15,12 @@ pub type IsMatch<T = ()> = Result<T, NoMatch>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Binding {
-    pub molt: Option<Id>,
-    pub real: Option<Id>,
+    pub id: Option<Id>,
 }
 
 impl Binding {
-    fn new(molt: Option<Id>) -> Self {
-        Self { molt, real: None }
+    fn new() -> Self {
+        Self { id: None }
     }
 }
 
@@ -50,32 +49,27 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
     fn new_root(vars: &[VarDecl], rules: &'a Rules, ctx: &'a MatchCtx<'a, Node>) -> Self {
         Self {
             rules,
-            bindings: vars
-                .iter()
-                .map(|var| (var.id, Binding::new(var.node)))
-                .collect(),
+            bindings: vars.iter().map(|var| (var.id, Binding::new())).collect(),
             ctx,
         }
     }
 
-    fn add_binding(&mut self, key: Id, real_id: Id) -> IsMatch {
+    fn add_binding(&mut self, key: Id, id: Id) -> IsMatch {
         if self.ctx.config().debug_print {
             println!(
                 "\tBind ${} to {}",
                 &self.ctx.get_var(key).name(),
-                self.ctx.print(real_id)
+                self.ctx.print(id)
             );
         }
         let binding = self.bindings.get_mut(&key).unwrap();
-        if let Some(real_id_2) = binding.real {
-            self.cmp_ids(real_id, real_id_2)
+        if let Some(previous_match) = binding.id {
+            // We encountered this variable again, so compare it to the
+            // previous match for consistency.
+            self.cmp_ids(id, previous_match)
         } else {
-            binding.real = Some(real_id);
-            if let Some(molt_id) = binding.molt {
-                self.cmp_ids(real_id, molt_id)
-            } else {
-                IsMatch::Ok(())
-            }
+            binding.id = Some(id);
+            IsMatch::Ok(())
         }
     }
 
@@ -219,6 +213,23 @@ pub fn match_pattern<N: NodeType + CmpSyn<N>>(
     let mut match_ = Matcher::new_root(vars, rules, ctx);
     dbg!(molt_var, real);
     match match_.add_binding(molt_var, real) {
+        Ok(_) => vec![Match {
+            bindings: match_.bindings,
+        }],
+        Err(_) => vec![],
+    }
+}
+
+pub fn match_pattern2<N: NodeType + CmpSyn<N>>(
+    ctx: &MatchCtx<N>,
+    vars: &[VarDecl],
+    molt: Id,
+    real: Id,
+    rules: &Rules,
+) -> Vec<Match> {
+    let mut match_ = Matcher::new_root(vars, rules, ctx);
+
+    match match_.cmp_ids(molt, real) {
         Ok(_) => vec![Match {
             bindings: match_.bindings,
         }],

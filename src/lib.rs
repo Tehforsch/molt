@@ -32,7 +32,7 @@ pub use ctx::{Ctx, Id, NodeId, Var, VarDecl};
 pub use error::{Error, emit_error};
 pub use input::{Diagnostic, FileId, Input, MoltSource};
 pub use match_ctx::{MatchCtx, MatchPatternData};
-pub use match_pattern::{Binding, Match, Matcher, match_pattern};
+pub use match_pattern::{Binding, Match, Matcher, match_pattern, match_pattern2};
 use molt_grammar::{Command, MatchCommand, ModifyCommand, MoltFile, UnresolvedMoltFile};
 pub use node::{KindType, NodeType, ToNode};
 pub use node_list::{
@@ -150,7 +150,7 @@ impl<'a> MatchResult<'a> {
             .map(|match_| {
                 let match_var = print.unwrap_or(self.var);
                 let binding = match_.get_binding(match_var);
-                let span = self.ctx.real_ctx.get_span(binding.real.unwrap());
+                let span = self.ctx.real_ctx.get_span(binding.id.unwrap());
                 let var_name = |var| format!("${}", self.ctx.get_var(var).name());
                 let mut diagnostic = Diagnostic::note().with_message("Match").with_labels(vec![
                     Label::primary(file_id, span.byte_range()).with_message(var_name(match_var)),
@@ -162,7 +162,7 @@ impl<'a> MatchResult<'a> {
                     if key == match_var {
                         continue;
                     }
-                    for node in binding.real.iter() {
+                    for node in binding.id.iter() {
                         diagnostic = diagnostic.with_note(format!(
                             "{} = {}",
                             var_name(key),

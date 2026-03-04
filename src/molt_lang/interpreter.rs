@@ -209,7 +209,7 @@ impl<'src> Interpreter<'src> {
                     todo!()
                 };
                 if let Value::Node(real) = real_id {
-                    let matches = crate::match_pattern(
+                    let matches = crate::match_pattern2(
                         &ctx,
                         &vars,
                         pat.node,

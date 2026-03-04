@@ -2,15 +2,12 @@ mod diff;
 
 use std::io::{self, Write};
 use std::path::Path;
-use std::str::FromStr;
 
-use crate::rust_grammar::{Node, TokenStream};
+use crate::rust_grammar::Node;
 use crate::{Config, Id, Match, MatchCtx, Span};
 use codespan_reporting::files::Files;
 
 use crate::ctrl_c::FileRestorer;
-use crate::molt_grammar::TokenVar;
-use crate::resolve::get_vars_in_token_stream;
 use crate::{Error, FileId, Input, MatchResult};
 
 #[derive(Debug, thiserror::Error)]
@@ -196,53 +193,57 @@ fn check_overlap(modifications: &[Modification]) -> Result<(), Error> {
     Ok(())
 }
 
+#[allow(unused)]
 fn make_modification(ctx: &MatchCtx<Node>, match_: &Match, input: Id, output: Id) -> Modification {
-    let ast = match_.get_binding(input).real.unwrap();
-    let ast_span = ctx.real_ctx.get_span(ast);
-    Modification {
-        span: ast_span,
-        new_code: get_modified_code(ctx, match_, output),
-    }
+    todo!()
+    // let ast = match_.get_binding(input).id.unwrap();
+    // let ast_span = ctx.real_ctx.get_span(ast);
+    // Modification {
+    //     span: ast_span,
+    //     new_code: get_modified_code(ctx, match_, output),
+    // }
 }
 
-fn get_modified_code(ctx: &MatchCtx<Node>, match_: &Match, output: Id) -> String {
-    let binding = match_.get_binding(output);
-    let mut code = if let Some(real_binding) = binding.real {
-        ctx.print(real_binding).to_string()
-    } else {
-        let pat_id = binding.molt.unwrap();
-        if pat_id.is_var() {
-            get_modified_code(ctx, match_, pat_id)
-        } else {
-            ctx.print(binding.molt.unwrap()).to_string()
-        }
-    };
-    loop {
-        let variables = contained_variables(&code);
-        if variables.is_empty() {
-            break;
-        }
-        replace_first_variable(ctx, match_, &mut code, variables);
-    }
-    code
+#[allow(unused)]
+fn get_modified_code(_ctx: &MatchCtx<Node>, _match_: &Match, _output: Id) -> String {
+    todo!()
+    // let binding = match_.get_binding(output);
+    // let mut code = if let Some(real_binding) = binding.real {
+    //     ctx.print(real_binding).to_string()
+    // } else {
+    //     let pat_id = binding.molt.unwrap();
+    //     if pat_id.is_var() {
+    //         get_modified_code(ctx, match_, pat_id)
+    //     } else {
+    //         ctx.print(binding.molt.unwrap()).to_string()
+    //     }
+    // };
+    // loop {
+    //     let variables = contained_variables(&code);
+    //     if variables.is_empty() {
+    //         break;
+    //     }
+    //     replace_first_variable(ctx, match_, &mut code, variables);
+    // }
+    // code
 }
 
-fn replace_first_variable(
-    ctx: &MatchCtx<Node>,
-    match_: &Match,
-    sc: &mut String,
-    mut vars: Vec<TokenVar>,
-) {
-    if let Some(var) = vars.pop() {
-        let var_id = ctx.molt_ctx.get_id_by_name(&var.name);
-        let new_code = get_modified_code(ctx, match_, var_id);
-        sc.replace_range(var.span.byte_range(), &new_code);
-    }
-}
-
-fn contained_variables(code: &str) -> Vec<TokenVar> {
-    let mut vars = vec![];
-    let tokens = TokenStream::from_str(code).unwrap();
-    get_vars_in_token_stream(&mut vars, tokens);
-    vars
-}
+// fn replace_first_variable(
+//     ctx: &MatchCtx<Node>,
+//     match_: &Match,
+//     sc: &mut String,
+//     mut vars: Vec<TokenVar>,
+// ) {
+//     if let Some(var) = vars.pop() {
+//         let var_id = ctx.molt_ctx.get_id_by_name(&var.name);
+//         let new_code = get_modified_code(ctx, match_, var_id);
+//         sc.replace_range(var.span.byte_range(), &new_code);
+//     }
+// }
+//
+// fn contained_variables(code: &str) -> Vec<TokenVar> {
+//     let mut vars = vec![];
+//     let tokens = TokenStream::from_str(code).unwrap();
+//     get_vars_in_token_stream(&mut vars, tokens);
+//     vars
+// }
