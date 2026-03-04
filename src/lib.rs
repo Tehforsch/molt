@@ -6,7 +6,6 @@ mod ctrl_c;
 mod ctx;
 mod error;
 mod input;
-mod interpreter;
 mod lsp;
 mod match_ctx;
 mod match_pattern;
@@ -27,7 +26,7 @@ mod utils;
 
 use std::path::{Path, PathBuf};
 
-use crate::{interpreter::Interpreter, rust_grammar::Node};
+use crate::rust_grammar::Node;
 pub use cmp_syn::CmpSyn;
 use codespan_reporting::diagnostic::Label;
 use codespan_reporting::files::Files;
@@ -267,8 +266,12 @@ pub fn run_new(
     for rust_file_id in input.iter_rust_src() {
         let (_, real_ctx) = RustFile::new(input, rust_file_id)?;
         diagnostics.extend(
-            Interpreter::run(&molt_file, input.source(rust_file_id).unwrap(), &real_ctx)
-                .map_err(Error::Interpreter)?,
+            crate::molt_lang::Interpreter::run(
+                &molt_file,
+                input.source(rust_file_id).unwrap(),
+                &real_ctx,
+            )
+            .map_err(Error::Interpreter)?,
         );
     }
     Ok(diagnostics)

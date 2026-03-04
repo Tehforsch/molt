@@ -7,6 +7,7 @@ use codespan_reporting::term::{self};
 
 use crate::input::{FileId, Input};
 use crate::modify::ModifyError;
+use crate::molt_lang::InterpreterError;
 use crate::resolve::ResolveError;
 
 #[derive(Debug)]
@@ -16,7 +17,7 @@ pub enum Error {
     Misc(String),
     Modify(ModifyError),
     Io(io::Error),
-    Interpreter(crate::interpreter::Error),
+    Interpreter(InterpreterError),
 }
 
 impl Error {

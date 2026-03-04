@@ -6,12 +6,12 @@ use std::collections::HashMap;
 
 use crate::{
     Ctx, Diagnostic, Id,
-    interpreter::{
-        function::{BuiltinFn, RuntimeFn, UserFn, builtins},
-        value::Value,
-    },
     molt_lang::{Expr, MoltFile, MoltFn, Stmt},
     rust_grammar::{Ident, Node},
+};
+use {
+    function::{BuiltinFn, RuntimeFn, UserFn, builtins},
+    value::Value,
 };
 
 use error::Result;
@@ -44,7 +44,7 @@ impl Scope {
     }
 }
 
-pub(super) struct Interpreter<'src> {
+pub(crate) struct Interpreter<'src> {
     diagnostics: Vec<Diagnostic>,
     scopes: Vec<Scope>,
     fns: HashMap<String, RuntimeFn<'src>>,

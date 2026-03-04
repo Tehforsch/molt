@@ -1,4 +1,8 @@
 mod grammar;
+mod interpreter;
+
+pub(crate) use interpreter::Error as InterpreterError;
+pub(crate) use interpreter::Interpreter;
 
 use codespan_reporting::files::Files;
 use proc_macro2::TokenStream;
