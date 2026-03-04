@@ -4,7 +4,7 @@ mod value;
 
 use std::collections::HashMap;
 
-use super::LetStmt;
+use super::{LetLhs, LetStmt};
 use crate::{
     Ctx, Diagnostic, Id, NodeType,
     molt_lang::{Expr, MAIN_FN_NAME, MoltFile, MoltFn, Stmt, Type, interpreter::value::StmtValue},
@@ -175,15 +175,19 @@ impl<'src> Interpreter<'src> {
     }
 
     fn eval_let(&mut self, let_stmt: &LetStmt) -> Result<StmtValue> {
-        if self.lookup_var(&let_stmt.lhs).is_ok() {
-            todo!()
+        match &let_stmt.lhs {
+            LetLhs::Var(var_name) => {
+                if self.lookup_var(var_name).is_ok() {
+                    todo!()
+                }
+                if let Some(rhs) = &let_stmt.rhs {
+                    let val = self.eval_expr(rhs)?;
+                    self.active_scope_mut().insert(var_name.clone(), &val);
+                }
+                Ok(StmtValue::Value(Value::Null))
+            }
+            LetLhs::Pat(_) => todo!(),
         }
-        if let Some(rhs) = &let_stmt.rhs {
-            let val = self.eval_expr(rhs)?;
-            self.active_scope_mut().insert(let_stmt.lhs.clone(), &val);
-        }
-        Ok(StmtValue::Value(Value::Null))
-        // Do nothing for `let` without rhs, since they are just type annotations..
     }
 
     fn active_scope(&self) -> &Scope {

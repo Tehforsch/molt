@@ -39,9 +39,15 @@ pub enum Stmt {
 
 #[derive(Debug)]
 pub struct LetStmt {
-    pub lhs: Ident,
+    pub lhs: LetLhs,
     pub type_: Type,
     pub rhs: Option<Expr>,
+}
+
+#[derive(Debug)]
+pub enum LetLhs {
+    Var(Ident),
+    Pat(Pat),
 }
 
 #[derive(Debug)]

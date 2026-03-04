@@ -61,9 +61,15 @@ pub enum Stmt {
 
 #[derive(Debug)]
 pub struct LetStmt {
-    pub lhs: Ident,
+    pub lhs: LetLhs,
     pub type_: Type,
     pub rhs: Option<Expr>,
+}
+
+#[derive(Debug)]
+pub enum LetLhs {
+    Var(Ident),
+    Pat(Pat),
 }
 
 #[derive(Debug)]
@@ -129,13 +135,16 @@ fn resolve_file(file: grammar::MoltFile) -> Result<MoltFile> {
             return Err(ResolveError::MainFnAndTopLevelStmtExist);
         }
         if let grammar::Stmt::Let(l) = stmts.remove(0) {
-            if l.lhs != INPUT_VAR_NAME {
+            let grammar::LetLhs::Var(ref var_name) = l.lhs else {
+                return Err(ResolveError::InvalidInputVarName);
+            };
+            if *var_name != INPUT_VAR_NAME {
                 return Err(ResolveError::InvalidInputVarName);
             }
             fns.push(MoltFn {
                 name: FnName::ImplicitMain,
                 args: vec![FnArg {
-                    var_name: l.lhs.clone(),
+                    var_name: var_name.clone(),
                     type_: resolve_type(l.type_)?,
                 }],
                 stmts: stmts
@@ -189,9 +198,16 @@ fn resolve_stmt(stmt: grammar::Stmt) -> Result<Stmt> {
 
 fn resolve_let_stmt(l: grammar::LetStmt) -> Result<LetStmt> {
     Ok(LetStmt {
-        lhs: l.lhs,
+        lhs: resolve_let_lhs(l.lhs)?,
         type_: resolve_type(l.type_)?,
         rhs: l.rhs.map(resolve_expr).transpose()?,
+    })
+}
+
+fn resolve_let_lhs(lhs: grammar::LetLhs) -> Result<LetLhs> {
+    Ok(match lhs {
+        grammar::LetLhs::Var(ident) => LetLhs::Var(ident),
+        grammar::LetLhs::Pat(pat) => LetLhs::Pat(resolve_pat(pat)?),
     })
 }
 

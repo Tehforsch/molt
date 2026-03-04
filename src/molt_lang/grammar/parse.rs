@@ -6,7 +6,7 @@ use crate::parser::punctuated::Punctuated;
 use crate::parser::{Result, token};
 use crate::rust_grammar::{Ident, Kind};
 
-use super::{Assignment, Expr, FnArg, LetStmt, MoltFile, MoltFn, Pat, Stmt};
+use super::{Assignment, Expr, FnArg, LetLhs, LetStmt, MoltFile, MoltFn, Pat, Stmt};
 
 impl Parse for MoltFile {
     fn parse(input: ParseStream) -> Result<Self> {
@@ -73,7 +73,7 @@ impl Parse for Stmt {
 impl Parse for LetStmt {
     fn parse(input: ParseStream) -> Result<Self> {
         let _: Token![let] = input.parse()?;
-        let lhs: Ident = input.parse()?;
+        let lhs: LetLhs = input.parse()?;
         let _: Token![:] = input.parse()?;
         let type_: Type = input.parse::<Type>()?;
         let rhs = if input.peek(Token![=]) {
@@ -84,6 +84,19 @@ impl Parse for LetStmt {
         };
         let _: Token![;] = input.parse()?;
         Ok(LetStmt { lhs, type_, rhs })
+    }
+}
+
+impl Parse for LetLhs {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let lookahead = input.lookahead1();
+        if lookahead.peek(token::Brace) {
+            let content;
+            braced!(content in input);
+            Ok(LetLhs::Pat(content.parse()?))
+        } else {
+            Ok(LetLhs::Var(input.parse()?))
+        }
     }
 }
 
