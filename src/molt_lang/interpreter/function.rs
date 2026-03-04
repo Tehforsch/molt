@@ -30,6 +30,9 @@ impl<'src> Interpreter<'src> {
                 Value::Node(id) => {
                     self.src.print(*id);
                 }
+                Value::Null => {
+                    println!("Null");
+                }
             }
         }
     }

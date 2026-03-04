@@ -4,11 +4,13 @@ mod value;
 
 use std::collections::HashMap;
 
+use super::LetStmt;
 use crate::{
     Ctx, Diagnostic, Id,
-    molt_lang::{Expr, MAIN_FN_NAME, MoltFile, MoltFn, Stmt},
+    molt_lang::{Expr, MAIN_FN_NAME, MoltFile, MoltFn, Stmt, interpreter::value::StmtValue},
     rust_grammar::{Ident, Node},
 };
+
 use {
     function::{BuiltinFn, builtins},
     value::Value,
@@ -91,10 +93,10 @@ impl<'src> Interpreter<'src> {
         Ok(())
     }
 
-    fn eval_stmt(&mut self, stmt: &Stmt) -> Result<()> {
+    fn eval_stmt(&mut self, stmt: &Stmt) -> Result<StmtValue> {
         match stmt {
             Stmt::Assignment(_) => todo!(),
-            Stmt::Let(_) => todo!(),
+            Stmt::Let(let_stmt) => self.eval_let(let_stmt),
             Stmt::FnCall(fn_call) => {
                 let args = self.make_fn_args(&fn_call.args)?;
                 self.eval_fn_call(&fn_call.fn_name.to_string(), &args)
@@ -102,7 +104,7 @@ impl<'src> Interpreter<'src> {
         }
     }
 
-    fn eval_fn_call(&mut self, fn_name: &str, args: &[Value]) -> Result<()> {
+    fn eval_fn_call(&mut self, fn_name: &str, args: &[Value]) -> Result<StmtValue> {
         match self.fns.get(fn_name).ok_or(Error::undefined_fn(fn_name))? {
             // Inlining to make borrow checker happy. A simple alternative
             // would be to clone the fn definitions.
@@ -114,18 +116,18 @@ impl<'src> Interpreter<'src> {
                 }
                 self.scopes.push(scope);
                 for stmt in user_fn.inner.stmts.iter() {
-                    self.eval_stmt(stmt)?;
+                    match self.eval_stmt(stmt)? {
+                        StmtValue::Return => break,
+                        StmtValue::Value(_) => {}
+                    }
                 }
                 self.scopes.pop();
-                Ok(())
             }
-            RuntimeFn::Builtin(builtin_fn) => {
-                match builtin_fn {
-                    BuiltinFn::Print => self.eval_print(args),
-                }
-                Ok(())
-            }
+            RuntimeFn::Builtin(builtin_fn) => match builtin_fn {
+                BuiltinFn::Print => self.eval_print(args),
+            },
         }
+        Ok(StmtValue::Value(Value::Null))
     }
 
     fn make_fn_args(&mut self, args: &[Expr]) -> Result<Vec<Value>> {
@@ -139,8 +141,24 @@ impl<'src> Interpreter<'src> {
         }
     }
 
+    fn eval_let(&mut self, let_stmt: &LetStmt) -> Result<StmtValue> {
+        if self.lookup_var(&let_stmt.lhs).is_ok() {
+            todo!()
+        }
+        if let Some(rhs) = &let_stmt.rhs {
+            let val = self.eval_expr(rhs)?;
+            self.active_scope_mut().insert(let_stmt.lhs.clone(), &val);
+        }
+        Ok(StmtValue::Value(Value::Null))
+        // Do nothing for `let` without rhs, since they are just type annotations..
+    }
+
     fn active_scope(&self) -> &Scope {
         self.scopes.last().unwrap()
+    }
+
+    fn active_scope_mut(&mut self) -> &mut Scope {
+        self.scopes.last_mut().unwrap()
     }
 
     fn next_scope_index(&self) -> usize {
