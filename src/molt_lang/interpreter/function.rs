@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::molt_lang::MoltFn;
+use crate::molt_lang::{Interpreter, MoltFn, interpreter::value::Value};
 
 pub enum RuntimeFn<'a> {
     UserDefined(UserFn<'a>),
@@ -20,4 +20,17 @@ pub fn builtins<'a>() -> HashMap<String, RuntimeFn<'a>> {
         .into_iter()
         .map(|(name, f)| (name.to_string(), f))
         .collect()
+}
+
+impl<'src> Interpreter<'src> {
+    pub(super) fn eval_print(&self, args: &[Value]) {
+        for val in args.iter() {
+            match val {
+                Value::String(_) => todo!(),
+                Value::Node(id) => {
+                    self.src.print(*id);
+                }
+            }
+        }
+    }
 }

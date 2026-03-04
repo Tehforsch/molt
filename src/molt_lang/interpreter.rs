@@ -157,15 +157,4 @@ impl<'src> Interpreter<'src> {
         }
         Err(Error::UndefinedVar)
     }
-
-    fn eval_print(&self, args: &[Value]) {
-        for val in args.iter() {
-            match val {
-                Value::String(_) => todo!(),
-                Value::Node(id) => {
-                    self.src.print(*id);
-                }
-            }
-        }
-    }
 }
