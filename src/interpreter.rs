@@ -5,7 +5,7 @@ mod value;
 use std::collections::HashMap;
 
 use crate::{
-    Ctx, Diagnostic,
+    Ctx, Diagnostic, Id,
     interpreter::{
         function::{BuiltinFn, RuntimeFn, UserFn, builtins},
         value::Value,
@@ -44,34 +44,47 @@ impl Scope {
     }
 }
 
-pub(super) struct Interpreter<'ast> {
+pub(super) struct Interpreter<'src> {
     diagnostics: Vec<Diagnostic>,
     scopes: Vec<Scope>,
-    fns: HashMap<String, RuntimeFn<'ast>>,
+    fns: HashMap<String, RuntimeFn<'src>>,
+    src: SrcData<'src>,
 }
 
-impl<'ast> Interpreter<'ast> {
+struct SrcData<'src> {
+    ctx: &'src Ctx<Node>,
+    src: &'src str,
+}
+
+impl<'src> SrcData<'src> {
+    fn print(&self, id: Id) {
+        println!("{}", self.ctx.print(id, self.src))
+    }
+}
+
+impl<'src> Interpreter<'src> {
     pub(crate) fn run(
         file: &MoltFile,
-        _data: crate::MatchPatternData<'_>,
-        real_ctx: &Ctx<Node>,
+        src: &'src str,
+        ctx: &'src Ctx<Node>,
     ) -> Result<Vec<Diagnostic>> {
         let mut interpreter = Self {
             diagnostics: vec![],
             scopes: vec![Scope::default()],
             fns: builtins(),
+            src: SrcData { ctx, src },
         };
         for f in file.fns.iter() {
             interpreter.eval_fn_def(f)?;
         }
-        for node in real_ctx.iter() {
+        for node in ctx.iter() {
             let value = Value::Node(node);
             interpreter.eval_fn_call(MAIN_FN_NAME, &[value])?;
         }
         Ok(interpreter.diagnostics)
     }
 
-    fn eval_fn_def(&mut self, f: &'ast MoltFn) -> Result<()> {
+    fn eval_fn_def(&mut self, f: &'src MoltFn) -> Result<()> {
         self.fns.insert(
             f.name.to_string(),
             RuntimeFn::UserDefined(UserFn { inner: f }),
@@ -108,7 +121,7 @@ impl<'ast> Interpreter<'ast> {
             }
             RuntimeFn::Builtin(builtin_fn) => {
                 match builtin_fn {
-                    BuiltinFn::Print => eval_print(args),
+                    BuiltinFn::Print => self.eval_print(args),
                 }
                 Ok(())
             }
@@ -145,10 +158,15 @@ impl<'ast> Interpreter<'ast> {
         }
         Err(Error::UndefinedVar)
     }
-}
 
-fn eval_print(args: &[Value]) {
-    for val in args.iter() {
-        println!("{:?}", val);
+    fn eval_print(&self, args: &[Value]) {
+        for val in args.iter() {
+            match val {
+                Value::String(_) => todo!(),
+                Value::Node(id) => {
+                    self.src.print(*id);
+                }
+            }
+        }
     }
 }
