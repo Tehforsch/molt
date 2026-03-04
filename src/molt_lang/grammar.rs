@@ -9,6 +9,7 @@ use crate::rust_grammar::{Ident, Type};
 #[derive(Debug)]
 pub(crate) struct MoltFile {
     pub fns: Vec<MoltFn>,
+    pub stmts: Vec<Stmt>,
 }
 
 #[derive(Debug)]
@@ -28,6 +29,14 @@ pub struct FnArg {
 pub enum Stmt {
     Assignment(Assignment),
     FnCall(FnCall),
+    Let(LetStmt),
+}
+
+#[derive(Debug)]
+pub struct LetStmt {
+    pub lhs: Ident,
+    pub type_: Type,
+    pub rhs: Option<Expr>,
 }
 
 #[derive(Debug)]

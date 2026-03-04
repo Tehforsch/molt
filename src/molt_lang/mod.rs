@@ -8,6 +8,7 @@ use crate::{Error, Input, Mode};
 
 pub struct MoltFile {
     pub fns: Vec<MoltFn>,
+    pub stmts: Vec<Stmt>,
 }
 
 pub struct MoltFn {
@@ -24,6 +25,13 @@ pub struct FnArg {
 pub enum Stmt {
     Assignment(Assignment),
     FnCall(FnCall),
+    Let(LetStmt),
+}
+
+pub struct LetStmt {
+    pub lhs: Ident,
+    pub type_: Type,
+    pub rhs: Option<Expr>,
 }
 
 pub struct Assignment {
@@ -48,6 +56,7 @@ pub struct Pat {
 fn resolve_file(file: grammar::MoltFile) -> MoltFile {
     MoltFile {
         fns: file.fns.into_iter().map(resolve_fn).collect(),
+        stmts: file.stmts.into_iter().map(resolve_stmt).collect(),
     }
 }
 
@@ -70,6 +79,15 @@ fn resolve_stmt(stmt: grammar::Stmt) -> Stmt {
     match stmt {
         grammar::Stmt::Assignment(a) => Stmt::Assignment(resolve_assignment(a)),
         grammar::Stmt::FnCall(f) => Stmt::FnCall(resolve_fn_call(f)),
+        grammar::Stmt::Let(l) => Stmt::Let(resolve_let_stmt(l)),
+    }
+}
+
+fn resolve_let_stmt(l: grammar::LetStmt) -> LetStmt {
+    LetStmt {
+        lhs: l.lhs,
+        type_: l.type_,
+        rhs: l.rhs.map(resolve_expr),
     }
 }
 

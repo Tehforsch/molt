@@ -95,6 +95,7 @@ impl<'src> Interpreter<'src> {
     fn eval_stmt(&mut self, stmt: &Stmt) -> Result<()> {
         match stmt {
             Stmt::Assignment(_) => todo!(),
+            Stmt::Let(_) => todo!(),
             Stmt::FnCall(fn_call) => {
                 let args = self.make_fn_args(&fn_call.args)?;
                 self.eval_fn_call(&fn_call.fn_name.to_string(), &args)

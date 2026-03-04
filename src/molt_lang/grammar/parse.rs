@@ -6,15 +6,21 @@ use crate::parser::punctuated::Punctuated;
 use crate::parser::{Result, token};
 use crate::rust_grammar::{Ident, Type};
 
-use super::{Assignment, Expr, FnArg, MoltFile, MoltFn, Pat, Stmt};
+use super::{Assignment, Expr, FnArg, LetStmt, MoltFile, MoltFn, Pat, Stmt};
 
 impl Parse for MoltFile {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut fns = vec![];
+        let mut stmts = vec![];
         while !input.is_empty() {
-            fns.push(input.parse()?);
+            let lookahead = input.lookahead1();
+            if lookahead.peek(Token![fn]) {
+                fns.push(input.parse()?);
+            } else {
+                stmts.push(input.parse()?);
+            }
         }
-        Ok(MoltFile { fns })
+        Ok(MoltFile { fns, stmts })
     }
 }
 
@@ -46,11 +52,31 @@ impl Parse for FnArg {
 
 impl Parse for Stmt {
     fn parse(input: ParseStream) -> Result<Self> {
-        if input.peek2(Token![=]) {
+        let lookahead = input.lookahead1();
+        if lookahead.peek(Token![let]) {
+            Ok(Stmt::Let(input.parse()?))
+        } else if input.peek2(Token![=]) {
             Ok(Stmt::Assignment(input.parse()?))
         } else {
             Ok(Stmt::FnCall(input.parse()?))
         }
+    }
+}
+
+impl Parse for LetStmt {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let _: Token![let] = input.parse()?;
+        let lhs: Ident = input.parse()?;
+        let _: Token![:] = input.parse()?;
+        let type_: Type = input.parse_node::<Type>()?;
+        let rhs = if input.peek(Token![=]) {
+            let _: Token![=] = input.parse()?;
+            Some(input.parse()?)
+        } else {
+            None
+        };
+        let _: Token![;] = input.parse()?;
+        Ok(LetStmt { lhs, type_, rhs })
     }
 }
 
@@ -59,6 +85,7 @@ impl Parse for Assignment {
         let lhs: Ident = input.parse()?;
         let _: Token![=] = input.parse()?;
         let rhs: Expr = input.parse()?;
+        let _: Token![;] = input.parse()?;
         Ok(Assignment { lhs, rhs })
     }
 }
@@ -71,6 +98,7 @@ impl Parse for FnCall {
         parenthesized!(content in input);
         let args = Punctuated::parse_terminated_with(&content, Expr::parse)?;
 
+        let _: Token![;] = input.parse()?;
         Ok(FnCall { fn_name, args })
     }
 }
