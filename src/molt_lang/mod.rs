@@ -10,6 +10,8 @@ use proc_macro2::TokenStream;
 use crate::rust_grammar::{Ident, Type};
 use crate::{Error, Input, Mode};
 
+const MAIN_FN_NAME: &str = "main";
+
 pub struct MoltFile {
     pub fns: Vec<MoltFn>,
     pub stmts: Vec<Stmt>,

@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use crate::{
     Ctx, Diagnostic, Id,
-    molt_lang::{Expr, MoltFile, MoltFn, Stmt},
+    molt_lang::{Expr, MAIN_FN_NAME, MoltFile, MoltFn, Stmt},
     rust_grammar::{Ident, Node},
 };
 use {
@@ -17,8 +17,6 @@ use {
 use error::Result;
 
 pub(crate) use error::Error;
-
-const MAIN_FN_NAME: &str = "main";
 
 type ScopeIndex = usize;
 
