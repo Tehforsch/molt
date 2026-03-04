@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use super::{LetLhs, LetStmt};
 use crate::{
-    Ctx, Diagnostic, Id, NodeType,
+    Ctx, Diagnostic, Id, MatchCtx, MatchPatternData, NodeType,
     molt_lang::{Expr, MAIN_FN_NAME, MoltFile, MoltFn, Stmt, Type, interpreter::value::StmtValue},
     rust_grammar::{Ident, Node},
 };
@@ -50,6 +50,7 @@ pub(crate) struct Interpreter<'src> {
     scopes: Vec<Scope>,
     fns: HashMap<String, RuntimeFn<'src>>,
     src: SrcData<'src>,
+    data: MatchPatternData<'src>,
 }
 
 struct SrcData<'src> {
@@ -68,12 +69,14 @@ impl<'src> Interpreter<'src> {
         file: &MoltFile,
         src: &'src str,
         ctx: &'src Ctx<Node>,
+        data: MatchPatternData<'src>,
     ) -> Result<Vec<Diagnostic>> {
         let mut interpreter = Self {
             diagnostics: vec![],
             scopes: vec![Scope::default()],
             fns: builtins(),
             src: SrcData { ctx, src },
+            data,
         };
         for f in file.fns.iter() {
             interpreter.eval_fn_def(f)?;
@@ -169,7 +172,6 @@ impl<'src> Interpreter<'src> {
 
     fn eval_expr(&mut self, expr: &Expr) -> Result<Value> {
         match expr {
-            Expr::Pattern(_) => todo!(),
             Expr::Atom(name) => Ok(self.lookup_var(name)?.clone()),
         }
     }
@@ -186,7 +188,42 @@ impl<'src> Interpreter<'src> {
                 }
                 Ok(StmtValue::Value(Value::Null))
             }
-            LetLhs::Pat(_) => todo!(),
+            LetLhs::Pat(pat) => {
+                let ctx = MatchCtx::new(&pat.ctx, self.src.ctx, self.data.clone());
+                let vars: Vec<_> = pat
+                    .vars
+                    .iter()
+                    .map(|var| {
+                        crate::VarDecl {
+                            id: var.id,
+                            node: None, // TODO: This doesn't really make sense in this context,
+                                        // since the only node that ever has this set to `Some()` would be the
+                                        // main node of the pattern we're matching, but I'm not sure that
+                                        // should ever enter the `ctx`
+                        }
+                    })
+                    .collect();
+                let real_id = if let Some(expr) = &let_stmt.rhs {
+                    self.eval_expr(expr)?
+                } else {
+                    // error handling
+                    todo!()
+                };
+                if let Value::Node(real) = real_id {
+                    let matches = crate::match_pattern(
+                        &ctx,
+                        &vars,
+                        pat.node,
+                        real,
+                        &crate::rule::Rules::default(),
+                    );
+                    dbg!(&matches);
+                    todo!()
+                } else {
+                    // error handling
+                    todo!()
+                }
+            }
         }
     }
 

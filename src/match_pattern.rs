@@ -217,6 +217,7 @@ pub fn match_pattern<N: NodeType + CmpSyn<N>>(
     rules: &Rules,
 ) -> Vec<Match> {
     let mut match_ = Matcher::new_root(vars, rules, ctx);
+    dbg!(molt_var, real);
     match match_.add_binding(molt_var, real) {
         Ok(_) => vec![Match {
             bindings: match_.bindings,

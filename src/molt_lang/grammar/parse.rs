@@ -1,7 +1,8 @@
 use proc_macro2::TokenStream;
 
-use crate::molt_lang::grammar::{FnCall, Type};
-use crate::parser::parse::{Parse, ParseStream};
+use crate::Mode;
+use crate::molt_lang::grammar::{FnCall, TokenVar, TokenVars, Type};
+use crate::parser::parse::{Parse, ParseStream, parse_tokens};
 use crate::parser::punctuated::Punctuated;
 use crate::parser::{Result, token};
 use crate::rust_grammar::{Ident, Kind};
@@ -91,9 +92,7 @@ impl Parse for LetLhs {
     fn parse(input: ParseStream) -> Result<Self> {
         let lookahead = input.lookahead1();
         if lookahead.peek(token::Brace) {
-            let content;
-            braced!(content in input);
-            Ok(LetLhs::Pat(content.parse()?))
+            Ok(LetLhs::Pat(input.parse()?))
         } else {
             Ok(LetLhs::Var(input.parse()?))
         }
@@ -125,27 +124,48 @@ impl Parse for FnCall {
 
 impl Parse for Expr {
     fn parse(input: ParseStream) -> Result<Self> {
-        let lookahead = input.lookahead1();
-        if lookahead.peek(token::Brace) {
-            let content;
-            braced!(content in input);
-            Ok(Expr::Pattern(content.parse()?))
-        } else {
-            Ok(Expr::Atom(input.parse()?))
-        }
+        Ok(Expr::Atom(input.parse()?))
     }
 }
 
 impl Parse for Pat {
     fn parse(input: ParseStream) -> Result<Self> {
         let lookahead = input.lookahead1();
-        let pat = if lookahead.peek(token::Brace) {
+        let tokens = if lookahead.peek(token::Brace) {
             let brace_content;
             braced!(brace_content in input);
             brace_content.parse::<TokenStream>()
         } else {
             Err(lookahead.error())
         }?;
-        Ok(Pat { pat })
+        Ok(Pat { tokens })
+    }
+}
+
+impl Parse for TokenVars {
+    fn parse(input: ParseStream) -> crate::parser::Result<Self> {
+        let mut vars = TokenVars(vec![]);
+        loop {
+            if input.cursor().eof() {
+                break;
+            } else if input.parse::<Token![$]>().is_ok() {
+                let content;
+                let _ = parenthesized!(content in input);
+                let name = content.parse()?;
+                let _: Token![:] = content.parse()?;
+                let kind: Kind = content.parse()?;
+                vars.0.push(TokenVar { name, kind });
+            } else {
+                if input.peek(token::Group) {
+                    let group = crate::parser::group::parse_group(input)?;
+                    let inner_vars: TokenVars = group.content.parse()?;
+                    vars.0.extend(inner_vars.0);
+                }
+                input
+                    .step(|cursor| Ok(((), cursor.skip().unwrap())))
+                    .unwrap();
+            }
+        }
+        Ok(vars)
     }
 }

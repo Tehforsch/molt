@@ -228,11 +228,13 @@ pub fn run_new(
 
     for rust_file_id in input.iter_rust_src() {
         let (_, real_ctx) = RustFile::new(input, rust_file_id)?;
+        let data = match_pattern_data(input, rust_file_id, &config);
         diagnostics.extend(
             crate::molt_lang::Interpreter::run(
                 &molt_file,
                 input.source(rust_file_id).unwrap(),
                 &real_ctx,
+                data,
             )
             .map_err(Error::Interpreter)?,
         );

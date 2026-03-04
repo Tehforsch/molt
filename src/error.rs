@@ -14,6 +14,7 @@ use crate::resolve::ResolveError;
 pub enum Error {
     Parse(crate::parser::Error, FileId),
     Resolve(ResolveError, FileId),
+    Resolve2(crate::molt_lang::ResolveError, FileId),
     Misc(String),
     Modify(ModifyError),
     Io(io::Error),
@@ -28,6 +29,7 @@ impl Error {
                 ResolveError::UndefinedVar(span, _) => Some((*span, *file_id)),
                 _ => None,
             },
+            Error::Resolve2(_, _) => None,
             Error::Misc(_) => None,
             Error::Modify(_) => None,
             Error::Io(_) => None,
@@ -86,6 +88,10 @@ impl Error {
     pub fn parse(t: crate::parser::Error, file_id: FileId) -> Self {
         Self::Parse(t, file_id)
     }
+
+    pub fn resolve(t: crate::molt_lang::ResolveError, file_id: FileId) -> Self {
+        Self::Resolve2(t, file_id)
+    }
 }
 
 impl std::fmt::Display for Error {
@@ -93,6 +99,7 @@ impl std::fmt::Display for Error {
         match self {
             Error::Parse(error, _) => write!(f, "{error}"),
             Error::Resolve(error, _) => write!(f, "{error}"),
+            Error::Resolve2(error, _) => write!(f, "{error}"),
             Error::Misc(s) => write!(f, "{s}"),
             Error::Modify(s) => write!(f, "{s}"),
             Error::Io(s) => write!(f, "{s}"),

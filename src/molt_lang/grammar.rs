@@ -2,6 +2,7 @@ mod parse;
 
 use proc_macro2::TokenStream;
 
+use crate::PatCtx;
 use crate::parser::punctuated::Punctuated;
 use crate::parser::token::Comma;
 use crate::rust_grammar::{Ident, Kind};
@@ -64,11 +65,19 @@ pub struct FnCall {
 
 #[derive(Debug)]
 pub enum Expr {
-    Pattern(Pat),
     Atom(Ident), // Make this an actual atom if we ever get arithmetic
 }
 
 #[derive(Debug)]
 pub struct Pat {
-    pub pat: TokenStream,
+    pub tokens: TokenStream,
 }
+
+#[derive(Debug, Clone)]
+pub struct TokenVar {
+    pub name: Ident,
+    // TODO: Replace with some sort of inference?
+    pub kind: Kind,
+}
+
+pub struct TokenVars(pub Vec<TokenVar>);

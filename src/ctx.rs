@@ -212,6 +212,13 @@ impl<Node: NodeType> Ctx<Node> {
         self.vars.iter()
     }
 
+    pub(crate) fn iter_vars_ids(&self) -> impl Iterator<Item = (Id, &Var<Node::Kind>)> {
+        self.vars
+            .iter()
+            .enumerate()
+            .map(|(i, v)| (Id(InternalId::Var(i), self.mode), v.clone()))
+    }
+
     pub fn get_span(&self, id: impl Into<Id>) -> Span {
         match id.into().0 {
             Pattern::Item(idx) => self.spans[idx],
@@ -222,6 +229,10 @@ impl<Node: NodeType> Ctx<Node> {
     pub fn print<'a>(&'a self, id: Id, src: &'a str) -> &'a str {
         let span = self.get_span(id);
         &src[span.byte_range()]
+    }
+
+    pub(crate) fn mode(&self) -> Mode {
+        self.mode
     }
 }
 

@@ -860,6 +860,11 @@ pub fn parse_str<T: Parse>(s: &str, mode: Mode) -> Result<T> {
     parse2_impl(ctx, T::parse, proc_macro2::TokenStream::from_str(s)?, mode)
 }
 
+pub fn parse_tokens<T: Parse>(s: TokenStream, mode: Mode) -> Result<(T, Ctx<Node>)> {
+    let ctx = Rc::new(RefCell::new(Ctx::new(mode)));
+    parse2_impl(ctx.clone(), T::parse, s, mode).map(|t| (t, ctx.replace(Ctx::new(mode))))
+}
+
 pub(crate) fn parse_str_ctx<T: Parse>(s: &str, mode: Mode) -> Result<(T, Ctx<Node>)> {
     let ctx = Rc::new(RefCell::new(Ctx::new(mode)));
     parse2_impl(

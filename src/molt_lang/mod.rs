@@ -1,14 +1,23 @@
 mod grammar;
 mod interpreter;
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 pub(crate) use interpreter::Error as InterpreterError;
 pub(crate) use interpreter::Interpreter;
 
 use codespan_reporting::files::Files;
-use proc_macro2::TokenStream;
 
+use crate::Ctx;
+use crate::Id;
+use crate::PatCtx;
+use crate::Var;
+use crate::parser::parse::parse_tokens;
 use crate::rust_grammar::Ident;
 use crate::rust_grammar::Kind;
+use crate::rust_grammar::Node;
+use crate::rust_grammar::parse_node_with_kind;
 use crate::{Error, Input, Mode};
 
 const MAIN_FN_NAME: &str = "main";
@@ -86,13 +95,19 @@ pub struct FnCall {
 
 #[derive(Debug)]
 pub enum Expr {
-    Pattern(Pat),
     Atom(Ident),
 }
 
-#[derive(Debug)]
 pub struct Pat {
-    pub _pat: TokenStream,
+    pub vars: Vec<TokenVar>,
+    pub ctx: PatCtx,
+    pub node: Id,
+}
+
+impl std::fmt::Debug for Pat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Pat").field("vars", &self.vars).finish()
+    }
 }
 
 #[derive(Debug)]
@@ -136,10 +151,10 @@ fn resolve_file(file: grammar::MoltFile) -> Result<MoltFile> {
         }
         if let grammar::Stmt::Let(l) = stmts.remove(0) {
             let grammar::LetLhs::Var(ref var_name) = l.lhs else {
-                return Err(ResolveError::InvalidInputVarName);
+                return Err(ResolveError::InvalidInputVarName.into());
             };
             if *var_name != INPUT_VAR_NAME {
-                return Err(ResolveError::InvalidInputVarName);
+                return Err(ResolveError::InvalidInputVarName.into());
             }
             fns.push(MoltFn {
                 name: FnName::ImplicitMain,
@@ -153,7 +168,7 @@ fn resolve_file(file: grammar::MoltFile) -> Result<MoltFile> {
                     .collect::<Result<Vec<_>>>()?,
             });
         } else {
-            return Err(ResolveError::NoInputVarName);
+            return Err(ResolveError::NoInputVarName.into());
         }
     }
     Ok(MoltFile { fns })
@@ -197,17 +212,18 @@ fn resolve_stmt(stmt: grammar::Stmt) -> Result<Stmt> {
 }
 
 fn resolve_let_stmt(l: grammar::LetStmt) -> Result<LetStmt> {
+    let type_ = resolve_type(l.type_)?;
     Ok(LetStmt {
-        lhs: resolve_let_lhs(l.lhs)?,
-        type_: resolve_type(l.type_)?,
+        lhs: resolve_let_lhs(l.lhs, &type_)?,
+        type_,
         rhs: l.rhs.map(resolve_expr).transpose()?,
     })
 }
 
-fn resolve_let_lhs(lhs: grammar::LetLhs) -> Result<LetLhs> {
+fn resolve_let_lhs(lhs: grammar::LetLhs, type_: &Type) -> Result<LetLhs> {
     Ok(match lhs {
         grammar::LetLhs::Var(ident) => LetLhs::Var(ident),
-        grammar::LetLhs::Pat(pat) => LetLhs::Pat(resolve_pat(pat)?),
+        grammar::LetLhs::Pat(pat) => LetLhs::Pat(resolve_pat(pat, &type_)?),
     })
 }
 
@@ -231,13 +247,50 @@ fn resolve_fn_call(f: grammar::FnCall) -> Result<FnCall> {
 
 fn resolve_expr(expr: grammar::Expr) -> Result<Expr> {
     match expr {
-        grammar::Expr::Pattern(p) => Ok(Expr::Pattern(resolve_pat(p)?)),
         grammar::Expr::Atom(name) => Ok(Expr::Atom(name)),
     }
 }
 
-fn resolve_pat(p: grammar::Pat) -> Result<Pat> {
-    Ok(Pat { _pat: p.pat })
+fn resolve_pat(p: grammar::Pat, type_: &Type) -> Result<Pat> {
+    // TODO: This seems like a horrible mess. Fix at least the unwrap, but also probably get rid of
+    // all of this.
+    // Add all vars to ctx with their kind (for now, while we have
+    // no inference).
+    let mut pat_ctx = PatCtx::new(Mode::Molt);
+    let (vars, ctx) = parse_tokens::<grammar::TokenVars>(p.tokens.clone(), Mode::Molt).unwrap();
+    for var in vars.0.into_iter() {
+        pat_ctx.add_var::<Node>(Var::new(var.name.to_string(), var.kind));
+    }
+    let pat_ctx = Rc::new(RefCell::new(pat_ctx));
+    let Type::Kind(kind) = type_;
+    let node = crate::parser::parse_with_ctx(
+        pat_ctx.clone(),
+        |stream| parse_node_with_kind(stream, *kind),
+        p.tokens,
+        Mode::Molt,
+    )
+    .map_err(|_| todo!())?;
+    // ...
+    let ctx = pat_ctx.replace(Ctx::new(Mode::Molt));
+
+    Ok(Pat {
+        vars: pat_ctx
+            .borrow()
+            .iter_vars_ids()
+            .map(|(id, var)| TokenVar {
+                id,
+                kind: var.kind(),
+            })
+            .collect(),
+        ctx,
+        node,
+    })
+}
+
+#[derive(Debug, Clone)]
+pub struct TokenVar {
+    pub id: Id,
+    pub kind: Kind,
 }
 
 impl MoltFile {
