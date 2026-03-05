@@ -13,7 +13,6 @@ use crate::Ctx;
 use crate::Id;
 use crate::Var;
 use crate::parser;
-use crate::parser::parse::parse_tokens;
 use crate::rust_grammar::Ident;
 use crate::rust_grammar::Kind;
 use crate::rust_grammar::Node;
@@ -250,16 +249,15 @@ fn resolve_expr(expr: grammar::Expr) -> Result<Expr> {
 }
 
 fn resolve_pat(p: grammar::Pat, type_: &Type) -> Result<Pat> {
-    // TODO: This seems like a horrible mess. Fix at least the unwrap, but also probably get rid of
-    // all of this.
-    // Add all vars to ctx with their kind (for now, while we have
-    // no inference).
+    // Add all vars to ctx with their kind.
     let mut pat_ctx = Ctx::<Node>::new(Mode::Molt);
-    let vars = parse_tokens::<grammar::TokenVars>(p.tokens.clone(), Mode::Molt).unwrap();
-    for var in vars.0.into_iter() {
-        pat_ctx.add_var::<Node>(Var::new(var.name, var.kind));
+    for var in p.vars.into_iter() {
+        let kind = Kind::infer_from_name(&var.name.to_string())
+            .unwrap_or_else(|| panic!("For now, names need to be called like their kind. Identifier {:?} does not follow this rule.", var.name.to_string()));
+        pat_ctx.add_var::<Node>(Var::new(var.name, kind));
     }
     let ctx = Rc::new(RefCell::new(pat_ctx));
+    // use the type annotation to tell us what to parse.
     let Type::Kind(kind) = type_;
     let node = crate::parser::parse_with_ctx(
         ctx.clone(),
@@ -268,7 +266,6 @@ fn resolve_pat(p: grammar::Pat, type_: &Type) -> Result<Pat> {
         Mode::Molt,
     )
     .map_err(ResolveError::PatternParse)?;
-    // ...
     let ctx = ctx.replace(Ctx::new(Mode::Molt));
     Ok(Pat {
         vars: ctx

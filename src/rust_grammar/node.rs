@@ -131,6 +131,17 @@ macro_rules! define_kind {
             }
         }
 
+        impl Kind {
+            pub fn infer_from_name(name: &str) -> Option<Self> {
+                $(
+                    if name.starts_with(&stringify!($variant_name).to_lowercase()) {
+                        return Some(Self::$variant_name);
+                    }
+                )*
+                None
+            }
+        }
+
         impl KindType<NodeKind> for Kind {
             fn is_comparable_to(&self, node_kind: NodeKind) -> bool {
                 match self {

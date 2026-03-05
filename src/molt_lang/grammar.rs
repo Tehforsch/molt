@@ -63,13 +63,12 @@ pub enum Expr {
 #[derive(Debug)]
 pub struct Pat {
     pub tokens: TokenStream,
+    pub vars: Vec<TokenVar>,
 }
 
 #[derive(Debug, Clone)]
 pub struct TokenVar {
     pub name: Ident,
-    // TODO: Replace with some sort of inference?
-    pub kind: Kind,
 }
 
 pub struct TokenVars(pub Vec<TokenVar>);

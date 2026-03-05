@@ -118,14 +118,16 @@ impl Parse for Expr {
 impl Parse for Pat {
     fn parse(input: ParseStream) -> Result<Self> {
         let lookahead = input.lookahead1();
-        let tokens = if lookahead.peek(token::Brace) {
-            let brace_content;
-            braced!(brace_content in input);
-            brace_content.parse::<TokenStream>()
+        let (vars, tokens) = if lookahead.peek(token::Brace) {
+            let content;
+            braced!(content in input);
+            let fork = content.fork();
+            let vars = fork.parse::<TokenVars>().unwrap().0;
+            (vars, content.parse::<TokenStream>()?)
         } else {
-            Err(lookahead.error())
-        }?;
-        Ok(Pat { tokens })
+            return Err(lookahead.error());
+        };
+        Ok(Pat { tokens, vars })
     }
 }
 
@@ -136,12 +138,8 @@ impl Parse for TokenVars {
             if input.cursor().eof() {
                 break;
             } else if input.parse::<Token![$]>().is_ok() {
-                let content;
-                let _ = parenthesized!(content in input);
-                let name = content.parse()?;
-                let _: Token![:] = content.parse()?;
-                let kind: Kind = content.parse()?;
-                vars.0.push(TokenVar { name, kind });
+                let name = input.parse()?;
+                vars.0.push(TokenVar { name });
             } else {
                 if input.peek(token::Group) {
                     let group = crate::parser::group::parse_group(input)?;
