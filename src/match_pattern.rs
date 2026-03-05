@@ -19,8 +19,8 @@ pub(crate) struct Binding {
 }
 
 impl Binding {
-    fn new() -> Self {
-        Self { id: None }
+    fn new(id: Option<Id>) -> Self {
+        Self { id }
     }
 }
 
@@ -49,7 +49,10 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
     fn new_root(vars: &[VarDecl], rules: &'a Rules, ctx: &'a MatchCtx<'a, Node>) -> Self {
         Self {
             rules,
-            bindings: vars.iter().map(|var| (var.id, Binding::new())).collect(),
+            bindings: vars
+                .iter()
+                .map(|var| (var.id, Binding::new(var.node)))
+                .collect(),
             ctx,
         }
     }

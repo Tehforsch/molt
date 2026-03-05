@@ -1,13 +1,17 @@
 #[derive(Debug)]
 pub enum Error {
     UndefinedFn(String),
-    UndefinedVar,
+    UndefinedVar(String),
     InvalidMainFn,
 }
 
 impl Error {
     pub(crate) fn undefined_fn(fn_name: &str) -> Self {
         Self::UndefinedFn(fn_name.into())
+    }
+
+    pub(crate) fn undefined_var(var_name: &str) -> Self {
+        Self::UndefinedVar(var_name.into())
     }
 }
 

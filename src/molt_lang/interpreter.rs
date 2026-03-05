@@ -40,8 +40,7 @@ impl Scope {
     }
 
     fn insert(&mut self, var_name: Ident, val: &Value) {
-        let existing = self.variables.insert(var_name, val.clone());
-        assert!(existing.is_none());
+        self.variables.insert(var_name, val.clone());
     }
 }
 
@@ -260,6 +259,6 @@ impl<'a> Interpreter<'a> {
             }
             scope_idx = scope.parent;
         }
-        Err(Error::UndefinedVar)
+        Err(Error::undefined_var(&name.to_string()))
     }
 }

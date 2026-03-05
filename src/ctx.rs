@@ -105,7 +105,6 @@ impl<K: std::fmt::Debug + PartialEq> PartialEq for Var<K> {
 #[derive(Clone, Debug)]
 pub(crate) struct VarDecl {
     pub(crate) id: Id,
-    #[allow(unused)] // TODO!!!!
     pub(crate) node: Option<Id>,
 }
 
