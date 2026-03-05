@@ -244,7 +244,7 @@ fn resolve_pat(p: grammar::Pat, type_: &Type) -> Result<Pat> {
     let mut pat_ctx = PatCtx::new(Mode::Molt);
     let vars = parse_tokens::<grammar::TokenVars>(p.tokens.clone(), Mode::Molt).unwrap();
     for var in vars.0.into_iter() {
-        pat_ctx.add_var::<Node>(Var::new(var.name.to_string(), var.kind));
+        pat_ctx.add_var::<Node>(Var::new(var.name, var.kind));
     }
     let ctx = Rc::new(RefCell::new(pat_ctx));
     let Type::Kind(kind) = type_;
@@ -264,6 +264,7 @@ fn resolve_pat(p: grammar::Pat, type_: &Type) -> Result<Pat> {
             .map(|(id, var)| TokenVar {
                 id,
                 _kind: var.kind(),
+                ident: var.ident().clone(),
             })
             .collect(),
         ctx,
@@ -275,6 +276,7 @@ fn resolve_pat(p: grammar::Pat, type_: &Type) -> Result<Pat> {
 pub struct TokenVar {
     pub id: Id,
     pub _kind: Kind,
+    pub ident: Ident,
 }
 
 impl MoltFile {

@@ -10,8 +10,7 @@ pub enum Value {
 }
 
 pub enum StmtValue {
-    #[allow(unused)]
-    Return,
+    NoMatch,
     #[allow(unused)]
     Value(Value),
 }

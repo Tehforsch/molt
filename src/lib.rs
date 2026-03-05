@@ -9,23 +9,21 @@ mod input;
 mod match_ctx;
 mod match_pattern;
 mod modify;
-mod molt_grammar;
 mod molt_lang;
 mod node;
 mod node_list;
 mod pattern;
-mod resolve;
 pub mod rule;
 mod rust_grammar;
 mod span;
 #[cfg(test)]
 mod tests;
+mod writer;
 
 use std::path::{Path, PathBuf};
 
-use crate::rust_grammar::Node;
+use crate::{rust_grammar::Node, writer::Writer};
 pub use cmp_syn::CmpSyn;
-use codespan_reporting::diagnostic::Label;
 use codespan_reporting::files::Files;
 pub use config::Config;
 pub use ctx::{Ctx, Id, NodeId, Var, VarDecl};
@@ -33,20 +31,30 @@ pub use error::{Error, emit_error};
 pub use input::{Diagnostic, FileId, Input, MoltSource};
 pub use match_ctx::{MatchCtx, MatchPatternData};
 pub use match_pattern::{Binding, Match, Matcher, match_pattern, match_pattern2};
-use molt_grammar::{Command, MatchCommand, ModifyCommand, MoltFile, UnresolvedMoltFile};
 pub use node::{KindType, NodeType, ToNode};
 pub use node_list::{
     List, ListMatchingMode, NoPunct, NodeList, PatNodeList, RealNodeList, SetMatchingMode, Single,
     SingleMatchingMode,
 };
 pub use pattern::Pattern;
-use rule::Rules;
 pub use span::{Span, Spanned, SpannedPat, WithSpan};
 
 struct RustFile;
 
 type CtxR = crate::ctx::Ctx<Node>;
 type PatCtx = CtxR;
+
+struct SrcData<'src> {
+    ctx: &'src Ctx<Node>,
+    src: &'src str,
+    file_id: FileId,
+}
+
+impl<'src> SrcData<'src> {
+    fn print(&self, id: Id) {
+        println!("{}", self.ctx.print(id, self.src))
+    }
+}
 
 /// Used in the parsing logic and the AST context
 /// to remember whether an item or variable belongs
@@ -72,68 +80,6 @@ fn match_pattern_data<'a>(
     }
 }
 
-struct MatchResult<'a> {
-    matches: Vec<Match>,
-    ctx: MatchCtx<'a, Node>,
-    var: Id,
-}
-
-impl MoltFile {
-    fn new(input: &Input) -> Result<(Self, PatCtx), Error> {
-        let file_id = input.molt_file_id();
-        let source = input.source(file_id).unwrap();
-        let unresolved: UnresolvedMoltFile =
-            crate::parser::parse_str(source, Mode::Molt).map_err(|e| Error::parse(e, file_id))?;
-        unresolved.resolve(file_id)
-    }
-
-    fn get_rules(&self) -> Rules {
-        let mut rules = Rules::default();
-        for ruleset in self.rulesets.iter() {
-            for key in ruleset.keys.iter() {
-                rules[*key] = ruleset.rule;
-            }
-        }
-        rules
-    }
-
-    fn match_pattern<'a>(
-        &'a self,
-        real_ctx: &'a CtxR,
-        molt_ctx: &'a CtxR,
-        var: Id,
-        data: MatchPatternData<'a>,
-    ) -> MatchResult<'a> {
-        let rules = &self.get_rules();
-        let ctx = MatchCtx::new(molt_ctx, real_ctx, data.clone());
-        if ctx.config().debug_print {
-            ctx.dump();
-        }
-        let pat_kind = ctx.molt_ctx.get_var(var).kind();
-        let matches = ctx
-            .real_ctx
-            .iter()
-            .flat_map(|item| {
-                let node: Pattern<&Node, Id> = ctx.real_ctx.get(item);
-                let is_of_kind = match node {
-                    crate::Pattern::Item(node) => node.is_of_kind(pat_kind),
-                    crate::Pattern::Var(var) => ctx
-                        .real_ctx
-                        .get_var(var)
-                        .kind()
-                        .is_comparable_to(pat_kind.into_node_kind()),
-                };
-                if is_of_kind {
-                    crate::match_pattern(&ctx, &self.vars, var, item, rules)
-                } else {
-                    vec![]
-                }
-            })
-            .collect();
-        MatchResult { matches, ctx, var }
-    }
-}
-
 impl RustFile {
     fn new(input: &Input, file_id: FileId) -> Result<(Self, CtxR), Error> {
         let source = input.source(file_id).unwrap();
@@ -143,105 +89,29 @@ impl RustFile {
     }
 }
 
-impl<'a> MatchResult<'a> {
-    fn make_diagnostics(&self, file_id: FileId, print: Option<Id>) -> Vec<Diagnostic> {
-        self.matches
-            .iter()
-            .map(|match_| {
-                let match_var = print.unwrap_or(self.var);
-                let binding = match_.get_binding(match_var);
-                let span = self.ctx.real_ctx.get_span(binding.id.unwrap());
-                let var_name = |var| format!("${}", self.ctx.get_var(var).name());
-                let mut diagnostic = Diagnostic::note().with_message("Match").with_labels(vec![
-                    Label::primary(file_id, span.byte_range()).with_message(var_name(match_var)),
-                ]);
-                let mut keys = match_.iter_vars().collect::<Vec<_>>();
-                keys.sort_by_key(|var| var_name(*var).to_string());
-                for key in keys {
-                    let binding = match_.get_binding(key);
-                    if key == match_var {
-                        continue;
-                    }
-                    for node in binding.id.iter() {
-                        diagnostic = diagnostic.with_note(format!(
-                            "{} = {}",
-                            var_name(key),
-                            self.ctx.print(*node),
-                        ));
-                    }
-                }
-                diagnostic
-            })
-            .collect()
-    }
-}
-
 pub fn run(
     input: &Input,
     config: crate::Config,
-    cargo_root: Option<&PathBuf>,
-) -> Result<Vec<Diagnostic>, Error> {
-    let mut diagnostics = vec![];
-    let (mut molt_file, pat_ctx) = MoltFile::new(input)?;
-
-    for rust_file_id in input.iter_rust_src() {
-        let (_, real_ctx) = RustFile::new(input, rust_file_id)?;
-        let data = match_pattern_data(input, rust_file_id, &config);
-        match molt_file.command() {
-            Command::Match(MatchCommand {
-                match_: pat_var,
-                print,
-            }) => {
-                let match_result =
-                    molt_file.match_pattern(&real_ctx, &pat_ctx, pat_var.unwrap(), data);
-                diagnostics.extend(match_result.make_diagnostics(rust_file_id, print));
-            }
-            Command::Modify(ModifyCommand { modifies, match_ }) => {
-                let match_result =
-                    molt_file.match_pattern(&real_ctx, &pat_ctx, match_.unwrap(), data);
-                modify::modify(
-                    input,
-                    &config,
-                    rust_file_id,
-                    match_result,
-                    modifies,
-                    cargo_root.map(|v| &**v),
-                )?;
-                if let Some(cargo_root) = cargo_root
-                    && config.cargo_fmt
-                {
-                    run_cargo_fmt(cargo_root)?;
-                }
-            }
-        };
-    }
-    Ok(diagnostics)
-}
-
-pub fn run_new(
-    input: &Input,
-    config: crate::Config,
     _cargo_root: Option<&PathBuf>,
-) -> Result<Vec<Diagnostic>, Error> {
-    let mut diagnostics = vec![];
+) -> Result<(), Error> {
     let molt_file = molt_lang::MoltFile::new(input)?;
 
     for rust_file_id in input.iter_rust_src() {
         let (_, real_ctx) = RustFile::new(input, rust_file_id)?;
         let data = match_pattern_data(input, rust_file_id, &config);
-        diagnostics.extend(
-            crate::molt_lang::Interpreter::run(
-                &molt_file,
-                input.source(rust_file_id).unwrap(),
-                &real_ctx,
-                data,
-            )
-            .map_err(Error::Interpreter)?,
-        );
+        let writer = Writer::new(input);
+        let src = SrcData {
+            ctx: &real_ctx,
+            src: input.source(rust_file_id).unwrap(),
+            file_id: rust_file_id,
+        };
+        crate::molt_lang::Interpreter::run(&molt_file, src, data, writer)
+            .map_err(Error::Interpreter)?;
     }
-    Ok(diagnostics)
+    Ok(())
 }
 
+#[allow(unused)]
 fn run_cargo_fmt(cargo_root: &Path) -> Result<(), Error> {
     let status = std::process::Command::new("cargo")
         .arg("fmt")

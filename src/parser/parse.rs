@@ -660,7 +660,7 @@ impl<'a> ParseBuffer<'a> {
                 }
                 self.advance_to(&ahead);
                 let id = self
-                    .add_var::<T>(Var::new(ident.to_string(), T::node_kind().into()))
+                    .add_var::<T>(Var::new(ident, T::node_kind().into()))
                     .into();
                 Ok(Some(Pattern::Var(id)))
             } else {

@@ -5,10 +5,8 @@ use std::path::{Path, PathBuf};
 
 use clap::Parser;
 use cli::CliArgs;
-use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
-use codespan_reporting::term::{self, Config};
 use ignore::WalkBuilder;
-use molt::{Input, MoltSource, emit_error, run, run_new};
+use molt::{Input, MoltSource, emit_error, run};
 
 #[derive(Debug, thiserror::Error)]
 enum Error {
@@ -97,17 +95,7 @@ fn main() -> Result<()> {
         interactive: args.interactive,
         check: args.check,
     };
-    // Temporary to make transition easier
-    let diagnostics = if args.new {
-        run_new(&input, config, root.as_ref())
-    } else {
-        run(&input, config, root.as_ref())
-    };
-    let diagnostics = emit_error(&input, diagnostics)?;
-    let writer = StandardStream::stderr(ColorChoice::Always);
-    let config = Config::default();
-    for diagnostic in diagnostics {
-        term::emit(&mut writer.lock(), &config, &input, &diagnostic).unwrap();
-    }
+    let diagnostics = run(&input, config, root.as_ref());
+    emit_error(&input, diagnostics)?;
     Ok(())
 }

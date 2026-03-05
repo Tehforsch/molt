@@ -1,19 +1,16 @@
 use std::io;
 
 use crate::Span;
+use crate::writer::Writer;
 use codespan_reporting::diagnostic::{Diagnostic, Label};
-use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
-use codespan_reporting::term::{self};
 
 use crate::input::{FileId, Input};
 use crate::modify::ModifyError;
 use crate::molt_lang::InterpreterError;
-use crate::resolve::ResolveError;
 
 #[derive(Debug)]
 pub enum Error {
     Parse(crate::parser::Error, FileId),
-    Resolve(ResolveError, FileId),
     Resolve2(crate::molt_lang::ResolveError, FileId),
     Misc(String),
     Modify(ModifyError),
@@ -25,10 +22,6 @@ impl Error {
     fn span_and_file_id(&self) -> Option<(Span, FileId)> {
         match self {
             Error::Parse(error, file_id) => Some((error.span().byte_range().into(), *file_id)),
-            Error::Resolve(e, file_id) => match e {
-                ResolveError::UndefinedVar(span, _) => Some((*span, *file_id)),
-                _ => None,
-            },
             Error::Resolve2(_, _) => None,
             Error::Misc(_) => None,
             Error::Modify(_) => None,
@@ -53,10 +46,9 @@ pub fn emit_error<T>(input: &Input, err: Result<T, Error>) -> Result<T, Error> {
     match err {
         Ok(t) => Ok(t),
         Err(e) => {
-            let writer = StandardStream::stderr(ColorChoice::Always);
-            let config = codespan_reporting::term::Config::default();
+            let writer = Writer::new(input);
             let diagnostic = make_error_diagnostic(&e);
-            term::emit(&mut writer.lock(), &config, input, &diagnostic).unwrap();
+            writer.emit_diagnostic(diagnostic);
             Err(e)
         }
     }
@@ -88,7 +80,6 @@ impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Error::Parse(error, _) => write!(f, "{error}"),
-            Error::Resolve(error, _) => write!(f, "{error}"),
             Error::Resolve2(error, _) => write!(f, "{error}"),
             Error::Misc(s) => write!(f, "{s}"),
             Error::Modify(s) => write!(f, "{s}"),

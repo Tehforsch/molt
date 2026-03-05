@@ -34,4 +34,3 @@ mod node;
 mod verbatim;
 mod whitespace;
 pub use node::{Kind, Node, NodeKind, parse_node_with_kind};
-pub use proc_macro2::{TokenStream, TokenTree};

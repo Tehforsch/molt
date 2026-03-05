@@ -35,7 +35,7 @@ impl Match {
     }
 
     pub fn iter_vars(&self) -> impl Iterator<Item = Id> {
-        self.bindings.keys().cloned()
+        self.bindings.keys().copied()
     }
 }
 

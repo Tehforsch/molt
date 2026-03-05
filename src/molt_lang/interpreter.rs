@@ -1,25 +1,25 @@
+mod builtins;
 mod error;
-mod function;
 mod value;
 
 use std::collections::HashMap;
 
 use super::{LetLhs, LetStmt};
 use crate::{
-    Ctx, Diagnostic, Id, MatchCtx, MatchPatternData, NodeType,
-    molt_lang::{Expr, MAIN_FN_NAME, MoltFile, MoltFn, Stmt, Type, interpreter::value::StmtValue},
+    Diagnostic, Id, MatchCtx, MatchPatternData, NodeType, SrcData,
+    molt_lang::{
+        Expr, MAIN_FN_NAME, MoltFile, MoltFn, Stmt, Type,
+        interpreter::{builtins::BuiltinFn, value::StmtValue},
+    },
     rust_grammar::{Ident, Node},
+    writer::Writer,
 };
 
-use {
-    function::{BuiltinFn, builtins},
-    value::Value,
-};
+use {builtins::builtins, value::Value};
 
 use error::Result;
 
 pub(crate) use error::Error;
-pub(crate) use function::RuntimeFn;
 
 type ScopeIndex = usize;
 
@@ -45,38 +45,36 @@ impl Scope {
     }
 }
 
+#[derive(Clone, Copy)]
+pub(crate) enum RuntimeFn<'a> {
+    UserDefined(&'a MoltFn),
+    Builtin(BuiltinFn),
+}
+
 pub(crate) struct Interpreter<'src> {
     diagnostics: Vec<Diagnostic>,
     scopes: Vec<Scope>,
     fns: HashMap<String, RuntimeFn<'src>>,
     src: SrcData<'src>,
     data: MatchPatternData<'src>,
-}
-
-struct SrcData<'src> {
-    ctx: &'src Ctx<Node>,
-    src: &'src str,
-}
-
-impl<'src> SrcData<'src> {
-    fn print(&self, id: Id) {
-        println!("{}", self.ctx.print(id, self.src))
-    }
+    writer: Writer<'src>,
 }
 
 impl<'src> Interpreter<'src> {
     pub(crate) fn run(
         file: &MoltFile,
-        src: &'src str,
-        ctx: &'src Ctx<Node>,
+        src: SrcData<'src>,
         data: MatchPatternData<'src>,
+        writer: Writer<'src>,
     ) -> Result<Vec<Diagnostic>> {
+        let ctx = src.ctx;
         let mut interpreter = Self {
             diagnostics: vec![],
             scopes: vec![Scope::default()],
             fns: builtins(),
-            src: SrcData { ctx, src },
+            src,
             data,
+            writer,
         };
         for f in file.fns.iter() {
             interpreter.eval_fn_def(f)?;
@@ -136,9 +134,7 @@ impl<'src> Interpreter<'src> {
             RuntimeFn::UserDefined(user_fn) => {
                 self.eval_user_defined_fn(args, user_fn)?;
             }
-            RuntimeFn::Builtin(builtin_fn) => match builtin_fn {
-                BuiltinFn::Print => self.eval_print(args),
-            },
+            RuntimeFn::Builtin(builtin_fn) => self.eval_builtin(args, builtin_fn),
         }
         Ok(StmtValue::Value(Value::Null))
     }
@@ -158,7 +154,7 @@ impl<'src> Interpreter<'src> {
     fn eval_block(&mut self, user_fn: &MoltFn) -> Result<(), Error> {
         for stmt in user_fn.stmts.iter() {
             match self.eval_stmt(stmt)? {
-                StmtValue::Return => break,
+                StmtValue::NoMatch => break,
                 StmtValue::Value(_) => {}
             }
         }
@@ -193,12 +189,18 @@ impl<'src> Interpreter<'src> {
                     .vars
                     .iter()
                     .map(|var| {
+                        // Look up if this variable was previously bound to
+                        // something.
+                        let bound_to = self.lookup_var(&var.ident).ok().map(|val| {
+                            let Value::Node(bound_to) = val else {
+                                todo!()
+                                // error handling
+                            };
+                            *bound_to
+                        });
                         crate::VarDecl {
                             id: var.id,
-                            node: None, // TODO: This doesn't really make sense in this context,
-                                        // since the only node that ever has this set to `Some()` would be the
-                                        // main node of the pattern we're matching, but I'm not sure that
-                                        // should ever enter the `ctx`
+                            node: bound_to,
                         }
                     })
                     .collect();
@@ -209,15 +211,25 @@ impl<'src> Interpreter<'src> {
                     todo!()
                 };
                 if let Value::Node(real) = real_id {
-                    let _ = crate::match_pattern2(
+                    let match_ = crate::match_pattern2(
                         &ctx,
                         &vars,
                         pat.node,
                         real,
                         &crate::rule::Rules::default(),
                     );
-                    todo!()
-                    // Ok(StmtValue::Value(Value::Null))
+                    if let Some(match_) = match_ {
+                        for var in match_.iter_vars() {
+                            let bound_to = match_.get_binding(var).id.unwrap();
+                            self.active_scope_mut().insert(
+                                ctx.molt_ctx.get_var(var).ident().clone(),
+                                &Value::Node(bound_to),
+                            );
+                        }
+                        Ok(StmtValue::Value(Value::Null))
+                    } else {
+                        Ok(StmtValue::NoMatch)
+                    }
                 } else {
                     // error handling
                     todo!()

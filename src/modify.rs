@@ -1,3 +1,4 @@
+#![allow(unused)]
 mod diff;
 
 use std::io::{self, Write};
@@ -8,7 +9,10 @@ use crate::{Config, Id, Match, MatchCtx, Span};
 use codespan_reporting::files::Files;
 
 use crate::ctrl_c::FileRestorer;
-use crate::{Error, FileId, Input, MatchResult};
+use crate::{Error, FileId, Input};
+
+// lol
+type MatchResult<'a> = &'a ();
 
 #[derive(Debug, thiserror::Error)]
 pub enum ModifyError {
@@ -160,24 +164,25 @@ fn write_to_file(input: &Input, rust_file_id: FileId, code: String) -> Result<()
 }
 
 fn prepare_modifications(
-    match_result: &MatchResult,
-    modifies: &[(Id, Id)],
+    _match_result: &MatchResult,
+    _modifies: &[(Id, Id)],
 ) -> Result<Vec<Modification>, Error> {
-    let mut all_modifications: Vec<_> = modifies
-        .iter()
-        .flat_map(|(input_var, output_var)| {
-            match_result
-                .matches
-                .iter()
-                .map(|match_| make_modification(&match_result.ctx, match_, *input_var, *output_var))
-        })
-        .collect();
-
-    // Sort modifications by their spans to ensure proper ordering
-    all_modifications.sort_by_key(|t| t.span.byte_range().start);
-
-    check_overlap(&all_modifications)?;
-    Ok(all_modifications)
+    todo!()
+    // let mut all_modifications: Vec<_> = modifies
+    //     .iter()
+    //     .flat_map(|(input_var, output_var)| {
+    //         match_result
+    //             .matches
+    //             .iter()
+    //             .map(|match_| make_modification(&match_result.ctx, match_, *input_var, *output_var))
+    //     })
+    //     .collect();
+    //
+    // // Sort modifications by their spans to ensure proper ordering
+    // all_modifications.sort_by_key(|t| t.span.byte_range().start);
+    //
+    // check_overlap(&all_modifications)?;
+    // Ok(all_modifications)
 }
 
 fn check_overlap(modifications: &[Modification]) -> Result<(), Error> {

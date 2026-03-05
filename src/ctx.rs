@@ -1,6 +1,8 @@
 use std::marker::PhantomData;
 
-use crate::{Mode, NodeType, Pattern, Span, Spanned, ToNode, span::SpannedPat};
+use crate::{
+    Mode, NodeType, Pattern, Span, Spanned, ToNode, rust_grammar::Ident, span::SpannedPat,
+};
 
 type InternalId = Pattern<usize, usize>;
 
@@ -86,7 +88,10 @@ impl Id {
 }
 
 pub struct Var<K> {
+    // TODO: Pick one of name / ident or
+    // replace with `NodeId<Ident>`
     name: String,
+    ident: Ident,
     kind: K,
 }
 
@@ -104,8 +109,12 @@ pub struct VarDecl {
 }
 
 impl<K: Copy> Var<K> {
-    pub fn new(name: String, kind: K) -> Self {
-        Self { name, kind }
+    pub fn new(ident: Ident, kind: K) -> Self {
+        Self {
+            name: ident.to_string(),
+            ident,
+            kind,
+        }
     }
 
     pub fn name(&self) -> &str {
@@ -114,6 +123,10 @@ impl<K: Copy> Var<K> {
 
     pub fn kind(&self) -> K {
         self.kind
+    }
+
+    pub fn ident(&self) -> &Ident {
+        &self.ident
     }
 }
 
