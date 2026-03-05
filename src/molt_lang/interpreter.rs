@@ -6,13 +6,13 @@ use std::collections::HashMap;
 
 use super::{LetLhs, LetStmt};
 use crate::{
-    Id, MatchCtx, MatchPatternData, NodeType, SrcData,
+    Id, MatchCtx, NodeType,
     molt_lang::{
         Expr, MAIN_FN_NAME, MoltFile, MoltFn, Stmt, Type,
+        context::Context,
         interpreter::{builtins::BuiltinFn, value::StmtValue},
     },
     rust_grammar::{Ident, Node},
-    writer::Writer,
 };
 
 use {builtins::builtins, value::Value};
@@ -51,33 +51,25 @@ pub(crate) enum RuntimeFn<'a> {
     Builtin(BuiltinFn),
 }
 
-pub(crate) struct Interpreter<'src> {
+pub(crate) struct Interpreter<'a> {
     scopes: Vec<Scope>,
-    fns: HashMap<String, RuntimeFn<'src>>,
-    src: SrcData<'src>,
-    data: MatchPatternData<'src>,
-    writer: Writer<'src>,
+    fns: HashMap<String, RuntimeFn<'a>>,
+
+    context: Context<'a>,
 }
 
-impl<'src> Interpreter<'src> {
-    pub(crate) fn run(
-        file: &MoltFile,
-        src: SrcData<'src>,
-        data: MatchPatternData<'src>,
-        writer: Writer<'src>,
-    ) -> Result<()> {
-        let ctx = src.ctx;
+impl<'a> Interpreter<'a> {
+    pub(crate) fn run(file: &MoltFile, context: Context<'a>) -> Result<()> {
         let mut interpreter = Self {
             scopes: vec![Scope::default()],
             fns: builtins(),
-            src,
-            data,
-            writer,
+            context,
         };
         for f in file.fns.iter() {
             interpreter.eval_fn_def(f)?;
         }
-        for node in ctx.iter() {
+        for node in interpreter.context.real_ctx.iter() {
+            // TODO reset interpreter here
             interpreter.eval_main_fn_on_node(node)?;
         }
         Ok(())
@@ -96,8 +88,8 @@ impl<'src> Interpreter<'src> {
         } else {
             let Type::Kind(kind) = &f.args[0].type_;
             if !self
-                .src
-                .ctx
+                .context
+                .real_ctx
                 .get::<Node>(node)
                 .unwrap_item()
                 .is_of_kind(*kind)
@@ -109,7 +101,7 @@ impl<'src> Interpreter<'src> {
         Ok(())
     }
 
-    fn eval_fn_def(&mut self, f: &'src MoltFn) -> Result<()> {
+    fn eval_fn_def(&mut self, f: &'a MoltFn) -> Result<()> {
         self.fns
             .insert(f.name.to_string(), RuntimeFn::UserDefined(f));
         Ok(())
@@ -179,7 +171,13 @@ impl<'src> Interpreter<'src> {
                 Ok(StmtValue::Value(Value::Null))
             }
             LetLhs::Pat(pat) => {
-                let ctx = MatchCtx::new(&pat.ctx, self.src.ctx, self.data.clone());
+                let real_id = if let Some(expr) = &let_stmt.rhs {
+                    self.eval_expr(expr)?
+                } else {
+                    // error handling
+                    todo!()
+                };
+                let ctx = MatchCtx::from_interpreter_ctx(&self.context, &pat.ctx);
                 let vars: Vec<_> = pat
                     .vars
                     .iter()
@@ -199,13 +197,7 @@ impl<'src> Interpreter<'src> {
                         }
                     })
                     .collect();
-                let real_id = if let Some(expr) = &let_stmt.rhs {
-                    self.eval_expr(expr)?
-                } else {
-                    // error handling
-                    todo!()
-                };
-                if let Value::Node(real) = real_id {
+                let new_bindings: Vec<_> = if let Value::Node(real) = real_id {
                     let match_ = crate::match_pattern2(
                         &ctx,
                         &vars,
@@ -214,21 +206,28 @@ impl<'src> Interpreter<'src> {
                         &crate::rule::Rules::default(),
                     );
                     if let Some(match_) = match_ {
-                        for var in match_.iter_vars() {
-                            let bound_to = match_.get_binding(var).id.unwrap();
-                            self.active_scope_mut().insert(
-                                ctx.molt_ctx.get_var(var).ident().clone(),
-                                &Value::Node(bound_to),
-                            );
-                        }
-                        Ok(StmtValue::Value(Value::Null))
+                        match_
+                            .iter_vars()
+                            .map(|var| {
+                                let bound_to = match_.get_binding(var).id.unwrap();
+                                (
+                                    ctx.molt_ctx.get_var(var).ident().clone(),
+                                    Value::Node(bound_to),
+                                )
+                            })
+                            .collect()
                     } else {
-                        Ok(StmtValue::NoMatch)
+                        return Ok(StmtValue::NoMatch);
                     }
                 } else {
                     // error handling
                     todo!()
+                };
+
+                for (ident, val) in new_bindings {
+                    self.active_scope_mut().insert(ident, &val);
                 }
+                Ok(StmtValue::Value(Value::Null))
             }
         }
     }
@@ -245,7 +244,7 @@ impl<'src> Interpreter<'src> {
         self.scopes.len() - 1
     }
 
-    fn lookup_fn(&mut self, fn_name: &str) -> std::result::Result<RuntimeFn<'src>, Error> {
+    fn lookup_fn(&mut self, fn_name: &str) -> std::result::Result<RuntimeFn<'a>, Error> {
         self.fns
             .get(fn_name)
             .cloned()

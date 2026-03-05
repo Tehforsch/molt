@@ -23,7 +23,7 @@ mod writer;
 
 use std::path::{Path, PathBuf};
 
-use crate::{rust_grammar::Node, writer::Writer};
+use crate::{molt_lang::Context, rust_grammar::Node};
 use codespan_reporting::files::Files;
 
 pub use cmp_syn::CmpSyn;
@@ -31,7 +31,7 @@ pub use config::Config;
 pub(crate) use ctx::{Ctx, Id, NodeId, Var, VarDecl};
 pub use error::{Error, emit_error};
 pub use input::{Diagnostic, FileId, Input, MoltSource};
-pub use match_ctx::{MatchCtx, MatchPatternData};
+pub use match_ctx::MatchCtx;
 pub(crate) use match_pattern::{Match, Matcher, match_pattern2};
 pub use node::{KindType, NodeType, ToNode};
 pub use node_list::{
@@ -40,20 +40,9 @@ pub use node_list::{
 };
 pub use pattern::Pattern;
 pub use span::{Span, Spanned, SpannedPat, WithSpan};
+pub use writer::Writer;
 
 struct RustFile;
-
-struct SrcData<'src> {
-    ctx: &'src Ctx<Node>,
-    src: &'src str,
-    file_id: FileId,
-}
-
-impl<'src> SrcData<'src> {
-    fn print(&self, id: Id) {
-        println!("{}", self.ctx.print(id, self.src))
-    }
-}
 
 /// Used in the parsing logic and the AST context
 /// to remember whether an item or variable belongs
@@ -64,19 +53,6 @@ pub enum Mode {
     Real,
     /// Represents something within a pattern in the molt code.
     Molt,
-}
-
-fn match_pattern_data<'a>(
-    input: &'a Input,
-    rust_file_id: crate::FileId,
-    config: &'a Config,
-) -> MatchPatternData<'a> {
-    MatchPatternData {
-        real_path: input.name(rust_file_id).unwrap().unwrap_path(),
-        real_src: input.source(rust_file_id).unwrap(),
-        molt_src: input.source(input.molt_file_id()).unwrap(),
-        config,
-    }
 }
 
 impl RustFile {
@@ -90,6 +66,7 @@ impl RustFile {
 
 pub fn run(
     input: &Input,
+    writer: &Writer,
     config: crate::Config,
     _cargo_root: Option<&PathBuf>,
 ) -> Result<(), Error> {
@@ -97,15 +74,15 @@ pub fn run(
 
     for rust_file_id in input.iter_rust_src() {
         let (_, real_ctx) = RustFile::new(input, rust_file_id)?;
-        let data = match_pattern_data(input, rust_file_id, &config);
-        let writer = Writer::new(input);
-        let src = SrcData {
-            ctx: &real_ctx,
-            src: input.source(rust_file_id).unwrap(),
-            file_id: rust_file_id,
+        let context = Context {
+            real_id: rust_file_id,
+            molt_id: input.molt_file_id(),
+            real_ctx: &real_ctx,
+            input,
+            writer,
+            config: &config,
         };
-        crate::molt_lang::Interpreter::run(&molt_file, src, data, writer)
-            .map_err(Error::Interpreter)?;
+        crate::molt_lang::Interpreter::run(&molt_file, context).map_err(Error::Interpreter)?;
     }
     Ok(())
 }

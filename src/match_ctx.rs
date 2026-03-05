@@ -1,37 +1,37 @@
-use std::path::Path;
+use codespan_reporting::files::Files;
 
 use crate::config::Config;
-use crate::{Ctx, Id, Mode, NodeType, Pattern, ToNode, Var};
+use crate::molt_lang::Context;
+use crate::{Ctx, FileId, Id, Input, Mode, NodeType, Pattern, ToNode, Var, rust_grammar};
 
-#[derive(Clone)]
-pub struct MatchPatternData<'a> {
-    pub real_src: &'a str,
-    pub molt_src: &'a str,
-    pub real_path: &'a Path,
+pub struct MatchCtx<'a, Node: NodeType> {
+    pub input: &'a Input,
+    pub molt_ctx: &'a Ctx<Node>,
+    pub real_ctx: &'a Ctx<Node>,
+    pub molt_id: FileId,
+    pub real_id: FileId,
     pub config: &'a Config,
 }
 
-pub struct MatchCtx<'a, Node: NodeType> {
-    pub molt_ctx: &'a Ctx<Node>,
-    pub real_ctx: &'a Ctx<Node>,
-    data: MatchPatternData<'a>,
+impl<'a> MatchCtx<'a, rust_grammar::Node> {
+    pub(crate) fn from_interpreter_ctx(
+        context: &'a Context,
+        ctx: &'a Ctx<crate::rust_grammar::Node>,
+    ) -> MatchCtx<'a, rust_grammar::Node> {
+        Self {
+            molt_ctx: ctx,
+            real_ctx: context.real_ctx,
+            input: context.input,
+            molt_id: context.molt_id,
+            real_id: context.real_id,
+            config: context.config,
+        }
+    }
 }
 
 impl<'a, Node: NodeType> MatchCtx<'a, Node> {
-    pub fn new(
-        molt_ctx: &'a Ctx<Node>,
-        real_ctx: &'a Ctx<Node>,
-        data: MatchPatternData<'a>,
-    ) -> Self {
-        Self {
-            molt_ctx,
-            real_ctx,
-            data,
-        }
-    }
-
     pub fn config(&self) -> &Config {
-        self.data.config
+        self.config
     }
 
     pub fn dump(&self) {
@@ -64,14 +64,14 @@ impl<'a, Node: NodeType> MatchCtx<'a, Node> {
     }
 
     fn print_real(&self, id: Id) -> &str {
-        self.real_ctx.print(id, self.data.real_src)
+        self.real_ctx.print(id, self.real_src())
     }
 
     fn print_molt(&self, id: Id) -> &str {
         if id.is_var() {
             self.molt_ctx.get_var(id).name()
         } else {
-            self.molt_ctx.print(id, self.data.molt_src)
+            self.molt_ctx.print(id, self.molt_src())
         }
     }
 
@@ -91,5 +91,13 @@ impl<'a, Node: NodeType> MatchCtx<'a, Node> {
 
     pub fn get_var(&self, var: Id) -> &Var<Node::Kind> {
         self.molt_ctx.get_var(var)
+    }
+
+    fn real_src(&self) -> &str {
+        self.input.source(self.real_id).unwrap()
+    }
+
+    fn molt_src(&self) -> &str {
+        self.input.source(self.molt_id).unwrap()
     }
 }

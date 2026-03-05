@@ -1,9 +1,11 @@
+mod context;
 mod grammar;
 mod interpreter;
 
 use std::cell::RefCell;
 use std::rc::Rc;
 
+pub(crate) use context::Context;
 pub(crate) use interpreter::Error as InterpreterError;
 pub(crate) use interpreter::Interpreter;
 

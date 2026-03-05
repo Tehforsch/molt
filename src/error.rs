@@ -57,13 +57,12 @@ pub(crate) fn make_error_diagnostic(err: &Error) -> Diagnostic<FileId> {
     diagnostic
 }
 
-pub fn emit_error<T>(input: &Input, err: Result<T, Error>) -> Result<T, Error> {
+pub fn emit_error<T>(writer: &Writer, input: &Input, err: Result<T, Error>) -> Result<T, Error> {
     match err {
         Ok(t) => Ok(t),
         Err(e) => {
-            let writer = Writer::new(input);
             let diagnostic = make_error_diagnostic(&e);
-            writer.emit_diagnostic(diagnostic);
+            writer.emit_diagnostic(input, diagnostic);
             Err(e)
         }
     }

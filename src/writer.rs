@@ -5,30 +5,19 @@ use codespan_reporting::term::{
 
 use crate::{Diagnostic, Input};
 
-pub struct Writer<'src> {
+pub struct Writer {
     stream: StandardStream,
     config: Config,
-    input: &'src Input,
 }
 
-impl<'src> Writer<'src> {
-    pub fn new(input: &'src Input) -> Self {
+impl Writer {
+    pub fn new() -> Self {
         let stream = StandardStream::stderr(ColorChoice::Always);
         let config = Config::default();
-        Self {
-            stream,
-            config,
-            input,
-        }
+        Self { stream, config }
     }
 
-    pub fn emit_diagnostic(&self, diagnostic: Diagnostic) {
-        term::emit(
-            &mut self.stream.lock(),
-            &self.config,
-            self.input,
-            &diagnostic,
-        )
-        .unwrap();
+    pub fn emit_diagnostic(&self, input: &Input, diagnostic: Diagnostic) {
+        term::emit(&mut self.stream.lock(), &self.config, input, &diagnostic).unwrap();
     }
 }

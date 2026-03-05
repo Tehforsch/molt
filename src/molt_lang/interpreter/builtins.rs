@@ -44,7 +44,7 @@ impl<'src> Interpreter<'src> {
         for val in args.iter() {
             match val {
                 Value::Node(id) => {
-                    self.emit_diagnostic(self.src.file_id, *id);
+                    self.emit_diagnostic(self.context.real_id, *id);
                 }
                 val => self.print_val(val),
             }
@@ -55,7 +55,10 @@ impl<'src> Interpreter<'src> {
         match val {
             Value::String(_) => todo!(),
             Value::Node(id) => {
-                self.src.print(*id);
+                println!(
+                    "{}",
+                    self.context.real_ctx().print(*id, self.context.real_src())
+                );
             }
             Value::Null => {
                 println!("Null");
@@ -64,10 +67,12 @@ impl<'src> Interpreter<'src> {
     }
 
     fn emit_diagnostic(&self, file_id: FileId, real_node_to_print: Id) {
-        let ctx = self.src.ctx;
+        let ctx = self.context.real_ctx();
         let span = ctx.get_span(real_node_to_print);
         let diagnostic =
             Diagnostic::note().with_labels(vec![Label::primary(file_id, span.byte_range())]);
-        self.writer.emit_diagnostic(diagnostic)
+        self.context
+            .writer()
+            .emit_diagnostic(self.context.input(), diagnostic)
     }
 }
