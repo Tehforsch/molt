@@ -174,9 +174,6 @@ impl<'src> Interpreter<'src> {
     fn eval_let(&mut self, let_stmt: &LetStmt) -> Result<StmtValue> {
         match &let_stmt.lhs {
             LetLhs::Var(var_name) => {
-                if self.lookup_var(var_name).is_ok() {
-                    todo!()
-                }
                 if let Some(rhs) = &let_stmt.rhs {
                     let val = self.eval_expr(rhs)?;
                     self.active_scope_mut().insert(var_name.clone(), &val);
