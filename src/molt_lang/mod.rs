@@ -143,146 +143,151 @@ impl std::fmt::Display for ResolveError {
 
 type Result<T, E = ResolveError> = std::result::Result<T, E>;
 
-fn resolve_file(file: grammar::MoltFile) -> Result<MoltFile> {
-    let grammar::MoltFile { fns, mut stmts } = file;
-    let mut fns: Vec<_> = fns.into_iter().map(resolve_fn).collect::<Result<_>>()?;
-    // Clearly very ugly, but we need to get started somehow.
-    if !stmts.is_empty() {
-        if fns.iter().any(|f| {
-            if let FnName::Ident(ident) = &f.name {
-                ident == MAIN_FN_NAME
+struct Resolver;
+
+impl Resolver {
+    fn resolve_file(&self, file: grammar::MoltFile) -> Result<MoltFile> {
+        let grammar::MoltFile { fns, mut stmts } = file;
+        let mut fns: Vec<_> = fns
+            .into_iter()
+            .map(|f| self.resolve_fn(f))
+            .collect::<Result<_>>()?;
+        // Clearly very ugly, but we need to get started somehow.
+        if !stmts.is_empty() {
+            if fns.iter().any(|f| {
+                if let FnName::Ident(ident) = &f.name {
+                    ident == MAIN_FN_NAME
+                } else {
+                    false
+                }
+            }) {
+                return Err(ResolveError::MainFnAndTopLevelStmtExist);
+            }
+            if let grammar::Stmt::Let(l) = stmts.remove(0) {
+                let grammar::LetLhs::Var(ref var_name) = l.lhs else {
+                    return Err(ResolveError::InvalidInputVarName);
+                };
+                if *var_name != INPUT_VAR_NAME {
+                    return Err(ResolveError::InvalidInputVarName);
+                }
+                fns.push(MoltFn {
+                    name: FnName::ImplicitMain,
+                    args: vec![FnArg {
+                        var_name: var_name.clone(),
+                        type_: self.resolve_type(l.type_)?,
+                    }],
+                    stmts: stmts
+                        .into_iter()
+                        .map(|s| self.resolve_stmt(s))
+                        .collect::<Result<Vec<_>>>()?,
+                });
             } else {
-                false
+                return Err(ResolveError::NoInputVarName);
             }
-        }) {
-            return Err(ResolveError::MainFnAndTopLevelStmtExist);
         }
-        if let grammar::Stmt::Let(l) = stmts.remove(0) {
-            let grammar::LetLhs::Var(ref var_name) = l.lhs else {
-                return Err(ResolveError::InvalidInputVarName);
-            };
-            if *var_name != INPUT_VAR_NAME {
-                return Err(ResolveError::InvalidInputVarName);
-            }
-            fns.push(MoltFn {
-                name: FnName::ImplicitMain,
-                args: vec![FnArg {
-                    var_name: var_name.clone(),
-                    type_: resolve_type(l.type_)?,
-                }],
-                stmts: stmts
-                    .into_iter()
-                    .map(resolve_stmt)
-                    .collect::<Result<Vec<_>>>()?,
-            });
-        } else {
-            return Err(ResolveError::NoInputVarName);
+        Ok(MoltFile { fns })
+    }
+
+    fn resolve_fn(&self, f: grammar::MoltFn) -> Result<MoltFn> {
+        Ok(MoltFn {
+            name: FnName::Ident(f.name),
+            args: f
+                .args
+                .into_iter()
+                .map(|a| self.resolve_fn_arg(a))
+                .collect::<Result<_>>()?,
+            stmts: f
+                .stmts
+                .into_iter()
+                .map(|s| self.resolve_stmt(s))
+                .collect::<Result<_>>()?,
+        })
+    }
+
+    fn resolve_fn_arg(&self, arg: grammar::FnArg) -> Result<FnArg> {
+        Ok(FnArg {
+            var_name: arg.var_name,
+            type_: self.resolve_type(arg.type_)?,
+        })
+    }
+
+    fn resolve_type(&self, arg: grammar::Type) -> Result<Type> {
+        Ok(match arg {
+            grammar::Type::Kind(ident) => Type::Kind(ident),
+        })
+    }
+
+    fn resolve_stmt(&self, stmt: grammar::Stmt) -> Result<Stmt> {
+        match stmt {
+            grammar::Stmt::ExprStmt(e) => Ok(Stmt::ExprStmt(self.resolve_expr(e)?)),
+            grammar::Stmt::Let(l) => Ok(Stmt::Let(self.resolve_let_stmt(l)?)),
         }
     }
-    Ok(MoltFile { fns })
-}
 
-fn resolve_fn(f: grammar::MoltFn) -> Result<MoltFn> {
-    Ok(MoltFn {
-        name: FnName::Ident(f.name),
-        args: f
-            .args
-            .into_iter()
-            .map(resolve_fn_arg)
-            .collect::<Result<_>>()?,
-        stmts: f
-            .stmts
-            .into_iter()
-            .map(resolve_stmt)
-            .collect::<Result<_>>()?,
-    })
-}
-
-fn resolve_fn_arg(arg: grammar::FnArg) -> Result<FnArg> {
-    Ok(FnArg {
-        var_name: arg.var_name,
-        type_: resolve_type(arg.type_)?,
-    })
-}
-
-fn resolve_type(arg: grammar::Type) -> Result<Type> {
-    Ok(match arg {
-        grammar::Type::Kind(ident) => Type::Kind(ident),
-    })
-}
-
-fn resolve_stmt(stmt: grammar::Stmt) -> Result<Stmt> {
-    match stmt {
-        grammar::Stmt::ExprStmt(e) => Ok(Stmt::ExprStmt(resolve_expr(e)?)),
-        grammar::Stmt::Let(l) => Ok(Stmt::Let(resolve_let_stmt(l)?)),
+    fn resolve_let_stmt(&self, l: grammar::LetStmt) -> Result<LetStmt> {
+        let type_ = self.resolve_type(l.type_)?;
+        Ok(LetStmt {
+            lhs: self.resolve_let_lhs(l.lhs, &type_)?,
+            _type_: type_,
+            rhs: l.rhs.map(|e| self.resolve_expr(e)).transpose()?,
+        })
     }
-}
 
-fn resolve_let_stmt(l: grammar::LetStmt) -> Result<LetStmt> {
-    let type_ = resolve_type(l.type_)?;
-    Ok(LetStmt {
-        lhs: resolve_let_lhs(l.lhs, &type_)?,
-        _type_: type_,
-        rhs: l.rhs.map(resolve_expr).transpose()?,
-    })
-}
-
-fn resolve_let_lhs(lhs: grammar::LetLhs, type_: &Type) -> Result<LetLhs> {
-    Ok(match lhs {
-        grammar::LetLhs::Var(ident) => LetLhs::Var(ident),
-        grammar::LetLhs::Pat(pat) => LetLhs::Pat(resolve_pat(pat, type_)?),
-    })
-}
-
-fn resolve_fn_call(f: grammar::FnCall) -> Result<FnCall> {
-    Ok(FnCall {
-        fn_name: f.fn_name,
-        args: f
-            .args
-            .into_iter()
-            .map(resolve_expr)
-            .collect::<Result<_>>()?,
-    })
-}
-
-fn resolve_expr(expr: grammar::Expr) -> Result<Expr> {
-    match expr {
-        grammar::Expr::FnCall(f) => Ok(Expr::FnCall(resolve_fn_call(f)?)),
-        grammar::Expr::Atom(name) => Ok(Expr::Atom(name)),
+    fn resolve_let_lhs(&self, lhs: grammar::LetLhs, type_: &Type) -> Result<LetLhs> {
+        Ok(match lhs {
+            grammar::LetLhs::Var(ident) => LetLhs::Var(ident),
+            grammar::LetLhs::Pat(pat) => LetLhs::Pat(self.resolve_pat(pat, type_)?),
+        })
     }
-}
 
-fn resolve_pat(p: grammar::Pat, type_: &Type) -> Result<Pat> {
-    // Add all vars to ctx with their kind.
-    let mut pat_ctx = Ctx::<Node>::new(Mode::Molt);
-    for var in p.vars.into_iter() {
-        let kind = Kind::infer_from_name(&var.name.to_string())
-            .unwrap_or_else(|| panic!("For now, names need to be called like their kind. Identifier {:?} does not follow this rule.", var.name.to_string()));
-        pat_ctx.add_var::<Node>(Var::new(var.name, kind));
+    fn resolve_fn_call(&self, f: grammar::FnCall) -> Result<FnCall> {
+        Ok(FnCall {
+            fn_name: f.fn_name,
+            args: f
+                .args
+                .into_iter()
+                .map(|e| self.resolve_expr(e))
+                .collect::<Result<_>>()?,
+        })
     }
-    let ctx = Rc::new(RefCell::new(pat_ctx));
-    // use the type annotation to tell us what to parse.
-    let Type::Kind(kind) = type_;
-    let node = crate::parser::parse_with_ctx(
-        ctx.clone(),
-        |stream| parse_node_with_kind(stream, *kind),
-        p.tokens,
-        Mode::Molt,
-    )
-    .map_err(ResolveError::PatternParse)?;
-    let ctx = ctx.replace(Ctx::new(Mode::Molt));
-    Ok(Pat {
-        vars: ctx
-            .iter_vars_ids()
-            .map(|(id, var)| TokenVar {
-                id,
-                _kind: var.kind(),
-                ident: var.ident().clone(),
-            })
-            .collect(),
-        ctx,
-        node,
-    })
+
+    fn resolve_expr(&self, expr: grammar::Expr) -> Result<Expr> {
+        match expr {
+            grammar::Expr::FnCall(f) => Ok(Expr::FnCall(self.resolve_fn_call(f)?)),
+            grammar::Expr::Atom(name) => Ok(Expr::Atom(name)),
+        }
+    }
+
+    fn resolve_pat(&self, p: grammar::Pat, type_: &Type) -> Result<Pat> {
+        let mut pat_ctx = Ctx::<Node>::new(Mode::Molt);
+        for var in p.vars.into_iter() {
+            let kind = Kind::infer_from_name(&var.name.to_string())
+                .unwrap_or_else(|| panic!("For now, names need to be called like their kind. Identifier {:?} does not follow this rule.", var.name.to_string()));
+            pat_ctx.add_var::<Node>(Var::new(var.name, kind));
+        }
+        let ctx = Rc::new(RefCell::new(pat_ctx));
+        let Type::Kind(kind) = type_;
+        let node = crate::parser::parse_with_ctx(
+            ctx.clone(),
+            |stream| parse_node_with_kind(stream, *kind),
+            p.tokens,
+            Mode::Molt,
+        )
+        .map_err(ResolveError::PatternParse)?;
+        let ctx = ctx.replace(Ctx::new(Mode::Molt));
+        Ok(Pat {
+            vars: ctx
+                .iter_vars_ids()
+                .map(|(id, var)| TokenVar {
+                    id,
+                    _kind: var.kind(),
+                    ident: var.ident().clone(),
+                })
+                .collect(),
+            ctx,
+            node,
+        })
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -298,6 +303,8 @@ impl MoltFile {
         let source = input.source(file_id).unwrap();
         let file: grammar::MoltFile =
             crate::parser::parse_str(source, Mode::Molt).map_err(|e| Error::parse(e, file_id))?;
-        resolve_file(file).map_err(|e| Error::Resolve2(e, file_id))
+        Resolver
+            .resolve_file(file)
+            .map_err(|e| Error::Resolve2(e, file_id))
     }
 }
