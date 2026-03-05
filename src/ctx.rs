@@ -240,10 +240,6 @@ impl<Node: NodeType> Ctx<Node> {
         let span = self.get_span(id);
         &src[span.byte_range()]
     }
-
-    pub(crate) fn mode(&self) -> Mode {
-        self.mode
-    }
 }
 
 impl<Node: NodeType> Ctx<Node> {
