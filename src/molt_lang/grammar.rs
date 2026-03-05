@@ -32,7 +32,7 @@ pub enum Type {
 
 #[derive(Debug)]
 pub enum Stmt {
-    FnCall(FnCall),
+    ExprStmt(Expr),
     Let(LetStmt),
 }
 
@@ -57,7 +57,8 @@ pub struct FnCall {
 
 #[derive(Debug)]
 pub enum Expr {
-    Atom(Ident), // Make this an actual atom if we ever get arithmetic
+    FnCall(FnCall),
+    Atom(Ident),
 }
 
 #[derive(Debug)]

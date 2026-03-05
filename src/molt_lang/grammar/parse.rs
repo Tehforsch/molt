@@ -4,6 +4,7 @@ use crate::molt_lang::grammar::{FnCall, TokenVar, TokenVars, Type};
 use crate::parser::parse::{Parse, ParseStream};
 use crate::parser::punctuated::Punctuated;
 use crate::parser::{Result, token};
+use crate::rust_grammar::ext::IdentExt;
 use crate::rust_grammar::{Ident, Kind};
 
 use super::{Expr, FnArg, LetLhs, LetStmt, MoltFile, MoltFn, Pat, Stmt};
@@ -63,7 +64,9 @@ impl Parse for Stmt {
         if lookahead.peek(Token![let]) {
             Ok(Stmt::Let(input.parse()?))
         } else {
-            Ok(Stmt::FnCall(input.parse()?))
+            let expr: Expr = input.parse()?;
+            let _: Token![;] = input.parse()?;
+            Ok(Stmt::ExprStmt(expr))
         }
     }
 }
@@ -104,14 +107,18 @@ impl Parse for FnCall {
         parenthesized!(content in input);
         let args = Punctuated::parse_terminated_with(&content, Expr::parse)?;
 
-        let _: Token![;] = input.parse()?;
         Ok(FnCall { fn_name, args })
     }
 }
 
 impl Parse for Expr {
     fn parse(input: ParseStream) -> Result<Self> {
-        Ok(Expr::Atom(input.parse()?))
+        let lookahead = input.lookahead1();
+        if lookahead.peek(Ident::peek_any) && input.peek2(token::Paren) {
+            Ok(Expr::FnCall(input.parse()?))
+        } else {
+            Ok(Expr::Atom(input.parse()?))
+        }
     }
 }
 

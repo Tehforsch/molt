@@ -60,8 +60,8 @@ impl<'src> Interpreter<'src> {
                     self.context.real_ctx().print(*id, self.context.real_src())
                 );
             }
-            Value::Null => {
-                println!("Null");
+            Value::Unit => {
+                println!("()");
             }
         }
     }

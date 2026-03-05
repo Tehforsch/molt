@@ -64,7 +64,7 @@ pub enum Type {
 
 #[derive(Debug)]
 pub enum Stmt {
-    FnCall(FnCall),
+    ExprStmt(Expr),
     Let(LetStmt),
 }
 
@@ -89,6 +89,7 @@ pub struct FnCall {
 
 #[derive(Debug)]
 pub enum Expr {
+    FnCall(FnCall),
     Atom(Ident),
 }
 
@@ -212,7 +213,7 @@ fn resolve_type(arg: grammar::Type) -> Result<Type> {
 
 fn resolve_stmt(stmt: grammar::Stmt) -> Result<Stmt> {
     match stmt {
-        grammar::Stmt::FnCall(f) => Ok(Stmt::FnCall(resolve_fn_call(f)?)),
+        grammar::Stmt::ExprStmt(e) => Ok(Stmt::ExprStmt(resolve_expr(e)?)),
         grammar::Stmt::Let(l) => Ok(Stmt::Let(resolve_let_stmt(l)?)),
     }
 }
@@ -246,6 +247,7 @@ fn resolve_fn_call(f: grammar::FnCall) -> Result<FnCall> {
 
 fn resolve_expr(expr: grammar::Expr) -> Result<Expr> {
     match expr {
+        grammar::Expr::FnCall(f) => Ok(Expr::FnCall(resolve_fn_call(f)?)),
         grammar::Expr::Atom(name) => Ok(Expr::Atom(name)),
     }
 }

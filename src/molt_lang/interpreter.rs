@@ -109,9 +109,9 @@ impl<'a> Interpreter<'a> {
     fn eval_stmt(&mut self, stmt: &Stmt) -> Result<StmtValue> {
         match stmt {
             Stmt::Let(let_stmt) => self.eval_let(let_stmt),
-            Stmt::FnCall(fn_call) => {
-                let args = self.make_fn_args(&fn_call.args)?;
-                self.eval_fn_call(&fn_call.fn_name.to_string(), &args)
+            Stmt::ExprStmt(expr) => {
+                self.eval_expr(expr)?;
+                Ok(StmtValue::Value(Value::Unit))
             }
         }
     }
@@ -125,7 +125,7 @@ impl<'a> Interpreter<'a> {
             }
             RuntimeFn::Builtin(builtin_fn) => self.eval_builtin(args, builtin_fn),
         }
-        Ok(StmtValue::Value(Value::Null))
+        Ok(StmtValue::Value(Value::Unit))
     }
 
     fn eval_user_defined_fn(&mut self, args: &[Value], user_fn: &MoltFn) -> Result<(), Error> {
@@ -156,6 +156,13 @@ impl<'a> Interpreter<'a> {
 
     fn eval_expr(&mut self, expr: &Expr) -> Result<Value> {
         match expr {
+            Expr::FnCall(fn_call) => {
+                let args = self.make_fn_args(&fn_call.args)?;
+                match self.eval_fn_call(&fn_call.fn_name.to_string(), &args)? {
+                    StmtValue::Value(v) => Ok(v),
+                    StmtValue::NoMatch => Ok(Value::Unit),
+                }
+            }
             Expr::Atom(name) => Ok(self.lookup_var(name)?.clone()),
         }
     }
@@ -167,7 +174,7 @@ impl<'a> Interpreter<'a> {
                     let val = self.eval_expr(rhs)?;
                     self.active_scope_mut().insert(var_name.clone(), &val);
                 }
-                Ok(StmtValue::Value(Value::Null))
+                Ok(StmtValue::Value(Value::Unit))
             }
             LetLhs::Pat(pat) => {
                 let real_id = if let Some(expr) = &let_stmt.rhs {
@@ -226,7 +233,7 @@ impl<'a> Interpreter<'a> {
                 for (ident, val) in new_bindings {
                     self.active_scope_mut().insert(ident, &val);
                 }
-                Ok(StmtValue::Value(Value::Null))
+                Ok(StmtValue::Value(Value::Unit))
             }
         }
     }

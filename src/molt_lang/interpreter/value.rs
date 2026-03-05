@@ -6,7 +6,7 @@ pub enum Value {
     String(String),
     Node(Id),
     // TODO: Get rid of this once we have proper semantics
-    Null,
+    Unit,
 }
 
 pub enum StmtValue {
