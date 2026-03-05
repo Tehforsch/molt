@@ -1,4 +1,4 @@
-pub mod discouraged;
+pub(crate) mod discouraged;
 
 use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::fmt::{self, Debug, Display};
@@ -24,22 +24,22 @@ use crate::rust_grammar::ext::IdentExt;
 use crate::rust_grammar::{Ident, Kind};
 use crate::rust_grammar::{Node, NodeKind};
 
-pub type ParseCtx = Rc<RefCell<Ctx<Node>>>;
+pub(crate) type ParseCtx = Rc<RefCell<Ctx<Node>>>;
 
-pub use crate::parser::error::{Error, Result};
-pub use crate::parser::lookahead::{Lookahead1, Peek};
+pub(crate) use crate::parser::error::{Error, Result};
+pub(crate) use crate::parser::lookahead::{Lookahead1, Peek};
 
 /// Parsing interface implemented by types that can be parsed in a default
 /// way from a token stream. This trait is for types that aren't represented
 /// as nodes but stored within the AST structs directly.
-pub trait Parse: Sized {
+pub(crate) trait Parse: Sized {
     fn parse(input: ParseStream) -> Result<Self>;
 }
 
 /// Parsing interface implemented by types that can be parsed in a default
 /// way from a token stream. This trait is for types that are represented
 /// as nodes.
-pub trait ParseNode {
+pub(crate) trait ParseNode {
     type Target: ToNode<Node>;
 
     /// Parse a Self::Target given the input. Most types implementing
@@ -66,7 +66,7 @@ pub trait ParseNode {
 /// trait and the corresponding `ParseStream::peek_pat` method
 /// also check for molt variables of the `Kind` corresponding to the
 /// associated `Target` type.
-pub trait PeekPat {
+pub(crate) trait PeekPat {
     type Target: ToNode<Node>;
 
     fn peek(cursor: Cursor) -> bool;
@@ -76,7 +76,7 @@ pub(crate) fn peek_pat<T: PeekPat>(cursor: Cursor, ctx: &Ctx<Node>) -> bool {
     T::peek(cursor) || peek_var(cursor, ctx, T::Target::node_kind())
 }
 
-pub trait ParseList {
+pub(crate) trait ParseList {
     type Item: ToNode<Node>;
     type ParseItem: ParseNode<Target = Self::Item>;
     type Punct: Parse;
@@ -96,7 +96,7 @@ pub(crate) fn parse_punctuated_list_real<T: ParseNode, P: Parse>(
     )
 }
 
-pub enum ListOrItem<T, P> {
+pub(crate) enum ListOrItem<T, P> {
     Item(SpannedPat<T>),
     List(NodeList<T, P>),
 }
@@ -107,7 +107,7 @@ pub enum ListOrItem<T, P> {
 /// `ParseStream::parse_list_or_item` method, this trait takes care of
 /// proper handling of molt variables while parsing these types of
 /// structures.
-pub trait ParseListOrItem {
+pub(crate) trait ParseListOrItem {
     type Target: ToNode<Node>;
     type Punct;
 
@@ -206,7 +206,7 @@ impl Parse for ListMatchingMode {
 /// an overview of parsing in Syn, refer to the [module documentation].
 ///
 /// [module documentation]: self
-pub type ParseStream<'a> = &'a ParseBuffer<'a>;
+pub(crate) type ParseStream<'a> = &'a ParseBuffer<'a>;
 
 /// Cursor position within a buffered token stream.
 ///
@@ -218,9 +218,9 @@ pub type ParseStream<'a> = &'a ParseBuffer<'a>;
 ///
 /// ## Calling a parser function
 ///
-/// There is no public way to construct a `ParseBuffer`. Instead, if you are
+/// There is no pub(crate) ic way to construct a `ParseBuffer`. Instead, if you are
 /// looking to invoke a parser function that requires `ParseStream` as input,
-/// you will need to go through one of the public parsing entry points.
+/// you will need to go through one of the pub(crate) ic parsing entry points.
 ///
 /// - The [`parse_macro_input!`] macro if parsing input of a procedural macro;
 /// - One of [the `syn::parse*` functions][syn-parse]; or
@@ -228,7 +228,7 @@ pub type ParseStream<'a> = &'a ParseBuffer<'a>;
 ///
 /// [`parse_macro_input!`]: crate::parser::parse_macro_input!
 /// [syn-parse]: self#the-synparse-functions
-pub struct ParseBuffer<'a> {
+pub(crate) struct ParseBuffer<'a> {
     scope: Span,
     // Instead of Cell<Cursor<'a>> so that ParseBuffer<'a> is covariant in 'a.
     // The rest of the code in this module needs to be careful that only a
@@ -278,7 +278,7 @@ impl<'a> RefUnwindSafe for ParseBuffer<'a> {}
 /// Cursor state associated with speculative parsing.
 ///
 /// This type is the input of the closure provided to [`ParseStream::step`].
-pub struct StepCursor<'c, 'a> {
+pub(crate) struct StepCursor<'c, 'a> {
     scope: Span,
     // This field is covariant in 'c.
     cursor: Cursor<'c>,
@@ -291,7 +291,7 @@ pub struct StepCursor<'c, 'a> {
     // this means if ever a StepCursor<'c, 'a> exists we are guaranteed that 'c
     // outlives 'a.
     marker: PhantomData<fn(Cursor<'c>) -> Cursor<'a>>,
-    pub ctx: ParseCtx,
+    pub(crate) ctx: ParseCtx,
 }
 
 impl<'c, 'a> Deref for StepCursor<'c, 'a> {
@@ -318,7 +318,7 @@ impl<'c, 'a> StepCursor<'c, 'a> {
     ///
     /// The `ParseStream::step` invocation will return this same error without
     /// advancing the stream state.
-    pub fn error<T: Display>(self, message: T) -> Error {
+    pub(crate) fn error<T: Display>(self, message: T) -> Error {
         error::new_at(self.scope, self.cursor, message)
     }
 }
@@ -377,7 +377,9 @@ fn cell_clone<T: Default + Clone>(cell: &Cell<T>) -> T {
     ret
 }
 
-pub fn inner_unexpected(buffer: &ParseBuffer) -> (Rc<Cell<Unexpected>>, Option<(Span, Delimiter)>) {
+pub(crate) fn inner_unexpected(
+    buffer: &ParseBuffer,
+) -> (Rc<Cell<Unexpected>>, Option<(Span, Delimiter)>) {
     let mut unexpected = get_unexpected(buffer);
     loop {
         match cell_clone(&unexpected) {
@@ -415,7 +417,7 @@ fn kind_matches(ctx: &Ctx<Node>, ident: &Ident, kind: NodeKind) -> bool {
 }
 
 impl<'a> ParseBuffer<'a> {
-    pub fn parse<T: Parse>(&self) -> Result<T> {
+    pub(crate) fn parse<T: Parse>(&self) -> Result<T> {
         T::parse(self)
     }
 
@@ -423,7 +425,7 @@ impl<'a> ParseBuffer<'a> {
         function(self)
     }
 
-    pub fn peek<T: Peek>(&self, token: T) -> bool {
+    pub(crate) fn peek<T: Peek>(&self, token: T) -> bool {
         let _ = token;
         T::Token::peek(self.cursor())
     }
@@ -463,15 +465,15 @@ impl<'a> ParseBuffer<'a> {
         Punctuated::parse_terminated_with(self, parser)
     }
 
-    pub fn is_empty(&self) -> bool {
+    pub(crate) fn is_empty(&self) -> bool {
         self.cursor().eof()
     }
 
-    pub fn lookahead1(&self) -> Lookahead1<'a> {
+    pub(crate) fn lookahead1(&self) -> Lookahead1<'a> {
         lookahead::new(self.scope, self.cursor(), self.ctx.clone())
     }
 
-    pub fn fork(&self) -> Self {
+    pub(crate) fn fork(&self) -> Self {
         ParseBuffer {
             scope: self.scope,
             cell: self.cell.clone(),
@@ -484,11 +486,11 @@ impl<'a> ParseBuffer<'a> {
         }
     }
 
-    pub fn error<T: Display>(&self, message: T) -> Error {
+    pub(crate) fn error<T: Display>(&self, message: T) -> Error {
         error::new_at(self.scope, self.cursor(), message)
     }
 
-    pub fn step<F, R>(&self, function: F) -> Result<R>
+    pub(crate) fn step<F, R>(&self, function: F) -> Result<R>
     where
         F: for<'c> FnOnce(StepCursor<'c, 'a>) -> Result<(R, Cursor<'c>)>,
     {
@@ -528,7 +530,7 @@ impl<'a> ParseBuffer<'a> {
         }
     }
 
-    pub fn cursor(&self) -> Cursor<'a> {
+    pub(crate) fn cursor(&self) -> Cursor<'a> {
         self.cell.get()
     }
 
@@ -545,7 +547,7 @@ impl<'a> ParseBuffer<'a> {
     }
 
     #[allow(unused)]
-    pub fn show(&self) {
+    pub(crate) fn show(&self) {
         println!("{}", self.cursor().token_stream());
     }
 
@@ -557,12 +559,12 @@ impl<'a> ParseBuffer<'a> {
         self.ctx.borrow_mut()
     }
 
-    pub fn parse_id<T: ParseNode>(&self) -> Result<NodeId<T::Target>> {
+    pub(crate) fn parse_id<T: ParseNode>(&self) -> Result<NodeId<T::Target>> {
         let pat = self.parse_spanned_pat::<T>()?;
         Ok(self.add_pat(pat))
     }
 
-    pub fn parse_node<T: ParseNode>(&self) -> Result<T::Target> {
+    pub(crate) fn parse_node<T: ParseNode>(&self) -> Result<T::Target> {
         T::parse_node(self)
     }
 
@@ -582,7 +584,7 @@ impl<'a> ParseBuffer<'a> {
         Ok(item.map(f).as_pattern())
     }
 
-    pub fn call_spanned<T>(
+    pub(crate) fn call_spanned<T>(
         &self,
         f: impl for<'b> Fn(&'b ParseBuffer<'b>) -> Result<T>,
     ) -> Result<Spanned<T>> {
@@ -750,7 +752,7 @@ impl<'a> ParseBuffer<'a> {
 }
 
 #[derive(Clone, Copy)]
-pub struct PosMarker {
+pub(crate) struct PosMarker {
     start: usize,
 }
 
@@ -855,12 +857,12 @@ fn parse2_impl<T>(
     }
 }
 
-pub fn parse_str<T: Parse>(s: &str, mode: Mode) -> Result<T> {
+pub(crate) fn parse_str<T: Parse>(s: &str, mode: Mode) -> Result<T> {
     let ctx = Rc::new(RefCell::new(Ctx::new(mode)));
     parse2_impl(ctx, T::parse, proc_macro2::TokenStream::from_str(s)?, mode)
 }
 
-pub fn parse_tokens<T: Parse>(s: TokenStream, mode: Mode) -> Result<T> {
+pub(crate) fn parse_tokens<T: Parse>(s: TokenStream, mode: Mode) -> Result<T> {
     let ctx = Rc::new(RefCell::new(Ctx::new(mode)));
     parse2_impl(ctx.clone(), T::parse, s, mode)
 }
@@ -876,7 +878,7 @@ pub(crate) fn parse_str_ctx<T: Parse>(s: &str, mode: Mode) -> Result<(T, Ctx<Nod
     .map(|t| (t, ctx.replace(Ctx::new(mode))))
 }
 
-pub fn parse_with_ctx<T>(
+pub(crate) fn parse_with_ctx<T>(
     ctx: ParseCtx,
     f: impl FnOnce(ParseStream) -> Result<T>,
     tokens: TokenStream,

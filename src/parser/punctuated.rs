@@ -169,7 +169,7 @@ impl<T, P> Punctuated<T, P> {
     /// to be parsed.
     ///
     /// [`parse_terminated`]: Punctuated::parse_terminated
-    pub fn parse_terminated_with<'a>(
+    pub(crate) fn parse_terminated_with<'a>(
         input: ParseStream<'a>,
         parser: fn(ParseStream<'a>) -> Result<T>,
     ) -> Result<Self>

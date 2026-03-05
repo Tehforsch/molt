@@ -7,10 +7,10 @@ use crate::{
 type InternalId = Pattern<usize, usize>;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct Id(InternalId, Mode);
+pub(crate) struct Id(InternalId, Mode);
 
 impl Id {
-    pub fn is_var(&self) -> bool {
+    pub(crate) fn is_var(&self) -> bool {
         match self.0 {
             Pattern::Item(_) => false,
             Pattern::Var(_) => true,
@@ -22,14 +22,14 @@ impl Id {
     }
 }
 
-pub struct NodeId<T> {
+pub(crate) struct NodeId<T> {
     _marker: PhantomData<T>,
     id: Id,
 }
 
 impl<T> NodeId<T> {
     // used instead of Expr::PLACEHOLDER in parsing.
-    pub fn placeholder() -> Self {
+    pub(crate) fn placeholder() -> Self {
         Self {
             id: Id(InternalId::Item(usize::MAX), Mode::Real),
             _marker: PhantomData,
@@ -79,7 +79,7 @@ impl Id {
         }
     }
 
-    pub fn unwrap_idx(self) -> usize {
+    pub(crate) fn unwrap_idx(self) -> usize {
         match self.0 {
             Pattern::Item(idx) => idx,
             Pattern::Var(idx) => idx,
@@ -87,7 +87,7 @@ impl Id {
     }
 }
 
-pub struct Var<K> {
+pub(crate) struct Var<K> {
     // TODO: Pick one of name / ident or
     // replace with `NodeId<Ident>`
     name: String,
@@ -103,13 +103,14 @@ impl<K: std::fmt::Debug + PartialEq> PartialEq for Var<K> {
 }
 
 #[derive(Clone, Debug)]
-pub struct VarDecl {
-    pub id: Id,
-    pub node: Option<Id>,
+pub(crate) struct VarDecl {
+    pub(crate) id: Id,
+    #[allow(unused)] // TODO!!!!
+    pub(crate) node: Option<Id>,
 }
 
 impl<K: Copy> Var<K> {
-    pub fn new(ident: Ident, kind: K) -> Self {
+    pub(crate) fn new(ident: Ident, kind: K) -> Self {
         Self {
             name: ident.to_string(),
             ident,
@@ -117,20 +118,20 @@ impl<K: Copy> Var<K> {
         }
     }
 
-    pub fn name(&self) -> &str {
+    pub(crate) fn name(&self) -> &str {
         &self.name
     }
 
-    pub fn kind(&self) -> K {
+    pub(crate) fn kind(&self) -> K {
         self.kind
     }
 
-    pub fn ident(&self) -> &Ident {
+    pub(crate) fn ident(&self) -> &Ident {
         &self.ident
     }
 }
 
-pub struct Ctx<Node: NodeType> {
+pub(crate) struct Ctx<Node: NodeType> {
     nodes: Vec<Node>,
     vars: Vec<Var<Node::Kind>>,
     spans: Vec<Span>,
@@ -144,7 +145,7 @@ impl<Node: NodeType> Ctx<Node> {
         Id(InternalId::Item(self.nodes.len() - 1), self.mode)
     }
 
-    pub fn add<T: ToNode<Node>>(&mut self, t: Spanned<T>) -> NodeId<T> {
+    pub(crate) fn add<T: ToNode<Node>>(&mut self, t: Spanned<T>) -> NodeId<T> {
         self.add_node(t.map(|item| item.to_node())).typed()
     }
 
@@ -153,7 +154,7 @@ impl<Node: NodeType> Ctx<Node> {
         Id(InternalId::Var(self.vars.len() - 1), self.mode)
     }
 
-    pub fn add_var<T: ToNode<Node>>(&mut self, var: Var<Node::Kind>) -> NodeId<T> {
+    pub(crate) fn add_var<T: ToNode<Node>>(&mut self, var: Var<Node::Kind>) -> NodeId<T> {
         let id = if let Some((id, _)) = self.get_var_by_name(&var.name) {
             id
         } else {
@@ -162,14 +163,14 @@ impl<Node: NodeType> Ctx<Node> {
         id.typed()
     }
 
-    pub fn add_pat<T: ToNode<Node>>(&mut self, item: SpannedPat<T>) -> NodeId<T> {
+    pub(crate) fn add_pat<T: ToNode<Node>>(&mut self, item: SpannedPat<T>) -> NodeId<T> {
         match item.item {
             Pattern::Item(_) => self.add(item.unwrap_real()),
             Pattern::Var(var) => var.typed(),
         }
     }
 
-    pub fn get<T: ToNode<Node>>(&self, id: impl Into<Id>) -> Pattern<&T, Id> {
+    pub(crate) fn get<T: ToNode<Node>>(&self, id: impl Into<Id>) -> Pattern<&T, Id> {
         let id = id.into();
         match id.0 {
             InternalId::Item(idx) => Pattern::Item(T::from_node_ref(&self.nodes[idx]).unwrap()),
@@ -177,7 +178,7 @@ impl<Node: NodeType> Ctx<Node> {
         }
     }
 
-    pub fn get_mut<T: ToNode<Node>>(&mut self, id: NodeId<T>) -> Pattern<&mut T, Id> {
+    pub(crate) fn get_mut<T: ToNode<Node>>(&mut self, id: NodeId<T>) -> Pattern<&mut T, Id> {
         let id: Id = id.into();
         match id.0 {
             InternalId::Item(idx) => {
@@ -187,14 +188,14 @@ impl<Node: NodeType> Ctx<Node> {
         }
     }
 
-    pub fn get_real<T: ToNode<Node>>(&self, id: impl Into<Id>) -> Option<&T> {
+    pub(crate) fn get_real<T: ToNode<Node>>(&self, id: impl Into<Id>) -> Option<&T> {
         match self.get(id) {
             Pattern::Item(t) => Some(t),
             Pattern::Var(_) => None,
         }
     }
 
-    pub fn get_var(&self, id: Id) -> &Var<Node::Kind> {
+    pub(crate) fn get_var(&self, id: Id) -> &Var<Node::Kind> {
         match id.0 {
             InternalId::Item(_) => panic!(),
             InternalId::Var(idx) => &self.vars[idx],
@@ -209,15 +210,11 @@ impl<Node: NodeType> Ctx<Node> {
             .map(|(i, var)| (Id(InternalId::Var(i), self.mode), var))
     }
 
-    pub fn get_kind_by_name(&self, name: &str) -> Node::Kind {
+    pub(crate) fn get_kind_by_name(&self, name: &str) -> Node::Kind {
         self.get_var_by_name(name).unwrap().1.kind
     }
 
-    pub fn get_id_by_name(&self, name: &str) -> Id {
-        self.get_var_by_name(name).unwrap().0
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = Id> {
+    pub(crate) fn iter(&self) -> impl Iterator<Item = Id> {
         (0..self.nodes.len()).map(|id| Id(InternalId::Item(id), self.mode))
     }
 
@@ -232,14 +229,14 @@ impl<Node: NodeType> Ctx<Node> {
             .map(|(i, v)| (Id(InternalId::Var(i), self.mode), v))
     }
 
-    pub fn get_span(&self, id: impl Into<Id>) -> Span {
+    pub(crate) fn get_span(&self, id: impl Into<Id>) -> Span {
         match id.into().0 {
             Pattern::Item(idx) => self.spans[idx],
             Pattern::Var(_) => panic!(),
         }
     }
 
-    pub fn print<'a>(&'a self, id: Id, src: &'a str) -> &'a str {
+    pub(crate) fn print<'a>(&'a self, id: Id, src: &'a str) -> &'a str {
         let span = self.get_span(id);
         &src[span.byte_range()]
     }
@@ -250,7 +247,7 @@ impl<Node: NodeType> Ctx<Node> {
 }
 
 impl<Node: NodeType> Ctx<Node> {
-    pub fn new(mode: Mode) -> Self {
+    pub(crate) fn new(mode: Mode) -> Self {
         Self {
             nodes: vec![],
             vars: vec![],

@@ -59,6 +59,10 @@ impl Error {
         };
         start.join(end).unwrap_or(start)
     }
+
+    pub fn messages(&self) -> impl Iterator<Item = &str> {
+        self.messages.iter().map(|msg| msg.message.as_str())
+    }
 }
 
 pub(crate) fn new_at<T: Display>(scope: Span, cursor: Cursor, message: T) -> Error {

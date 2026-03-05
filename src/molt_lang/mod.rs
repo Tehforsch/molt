@@ -12,6 +12,7 @@ use codespan_reporting::files::Files;
 use crate::Ctx;
 use crate::Id;
 use crate::Var;
+use crate::parser;
 use crate::parser::parse::parse_tokens;
 use crate::rust_grammar::Ident;
 use crate::rust_grammar::Kind;
@@ -107,6 +108,16 @@ pub enum ResolveError {
     MainFnAndTopLevelStmtExist,
     InvalidInputVarName,
     NoInputVarName,
+    PatternParse(parser::Error),
+}
+
+impl ResolveError {
+    pub(crate) fn parse_error(&self) -> Option<&parser::Error> {
+        match self {
+            ResolveError::PatternParse(error) => Some(error),
+            _ => None,
+        }
+    }
 }
 
 impl std::fmt::Display for ResolveError {
@@ -120,6 +131,9 @@ impl std::fmt::Display for ResolveError {
             }
             ResolveError::NoInputVarName => {
                 write!(f, "No `input` variable declared.")
+            }
+            ResolveError::PatternParse(_) => {
+                write!(f, "Error while parsing pattern.")
             }
         }
     }
@@ -253,10 +267,9 @@ fn resolve_pat(p: grammar::Pat, type_: &Type) -> Result<Pat> {
         p.tokens,
         Mode::Molt,
     )
-    .map_err(|_| todo!())?;
+    .map_err(ResolveError::PatternParse)?;
     // ...
     let ctx = ctx.replace(Ctx::new(Mode::Molt));
-
     Ok(Pat {
         vars: ctx
             .iter_vars_ids()
@@ -284,6 +297,6 @@ impl MoltFile {
         let source = input.source(file_id).unwrap();
         let file: grammar::MoltFile =
             crate::parser::parse_str(source, Mode::Molt).map_err(|e| Error::parse(e, file_id))?;
-        resolve_file(file).map_err(|e| Error::Misc(e.to_string()))
+        resolve_file(file).map_err(|e| Error::Resolve2(e, file_id))
     }
 }

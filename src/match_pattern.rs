@@ -10,12 +10,12 @@ use crate::{
     rule::{Rule, RuleKey, Rules},
 };
 
-pub struct NoMatch;
-pub type IsMatch<T = ()> = Result<T, NoMatch>;
+pub(crate) struct NoMatch;
+pub(crate) type IsMatch<T = ()> = Result<T, NoMatch>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Binding {
-    pub id: Option<Id>,
+pub(crate) struct Binding {
+    pub(crate) id: Option<Id>,
 }
 
 impl Binding {
@@ -25,21 +25,21 @@ impl Binding {
 }
 
 #[derive(Debug)]
-pub struct Match {
+pub(crate) struct Match {
     bindings: HashMap<Id, Binding>,
 }
 
 impl Match {
-    pub fn get_binding(&self, var: Id) -> &Binding {
+    pub(crate) fn get_binding(&self, var: Id) -> &Binding {
         &self.bindings[&var]
     }
 
-    pub fn iter_vars(&self) -> impl Iterator<Item = Id> {
+    pub(crate) fn iter_vars(&self) -> impl Iterator<Item = Id> {
         self.bindings.keys().copied()
     }
 }
 
-pub struct Matcher<'a, Node: NodeType> {
+pub(crate) struct Matcher<'a, Node: NodeType> {
     rules: &'a Rules,
     ctx: &'a MatchCtx<'a, Node>,
     bindings: HashMap<Id, Binding>,
@@ -195,7 +195,7 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
         t1.cmp_syn(self, t2)
     }
 
-    pub fn should_compare(&mut self, rule: RuleKey) -> bool {
+    pub(crate) fn should_compare(&mut self, rule: RuleKey) -> bool {
         match self.rules[rule] {
             Rule::Ignore => false,
             Rule::Strict => true,
@@ -203,23 +203,7 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
     }
 }
 
-pub fn match_pattern<N: NodeType + CmpSyn<N>>(
-    ctx: &MatchCtx<N>,
-    vars: &[VarDecl],
-    molt_var: Id,
-    real: Id,
-    rules: &Rules,
-) -> Vec<Match> {
-    let mut match_ = Matcher::new_root(vars, rules, ctx);
-    match match_.add_binding(molt_var, real) {
-        Ok(_) => vec![Match {
-            bindings: match_.bindings,
-        }],
-        Err(_) => vec![],
-    }
-}
-
-pub fn match_pattern2<N: NodeType + CmpSyn<N>>(
+pub(crate) fn match_pattern2<N: NodeType + CmpSyn<N>>(
     ctx: &MatchCtx<N>,
     vars: &[VarDecl],
     molt: Id,

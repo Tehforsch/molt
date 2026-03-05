@@ -2,6 +2,7 @@ mod cli;
 
 use std::io;
 use std::path::{Path, PathBuf};
+use std::process::ExitCode;
 
 use clap::Parser;
 use cli::CliArgs;
@@ -71,7 +72,7 @@ fn get_cargo_source_files(path: &Path) -> Result<Vec<PathBuf>> {
     get_rust_files_from_dir(path.parent().unwrap())
 }
 
-fn main() -> Result<()> {
+fn main() -> Result<ExitCode> {
     let args = CliArgs::parse();
     let from_cargo = |path| {
         let cargo_toml = get_cargo_toml(path)?;
@@ -96,6 +97,9 @@ fn main() -> Result<()> {
         check: args.check,
     };
     let diagnostics = run(&input, config, root.as_ref());
-    emit_error(&input, diagnostics)?;
-    Ok(())
+    if emit_error(&input, diagnostics).is_err() {
+        Ok(ExitCode::FAILURE)
+    } else {
+        Ok(ExitCode::SUCCESS)
+    }
 }

@@ -15,4 +15,4 @@ pub mod punctuated;
 pub mod span;
 mod thread;
 
-pub use parse::{ParseCtx, parse_str, parse_with_ctx};
+pub(crate) use parse::{ParseCtx, parse_str, parse_with_ctx};

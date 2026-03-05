@@ -1,3 +1,4 @@
+#![allow(private_interfaces)]
 #[macro_use]
 mod parser;
 mod cmp_syn;
@@ -23,14 +24,15 @@ mod writer;
 use std::path::{Path, PathBuf};
 
 use crate::{rust_grammar::Node, writer::Writer};
-pub use cmp_syn::CmpSyn;
 use codespan_reporting::files::Files;
+
+pub use cmp_syn::CmpSyn;
 pub use config::Config;
-pub use ctx::{Ctx, Id, NodeId, Var, VarDecl};
+pub(crate) use ctx::{Ctx, Id, NodeId, Var, VarDecl};
 pub use error::{Error, emit_error};
 pub use input::{Diagnostic, FileId, Input, MoltSource};
 pub use match_ctx::{MatchCtx, MatchPatternData};
-pub use match_pattern::{Binding, Match, Matcher, match_pattern, match_pattern2};
+pub(crate) use match_pattern::{Match, Matcher, match_pattern2};
 pub use node::{KindType, NodeType, ToNode};
 pub use node_list::{
     List, ListMatchingMode, NoPunct, NodeList, PatNodeList, RealNodeList, SetMatchingMode, Single,

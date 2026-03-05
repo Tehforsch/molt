@@ -1,7 +1,7 @@
 use std::io;
 
-use crate::Span;
 use crate::writer::Writer;
+use crate::{Span, parser};
 use codespan_reporting::diagnostic::{Diagnostic, Label};
 
 use crate::input::{FileId, Input};
@@ -20,9 +20,19 @@ pub enum Error {
 
 impl Error {
     fn span_and_file_id(&self) -> Option<(Span, FileId)> {
+        self.parse_error_and_file_id()
+            .map(|(error, file_id)| (error.span().byte_range().into(), file_id))
+    }
+
+    fn hints(&self) -> Option<impl Iterator<Item = &str>> {
+        self.parse_error_and_file_id()
+            .map(|(error, _)| error.messages())
+    }
+
+    fn parse_error_and_file_id(&self) -> Option<(&parser::Error, FileId)> {
         match self {
-            Error::Parse(error, file_id) => Some((error.span().byte_range().into(), *file_id)),
-            Error::Resolve2(_, _) => None,
+            Error::Parse(error, file_id) => Some((error, *file_id)),
+            Error::Resolve2(error, file_id) => error.parse_error().map(|e| (e, *file_id)),
             Error::Misc(_) => None,
             Error::Modify(_) => None,
             Error::Io(_) => None,
@@ -38,6 +48,11 @@ pub(crate) fn make_error_diagnostic(err: &Error) -> Diagnostic<FileId> {
         diagnostic = diagnostic.with_labels(vec![
             Label::primary(file, span.byte_range()).with_message(&message),
         ]);
+    }
+    if let Some(hints) = err.hints() {
+        for msg in hints {
+            diagnostic = diagnostic.with_note(msg);
+        }
     }
     diagnostic
 }
