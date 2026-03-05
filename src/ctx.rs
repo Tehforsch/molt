@@ -171,6 +171,7 @@ impl<Node: NodeType> Ctx<Node> {
 
     pub(crate) fn get<T: ToNode<Node>>(&self, id: impl Into<Id>) -> Pattern<&T, Id> {
         let id = id.into();
+        debug_assert_eq!(id.mode(), self.mode);
         match id.0 {
             InternalId::Item(idx) => Pattern::Item(T::from_node_ref(&self.nodes[idx]).unwrap()),
             InternalId::Var(_) => Pattern::Var(id),
@@ -179,6 +180,7 @@ impl<Node: NodeType> Ctx<Node> {
 
     pub(crate) fn get_mut<T: ToNode<Node>>(&mut self, id: NodeId<T>) -> Pattern<&mut T, Id> {
         let id: Id = id.into();
+        debug_assert_eq!(id.mode(), self.mode);
         match id.0 {
             InternalId::Item(idx) => {
                 Pattern::Item(T::from_node_ref_mut(&mut self.nodes[idx]).unwrap())
@@ -229,7 +231,9 @@ impl<Node: NodeType> Ctx<Node> {
     }
 
     pub(crate) fn get_span(&self, id: impl Into<Id>) -> Span {
-        match id.into().0 {
+        let id: Id = id.into();
+        debug_assert_eq!(id.mode(), self.mode);
+        match id.0 {
             Pattern::Item(idx) => self.spans[idx],
             Pattern::Var(_) => panic!(),
         }
