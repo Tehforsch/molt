@@ -560,7 +560,7 @@ impl<'a> ParseBuffer<'a> {
         f: impl Fn(T) -> S,
     ) -> Result<Spanned<Pattern<S, Id>>> {
         let item: Spanned<T> = self.parse_spanned()?;
-        Ok(item.map(f).as_pattern())
+        Ok(item.map(f).into_pattern())
     }
 
     pub(crate) fn call_spanned<T>(

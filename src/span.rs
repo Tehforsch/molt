@@ -60,7 +60,7 @@ pub trait WithSpan: Sized {
     }
 
     fn pattern_with_span(self, span: Span) -> Spanned<Pattern<Self, Id>> {
-        Spanned::new(self, span).as_pattern()
+        Spanned::new(self, span).into_pattern()
     }
 }
 
@@ -96,7 +96,7 @@ impl<T> Spanned<T> {
         self.item
     }
 
-    pub fn as_pattern(self) -> SpannedPat<T> {
+    pub fn into_pattern(self) -> SpannedPat<T> {
         self.map(|item| Pattern::Item(item))
     }
 

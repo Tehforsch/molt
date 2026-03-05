@@ -97,7 +97,7 @@ fn main() -> Result<ExitCode> {
         check: args.check,
     };
 
-    let writer = Writer::new();
+    let writer = Writer::default();
     let diagnostics = run(&input, &writer, config, root.as_ref());
     if emit_error(&writer, &input, diagnostics).is_err() {
         Ok(ExitCode::FAILURE)

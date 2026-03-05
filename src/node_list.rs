@@ -145,11 +145,6 @@ pub enum ListMatchingMode {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum SetMatchingMode {
-    AllMatch,
-}
-
-#[derive(Debug, Copy, Clone)]
 pub enum SingleMatchingMode {
     Any,
     All,

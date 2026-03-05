@@ -26,7 +26,6 @@ use crate::CmpSyn;
 
 pub trait ToNode<Node: NodeType>: Sized {
     fn to_node(self) -> Node;
-    fn from_node(node: Node) -> Option<Self>;
     fn from_node_ref(node: &Node) -> Option<&Self>;
     fn from_node_ref_mut(node: &mut Node) -> Option<&mut Self>;
     fn node_kind() -> Node::NodeKind;
@@ -35,10 +34,6 @@ pub trait ToNode<Node: NodeType>: Sized {
 impl<T: NodeType> ToNode<T> for T {
     fn to_node(self) -> T {
         self
-    }
-
-    fn from_node(node: T) -> Option<Self> {
-        Some(node)
     }
 
     fn from_node_ref(node: &T) -> Option<&Self> {
@@ -64,5 +59,4 @@ pub trait NodeType: CmpSyn<Self> + Sized {
 
 pub trait KindType<NodeKind> {
     fn is_comparable_to(&self, node_kind: NodeKind) -> bool;
-    fn into_node_kind(self) -> NodeKind;
 }

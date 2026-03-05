@@ -8,6 +8,7 @@ use std::{
 
 #[derive(Clone, Copy, Debug)]
 pub enum Rule {
+    #[allow(unused)]
     Ignore,
     Strict,
 }
@@ -34,6 +35,7 @@ macro_rules! rules {
             )*
         }
 
+        #[allow(unused)] // Not used in the new impl currently, but will be eventually
         pub enum RuleKeyKind {
             $(
                 $name,
@@ -72,12 +74,14 @@ macro_rules! rules {
             }
         }
 
+        #[allow(unused)] // Not used in the new impl currently, but will be eventually
         pub enum ParseRuleKey {
             Blanket(crate::rule::RuleKeyKind),
             Concrete(Vec<crate::rule::RuleKey>),
         }
 
         impl ParseRuleKey {
+            #[allow(unused)] // Not used in the new impl currently, but will be eventually
             pub fn into_keys(self) -> Vec<crate::rule::RuleKey> {
                 match self {
                     Self::Blanket(key) => {

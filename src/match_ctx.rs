@@ -34,6 +34,7 @@ impl<'a, Node: NodeType> MatchCtx<'a, Node> {
         self.config
     }
 
+    #[allow(unused)]
     pub fn dump(&self) {
         println!("--------------------------------");
         for id in self.real_ctx.iter() {

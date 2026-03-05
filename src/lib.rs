@@ -14,7 +14,7 @@ mod molt_lang;
 mod node;
 mod node_list;
 mod pattern;
-pub mod rule;
+pub(crate) mod rule;
 mod rust_grammar;
 mod span;
 #[cfg(test)]
@@ -26,20 +26,22 @@ use std::path::{Path, PathBuf};
 use crate::{molt_lang::Context, rust_grammar::Node};
 use codespan_reporting::files::Files;
 
+// TODO make the CmpSyn trait private
+// and fix the resulting warnings.
 pub use cmp_syn::CmpSyn;
 pub use config::Config;
 pub(crate) use ctx::{Ctx, Id, NodeId, Var, VarDecl};
 pub use error::{Error, emit_error};
-pub use input::{Diagnostic, FileId, Input, MoltSource};
-pub use match_ctx::MatchCtx;
-pub(crate) use match_pattern::{Match, Matcher, match_pattern2};
-pub use node::{KindType, NodeType, ToNode};
-pub use node_list::{
-    List, ListMatchingMode, NoPunct, NodeList, PatNodeList, RealNodeList, SetMatchingMode, Single,
-    SingleMatchingMode,
+pub(crate) use input::{Diagnostic, FileId};
+pub use input::{Input, MoltSource};
+pub(crate) use match_ctx::MatchCtx;
+pub(crate) use match_pattern::{Match, Matcher, match_pattern};
+pub(crate) use node::{KindType, NodeType, ToNode};
+pub(crate) use node_list::{
+    List, ListMatchingMode, NodeList, PatNodeList, RealNodeList, Single, SingleMatchingMode,
 };
-pub use pattern::Pattern;
-pub use span::{Span, Spanned, SpannedPat, WithSpan};
+pub(crate) use pattern::Pattern;
+pub(crate) use span::{Span, Spanned, SpannedPat, WithSpan};
 pub use writer::Writer;
 
 struct RustFile;
@@ -48,7 +50,7 @@ struct RustFile;
 /// to remember whether an item or variable belongs
 /// to real source code or code within molt patterns.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub enum Mode {
+pub(crate) enum Mode {
     /// Represents something within the real source code.
     Real,
     /// Represents something within a pattern in the molt code.

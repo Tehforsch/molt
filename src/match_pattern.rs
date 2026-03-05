@@ -203,7 +203,7 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
     }
 }
 
-pub(crate) fn match_pattern2<N: NodeType + CmpSyn<N>>(
+pub(crate) fn match_pattern<N: NodeType + CmpSyn<N>>(
     ctx: &MatchCtx<N>,
     vars: &[VarDecl],
     molt: Id,

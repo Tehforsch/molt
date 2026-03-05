@@ -10,13 +10,15 @@ pub struct Writer {
     config: Config,
 }
 
-impl Writer {
-    pub fn new() -> Self {
+impl Default for Writer {
+    fn default() -> Self {
         let stream = StandardStream::stderr(ColorChoice::Always);
         let config = Config::default();
-        Self { stream, config }
+        Writer { stream, config }
     }
+}
 
+impl Writer {
     pub fn emit_diagnostic(&self, input: &Input, diagnostic: Diagnostic) {
         term::emit(&mut self.stream.lock(), &self.config, input, &diagnostic).unwrap();
     }

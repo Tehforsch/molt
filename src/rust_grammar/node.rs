@@ -79,15 +79,6 @@ macro_rules! define_node {
                     Node::$variant_name(self)
                 }
 
-                fn from_node(node: Node) -> Option<Self> {
-                    #[allow(irrefutable_let_patterns)]
-                    if let Node::$variant_name(item) = node {
-                        Some(item)
-                    } else {
-                        None
-                    }
-                }
-
                 fn from_node_ref(node: &Node) -> Option<&Self> {
                     #[allow(irrefutable_let_patterns)]
                     if let Node::$variant_name(item) = node {
@@ -147,14 +138,6 @@ macro_rules! define_kind {
                 match self {
                     $(
                         Kind::$variant_name => matches!(node_kind, NodeKind::$kind_name),
-                    )*
-                }
-            }
-
-            fn into_node_kind(self) -> NodeKind {
-                match self {
-                    $(
-                        Kind::$variant_name => NodeKind::$kind_name,
                     )*
                 }
             }

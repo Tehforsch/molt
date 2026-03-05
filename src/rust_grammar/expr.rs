@@ -1291,7 +1291,7 @@ fn unary_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedPa
                         expr: input.add_pat(expr),
                     }),
                 )
-                .as_pattern())
+                .into_pattern())
         } else {
             Ok(input
                 .make_spanned(
@@ -1303,7 +1303,7 @@ fn unary_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedPa
                         expr: input.add_pat(expr),
                     }),
                 )
-                .as_pattern())
+                .into_pattern())
         }
     } else if input.peek(Token![*]) || input.peek(Token![!]) || input.peek(Token![-]) {
         Ok(expr_unary(input, attrs, allow_struct)?.map_real(Expr::Unary))
@@ -1341,7 +1341,7 @@ fn trailer_expr(
         e.replace_attrs(attrs);
     }
 
-    Ok(e.as_pattern())
+    Ok(e.into_pattern())
 }
 
 fn trailer_helper(input: ParseStream, mut e: SpannedPat<Expr>) -> Result<SpannedPat<Expr>> {
@@ -1975,7 +1975,7 @@ fn expr_unary(
                 expr: input.add_pat(unary_expr(input, allow_struct)?),
             },
         )
-        .as_pattern())
+        .into_pattern())
 }
 
 impl Parse for ExprRawAddr {

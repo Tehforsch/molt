@@ -198,7 +198,7 @@ impl<'a> Interpreter<'a> {
                     })
                     .collect();
                 let new_bindings: Vec<_> = if let Value::Node(real) = real_id {
-                    let match_ = crate::match_pattern2(
+                    let match_ = crate::match_pattern(
                         &ctx,
                         &vars,
                         pat.node,
