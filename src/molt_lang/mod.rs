@@ -11,7 +11,6 @@ use codespan_reporting::files::Files;
 
 use crate::Ctx;
 use crate::Id;
-use crate::PatCtx;
 use crate::Var;
 use crate::parser::parse::parse_tokens;
 use crate::rust_grammar::Ident;
@@ -93,7 +92,7 @@ pub enum Expr {
 
 pub struct Pat {
     pub vars: Vec<TokenVar>,
-    pub ctx: PatCtx,
+    pub ctx: Ctx<Node>,
     pub node: Id,
 }
 
@@ -241,7 +240,7 @@ fn resolve_pat(p: grammar::Pat, type_: &Type) -> Result<Pat> {
     // all of this.
     // Add all vars to ctx with their kind (for now, while we have
     // no inference).
-    let mut pat_ctx = PatCtx::new(Mode::Molt);
+    let mut pat_ctx = Ctx::<Node>::new(Mode::Molt);
     let vars = parse_tokens::<grammar::TokenVars>(p.tokens.clone(), Mode::Molt).unwrap();
     for var in vars.0.into_iter() {
         pat_ctx.add_var::<Node>(Var::new(var.name, var.kind));

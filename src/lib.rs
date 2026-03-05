@@ -41,9 +41,6 @@ pub use span::{Span, Spanned, SpannedPat, WithSpan};
 
 struct RustFile;
 
-type CtxR = crate::ctx::Ctx<Node>;
-type PatCtx = CtxR;
-
 struct SrcData<'src> {
     ctx: &'src Ctx<Node>,
     src: &'src str,
@@ -81,7 +78,7 @@ fn match_pattern_data<'a>(
 }
 
 impl RustFile {
-    fn new(input: &Input, file_id: FileId) -> Result<(Self, CtxR), Error> {
+    fn new(input: &Input, file_id: FileId) -> Result<(Self, Ctx<Node>), Error> {
         let source = input.source(file_id).unwrap();
         crate::rust_grammar::parse_file(source, Mode::Real)
             .map_err(|e| Error::parse(e, file_id))
