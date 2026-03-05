@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use super::{LetLhs, LetStmt};
 use crate::{
-    Diagnostic, Id, MatchCtx, MatchPatternData, NodeType, SrcData,
+    Id, MatchCtx, MatchPatternData, NodeType, SrcData,
     molt_lang::{
         Expr, MAIN_FN_NAME, MoltFile, MoltFn, Stmt, Type,
         interpreter::{builtins::BuiltinFn, value::StmtValue},
@@ -52,7 +52,6 @@ pub(crate) enum RuntimeFn<'a> {
 }
 
 pub(crate) struct Interpreter<'src> {
-    diagnostics: Vec<Diagnostic>,
     scopes: Vec<Scope>,
     fns: HashMap<String, RuntimeFn<'src>>,
     src: SrcData<'src>,
@@ -66,10 +65,9 @@ impl<'src> Interpreter<'src> {
         src: SrcData<'src>,
         data: MatchPatternData<'src>,
         writer: Writer<'src>,
-    ) -> Result<Vec<Diagnostic>> {
+    ) -> Result<()> {
         let ctx = src.ctx;
         let mut interpreter = Self {
-            diagnostics: vec![],
             scopes: vec![Scope::default()],
             fns: builtins(),
             src,
@@ -82,7 +80,7 @@ impl<'src> Interpreter<'src> {
         for node in ctx.iter() {
             interpreter.eval_main_fn_on_node(node)?;
         }
-        Ok(interpreter.diagnostics)
+        Ok(())
     }
 
     fn eval_main_fn_on_node(&mut self, node: Id) -> Result<()> {
