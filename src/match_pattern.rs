@@ -225,13 +225,10 @@ pub fn match_pattern2<N: NodeType + CmpSyn<N>>(
     molt: Id,
     real: Id,
     rules: &Rules,
-) -> Vec<Match> {
+) -> Option<Match> {
     let mut match_ = Matcher::new_root(vars, rules, ctx);
 
-    match match_.cmp_ids(real, molt) {
-        Ok(_) => vec![Match {
-            bindings: match_.bindings,
-        }],
-        Err(_) => vec![],
-    }
+    match_.cmp_ids(real, molt).ok().map(|_| Match {
+        bindings: match_.bindings,
+    })
 }
