@@ -1,5 +1,0 @@
-let ty: Type;
-let t: Item = {
-    impl Foo for $ty {
-    }
-};

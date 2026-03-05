@@ -1,2 +1,0 @@
-let lit: Lit;
-let expr: Expr = foo($lit);

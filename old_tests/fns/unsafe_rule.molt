@@ -1,3 +1,0 @@
-ignore Unsafe;
-
-let pat: Fn = fn foo() {};

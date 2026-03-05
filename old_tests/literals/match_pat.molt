@@ -1,2 +1,0 @@
-let lit: Lit;
-let pat: Pat = $lit;

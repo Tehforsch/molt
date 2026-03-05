@@ -1,3 +1,0 @@
-let vis: Vis;
-let ident: Ident;
-let pattern: Item = $vis fn $ident() {};

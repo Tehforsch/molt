@@ -1,2 +1,0 @@
-let pat: Pat;
-let x: Expr = |$($pat)*| {};

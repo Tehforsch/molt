@@ -1,6 +1,0 @@
-let ty: Type;
-let item: Item = {
-    trait Foo {
-        const CONST: $ty = 5;
-    }
-};

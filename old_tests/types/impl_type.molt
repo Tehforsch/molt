@@ -1,7 +1,0 @@
-let ty: Type;
-let item: Item = {
-    impl Foo {
-        const CONST: usize = 5;
-        type Result = $ty;
-    }
-};

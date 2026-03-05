@@ -1,7 +1,0 @@
-let generics: Generics;
-
-let pattern: Item = {
-    trait MyIterator$generics {
-        fn next(&mut self) -> Option<Item>;
-    }
-};

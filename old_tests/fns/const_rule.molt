@@ -1,3 +1,0 @@
-ignore Const;
-
-let pat: Fn = fn foo() {};

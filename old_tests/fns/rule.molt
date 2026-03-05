@@ -1,3 +1,0 @@
-ignore Vis;
-
-let pat: Fn = fn foo() {};

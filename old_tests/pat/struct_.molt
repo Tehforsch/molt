@@ -1,4 +1,0 @@
-let pat1: Pat;
-let pat2: Pat;
-
-let target: Pat = Point { x: $pat1, y: $pat2 };

@@ -1,5 +1,0 @@
-let ident: Ident;
-let x: Expr = $ident.foo::<$old_ty>()?;
-let old_ty: Type = Foo1;
-let new_ty: Type = Foo2;
-mod old_ty -> new_ty;

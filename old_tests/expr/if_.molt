@@ -1,8 +1,0 @@
-let cond, then, else_: Expr;
-let expr: Expr = {
-    if $cond {
-        $then
-    } else {
-        $else_
-    }
-};

@@ -1,7 +1,0 @@
-let generics: Generics;
-let pattern: Item = {
-    enum MyResult$generics {
-        Ok(T),
-        Err(E),
-    }
-};

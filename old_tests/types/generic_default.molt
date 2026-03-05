@@ -1,2 +1,0 @@
-let ty: Type;
-let x: Item = { type Result<T, E=$ty> = std::result::Result<T, E>; };

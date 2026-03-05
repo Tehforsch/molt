@@ -1,3 +1,0 @@
-let vis: Vis;
-let ident: Ident;
-let item: Item = { $vis mod $ident {} };

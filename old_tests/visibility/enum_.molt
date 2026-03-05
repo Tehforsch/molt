@@ -1,8 +1,0 @@
-let vis: Vis;
-let ident: Ident;
-
-let pattern: Item = {
-    $vis enum $ident {
-        Variant,
-    }
-};

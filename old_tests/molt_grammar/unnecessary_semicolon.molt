@@ -1,4 +1,0 @@
-let e: Item =
-    fn foo() {
-        ;;;;
-    };
