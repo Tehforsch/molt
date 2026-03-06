@@ -5,7 +5,7 @@ use std::io::{self, Write};
 use std::path::Path;
 
 use crate::rust_grammar::Node;
-use crate::{Config, Id, Match, MatchCtx, Span};
+use crate::{Config, Id, Match, Span};
 use codespan_reporting::files::Files;
 
 use crate::ctrl_c::FileRestorer;
@@ -197,6 +197,9 @@ fn check_overlap(modifications: &[Modification]) -> Result<(), Error> {
     }
     Ok(())
 }
+
+// temp
+type MatchCtx<N> = N;
 
 #[allow(unused)]
 fn make_modification(ctx: &MatchCtx<Node>, match_: &Match, input: Id, output: Id) -> Modification {

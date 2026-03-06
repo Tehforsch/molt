@@ -11,6 +11,15 @@ pub enum Pattern<Item, Var> {
     Var(Var),
 }
 
+impl<Item: Clone, Var> Pattern<&Item, Var> {
+    pub fn cloned(self) -> Pattern<Item, Var> {
+        match self {
+            Pattern::Item(item) => Pattern::Item(item.clone()),
+            Pattern::Var(var) => Pattern::Var(var),
+        }
+    }
+}
+
 impl<Item, Var> Pattern<Item, Var> {
     pub fn unwrap_item(self) -> Item {
         match self {

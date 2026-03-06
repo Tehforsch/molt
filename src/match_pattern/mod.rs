@@ -1,7 +1,9 @@
+mod match_ctx;
+
 use std::collections::HashMap;
 
 use crate::cmp_syn::CmpSyn;
-use crate::match_ctx::MatchCtx;
+use crate::match_pattern::match_ctx::MatchCtx;
 use crate::node_list::List;
 use crate::rule::{DoesNotRequireRule, RequiresRule};
 use crate::{
@@ -32,33 +34,59 @@ impl Match {
     }
 }
 
+// This exists to appease borrowck.
+// It is the owner of the `MatchCtx` which
+// we use in `Matcher`. If the `Matcher` owns the
+// `MatchCtx` itself, the borrowchecker will complain
+// about aliasing (since it is now not hidden under a
+// reference anymore and therefore mutable)
+pub(crate) struct MatcherBuilder<'a, Node: NodeType> {
+    rules: &'a Rules,
+    ctx: MatchCtx<'a, Node>,
+    bindings: HashMap<Id, Binding>,
+}
+
 pub(crate) struct Matcher<'a, Node: NodeType> {
     rules: &'a Rules,
     ctx: &'a MatchCtx<'a, Node>,
     bindings: HashMap<Id, Binding>,
 }
 
-impl<'a, Node: NodeType> Matcher<'a, Node> {
-    pub fn new(ctx: &'a MatchCtx<Node>, rules: &'a Rules) -> Self {
-        Self {
+impl<'a> Matcher<'a, crate::rust_grammar::Node> {
+    pub(crate) fn from_interpreter_ctx(
+        context: &'a crate::molt_lang::Context<'a>,
+        ctx: &'a crate::Ctx<crate::rust_grammar::Node>,
+        rules: &'a Rules,
+    ) -> MatcherBuilder<'a, crate::rust_grammar::Node> {
+        let ctx = MatchCtx::from_interpreter_ctx(context, ctx);
+        MatcherBuilder {
             rules,
             bindings: HashMap::default(),
             ctx,
         }
     }
+}
 
+impl<'a, Node: NodeType> MatcherBuilder<'a, Node> {
     /// Add the variable to the matching context.
     pub fn add_var(&mut self, var: Id, bound_to: Option<Id>) {
         let _previous_entry = self.bindings.insert(var, Binding { id: bound_to });
         debug_assert!(_previous_entry.is_none());
     }
 
-    pub fn get_matches(mut self, molt: Id, real: Id) -> Option<Match> {
-        self.cmp_ids(real, molt).ok().map(|_| Match {
+    pub fn get_matches(self, molt: Id, real: Id) -> Option<Match> {
+        let mut matcher = Matcher {
+            rules: self.rules,
+            ctx: &self.ctx,
             bindings: self.bindings,
+        };
+        matcher.cmp_ids(real, molt).ok().map(|_| Match {
+            bindings: matcher.bindings,
         })
     }
+}
 
+impl<'a, Node: NodeType> Matcher<'a, Node> {
     fn bind(&mut self, key: Id, id: Id) -> IsMatch {
         if self.ctx.config().debug_print {
             println!(
@@ -89,8 +117,9 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
 
         match self.ctx.get::<Node>(id) {
             Pattern::Var(var) => self.bind(var, real_id),
-            Pattern::Item(pat) => {
-                self.cmp_syn::<Node, Node>(self.ctx.real_ctx.get(real_id).unwrap_item(), pat)
+            Pattern::Item(node) => {
+                let item = self.ctx.real_ctx.get(real_id).unwrap_item();
+                self.cmp_syn::<Node, Node>(item, node)
             }
         }
     }

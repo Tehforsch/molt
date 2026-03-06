@@ -4,7 +4,7 @@ use crate::config::Config;
 use crate::molt_lang::Context;
 use crate::{Ctx, FileId, Id, Input, Mode, NodeType, Pattern, ToNode, Var, rust_grammar};
 
-pub struct MatchCtx<'a, Node: NodeType> {
+pub(super) struct MatchCtx<'a, Node: NodeType> {
     pub input: &'a Input,
     pub molt_ctx: &'a Ctx<Node>,
     pub real_ctx: &'a Ctx<Node>,

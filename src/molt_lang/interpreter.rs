@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use super::{LetLhs, LetStmt};
 use crate::{
-    Id, MatchCtx, Matcher, NodeType,
+    Id, Matcher, NodeType,
     molt_lang::{
         Expr, MAIN_FN_NAME, MoltFile, MoltFn, Stmt, Type,
         context::Context,
@@ -183,9 +183,8 @@ impl<'a> Interpreter<'a> {
                     // error handling
                     todo!()
                 };
-                let ctx = MatchCtx::from_interpreter_ctx(&self.context, &pat.ctx);
                 let rules = crate::rule::Rules::default();
-                let mut matcher = Matcher::new(&ctx, &rules);
+                let mut matcher = Matcher::from_interpreter_ctx(&self.context, &pat.ctx, &rules);
                 for var in pat.vars.iter() {
                     // Look up if this variable was previously bound to
                     // something.
@@ -205,10 +204,7 @@ impl<'a> Interpreter<'a> {
                             .iter_vars()
                             .map(|var| {
                                 let bound_to = match_.get_binding(var).id.unwrap();
-                                (
-                                    ctx.molt_ctx.get_var(var).ident().clone(),
-                                    Value::Node(bound_to),
-                                )
+                                (pat.ctx.get_var(var).ident().clone(), Value::Node(bound_to))
                             })
                             .collect()
                     } else {
