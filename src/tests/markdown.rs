@@ -141,7 +141,7 @@ impl MarkdownTestSuite {
         );
 
         let molt_code = &molt_blocks[0].content;
-        let input = Input::new(MoltSource::FromCli(Contents::new(molt_code.clone())));
+        let mut input = Input::new(MoltSource::String(Contents::new(molt_code.clone())));
         if let Err(e) = emit_error(&Writer::default(), &input, MoltFile::new(&input)) {
             panic!(
                 "{}: section {:?}: failed to parse molt code: {e:?}",
@@ -156,7 +156,6 @@ impl MarkdownTestSuite {
         }
 
         let temp_dir = TempDir::new().unwrap();
-        let mut input = Input::new(MoltSource::FromCli(Contents::new(molt_code.clone())));
         for (i, block) in rust_blocks.iter().enumerate() {
             let path = temp_dir.path().join(format!("input_{i}.rs"));
             std::fs::write(&path, &block.content).unwrap();

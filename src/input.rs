@@ -7,7 +7,7 @@ pub type Diagnostic = codespan_reporting::diagnostic::Diagnostic<FileId>;
 
 pub struct Input {
     root: Option<PathBuf>,
-    rust_src: Vec<RustSourceFile>,
+    rust_src: Vec<SourceFile>,
     molt_src: MoltSource,
 }
 
@@ -37,14 +37,10 @@ pub struct Contents {
     line_starts: Vec<usize>,
 }
 
-struct RustSourceFile(SourceFile);
-
 pub enum MoltSource {
-    FromCli(Contents),
-    File(MoltSourceFile),
+    String(Contents),
+    File(SourceFile),
 }
-
-pub struct MoltSourceFile(SourceFile);
 
 struct SourceFile {
     contents: Contents,
@@ -61,10 +57,10 @@ impl<'a> Files<'a> for Input {
 
     fn name(&'a self, id: Self::FileId) -> Result<Self::Name, Error> {
         match id {
-            FileId::Rust(idx) => Ok(FilePath::Path(&self.rust_src[idx].0.path)),
+            FileId::Rust(idx) => Ok(FilePath::Path(&self.rust_src[idx].path)),
             FileId::Molt => Ok(match &self.molt_src {
-                MoltSource::FromCli(_) => FilePath::FromCli,
-                MoltSource::File(file) => FilePath::Path(&file.0.path),
+                MoltSource::String(_) => FilePath::FromCli,
+                MoltSource::File(file) => FilePath::Path(&file.path),
             }),
         }
     }
@@ -107,8 +103,9 @@ impl Input {
             molt_src: self.molt_src,
         }
     }
+
     pub fn with_rust_src_file<P: AsRef<Path>>(mut self, file: P) -> Result<Self, crate::Error> {
-        self.rust_src.push(RustSourceFile::new(file)?);
+        self.rust_src.push(SourceFile::new(file)?);
         Ok(Self {
             molt_src: self.molt_src,
             rust_src: self.rust_src,
@@ -121,7 +118,7 @@ impl Input {
         files: impl Iterator<Item = P>,
     ) -> Result<Self, crate::Error> {
         for file in files {
-            self.rust_src.push(RustSourceFile::new(file)?);
+            self.rust_src.push(SourceFile::new(file)?);
         }
         Ok(Self {
             molt_src: self.molt_src,
@@ -132,10 +129,10 @@ impl Input {
 
     fn get_contents(&self, id: FileId) -> &Contents {
         match id {
-            FileId::Rust(idx) => &self.rust_src[idx].0.contents,
+            FileId::Rust(idx) => &self.rust_src[idx].contents,
             FileId::Molt => match &self.molt_src {
-                MoltSource::FromCli(s) => s,
-                MoltSource::File(file) => &file.0.contents,
+                MoltSource::String(s) => s,
+                MoltSource::File(file) => &file.contents,
             },
         }
     }
@@ -198,17 +195,15 @@ pub fn line_starts(source: &str) -> impl '_ + Iterator<Item = usize> {
     core::iter::once(0).chain(source.match_indices('\n').map(|(i, _)| i + 1))
 }
 
-impl RustSourceFile {
+impl SourceFile {
     fn new<P: AsRef<Path>>(path: P) -> Result<Self, crate::Error> {
-        Ok(RustSourceFile(SourceFile::from_path(path.as_ref())?))
+        Ok(SourceFile::from_path(path.as_ref())?)
     }
 }
 
 impl MoltSource {
     pub fn file<P: AsRef<Path>>(path: P) -> Result<Self, crate::Error> {
-        Ok(MoltSource::File(MoltSourceFile(SourceFile::from_path(
-            path.as_ref(),
-        )?)))
+        Ok(MoltSource::File(SourceFile::from_path(path.as_ref())?))
     }
 }
 
