@@ -1,0 +1,5 @@
+---
+source: src/tests/markdown.rs
+expression: "format!(\"Ran {count} tests.\")"
+---
+Ran 2 tests.

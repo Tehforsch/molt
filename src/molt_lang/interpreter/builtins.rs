@@ -55,13 +55,11 @@ impl<'src> Interpreter<'src> {
         match val {
             Value::String(_) => todo!(),
             Value::Node(id) => {
-                println!(
-                    "{}",
-                    self.context.real_ctx().print(*id, self.context.real_src())
-                );
+                let s = self.context.real_ctx().print(*id, self.context.real_src());
+                self.context.writer().write_line(s);
             }
             Value::Unit => {
-                println!("()");
+                self.context.writer().write_line("()");
             }
         }
     }
