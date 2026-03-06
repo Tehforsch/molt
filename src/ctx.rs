@@ -1,3 +1,4 @@
+//! Defines the main types that store parsed syntax nodes.
 use std::marker::PhantomData;
 
 use crate::{
@@ -6,6 +7,9 @@ use crate::{
 
 type InternalId = Pattern<usize, usize>;
 
+/// The main ID type. An `Id` uniquely identifies
+/// either a concrete syntax node or a pattern variable
+/// for a given `Ctx`.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub(crate) struct Id(InternalId, Mode);
 
@@ -22,6 +26,8 @@ impl Id {
     }
 }
 
+/// `NodeId<T>` is a strongly typed variant of the
+/// `Id` type. Used in the AST to retain type information.
 pub(crate) struct NodeId<T> {
     _marker: PhantomData<T>,
     id: Id,
@@ -87,6 +93,8 @@ impl Id {
     }
 }
 
+/// The real representation of a pattern variable.
+/// Contains its name and the kind of the variable.
 pub(crate) struct Var<K> {
     // TODO: Pick one of name / ident or
     // replace with `NodeId<Ident>`
@@ -100,12 +108,6 @@ impl<K: std::fmt::Debug + PartialEq> PartialEq for Var<K> {
         debug_assert_eq!(self.kind, other.kind);
         self.name.eq(&other.name)
     }
-}
-
-#[derive(Clone, Debug)]
-pub(crate) struct VarDecl {
-    pub(crate) id: Id,
-    pub(crate) node: Option<Id>,
 }
 
 impl<K: Copy> Var<K> {

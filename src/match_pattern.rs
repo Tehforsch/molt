@@ -6,7 +6,6 @@ use crate::node_list::List;
 use crate::rule::{DoesNotRequireRule, RequiresRule};
 use crate::{
     Id, NodeId, NodeList, NodeType, PatNodeList, Pattern, RealNodeList, Single, SingleMatchingMode,
-    VarDecl,
     rule::{Rule, RuleKey, Rules},
 };
 
@@ -16,12 +15,6 @@ pub(crate) type IsMatch<T = ()> = Result<T, NoMatch>;
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Binding {
     pub(crate) id: Option<Id>,
-}
-
-impl Binding {
-    fn new(id: Option<Id>) -> Self {
-        Self { id }
-    }
 }
 
 #[derive(Debug)]
@@ -46,18 +39,27 @@ pub(crate) struct Matcher<'a, Node: NodeType> {
 }
 
 impl<'a, Node: NodeType> Matcher<'a, Node> {
-    fn new_root(vars: &[VarDecl], rules: &'a Rules, ctx: &'a MatchCtx<'a, Node>) -> Self {
+    pub fn new(ctx: &'a MatchCtx<Node>, rules: &'a Rules) -> Self {
         Self {
             rules,
-            bindings: vars
-                .iter()
-                .map(|var| (var.id, Binding::new(var.node)))
-                .collect(),
+            bindings: HashMap::default(),
             ctx,
         }
     }
 
-    fn add_binding(&mut self, key: Id, id: Id) -> IsMatch {
+    /// Add the variable to the matching context.
+    pub fn add_var(&mut self, var: Id, bound_to: Option<Id>) {
+        let _previous_entry = self.bindings.insert(var, Binding { id: bound_to });
+        debug_assert!(_previous_entry.is_none());
+    }
+
+    pub fn get_matches(mut self, molt: Id, real: Id) -> Option<Match> {
+        self.cmp_ids(real, molt).ok().map(|_| Match {
+            bindings: self.bindings,
+        })
+    }
+
+    fn bind(&mut self, key: Id, id: Id) -> IsMatch {
         if self.ctx.config().debug_print {
             println!(
                 "\tBind ${} to {}",
@@ -86,7 +88,7 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
         }
 
         match self.ctx.get::<Node>(id) {
-            Pattern::Var(var) => self.add_binding(var, real_id),
+            Pattern::Var(var) => self.bind(var, real_id),
             Pattern::Item(pat) => {
                 self.cmp_syn::<Node, Node>(self.ctx.real_ctx.get(real_id).unwrap_item(), pat)
             }
@@ -204,18 +206,4 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
             Rule::Strict => true,
         }
     }
-}
-
-pub(crate) fn match_pattern<N: NodeType + CmpSyn<N>>(
-    ctx: &MatchCtx<N>,
-    vars: &[VarDecl],
-    molt: Id,
-    real: Id,
-    rules: &Rules,
-) -> Option<Match> {
-    let mut match_ = Matcher::new_root(vars, rules, ctx);
-
-    match_.cmp_ids(real, molt).ok().map(|_| Match {
-        bindings: match_.bindings,
-    })
 }

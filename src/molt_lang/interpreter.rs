@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use super::{LetLhs, LetStmt};
 use crate::{
-    Id, MatchCtx, NodeType,
+    Id, MatchCtx, Matcher, NodeType,
     molt_lang::{
         Expr, MAIN_FN_NAME, MoltFile, MoltFn, Stmt, Type,
         context::Context,
@@ -184,33 +184,22 @@ impl<'a> Interpreter<'a> {
                     todo!()
                 };
                 let ctx = MatchCtx::from_interpreter_ctx(&self.context, &pat.ctx);
-                let vars: Vec<_> = pat
-                    .vars
-                    .iter()
-                    .map(|var| {
-                        // Look up if this variable was previously bound to
-                        // something.
-                        let bound_to = self.lookup_var(&var.ident).ok().map(|val| {
-                            let Value::Node(bound_to) = val else {
-                                todo!()
-                                // error handling
-                            };
-                            *bound_to
-                        });
-                        crate::VarDecl {
-                            id: var.id,
-                            node: bound_to,
-                        }
-                    })
-                    .collect();
+                let rules = crate::rule::Rules::default();
+                let mut matcher = Matcher::new(&ctx, &rules);
+                for var in pat.vars.iter() {
+                    // Look up if this variable was previously bound to
+                    // something.
+                    let bound_to = self.lookup_var(&var.ident).ok().map(|val| {
+                        let Value::Node(bound_to) = val else {
+                            todo!()
+                            // error handling
+                        };
+                        *bound_to
+                    });
+                    matcher.add_var(var.id, bound_to);
+                }
                 let new_bindings: Vec<_> = if let Value::Node(real) = real_id {
-                    let match_ = crate::match_pattern(
-                        &ctx,
-                        &vars,
-                        pat.node,
-                        real,
-                        &crate::rule::Rules::default(),
-                    );
+                    let match_ = matcher.get_matches(pat.node, real);
                     if let Some(match_) = match_ {
                         match_
                             .iter_vars()

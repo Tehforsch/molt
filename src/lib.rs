@@ -30,12 +30,12 @@ use codespan_reporting::files::Files;
 // and fix the resulting warnings.
 pub use cmp_syn::CmpSyn;
 pub use config::Config;
-pub(crate) use ctx::{Ctx, Id, NodeId, Var, VarDecl};
+pub(crate) use ctx::{Ctx, Id, NodeId, Var};
 pub use error::{Error, emit_error};
 pub(crate) use input::{Diagnostic, FileId};
 pub use input::{Input, MoltSource};
 pub(crate) use match_ctx::MatchCtx;
-pub(crate) use match_pattern::{Match, Matcher, match_pattern};
+pub(crate) use match_pattern::{Match, Matcher};
 pub(crate) use node::{KindType, NodeType, ToNode};
 pub(crate) use node_list::{
     List, ListMatchingMode, NodeList, PatNodeList, RealNodeList, Single, SingleMatchingMode,
