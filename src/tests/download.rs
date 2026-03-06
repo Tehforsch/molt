@@ -5,7 +5,7 @@ use tar::Archive;
 use tempfile::TempDir;
 
 use crate::RustFile;
-use crate::input::{Contents, Input, MoltSource};
+use crate::input::{Contents, Input, Source};
 
 #[test]
 #[ignore]
@@ -58,7 +58,7 @@ fn parse_crate(name: &str, version: &str) {
     let rust_files = find_rust_files(&syn_dir);
     assert!(!rust_files.is_empty());
 
-    let mut input = Input::new(MoltSource::String(Contents::new("".to_string())));
+    let mut input = Input::new(Source::String(Contents::new("".to_string())));
     for rust_file_path in rust_files {
         input = input.with_rust_src_file(&rust_file_path).unwrap();
     }

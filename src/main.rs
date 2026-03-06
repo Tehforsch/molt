@@ -7,7 +7,7 @@ use std::process::ExitCode;
 use clap::Parser;
 use cli::CliArgs;
 use ignore::WalkBuilder;
-use molt::{Input, MoltSource, Writer, emit_error, run};
+use molt::{Input, Source, Writer, emit_error, run};
 
 #[derive(Debug, thiserror::Error)]
 enum Error {
@@ -84,7 +84,7 @@ fn main() -> Result<ExitCode> {
     } else {
         (None, get_rust_files_from_paths(&args.input_files)?)
     };
-    let mut input = Input::new(MoltSource::file(&args.molt_file).unwrap())
+    let mut input = Input::new(Source::file(&args.molt_file).unwrap())
         .with_rust_src_files(source_files.iter())
         .unwrap();
     if let Some(ref root) = root {

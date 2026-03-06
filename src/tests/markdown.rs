@@ -1,12 +1,11 @@
 use std::path::{Path, PathBuf};
 
 use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag, TagEnd};
-use tempfile::TempDir;
 use walkdir::WalkDir;
 
 use crate::config::Config;
 use crate::emit_error;
-use crate::input::{Contents, Input, MoltSource};
+use crate::input::{Contents, Input, Source};
 use crate::molt_lang::MoltFile;
 use crate::writer::Writer;
 
@@ -141,7 +140,7 @@ impl MarkdownTestSuite {
         );
 
         let molt_code = &molt_blocks[0].content;
-        let mut input = Input::new(MoltSource::String(Contents::new(molt_code.clone())));
+        let mut input = Input::new(Source::String(Contents::new(molt_code.clone())));
         if let Err(e) = emit_error(&Writer::default(), &input, MoltFile::new(&input)) {
             panic!(
                 "{}: section {:?}: failed to parse molt code: {e:?}",
@@ -155,11 +154,8 @@ impl MarkdownTestSuite {
             return;
         }
 
-        let temp_dir = TempDir::new().unwrap();
-        for (i, block) in rust_blocks.iter().enumerate() {
-            let path = temp_dir.path().join(format!("input_{i}.rs"));
-            std::fs::write(&path, &block.content).unwrap();
-            input = input.with_rust_src_file(path).unwrap();
+        for block in rust_blocks.iter() {
+            input = input.with_rust_src(block.content.clone()).unwrap();
         }
 
         let writer = Writer::buffer();

@@ -3,12 +3,12 @@ use std::path::{Path, PathBuf};
 
 use codespan_reporting::files::{Error, Files};
 
-pub type Diagnostic = codespan_reporting::diagnostic::Diagnostic<FileId>;
+pub(crate) type Diagnostic = codespan_reporting::diagnostic::Diagnostic<FileId>;
 
 pub struct Input {
     root: Option<PathBuf>,
-    rust_src: Vec<SourceFile>,
-    molt_src: MoltSource,
+    rust_src: Vec<Source>,
+    molt_src: Source,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -19,25 +19,25 @@ pub enum FileId {
 
 pub enum FilePath<'a> {
     Path(&'a Path),
-    FromCli,
+    FromString,
 }
 
 impl<'a> FilePath<'a> {
-    pub fn unwrap_path(&self) -> &'a Path {
+    pub(crate) fn unwrap_path(&self) -> &'a Path {
         match self {
             FilePath::Path(path) => path,
-            FilePath::FromCli => panic!("unwrap_path called on FromCli variant."),
+            FilePath::FromString => panic!("unwrap_path called on FromString variant."),
         }
     }
 }
 
-pub struct Contents {
+pub(crate) struct Contents {
     contents: String,
     /// The starting byte indices in the source code.
     line_starts: Vec<usize>,
 }
 
-pub enum MoltSource {
+pub enum Source {
     String(Contents),
     File(SourceFile),
 }
@@ -56,12 +56,10 @@ impl<'a> Files<'a> for Input {
     type Source = &'a str;
 
     fn name(&'a self, id: Self::FileId) -> Result<Self::Name, Error> {
-        match id {
-            FileId::Rust(idx) => Ok(FilePath::Path(&self.rust_src[idx].path)),
-            FileId::Molt => Ok(match &self.molt_src {
-                MoltSource::String(_) => FilePath::FromCli,
-                MoltSource::File(file) => FilePath::Path(&file.path),
-            }),
+        let source = self.get_source(id);
+        match source {
+            Source::String(_) => Ok(FilePath::FromString),
+            Source::File(file) => Ok(FilePath::Path(&file.path)),
         }
     }
 
@@ -88,7 +86,7 @@ impl<'a> Files<'a> for Input {
 }
 
 impl Input {
-    pub fn new(molt_src: MoltSource) -> Self {
+    pub fn new(molt_src: Source) -> Self {
         Self {
             root: None,
             rust_src: vec![],
@@ -104,8 +102,22 @@ impl Input {
         }
     }
 
-    pub fn with_rust_src_file<P: AsRef<Path>>(mut self, file: P) -> Result<Self, crate::Error> {
-        self.rust_src.push(SourceFile::new(file)?);
+    #[cfg(test)]
+    pub(crate) fn with_rust_src(mut self, contents: String) -> Result<Self, crate::Error> {
+        self.rust_src.push(Source::String(Contents::new(contents)));
+        Ok(Self {
+            molt_src: self.molt_src,
+            rust_src: self.rust_src,
+            root: self.root,
+        })
+    }
+
+    #[cfg(test)]
+    pub(crate) fn with_rust_src_file<P: AsRef<Path>>(
+        mut self,
+        file: P,
+    ) -> Result<Self, crate::Error> {
+        self.rust_src.push(Source::File(SourceFile::new(file)?));
         Ok(Self {
             molt_src: self.molt_src,
             rust_src: self.rust_src,
@@ -118,7 +130,7 @@ impl Input {
         files: impl Iterator<Item = P>,
     ) -> Result<Self, crate::Error> {
         for file in files {
-            self.rust_src.push(SourceFile::new(file)?);
+            self.rust_src.push(Source::File(SourceFile::new(file)?));
         }
         Ok(Self {
             molt_src: self.molt_src,
@@ -128,12 +140,10 @@ impl Input {
     }
 
     fn get_contents(&self, id: FileId) -> &Contents {
-        match id {
-            FileId::Rust(idx) => &self.rust_src[idx].contents,
-            FileId::Molt => match &self.molt_src {
-                MoltSource::String(s) => s,
-                MoltSource::File(file) => &file.contents,
-            },
+        let source = self.get_source(id);
+        match source {
+            Source::String(contents) => contents,
+            Source::File(source_file) => &source_file.contents,
         }
     }
 
@@ -148,8 +158,11 @@ impl Input {
             .map(|(i, _)| FileId::Rust(i))
     }
 
-    pub fn root(&self) -> Option<&PathBuf> {
-        self.root.as_ref()
+    fn get_source(&self, id: FileId) -> &Source {
+        match id {
+            FileId::Rust(idx) => &self.rust_src[idx],
+            FileId::Molt => &self.molt_src,
+        }
     }
 }
 
@@ -157,13 +170,13 @@ impl<'a> std::fmt::Display for FilePath<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             FilePath::Path(path) => write!(f, "{path:?}"),
-            FilePath::FromCli => write!(f, "CLI input"),
+            FilePath::FromString => write!(f, "test input"),
         }
     }
 }
 
 impl Contents {
-    pub fn new(contents: String) -> Self {
+    pub(crate) fn new(contents: String) -> Self {
         let line_starts = line_starts(&contents).collect();
         Self {
             contents,
@@ -191,19 +204,19 @@ impl Contents {
     }
 }
 
-pub fn line_starts(source: &str) -> impl '_ + Iterator<Item = usize> {
+pub(crate) fn line_starts(source: &str) -> impl '_ + Iterator<Item = usize> {
     core::iter::once(0).chain(source.match_indices('\n').map(|(i, _)| i + 1))
 }
 
 impl SourceFile {
     fn new<P: AsRef<Path>>(path: P) -> Result<Self, crate::Error> {
-        Ok(SourceFile::from_path(path.as_ref())?)
+        SourceFile::from_path(path.as_ref())
     }
 }
 
-impl MoltSource {
+impl Source {
     pub fn file<P: AsRef<Path>>(path: P) -> Result<Self, crate::Error> {
-        Ok(MoltSource::File(SourceFile::from_path(path.as_ref())?))
+        Ok(Source::File(SourceFile::from_path(path.as_ref())?))
     }
 }
 
