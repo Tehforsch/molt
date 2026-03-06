@@ -121,10 +121,6 @@ impl<K: Copy> Var<K> {
         &self.name
     }
 
-    pub(crate) fn kind(&self) -> K {
-        self.kind
-    }
-
     pub(crate) fn ident(&self) -> &Ident {
         &self.ident
     }

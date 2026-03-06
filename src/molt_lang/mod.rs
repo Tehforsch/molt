@@ -105,7 +105,6 @@ impl std::fmt::Debug for Pat {
 #[derive(Debug, Clone)]
 pub struct TokenVar {
     pub id: Id,
-    pub _kind: Kind,
     pub ident: Ident,
 }
 

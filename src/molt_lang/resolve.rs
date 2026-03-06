@@ -118,7 +118,6 @@ impl Resolver {
                 .iter_vars_ids()
                 .map(|(id, var)| TokenVar {
                     id,
-                    _kind: var.kind(),
                     ident: var.ident().clone(),
                 })
                 .collect(),
