@@ -4,10 +4,10 @@ use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag, TagEnd};
 use walkdir::WalkDir;
 
 use crate::config::Config;
-use crate::emit_error;
 use crate::input::{Contents, Input, Source};
-use crate::molt_lang::MoltFile;
+use crate::molt_lang::{Context, MoltFile};
 use crate::writer::Writer;
+use crate::{Error, RustFile, emit_error};
 
 struct Section {
     name: String,
@@ -95,7 +95,7 @@ impl MarkdownTestSuite {
             self.path
         );
 
-        let mut count = 0;
+        let mut num_sections = 0;
         for md_file in md_files {
             let content = std::fs::read_to_string(&md_file)
                 .unwrap_or_else(|e| panic!("failed to read {}: {e}", md_file.display()));
@@ -103,11 +103,17 @@ impl MarkdownTestSuite {
             let sections = parse_markdown(&content);
 
             for section in &sections {
-                self.run_section(&md_file, section);
-                count += 1;
+                if let Err(e) = self.run_section(&md_file, section) {
+                    panic!(
+                        "{}: section {:?}: molt run failed: {e:?}",
+                        md_file.display(),
+                        section.name
+                    );
+                }
+                num_sections += 1;
             }
         }
-        count
+        num_sections
     }
 
     fn filter_code_blocks(section: &Section, f: impl Fn(&str) -> bool) -> Vec<&CodeBlock> {
@@ -118,18 +124,14 @@ impl MarkdownTestSuite {
             .collect()
     }
 
-    fn run_section(&self, md_file: &Path, section: &Section) {
-        let molt_blocks: Vec<_> = Self::filter_code_blocks(section, |lang| lang == "molt");
-        let rust_blocks: Vec<_> = Self::filter_code_blocks(section, |lang| lang == "rust");
-        let unknown_blocks: Vec<_> =
+    fn run_section(&self, md_file: &Path, section: &Section) -> Result<(), Error> {
+        let molt_blocks = Self::filter_code_blocks(section, |lang| lang == "molt");
+        let rust_blocks = Self::filter_code_blocks(section, |lang| lang == "rust");
+        let unknown_blocks =
             Self::filter_code_blocks(section, |lang| lang != "rust" && lang != "molt");
 
-        if section.code_blocks.is_empty() {
-            return;
-        }
-
+        assert!(!section.code_blocks.is_empty());
         assert!(unknown_blocks.is_empty());
-
         assert_eq!(
             molt_blocks.len(),
             1,
@@ -139,41 +141,38 @@ impl MarkdownTestSuite {
             molt_blocks.len()
         );
 
-        let molt_code = &molt_blocks[0].content;
-        let mut input = Input::new(Source::String(Contents::new(molt_code.clone())));
-        if let Err(e) = emit_error(&Writer::default(), &input, MoltFile::new(&input)) {
-            panic!(
-                "{}: section {:?}: failed to parse molt code: {e:?}",
-                md_file.display(),
-                section.name
-            )
-        };
-
-        if rust_blocks.is_empty() {
-            // TODO: run the molt code without a rust file once the interpreter supports it
-            return;
-        }
-
+        let mut input = Input::new(Source::String(Contents::new(
+            molt_blocks[0].content.clone(),
+        )));
         for block in rust_blocks.iter() {
             input = input.with_rust_src(block.content.clone()).unwrap();
         }
+        let test_writer = Writer::buffer();
 
-        let writer = Writer::buffer();
-        crate::run(&input, &writer, Config::test(), None).unwrap_or_else(|e| {
-            panic!(
-                "{}: section {:?}: molt run failed: {e:?}",
-                md_file.display(),
-                section.name
-            )
-        });
+        // Parse and resolve molt file.
+        let molt_file = emit_error(&test_writer, &input, MoltFile::new(&input))?;
 
-        let output = writer.into_string().unwrap();
+        for rust_file_id in input.iter_rust_src() {
+            let (_, real_ctx) = RustFile::new(&input, rust_file_id)?;
+            let context = Context {
+                real_id: rust_file_id,
+                molt_id: input.molt_file_id(),
+                real_ctx: &real_ctx,
+                input: &input,
+                writer: &test_writer,
+                config: &Config::default(),
+            };
+            crate::molt_lang::Interpreter::run(&molt_file, context).map_err(Error::Interpreter)?;
+        }
+
+        let output = test_writer.into_string().unwrap();
         let snapshot_name = format!(
             "{}__{}",
             md_file.file_stem().unwrap().to_str().unwrap(),
             section.name.replace(' ', "_")
         );
         insta::assert_snapshot!(snapshot_name, output);
+        Ok(())
     }
 }
 
