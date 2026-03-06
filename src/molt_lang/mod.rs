@@ -6,6 +6,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 pub(crate) use context::Context;
+pub(crate) use grammar::FileStructureError;
 pub(crate) use interpreter::Error as InterpreterError;
 pub(crate) use interpreter::Interpreter;
 
@@ -105,92 +106,23 @@ impl std::fmt::Debug for Pat {
     }
 }
 
-#[derive(Debug)]
-pub enum ResolveError {
-    MainFnAndTopLevelStmtExist,
-    InvalidInputVarName,
-    NoInputVarName,
-    PatternParse(parser::Error),
-}
-
-impl ResolveError {
-    pub(crate) fn parse_error(&self) -> Option<&parser::Error> {
-        match self {
-            ResolveError::PatternParse(error) => Some(error),
-            _ => None,
-        }
-    }
-}
-
-impl std::fmt::Display for ResolveError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ResolveError::MainFnAndTopLevelStmtExist => {
-                write!(f, "Both a main function and top level statements exist")
-            }
-            ResolveError::InvalidInputVarName => {
-                write!(f, "The first variable needs to have name `input`.")
-            }
-            ResolveError::NoInputVarName => {
-                write!(f, "No `input` variable declared.")
-            }
-            ResolveError::PatternParse(_) => {
-                write!(f, "Error while parsing pattern.")
-            }
-        }
-    }
-}
-
-type Result<T, E = ResolveError> = std::result::Result<T, E>;
+type Result<T, E = parser::Error> = std::result::Result<T, E>;
 
 struct Resolver;
 
 impl Resolver {
     fn resolve_file(&self, file: grammar::MoltFile) -> Result<MoltFile> {
-        let grammar::MoltFile { fns, mut stmts } = file;
-        let mut fns: Vec<_> = fns
+        let grammar::MoltFile { fns, stmts: _ } = file;
+        let fns: Vec<_> = fns
             .into_iter()
             .map(|f| self.resolve_fn(f))
             .collect::<Result<_>>()?;
-        // Clearly very ugly, but we need to get started somehow.
-        if !stmts.is_empty() {
-            if fns.iter().any(|f| {
-                if let FnName::Ident(ident) = &f.name {
-                    ident == MAIN_FN_NAME
-                } else {
-                    false
-                }
-            }) {
-                return Err(ResolveError::MainFnAndTopLevelStmtExist);
-            }
-            if let grammar::Stmt::Let(l) = stmts.remove(0) {
-                let grammar::LetLhs::Var(ref var_name) = l.lhs else {
-                    return Err(ResolveError::InvalidInputVarName);
-                };
-                if *var_name != INPUT_VAR_NAME {
-                    return Err(ResolveError::InvalidInputVarName);
-                }
-                fns.push(MoltFn {
-                    name: FnName::ImplicitMain,
-                    args: vec![FnArg {
-                        var_name: var_name.clone(),
-                        type_: self.resolve_type(l.type_)?,
-                    }],
-                    stmts: stmts
-                        .into_iter()
-                        .map(|s| self.resolve_stmt(s))
-                        .collect::<Result<Vec<_>>>()?,
-                });
-            } else {
-                return Err(ResolveError::NoInputVarName);
-            }
-        }
         Ok(MoltFile { fns })
     }
 
     fn resolve_fn(&self, f: grammar::MoltFn) -> Result<MoltFn> {
         Ok(MoltFn {
-            name: FnName::Ident(f.name),
+            name: f.name,
             args: f
                 .args
                 .into_iter()
@@ -272,8 +204,7 @@ impl Resolver {
             |stream| parse_node_with_kind(stream, *kind),
             p.tokens,
             Mode::Molt,
-        )
-        .map_err(ResolveError::PatternParse)?;
+        )?;
         let ctx = ctx.replace(Ctx::new(Mode::Molt));
         Ok(Pat {
             vars: ctx
@@ -303,8 +234,9 @@ impl MoltFile {
         let source = input.source(file_id).unwrap();
         let file: grammar::MoltFile =
             crate::parser::parse_str(source, Mode::Molt).map_err(|e| Error::parse(e, file_id))?;
+        let file = file.add_implicit_main().map_err(Error::FileStructure)?;
         Resolver
             .resolve_file(file)
-            .map_err(|e| Error::Resolve2(e, file_id))
+            .map_err(|e| Error::Parse(e, file_id))
     }
 }

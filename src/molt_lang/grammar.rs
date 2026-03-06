@@ -2,9 +2,11 @@ mod parse;
 
 use proc_macro2::TokenStream;
 
+use crate::molt_lang::FnName;
 use crate::parser::punctuated::Punctuated;
 use crate::parser::token::Comma;
 use crate::rust_grammar::{Ident, Kind};
+pub use parse::FileStructureError;
 
 #[derive(Debug)]
 pub(crate) struct MoltFile {
@@ -14,7 +16,7 @@ pub(crate) struct MoltFile {
 
 #[derive(Debug)]
 pub struct MoltFn {
-    pub name: Ident,
+    pub name: FnName,
     pub args: Punctuated<FnArg, Comma>,
     pub stmts: Punctuated<Stmt, Token![;]>,
 }

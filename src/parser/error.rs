@@ -6,7 +6,7 @@ use proc_macro2::{LexError, Span};
 use crate::parser::buffer::Cursor;
 use crate::parser::thread::ThreadBound;
 
-pub type Result<T> = std::result::Result<T, Error>;
+pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 pub struct Error {
     messages: Vec<ErrorMessage>,

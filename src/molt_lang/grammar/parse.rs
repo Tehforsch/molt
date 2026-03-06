@@ -1,6 +1,7 @@
 use proc_macro2::TokenStream;
 
 use crate::molt_lang::grammar::{FnCall, TokenVar, TokenVars, Type};
+use crate::molt_lang::{FnName, INPUT_VAR_NAME, MAIN_FN_NAME};
 use crate::parser::parse::{Parse, ParseStream};
 use crate::parser::punctuated::Punctuated;
 use crate::parser::{Result, token};
@@ -25,6 +26,61 @@ impl Parse for MoltFile {
     }
 }
 
+#[derive(Debug)]
+pub enum FileStructureError {
+    MainFnAndTopLevelStmtExist,
+    InvalidInputVarName,
+    NoInputVarName,
+}
+
+impl std::fmt::Display for FileStructureError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FileStructureError::MainFnAndTopLevelStmtExist => {
+                write!(f, "Both a main function and top level statements exist")
+            }
+            FileStructureError::InvalidInputVarName => {
+                write!(f, "The first variable needs to have name `input`.")
+            }
+            FileStructureError::NoInputVarName => {
+                write!(f, "No `input` variable declared.")
+            }
+        }
+    }
+}
+
+impl MoltFile {
+    pub fn add_implicit_main(mut self) -> Result<Self, FileStructureError> {
+        // Clearly very ugly, but we need to get started somehow.
+        if !self.stmts.is_empty() {
+            if self.fns.iter().any(|f| MAIN_FN_NAME == f.name.to_string()) {
+                return Err(FileStructureError::MainFnAndTopLevelStmtExist);
+            }
+            if let Stmt::Let(l) = self.stmts.remove(0) {
+                let LetLhs::Var(ref var_name) = l.lhs else {
+                    return Err(FileStructureError::InvalidInputVarName);
+                };
+                if *var_name != INPUT_VAR_NAME {
+                    return Err(FileStructureError::InvalidInputVarName);
+                }
+                let mut args = Punctuated::new();
+                args.push(FnArg {
+                    var_name: var_name.clone(),
+                    type_: l.type_,
+                });
+                self.fns.push(MoltFn {
+                    name: FnName::ImplicitMain,
+                    args,
+                    stmts: self.stmts.drain(..).collect(),
+                });
+            } else {
+                return Err(FileStructureError::NoInputVarName);
+            }
+        }
+        Ok(self)
+    }
+}
+
 impl Parse for MoltFn {
     fn parse(input: ParseStream) -> Result<Self> {
         let _: Token![fn] = input.parse()?;
@@ -38,7 +94,11 @@ impl Parse for MoltFn {
         braced!(body in input);
         let stmts = Punctuated::parse_terminated_with(&body, Stmt::parse)?;
 
-        Ok(MoltFn { name, args, stmts })
+        Ok(MoltFn {
+            name: FnName::Ident(name),
+            args,
+            stmts,
+        })
     }
 }
 
