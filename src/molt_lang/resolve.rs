@@ -1,4 +1,6 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::rc::Rc;
 
 use super::*;
@@ -8,12 +10,63 @@ use crate::Var;
 use crate::molt_lang::MoltFile;
 use crate::molt_lang::MoltFn;
 use crate::molt_lang::grammar;
+use crate::molt_lang::scope::Scope;
+use crate::molt_lang::visitor::Visitor;
 use crate::parser;
 use crate::rust_grammar::Kind;
 use crate::rust_grammar::Node;
 use crate::rust_grammar::parse_node_with_kind;
 
 type Result<T, E = parser::Error> = std::result::Result<T, E>;
+
+type VarId = usize;
+
+pub struct NameResolver {
+    depth: usize,
+    scopes: Vec<Scope<()>>,
+    scope_offsets: HashMap<VarId, usize>,
+}
+
+impl NameResolver {
+    fn next_scope_index(&self) -> usize {
+        self.scopes.len() - 1
+    }
+
+    fn active_scope(&self) -> &Scope<()> {
+        self.scopes.last().unwrap()
+    }
+
+    fn active_scope_mut(&mut self) -> &mut Scope<()> {
+        self.scopes.last_mut().unwrap()
+    }
+}
+
+impl Visitor for NameResolver {
+    fn visit_fn(&mut self, f: &MoltFn) {
+        let mut scope = Scope::child_of(self.active_scope(), self.next_scope_index());
+        for arg in f.args.iter() {
+            scope.insert(arg.var_name.clone(), ());
+        }
+        self.scopes.push(scope);
+        self.scopes.pop();
+    }
+
+    fn visit_fn_arg(&mut self, _arg: &FnArg) {}
+
+    fn visit_stmt(&mut self, _stmt: &Stmt) {}
+
+    fn visit_expr(&mut self, _expr: &Expr) {}
+
+    fn visit_let_stmt(&mut self, _let_stmt: &LetStmt) {}
+
+    fn visit_fn_call(&mut self, _fn_call: &FnCall) {}
+
+    fn visit_pat(&mut self, _pat: &Pat) {}
+
+    fn visit_type(&mut self, _type: &Type) {}
+
+    fn visit_ident(&mut self, _ident: &Ident) {}
+}
 
 pub struct Resolver;
 
