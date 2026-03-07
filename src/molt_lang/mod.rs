@@ -2,6 +2,7 @@ mod context;
 mod grammar;
 mod interpreter;
 mod resolve;
+mod scope;
 
 pub(crate) use context::Context;
 pub(crate) use grammar::FileStructureError;

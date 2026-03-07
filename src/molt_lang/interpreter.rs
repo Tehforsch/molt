@@ -11,6 +11,7 @@ use crate::{
         Expr, MAIN_FN_NAME, MoltFile, MoltFn, Stmt, Type,
         context::Context,
         interpreter::{builtins::BuiltinFn, value::StmtValue},
+        scope::Scope as GenericScope,
     },
     rust_grammar::{Ident, Node},
 };
@@ -19,30 +20,9 @@ use {builtins::builtins, value::Value};
 
 use error::Result;
 
+type Scope = GenericScope<Value>;
+
 pub(crate) use error::Error;
-
-type ScopeIndex = usize;
-
-#[derive(Default)]
-struct Scope {
-    parent: Option<ScopeIndex>,
-    variables: HashMap<Ident, Value>,
-    index: ScopeIndex,
-}
-
-impl Scope {
-    fn child_of(active_scope: &Scope, index: usize) -> Scope {
-        Self {
-            parent: Some(active_scope.index),
-            variables: HashMap::default(),
-            index,
-        }
-    }
-
-    fn insert(&mut self, var_name: Ident, val: &Value) {
-        self.variables.insert(var_name, val.clone());
-    }
-}
 
 #[derive(Clone, Copy)]
 pub(crate) enum RuntimeFn<'a> {
@@ -132,7 +112,7 @@ impl<'a> Interpreter<'a> {
         let mut scope = Scope::child_of(self.active_scope(), self.next_scope_index());
         assert_eq!(user_fn.args.len(), args.len());
         for (arg, val) in user_fn.args.iter().zip(args.iter()) {
-            scope.insert(arg.var_name.clone(), val);
+            scope.insert(arg.var_name.clone(), val.clone());
         }
         self.scopes.push(scope);
         self.eval_block(user_fn)?;
@@ -172,7 +152,7 @@ impl<'a> Interpreter<'a> {
             LetLhs::Var(var_name) => {
                 if let Some(rhs) = &let_stmt.rhs {
                     let val = self.eval_expr(rhs)?;
-                    self.active_scope_mut().insert(var_name.clone(), &val);
+                    self.active_scope_mut().insert(var_name.clone(), val);
                 }
                 Ok(StmtValue::Value(Value::Unit))
             }
@@ -216,7 +196,7 @@ impl<'a> Interpreter<'a> {
                 };
 
                 for (ident, val) in new_bindings {
-                    self.active_scope_mut().insert(ident, &val);
+                    self.active_scope_mut().insert(ident, val);
                 }
                 Ok(StmtValue::Value(Value::Unit))
             }
@@ -246,10 +226,10 @@ impl<'a> Interpreter<'a> {
         let mut scope_idx = Some(self.scopes.len() - 1);
         while let Some(idx) = scope_idx {
             let scope = &self.scopes[idx];
-            if let Some(val) = scope.variables.get(name) {
+            if let Some(val) = scope.get(name) {
                 return Ok(val);
             }
-            scope_idx = scope.parent;
+            scope_idx = scope.parent();
         }
         Err(Error::undefined_var(&name.to_string()))
     }
