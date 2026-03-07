@@ -8,9 +8,30 @@ struct Section {
     code_blocks: Vec<CodeBlock>,
 }
 
+enum Lang {
+    Molt,
+    MoltError,
+    Rust,
+}
+
+impl Lang {
+    fn new(lang: &str) -> Option<Self> {
+        match lang {
+            "molt" => Some(Self::Molt),
+            "molt error" => Some(Self::MoltError),
+            "rust" => Some(Self::Rust),
+            _ => None,
+        }
+    }
+}
+
 struct CodeBlock {
-    lang: String,
+    lang: Lang,
     content: String,
+}
+
+struct TestConfig {
+    should_error: bool,
 }
 
 fn parse_markdown(content: &str) -> Vec<Section> {
@@ -44,7 +65,8 @@ fn parse_markdown(content: &str) -> Vec<Section> {
             }
             Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(lang))) => {
                 in_code_block = true;
-                current_lang = lang.to_string();
+                current_lang = Lang::new(lang)
+                    .unwrap_or_else(|| panic!("Unexpected lang in md block: {lang}"));
                 current_code.clear();
             }
             Event::Text(text) if in_code_block => {
@@ -78,7 +100,7 @@ fn filter_code_blocks(section: &Section, f: impl Fn(&str) -> bool) -> Vec<&CodeB
         .collect()
 }
 
-pub fn run_on_str(molt_src: &str, rust_sources: &[&str]) -> Result<String, Error> {
+pub fn run_on_str(c: TestConfig, molt_src: &str, rust_sources: &[&str]) -> Result<String, Error> {
     let mut input = Input::new(Source::String(Contents::new(molt_src.to_string())));
     for src in rust_sources {
         input = input.with_rust_src(src.to_string())?;
@@ -92,9 +114,11 @@ pub fn run_on_str(molt_src: &str, rust_sources: &[&str]) -> Result<String, Error
 }
 
 fn run_section(md_file: &Path, section: &Section) {
-    let molt_blocks = filter_code_blocks(section, |lang| lang == "molt");
+    let molt_blocks = filter_code_blocks(section, |lang| lang == "molt" || lang == "molt error");
     let rust_blocks = filter_code_blocks(section, |lang| lang == "rust");
-    let unknown_blocks = filter_code_blocks(section, |lang| lang != "rust" && lang != "molt");
+    let unknown_blocks = filter_code_blocks(section, |lang| {
+        lang != "rust" && lang != "molt" && lang != "molt error"
+    });
 
     assert!(!section.code_blocks.is_empty());
     assert!(unknown_blocks.is_empty());
