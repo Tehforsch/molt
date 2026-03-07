@@ -18,7 +18,6 @@ edition.workspace = true
 [dependencies]
 clap = { version = "4.5.21", features = ["derive"] }
 codespan-reporting = "0.12.0"
-walkdir = "2.5.0"
 ignore = "0.4"
 thiserror = "2.0.12"
 serde = { version = "1.0", features = ["derive"] }
@@ -35,6 +34,7 @@ debug-print = []
 default = ["debug-print"]
 
 [dev-dependencies]
+datatest-stable = "0.2"
 insta = { version = "1.41.1"}
 pulldown-cmark = "0.12"
 reqwest = { version = "0.11", features = ["blocking"] }
@@ -49,6 +49,10 @@ similar.opt-level = 3
 [[bin]]
 name = "molt"
 path = "src/main.rs"
+
+[[test]]
+name = "mdtest"
+harness = false
 
 [profile.dev]
 debug = "line-tables-only"

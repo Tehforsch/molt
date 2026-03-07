@@ -7,7 +7,7 @@ use std::process::ExitCode;
 use clap::Parser;
 use cli::CliArgs;
 use ignore::WalkBuilder;
-use molt::{Input, Source, Writer, emit_error, run};
+use molt::{Input, Source, Writer, run};
 
 #[derive(Debug, thiserror::Error)]
 enum Error {
@@ -98,8 +98,8 @@ fn main() -> Result<ExitCode> {
     };
 
     let writer = Writer::default();
-    let diagnostics = run(&input, &writer, config, root.as_ref());
-    if emit_error(&writer, &input, diagnostics).is_err() {
+    let result = run(&input, &writer, config, root.as_ref());
+    if result.is_err() {
         Ok(ExitCode::FAILURE)
     } else {
         Ok(ExitCode::SUCCESS)

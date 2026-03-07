@@ -31,7 +31,7 @@ impl<'a> FilePath<'a> {
     }
 }
 
-pub(crate) struct Contents {
+pub struct Contents {
     contents: String,
     /// The starting byte indices in the source code.
     line_starts: Vec<usize>,
@@ -102,8 +102,7 @@ impl Input {
         }
     }
 
-    #[cfg(test)]
-    pub(crate) fn with_rust_src(mut self, contents: String) -> Result<Self, crate::Error> {
+    pub fn with_rust_src(mut self, contents: String) -> Result<Self, crate::Error> {
         self.rust_src.push(Source::String(Contents::new(contents)));
         Ok(Self {
             molt_src: self.molt_src,
@@ -176,7 +175,7 @@ impl<'a> std::fmt::Display for FilePath<'a> {
 }
 
 impl Contents {
-    pub(crate) fn new(contents: String) -> Self {
+    pub fn new(contents: String) -> Self {
         let line_starts = line_starts(&contents).collect();
         Self {
             contents,

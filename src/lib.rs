@@ -30,9 +30,10 @@ use codespan_reporting::files::Files;
 pub use cmp_syn::CmpSyn;
 pub use config::Config;
 pub(crate) use ctx::{Ctx, Id, NodeId, Var};
-pub use error::{Error, emit_error};
+pub use error::Error;
+pub(crate) use error::emit_error;
+pub use input::{Contents, Input, Source};
 pub(crate) use input::{Diagnostic, FileId};
-pub use input::{Input, Source};
 pub(crate) use match_pattern::{Match, Matcher};
 pub(crate) use node::{KindType, NodeType, ToNode};
 pub(crate) use node_list::{
@@ -64,7 +65,7 @@ impl RustFile {
     }
 }
 
-pub fn run(
+pub fn run_internal(
     input: &Input,
     writer: &Writer,
     config: crate::Config,
@@ -85,6 +86,19 @@ pub fn run(
         crate::molt_lang::Interpreter::run(&molt_file, context).map_err(Error::Interpreter)?;
     }
     Ok(())
+}
+
+pub fn run(
+    input: &Input,
+    writer: &Writer,
+    config: crate::Config,
+    _cargo_root: Option<&PathBuf>,
+) -> Result<(), Error> {
+    emit_error(
+        writer,
+        input,
+        run_internal(input, writer, config, _cargo_root),
+    )
 }
 
 #[allow(unused)]
