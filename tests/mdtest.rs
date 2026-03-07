@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use molt::{Config, Contents, Error, Input, Source, Writer};
+use molt::{Config, Contents, Error, Input, Source, Writer, emit_error};
 use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag, TagEnd};
 
 struct Section {
@@ -8,9 +8,31 @@ struct Section {
     code_blocks: Vec<CodeBlock>,
 }
 
+#[derive(Clone, Copy)]
+enum Lang {
+    Molt,
+    MoltError,
+    Rust,
+}
+
+impl Lang {
+    fn new(lang: &str) -> Option<Self> {
+        match lang {
+            "molt" => Some(Self::Molt),
+            "molt error" => Some(Self::MoltError),
+            "rust" => Some(Self::Rust),
+            _ => None,
+        }
+    }
+}
+
 struct CodeBlock {
-    lang: String,
+    lang: Lang,
     content: String,
+}
+
+struct TestConfig {
+    should_error: bool,
 }
 
 fn parse_markdown(content: &str) -> Vec<Section> {
@@ -54,7 +76,9 @@ fn parse_markdown(content: &str) -> Vec<Section> {
                 in_code_block = false;
                 if let Some(ref mut section) = current_section {
                     section.code_blocks.push(CodeBlock {
-                        lang: current_lang.clone(),
+                        lang: Lang::new(&current_lang).unwrap_or_else(|| {
+                            panic!("Unexpected lang in md block: {current_lang}")
+                        }),
                         content: current_code.clone(),
                     });
                 }
@@ -70,34 +94,41 @@ fn parse_markdown(content: &str) -> Vec<Section> {
     sections
 }
 
-fn filter_code_blocks(section: &Section, f: impl Fn(&str) -> bool) -> Vec<&CodeBlock> {
+fn filter_code_blocks(section: &Section, f: impl Fn(Lang) -> bool) -> Vec<&CodeBlock> {
     section
         .code_blocks
         .iter()
-        .filter(|block| f(&block.lang))
+        .filter(|block| f(block.lang))
         .collect()
 }
 
-pub fn run_on_str(molt_src: &str, rust_sources: &[&str]) -> Result<String, Error> {
+fn run_on_str(c: TestConfig, molt_src: &str, rust_sources: &[&str]) -> Result<String, Error> {
     let mut input = Input::new(Source::String(Contents::new(molt_src.to_string())));
     for src in rust_sources {
         input = input.with_rust_src(src.to_string())?;
     }
     let writer = Writer::buffer();
-    // Intentionally ignore the error here for now, so I see parse errors.
-    // Eventually, we should probably configure which tests are supposed
-    // to error and which ones arent.
-    let _ = molt::run(&input, &writer, Config::default(), None);
+    if c.should_error {
+        // If an error is expected, ignore the result since any error will be
+        // written to the `writer` and therefore appear in the output so we can
+        // test against it.
+        let _ = molt::run(&input, &writer, Config::default(), None);
+    } else {
+        let result = molt::run(&input, &writer, Config::default(), None);
+        // Otherwise, emit the error to stderr
+        if result.is_err() {
+            emit_error(&Writer::default(), &input, result).unwrap();
+        }
+    }
     Ok(writer.into_string().unwrap())
 }
 
 fn run_section(md_file: &Path, section: &Section) {
-    let molt_blocks = filter_code_blocks(section, |lang| lang == "molt");
-    let rust_blocks = filter_code_blocks(section, |lang| lang == "rust");
-    let unknown_blocks = filter_code_blocks(section, |lang| lang != "rust" && lang != "molt");
+    let molt_blocks =
+        filter_code_blocks(section, |lang| matches!(lang, Lang::Molt | Lang::MoltError));
+    let rust_blocks = filter_code_blocks(section, |lang| matches!(lang, Lang::Rust));
 
     assert!(!section.code_blocks.is_empty());
-    assert!(unknown_blocks.is_empty());
     assert_eq!(
         molt_blocks.len(),
         1,
@@ -108,7 +139,13 @@ fn run_section(md_file: &Path, section: &Section) {
     );
 
     let rust_sources: Vec<&str> = rust_blocks.iter().map(|b| b.content.as_str()).collect();
-    let output = run_on_str(&molt_blocks[0].content, &rust_sources).unwrap_or_else(|e| {
+    let should_error = match &molt_blocks[0].lang {
+        Lang::Molt => false,
+        Lang::MoltError => true,
+        Lang::Rust => unreachable!(),
+    };
+    let config = TestConfig { should_error };
+    let output = run_on_str(config, &molt_blocks[0].content, &rust_sources).unwrap_or_else(|e| {
         panic!(
             "{}: section {:?}: molt run failed: {e:?}",
             md_file.display(),

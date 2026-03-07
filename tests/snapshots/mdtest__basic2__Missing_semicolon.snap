@@ -1,0 +1,11 @@
+---
+source: tests/mdtest.rs
+expression: output
+---
+error: expected `;`
+  ┌─ test input:1:1
+  │
+1 │ let input: Stmt
+  │ ^ expected `;`
+  │
+  = expected `;`
