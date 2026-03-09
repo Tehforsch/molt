@@ -55,6 +55,7 @@ impl<'src> Interpreter<'src> {
         let content = match val {
             Value::String(s) => s,
             Value::Int(x) => &format!("{}", x),
+            Value::Bool(b) => &format!("{}", b),
             Value::Node(id) => self.context.real_ctx().print(*id, self.context.real_src()),
             Value::Unit => "()",
         };

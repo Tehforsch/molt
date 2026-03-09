@@ -5,7 +5,7 @@ use proc_macro2::TokenStream;
 use crate::molt_lang::FnName;
 use crate::parser::punctuated::Punctuated;
 use crate::parser::token::Comma;
-use crate::rust_grammar::{Ident, Kind, LitInt, LitStr};
+use crate::rust_grammar::{Ident, Kind, LitBool, LitInt, LitStr};
 pub use parse::FileStructureError;
 
 #[derive(Debug)]
@@ -73,6 +73,7 @@ pub enum Atom {
 pub enum Lit {
     Int(LitInt),
     Str(LitStr),
+    Bool(LitBool),
 }
 
 #[derive(Debug)]

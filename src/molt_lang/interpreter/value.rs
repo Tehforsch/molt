@@ -5,6 +5,7 @@ pub enum Value {
     #[allow(unused)]
     String(String),
     Int(i64),
+    Bool(bool),
     Node(Id),
     // TODO: Get rid of this once we have proper semantics
     Unit,

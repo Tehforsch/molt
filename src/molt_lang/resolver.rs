@@ -212,6 +212,7 @@ impl Resolver {
                 Ok(Lit::Int(val))
             }
             grammar::Lit::Str(lit_str) => Ok(Lit::Str(lit_str.value())),
+            grammar::Lit::Bool(lit_bool) => Ok(Lit::Bool(lit_bool.value())),
         }
     }
 

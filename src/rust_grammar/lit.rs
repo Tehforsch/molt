@@ -478,6 +478,14 @@ impl LitBool {
         let s = if self.value { "true" } else { "false" };
         Ident::new(s, self.span)
     }
+
+    pub fn peek(input: ParseStream) -> bool {
+        if let Some(ident) = input.cursor().ident().map(|(ident, _)| ident) {
+            ident == "true" || ident == "false"
+        } else {
+            false
+        }
+    }
 }
 
 macro_rules! lit_extra_traits {

@@ -180,6 +180,7 @@ impl<'a> Interpreter<'a> {
         match lit {
             Lit::Str(s) => Ok(Value::String(s.clone())),
             Lit::Int(x) => Ok(Value::Int(*x)),
+            Lit::Bool(b) => Ok(Value::Bool(*b)),
         }
     }
 

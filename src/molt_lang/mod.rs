@@ -105,6 +105,7 @@ pub enum Atom {
 pub enum Lit {
     Str(String),
     Int(i64),
+    Bool(bool),
 }
 
 pub struct Pat {

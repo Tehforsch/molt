@@ -6,7 +6,7 @@ use crate::parser::parse::{Parse, ParseStream};
 use crate::parser::punctuated::Punctuated;
 use crate::parser::{Result, token};
 use crate::rust_grammar::ext::IdentExt;
-use crate::rust_grammar::{Ident, Kind, LitInt, LitStr};
+use crate::rust_grammar::{Ident, Kind, LitBool, LitInt, LitStr};
 
 use super::{Expr, FnArg, LetLhs, LetStmt, MoltFile, MoltFn, Pat, Stmt};
 
@@ -177,16 +177,18 @@ impl Parse for FnCall {
 impl Parse for Expr {
     fn parse(input: ParseStream) -> Result<Self> {
         let lookahead = input.lookahead1();
-        if lookahead.peek(Ident::peek_any) {
+        if lookahead.peek(LitInt) {
+            Ok(Expr::Atom(Atom::Lit(Lit::Int(input.parse()?))))
+        } else if lookahead.peek(LitStr) {
+            Ok(Expr::Atom(Atom::Lit(Lit::Str(input.parse()?))))
+        } else if LitBool::peek(input) {
+            Ok(Expr::Atom(Atom::Lit(Lit::Bool(input.parse()?))))
+        } else if input.peek(Ident::peek_any) {
             if input.peek2(token::Paren) {
                 Ok(Expr::FnCall(input.parse()?))
             } else {
                 Ok(Expr::Atom(Atom::Var(input.parse()?)))
             }
-        } else if lookahead.peek(LitInt) {
-            Ok(Expr::Atom(Atom::Lit(Lit::Int(input.parse()?))))
-        } else if lookahead.peek(LitStr) {
-            Ok(Expr::Atom(Atom::Lit(Lit::Str(input.parse()?))))
         } else {
             Err(lookahead.error())
         }
