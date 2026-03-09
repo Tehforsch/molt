@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 
 use crate::molt_lang::grammar::{Atom, FnCall, Lit, TokenVar, TokenVars, Type};
 use crate::molt_lang::{FnName, INPUT_VAR_NAME, MAIN_FN_NAME};
-use crate::parser::parse::{Parse, ParseStream};
+use crate::parser::parse::{self, Parse, ParseStream};
 use crate::parser::punctuated::Punctuated;
 use crate::parser::{Result, token};
 use crate::rust_grammar::ext::IdentExt;
@@ -224,12 +224,20 @@ impl Parse for TokenVars {
             } else if input.parse::<Token![$]>().is_ok() {
                 let name = input.parse()?;
                 vars.0.push(TokenVar { name });
+            } else if input.cursor().any_group().is_some() {
+                let inner_vars: TokenVars = input.step(|cursor| {
+                    let (inner, _delim, _span, rest) = cursor.any_group().unwrap();
+                    let scope = _span.close();
+                    let ctx = cursor.ctx.clone();
+                    let nested = parse::advance_step_cursor(cursor, inner);
+                    let unexpected = parse::get_unexpected(input);
+                    let content =
+                        parse::new_parse_buffer(scope, nested, unexpected, ctx, input.mode());
+                    let inner_vars: TokenVars = content.parse().unwrap();
+                    Ok((inner_vars, rest))
+                })?;
+                vars.0.extend(inner_vars.0);
             } else {
-                if input.peek(token::Group) {
-                    let group = crate::parser::group::parse_group(input)?;
-                    let inner_vars: TokenVars = group.content.parse()?;
-                    vars.0.extend(inner_vars.0);
-                }
                 input
                     .step(|cursor| Ok(((), cursor.skip().unwrap())))
                     .unwrap();
