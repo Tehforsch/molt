@@ -1,18 +1,19 @@
 mod context;
 mod grammar;
 mod interpreter;
-mod resolve;
+mod resolver;
 
 pub(crate) use context::Context;
 pub(crate) use grammar::FileStructureError;
 pub(crate) use interpreter::Error as InterpreterError;
 pub(crate) use interpreter::Interpreter;
+pub(crate) use resolver::Error as ResolverError;
 
 use codespan_reporting::files::Files;
 
 use crate::Ctx;
 use crate::Id;
-use crate::molt_lang::resolve::Resolver;
+use crate::molt_lang::resolver::Resolver;
 use crate::rust_grammar::Ident;
 use crate::rust_grammar::Kind;
 use crate::rust_grammar::Node;
@@ -24,7 +25,11 @@ const INPUT_VAR_NAME: &str = "input";
 #[derive(Debug)]
 pub struct MoltFile {
     pub fns: Vec<MoltFn>,
+    pub num_vars: usize,
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct VarId(usize);
 
 #[derive(Debug)]
 pub enum FnName {
@@ -50,7 +55,7 @@ pub struct MoltFn {
 
 #[derive(Debug)]
 pub struct FnArg {
-    pub var_name: Ident,
+    pub var_id: VarId,
     pub type_: Type,
 }
 
@@ -74,7 +79,7 @@ pub struct LetStmt {
 
 #[derive(Debug)]
 pub enum LetLhs {
-    Var(Ident),
+    Var(VarId),
     Pat(Pat),
 }
 
@@ -87,13 +92,24 @@ pub struct FnCall {
 #[derive(Debug)]
 pub enum Expr {
     FnCall(FnCall),
-    Atom(Ident),
+    Atom(VarId),
 }
 
 pub struct Pat {
     pub vars: Vec<TokenVar>,
     pub ctx: Ctx<Node>,
     pub node: Id,
+}
+
+impl Pat {
+    fn get_var_id(&self, id: Id) -> VarId {
+        // TODO this is O(n^2) given the surrounding context.
+        self.vars
+            .iter()
+            .find(|var| var.ctx_id == id)
+            .map(|var| var.var_id)
+            .unwrap()
+    }
 }
 
 impl std::fmt::Debug for Pat {
@@ -104,8 +120,8 @@ impl std::fmt::Debug for Pat {
 
 #[derive(Debug, Clone)]
 pub struct TokenVar {
-    pub id: Id,
-    pub ident: Ident,
+    pub ctx_id: Id,
+    pub var_id: VarId,
 }
 
 impl MoltFile {
@@ -115,8 +131,9 @@ impl MoltFile {
         let file: grammar::MoltFile =
             crate::parser::parse_str(source, Mode::Molt).map_err(|e| Error::parse(e, file_id))?;
         let file = file.add_implicit_main().map_err(Error::FileStructure)?;
-        Resolver
+        let mut resolver = Resolver::default();
+        resolver
             .resolve_file(file)
-            .map_err(|e| Error::Parse(e, file_id))
+            .map_err(|e| Error::Resolver(e, file_id))
     }
 }

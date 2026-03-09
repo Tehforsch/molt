@@ -6,11 +6,12 @@ use codespan_reporting::diagnostic::{Diagnostic, Label};
 
 use crate::input::{FileId, Input};
 use crate::modify::ModifyError;
-use crate::molt_lang::{FileStructureError, InterpreterError};
+use crate::molt_lang::{FileStructureError, InterpreterError, ResolverError};
 
 #[derive(Debug)]
 pub enum Error {
     Parse(crate::parser::Error, FileId),
+    Resolver(ResolverError, FileId),
     FileStructure(FileStructureError),
     Misc(String),
     Modify(ModifyError),
@@ -32,6 +33,8 @@ impl Error {
     fn parse_error_and_file_id(&self) -> Option<(&parser::Error, FileId)> {
         match self {
             Error::Parse(error, file_id) => Some((error, *file_id)),
+            Error::Resolver(ResolverError::Parse(error), file_id) => Some((error, *file_id)),
+            Error::Resolver(_, _) => None,
             Error::FileStructure(_) => None,
             Error::Misc(_) => None,
             Error::Modify(_) => None,
@@ -94,6 +97,7 @@ impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Error::Parse(error, _) => write!(f, "{error}"),
+            Error::Resolver(error, _) => write!(f, "{error}"),
             Error::FileStructure(error) => write!(f, "{error}"),
             Error::Misc(s) => write!(f, "{s}"),
             Error::Modify(s) => write!(f, "{s}"),

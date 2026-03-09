@@ -12,7 +12,7 @@ use crate::{
         context::Context,
         interpreter::{builtins::BuiltinFn, value::StmtValue},
     },
-    rust_grammar::{Ident, Node},
+    rust_grammar::Node,
 };
 
 use {builtins::builtins, value::Value};
@@ -21,46 +21,48 @@ use error::Result;
 
 pub(crate) use error::Error;
 
-type ScopeIndex = usize;
-
-#[derive(Default)]
-struct Scope {
-    parent: Option<ScopeIndex>,
-    variables: HashMap<Ident, Value>,
-    index: ScopeIndex,
-}
-
-impl Scope {
-    fn child_of(active_scope: &Scope, index: usize) -> Scope {
-        Self {
-            parent: Some(active_scope.index),
-            variables: HashMap::default(),
-            index,
-        }
-    }
-
-    fn insert(&mut self, var_name: Ident, val: &Value) {
-        self.variables.insert(var_name, val.clone());
-    }
-}
-
 #[derive(Clone, Copy)]
 pub(crate) enum RuntimeFn<'a> {
     UserDefined(&'a MoltFn),
     Builtin(BuiltinFn),
 }
 
-pub(crate) struct Interpreter<'a> {
-    scopes: Vec<Scope>,
-    fns: HashMap<String, RuntimeFn<'a>>,
+#[derive(Default)]
+struct VarStack {
+    values: Vec<Value>,
+}
 
+impl VarStack {
+    // TODO document why this is push/pop and not set/get (see recursion)
+    fn push(&mut self, val: Value) {
+        self.values.push(val)
+    }
+
+    fn pop(&mut self) -> Value {
+        self.values.pop().unwrap()
+    }
+
+    fn get(&self) -> Value {
+        // We unwrap here since the resolver will have reported
+        // an undefined variable if the stack is empty at run time
+        self.values.last().unwrap().clone()
+    }
+
+    fn try_get(&self) -> Option<Value> {
+        self.values.last().cloned()
+    }
+}
+
+pub(crate) struct Interpreter<'a> {
+    vars: Vec<VarStack>,
+    fns: HashMap<String, RuntimeFn<'a>>,
     context: Context<'a>,
 }
 
 impl<'a> Interpreter<'a> {
     pub(crate) fn run(file: &MoltFile, context: Context<'a>) -> Result<()> {
         let mut interpreter = Self {
-            scopes: vec![Scope::default()],
+            vars: (0..file.num_vars).map(|_| VarStack::default()).collect(),
             fns: builtins(),
             context,
         };
@@ -129,14 +131,14 @@ impl<'a> Interpreter<'a> {
     }
 
     fn eval_user_defined_fn(&mut self, args: &[Value], user_fn: &MoltFn) -> Result<(), Error> {
-        let mut scope = Scope::child_of(self.active_scope(), self.next_scope_index());
-        assert_eq!(user_fn.args.len(), args.len());
+        assert_eq!(user_fn.args.len(), args.len()); // todo verify this at resolution time
         for (arg, val) in user_fn.args.iter().zip(args.iter()) {
-            scope.insert(arg.var_name.clone(), val);
+            self.vars[arg.var_id.0].push(val.clone());
         }
-        self.scopes.push(scope);
         self.eval_block(user_fn)?;
-        self.scopes.pop();
+        for arg in user_fn.args.iter() {
+            self.vars[arg.var_id.0].pop();
+        }
         Ok(())
     }
 
@@ -163,16 +165,16 @@ impl<'a> Interpreter<'a> {
                     StmtValue::NoMatch => Ok(Value::Unit),
                 }
             }
-            Expr::Atom(name) => Ok(self.lookup_var(name)?.clone()),
+            Expr::Atom(id) => Ok(self.vars[id.0].get().clone()),
         }
     }
 
     fn eval_let(&mut self, let_stmt: &LetStmt) -> Result<StmtValue> {
         match &let_stmt.lhs {
-            LetLhs::Var(var_name) => {
+            LetLhs::Var(var_id) => {
                 if let Some(rhs) = &let_stmt.rhs {
                     let val = self.eval_expr(rhs)?;
-                    self.active_scope_mut().insert(var_name.clone(), &val);
+                    self.vars[var_id.0].push(val);
                 }
                 Ok(StmtValue::Value(Value::Unit))
             }
@@ -188,14 +190,14 @@ impl<'a> Interpreter<'a> {
                 for var in pat.vars.iter() {
                     // Look up if this variable was previously bound to
                     // something.
-                    let bound_to = self.lookup_var(&var.ident).ok().map(|val| {
+                    let bound_to = self.vars[var.var_id.0].try_get().map(|val| {
                         let Value::Node(bound_to) = val else {
                             todo!()
                             // error handling
                         };
-                        *bound_to
+                        bound_to
                     });
-                    matcher.add_var(var.id, bound_to);
+                    matcher.add_var(var.ctx_id, bound_to);
                 }
                 let new_bindings: Vec<_> = if let Value::Node(real) = real_id {
                     let match_ = matcher.get_matches(pat.node, real);
@@ -204,7 +206,8 @@ impl<'a> Interpreter<'a> {
                             .iter_vars()
                             .map(|var| {
                                 let bound_to = match_.get_binding(var).id.unwrap();
-                                (pat.ctx.get_var(var).ident().clone(), Value::Node(bound_to))
+                                let var_id = pat.get_var_id(var);
+                                (var_id, Value::Node(bound_to))
                             })
                             .collect()
                     } else {
@@ -215,24 +218,12 @@ impl<'a> Interpreter<'a> {
                     todo!()
                 };
 
-                for (ident, val) in new_bindings {
-                    self.active_scope_mut().insert(ident, &val);
+                for (id, val) in new_bindings {
+                    self.vars[id.0].push(val);
                 }
                 Ok(StmtValue::Value(Value::Unit))
             }
         }
-    }
-
-    fn active_scope(&self) -> &Scope {
-        self.scopes.last().unwrap()
-    }
-
-    fn active_scope_mut(&mut self) -> &mut Scope {
-        self.scopes.last_mut().unwrap()
-    }
-
-    fn next_scope_index(&self) -> usize {
-        self.scopes.len() - 1
     }
 
     fn lookup_fn(&mut self, fn_name: &str) -> std::result::Result<RuntimeFn<'a>, Error> {
@@ -240,17 +231,5 @@ impl<'a> Interpreter<'a> {
             .get(fn_name)
             .cloned()
             .ok_or(Error::undefined_fn(fn_name))
-    }
-
-    fn lookup_var(&self, name: &Ident) -> Result<&Value> {
-        let mut scope_idx = Some(self.scopes.len() - 1);
-        while let Some(idx) = scope_idx {
-            let scope = &self.scopes[idx];
-            if let Some(val) = scope.variables.get(name) {
-                return Ok(val);
-            }
-            scope_idx = scope.parent;
-        }
-        Err(Error::undefined_var(&name.to_string()))
     }
 }
