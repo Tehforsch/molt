@@ -159,15 +159,15 @@ impl Resolver {
     }
 
     fn resolve_let_stmt(&mut self, l: grammar::LetStmt) -> Result<LetStmt> {
-        let type_ = self.resolve_type(l.type_)?;
+        let type_ = l.type_.map(|t| self.resolve_type(t)).transpose()?;
         Ok(LetStmt {
-            lhs: self.resolve_let_lhs(l.lhs, &type_)?,
+            lhs: self.resolve_let_lhs(l.lhs, type_.as_ref())?,
             _type_: type_,
             rhs: l.rhs.map(|e| self.resolve_expr(e)).transpose()?,
         })
     }
 
-    fn resolve_let_lhs(&mut self, lhs: grammar::LetLhs, type_: &Type) -> Result<LetLhs> {
+    fn resolve_let_lhs(&mut self, lhs: grammar::LetLhs, type_: Option<&Type>) -> Result<LetLhs> {
         Ok(match lhs {
             grammar::LetLhs::Var(ident) => {
                 let var_id = self.register_var(&ident);
@@ -216,7 +216,7 @@ impl Resolver {
         }
     }
 
-    fn resolve_pat(&mut self, p: grammar::Pat, type_: &Type) -> Result<Pat> {
+    fn resolve_pat(&mut self, p: grammar::Pat, type_: Option<&Type>) -> Result<Pat> {
         let mut pat_ctx = Ctx::<Node>::new(Mode::Molt);
         for var in p.vars.into_iter() {
             let kind = Kind::infer_from_name(&var.name.to_string())
@@ -224,7 +224,9 @@ impl Resolver {
             pat_ctx.add_var::<Node>(Var::new(var.name, kind));
         }
         let ctx = Rc::new(RefCell::new(pat_ctx));
-        let Type::Kind(kind) = type_;
+        let Some(Type::Kind(kind)) = type_ else {
+            todo!() // Error handling!
+        };
         let node = crate::parser::parse_with_ctx(
             ctx.clone(),
             |stream| parse_node_with_kind(stream, *kind),

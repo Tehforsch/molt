@@ -66,7 +66,7 @@ impl MoltFile {
                 let mut args = Punctuated::new();
                 args.push(FnArg {
                     var_name: var_name.clone(),
-                    type_: l.type_,
+                    type_: l.type_.unwrap(), // TODO error handling
                 });
                 self.fns.push(MoltFn {
                     name: FnName::ImplicitMain,
@@ -138,8 +138,12 @@ impl Parse for LetStmt {
     fn parse(input: ParseStream) -> Result<Self> {
         let _: Token![let] = input.parse()?;
         let lhs: LetLhs = input.parse()?;
-        let _: Token![:] = input.parse()?;
-        let type_: Type = input.parse::<Type>()?;
+        let type_: Option<Type> = if input.peek(Token![:]) {
+            let _: Token![:] = input.parse()?;
+            Some(input.parse::<Type>()?)
+        } else {
+            None
+        };
         let rhs = if input.peek(Token![=]) {
             let _: Token![=] = input.parse()?;
             Some(input.parse()?)
