@@ -4,7 +4,7 @@ mod value;
 
 use std::collections::HashMap;
 
-use super::{LetLhs, LetStmt};
+use super::{LetLhs, LetStmt, Lit};
 use crate::{
     Id, Matcher, NodeType,
     molt_lang::{
@@ -165,7 +165,21 @@ impl<'a> Interpreter<'a> {
                     StmtValue::NoMatch => Ok(Value::Unit),
                 }
             }
-            Expr::Atom(id) => Ok(self.vars[id.0].get().clone()),
+            Expr::Atom(atom) => self.eval_atom(atom),
+        }
+    }
+
+    fn eval_atom(&self, atom: &super::Atom) -> Result<Value> {
+        match atom {
+            super::Atom::Var(var_id) => Ok(self.vars[var_id.0].get().clone()),
+            super::Atom::Lit(lit) => self.eval_lit(lit),
+        }
+    }
+
+    fn eval_lit(&self, lit: &Lit) -> Result<Value> {
+        match lit {
+            Lit::Str(s) => Ok(Value::String(s.clone())),
+            Lit::Int(x) => Ok(Value::Int(*x)),
         }
     }
 

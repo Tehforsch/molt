@@ -52,16 +52,13 @@ impl<'src> Interpreter<'src> {
     }
 
     fn print_val(&self, val: &Value) {
-        match val {
-            Value::String(_) => todo!(),
-            Value::Node(id) => {
-                let s = self.context.real_ctx().print(*id, self.context.real_src());
-                self.context.writer().write_line(s);
-            }
-            Value::Unit => {
-                self.context.writer().write_line("()");
-            }
-        }
+        let content = match val {
+            Value::String(s) => s,
+            Value::Int(x) => &format!("{}", x),
+            Value::Node(id) => self.context.real_ctx().print(*id, self.context.real_src()),
+            Value::Unit => "()",
+        };
+        self.context.writer().write_line(content);
     }
 
     fn emit_diagnostic(&self, file_id: FileId, real_node_to_print: Id) {

@@ -5,7 +5,7 @@ use proc_macro2::TokenStream;
 use crate::molt_lang::FnName;
 use crate::parser::punctuated::Punctuated;
 use crate::parser::token::Comma;
-use crate::rust_grammar::{Ident, Kind};
+use crate::rust_grammar::{Ident, Kind, LitInt, LitStr};
 pub use parse::FileStructureError;
 
 #[derive(Debug)]
@@ -18,7 +18,7 @@ pub(crate) struct MoltFile {
 pub struct MoltFn {
     pub name: FnName,
     pub args: Punctuated<FnArg, Comma>,
-    pub stmts: Punctuated<Stmt, Token![;]>,
+    pub stmts: Vec<Stmt>,
 }
 
 #[derive(Debug)]
@@ -60,7 +60,19 @@ pub struct FnCall {
 #[derive(Debug)]
 pub enum Expr {
     FnCall(FnCall),
-    Atom(Ident),
+    Atom(Atom),
+}
+
+#[derive(Debug)]
+pub enum Atom {
+    Lit(Lit),
+    Var(Ident),
+}
+
+#[derive(Debug)]
+pub enum Lit {
+    Int(LitInt),
+    Str(LitStr),
 }
 
 #[derive(Debug)]

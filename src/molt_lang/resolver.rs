@@ -191,7 +191,27 @@ impl Resolver {
     fn resolve_expr(&mut self, expr: grammar::Expr) -> Result<Expr> {
         match expr {
             grammar::Expr::FnCall(f) => Ok(Expr::FnCall(self.resolve_fn_call(f)?)),
-            grammar::Expr::Atom(name) => Ok(Expr::Atom(self.lookup_var(&name)?)),
+            grammar::Expr::Atom(atom) => Ok(Expr::Atom(self.resolve_atom(&atom)?)),
+        }
+    }
+
+    fn resolve_atom(&self, atom: &grammar::Atom) -> Result<Atom> {
+        match atom {
+            grammar::Atom::Lit(lit) => Ok(Atom::Lit(self.resolve_lit(lit)?)),
+            grammar::Atom::Var(ident) => Ok(Atom::Var(self.lookup_var(ident)?)),
+        }
+    }
+
+    fn resolve_lit(&self, lit: &grammar::Lit) -> Result<Lit> {
+        match lit {
+            grammar::Lit::Int(lit_int) => {
+                let val = lit_int
+                    .base10_digits()
+                    .parse()
+                    .map_err(|err| Error::Parse(parser::Error::new(lit_int.span(), err)))?;
+                Ok(Lit::Int(val))
+            }
+            grammar::Lit::Str(lit_str) => Ok(Lit::Str(lit_str.value())),
         }
     }
 

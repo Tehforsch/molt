@@ -17,7 +17,7 @@ mod item;
 pub use crate::rust_grammar::item::Item;
 pub mod lifetime;
 mod lit;
-pub use crate::rust_grammar::lit::Lit;
+pub use crate::rust_grammar::lit::{Lit, LitInt, LitStr};
 mod mac;
 mod op;
 mod pat;

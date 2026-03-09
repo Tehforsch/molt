@@ -1,12 +1,12 @@
 use proc_macro2::TokenStream;
 
-use crate::molt_lang::grammar::{FnCall, TokenVar, TokenVars, Type};
+use crate::molt_lang::grammar::{Atom, FnCall, Lit, TokenVar, TokenVars, Type};
 use crate::molt_lang::{FnName, INPUT_VAR_NAME, MAIN_FN_NAME};
 use crate::parser::parse::{Parse, ParseStream};
 use crate::parser::punctuated::Punctuated;
 use crate::parser::{Result, token};
 use crate::rust_grammar::ext::IdentExt;
-use crate::rust_grammar::{Ident, Kind};
+use crate::rust_grammar::{Ident, Kind, LitInt, LitStr};
 
 use super::{Expr, FnArg, LetLhs, LetStmt, MoltFile, MoltFn, Pat, Stmt};
 
@@ -92,7 +92,10 @@ impl Parse for MoltFn {
 
         let body;
         braced!(body in input);
-        let stmts = Punctuated::parse_terminated_with(&body, Stmt::parse)?;
+        let mut stmts = vec![];
+        while !body.is_empty() {
+            stmts.push(body.parse()?);
+        }
 
         Ok(MoltFn {
             name: FnName::Ident(name),
@@ -174,10 +177,18 @@ impl Parse for FnCall {
 impl Parse for Expr {
     fn parse(input: ParseStream) -> Result<Self> {
         let lookahead = input.lookahead1();
-        if lookahead.peek(Ident::peek_any) && input.peek2(token::Paren) {
-            Ok(Expr::FnCall(input.parse()?))
+        if lookahead.peek(Ident::peek_any) {
+            if input.peek2(token::Paren) {
+                Ok(Expr::FnCall(input.parse()?))
+            } else {
+                Ok(Expr::Atom(Atom::Var(input.parse()?)))
+            }
+        } else if lookahead.peek(LitInt) {
+            Ok(Expr::Atom(Atom::Lit(Lit::Int(input.parse()?))))
+        } else if lookahead.peek(LitStr) {
+            Ok(Expr::Atom(Atom::Lit(Lit::Str(input.parse()?))))
         } else {
-            Ok(Expr::Atom(input.parse()?))
+            Err(lookahead.error())
         }
     }
 }

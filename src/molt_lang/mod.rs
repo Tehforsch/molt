@@ -92,7 +92,19 @@ pub struct FnCall {
 #[derive(Debug)]
 pub enum Expr {
     FnCall(FnCall),
-    Atom(VarId),
+    Atom(Atom),
+}
+
+#[derive(Debug)]
+pub enum Atom {
+    Var(VarId),
+    Lit(Lit),
+}
+
+#[derive(Debug)]
+pub enum Lit {
+    Str(String),
+    Int(i64),
 }
 
 pub struct Pat {
