@@ -27,7 +27,7 @@ pub struct FnArg {
     pub type_: Type,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Type {
     Kind(Kind),
 }

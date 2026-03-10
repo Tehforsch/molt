@@ -72,8 +72,12 @@ pub fn run_internal(
 ) -> Result<(), Error> {
     let molt_file = molt_lang::MoltFile::new(input)?;
 
-    for rust_file_id in input.iter_rust_src() {
-        let (_, real_ctx) = RustFile::new(input, rust_file_id)?;
+    if input.iter_rust_src().count() == 0 {
+        // Fake some context so we can run.
+        // TODO: This whole thing is super ugly,
+        // but language tests feel hard otherwise
+        let rust_file_id = FileId::Rust(usize::MAX);
+        let real_ctx = Ctx::new(Mode::Real);
         let context = Context {
             real_id: rust_file_id,
             molt_id: input.molt_file_id(),
@@ -82,7 +86,21 @@ pub fn run_internal(
             writer,
             config: &config,
         };
-        crate::molt_lang::Interpreter::run(&molt_file, context).map_err(Error::Interpreter)?;
+        crate::molt_lang::Interpreter::run_dry(&molt_file, context).map_err(Error::Interpreter)?;
+    } else {
+        molt_file.check_has_main_fn_with_input()?;
+        for rust_file_id in input.iter_rust_src() {
+            let (_, real_ctx) = RustFile::new(input, rust_file_id)?;
+            let context = Context {
+                real_id: rust_file_id,
+                molt_id: input.molt_file_id(),
+                real_ctx: &real_ctx,
+                input,
+                writer,
+                config: &config,
+            };
+            crate::molt_lang::Interpreter::run(&molt_file, context).map_err(Error::Interpreter)?;
+        }
     }
     Ok(())
 }

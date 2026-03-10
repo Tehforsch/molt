@@ -29,7 +29,6 @@ impl Parse for MoltFile {
 #[derive(Debug)]
 pub enum FileStructureError {
     MainFnAndTopLevelStmtExist,
-    InvalidInputVarName,
     NoInputVarName,
 }
 
@@ -38,9 +37,6 @@ impl std::fmt::Display for FileStructureError {
         match self {
             FileStructureError::MainFnAndTopLevelStmtExist => {
                 write!(f, "Both a main function and top level statements exist")
-            }
-            FileStructureError::InvalidInputVarName => {
-                write!(f, "The first variable needs to have name `input`.")
             }
             FileStructureError::NoInputVarName => {
                 write!(f, "No `input` variable declared.")
@@ -56,26 +52,22 @@ impl MoltFile {
             if self.fns.iter().any(|f| MAIN_FN_NAME == f.name.to_string()) {
                 return Err(FileStructureError::MainFnAndTopLevelStmtExist);
             }
-            if let Stmt::Let(l) = self.stmts.remove(0) {
-                let LetLhs::Var(ref var_name) = l.lhs else {
-                    return Err(FileStructureError::InvalidInputVarName);
-                };
-                if *var_name != INPUT_VAR_NAME {
-                    return Err(FileStructureError::InvalidInputVarName);
-                }
-                let mut args = Punctuated::new();
+            let mut args = Punctuated::new();
+            if let Some(Stmt::Let(l)) = self.stmts.first()
+                && let LetLhs::Var(ref var_name) = l.lhs
+                && *var_name == INPUT_VAR_NAME
+            {
                 args.push(FnArg {
                     var_name: var_name.clone(),
-                    type_: l.type_.unwrap(), // TODO error handling
+                    type_: l.type_.clone().unwrap(), // TODO: Error handling
                 });
-                self.fns.push(MoltFn {
-                    name: FnName::ImplicitMain,
-                    args,
-                    stmts: self.stmts.drain(..).collect(),
-                });
-            } else {
-                return Err(FileStructureError::NoInputVarName);
+                self.stmts.remove(0);
             }
+            self.fns.push(MoltFn {
+                name: FnName::ImplicitMain,
+                args,
+                stmts: self.stmts.drain(..).collect(),
+            });
         }
         Ok(self)
     }

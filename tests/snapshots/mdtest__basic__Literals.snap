@@ -1,0 +1,5 @@
+---
+source: tests/mdtest.rs
+expression: output
+---
+5

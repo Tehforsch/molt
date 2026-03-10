@@ -26,6 +26,5 @@ print(ident);
 
 # Literals
 ```molt
-let input: Stmt;
 print(5);
 ```

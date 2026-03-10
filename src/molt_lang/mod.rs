@@ -37,6 +37,15 @@ pub enum FnName {
     ImplicitMain,
 }
 
+impl FnName {
+    fn is_main(&self) -> bool {
+        match self {
+            FnName::Ident(ident) => ident == "main",
+            FnName::ImplicitMain => true,
+        }
+    }
+}
+
 impl std::fmt::Display for FnName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -148,5 +157,17 @@ impl MoltFile {
         resolver
             .resolve_file(file)
             .map_err(|e| Error::Resolver(e, file_id))
+    }
+
+    pub(crate) fn check_has_main_fn_with_input(&self) -> Result<(), Error> {
+        if self
+            .fns
+            .iter()
+            .any(|f| f.name.is_main() && !f.args.is_empty())
+        {
+            Ok(())
+        } else {
+            Err(Error::FileStructure(FileStructureError::NoInputVarName))
+        }
     }
 }

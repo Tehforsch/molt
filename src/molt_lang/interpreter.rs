@@ -76,6 +76,31 @@ impl<'a> Interpreter<'a> {
         Ok(())
     }
 
+    pub(crate) fn run_dry(file: &MoltFile, context: Context<'a>) -> Result<()> {
+        let mut interpreter = Self {
+            vars: (0..file.num_vars).map(|_| VarStack::default()).collect(),
+            fns: builtins(),
+            context,
+        };
+        for f in file.fns.iter() {
+            interpreter.eval_fn_def(f)?;
+        }
+        interpreter.eval_main_fn_dry()?;
+        Ok(())
+    }
+
+    fn eval_main_fn_dry(&mut self) -> Result<()> {
+        let main_fn = self.lookup_fn(MAIN_FN_NAME)?;
+        let RuntimeFn::UserDefined(f) = main_fn else {
+            unreachable!()
+        };
+        if !f.args.is_empty() {
+            return Err(Error::InvalidMainFn);
+        }
+        self.eval_fn_call(MAIN_FN_NAME, &[])?;
+        Ok(())
+    }
+
     fn eval_main_fn_on_node(&mut self, node: Id) -> Result<()> {
         let value = Value::Node(node);
         // Special handling to filter out non-matching node types
