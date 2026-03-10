@@ -22,7 +22,6 @@ impl std::fmt::Display for Error {
 }
 
 #[derive(Debug, Clone)]
-#[allow(unused)] // TODO
 pub enum Type {
     Var,
     Kind(Kind),
@@ -31,6 +30,41 @@ pub enum Type {
     Str,
     Unit,
     Fun(Vec<TypeId>, TypeId),
+}
+
+#[derive(Debug, Clone)]
+pub enum ResolvedType {
+    Var,
+    Kind(Kind),
+    Int,
+    Bool,
+    Str,
+    Unit,
+    Fun(Vec<ResolvedType>, Box<ResolvedType>),
+}
+
+impl std::fmt::Display for ResolvedType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ResolvedType::Kind(kind) => write!(f, "{}", kind),
+            ResolvedType::Var => write!(f, "var"),
+            ResolvedType::Int => write!(f, "Int"),
+            ResolvedType::Bool => write!(f, "Bool"),
+            ResolvedType::Str => write!(f, "Str"),
+            ResolvedType::Unit => write!(f, "Unit"),
+            ResolvedType::Fun(args, ret) => {
+                write!(f, "Fn(")?;
+                for (i, arg) in args.iter().enumerate() {
+                    write!(f, "{arg}")?;
+                    if i != args.len() - 1 {
+                        write!(f, ", ")?;
+                    }
+                }
+                write!(f, ")")?;
+                write!(f, " -> {}", ret)
+            }
+        }
+    }
 }
 
 impl From<crate::molt_lang::Type> for Type {
@@ -52,6 +86,37 @@ pub(super) struct Typechecker {
     vars: HashMap<VarId, TypeId>,
 }
 
+pub(super) struct TypecheckResult {
+    vars: HashMap<VarId, Type>,
+    types: Vec<Type>,
+}
+
+impl TypecheckResult {
+    pub(crate) fn iter_vars(&self) -> impl Iterator<Item = (VarId, ResolvedType)> {
+        self.vars
+            .iter()
+            .map(|(id, type_)| (*id, self.as_resolved(type_)))
+    }
+
+    fn as_resolved(&self, type_: &Type) -> ResolvedType {
+        match type_ {
+            Type::Var => ResolvedType::Var,
+            Type::Kind(kind) => ResolvedType::Kind(*kind),
+            Type::Int => ResolvedType::Int,
+            Type::Bool => ResolvedType::Bool,
+            Type::Str => ResolvedType::Str,
+            Type::Unit => ResolvedType::Unit,
+            Type::Fun(type_ids, type_id) => ResolvedType::Fun(
+                type_ids
+                    .iter()
+                    .map(|t| self.as_resolved(&self.types[t.0]))
+                    .collect(),
+                Box::new(self.as_resolved(&self.types[type_id.0])),
+            ),
+        }
+    }
+}
+
 impl Typechecker {
     fn add_type(&mut self, t: Type) -> TypeId {
         self.types.push(t);
@@ -71,7 +136,7 @@ impl Typechecker {
             .unwrap_or(id)
     }
 
-    pub(crate) fn check(mut self, file: &MoltFile) -> Result<HashMap<VarId, Type>, Error> {
+    pub(crate) fn check(mut self, file: &MoltFile) -> Result<TypecheckResult, Error> {
         for f in file.fns.iter() {
             self.declare_fn(f);
         }
@@ -81,11 +146,15 @@ impl Typechecker {
         for f in file.fns.iter() {
             self.check_fn(f)?;
         }
-        Ok(self
+        let vars = self
             .vars
             .iter()
             .map(|(var, id)| (*var, self.types[self.resolve(*id).0].clone()))
-            .collect())
+            .collect();
+        Ok(TypecheckResult {
+            vars,
+            types: self.types,
+        })
     }
 
     fn declare_fn(&mut self, f: &MoltFn) {

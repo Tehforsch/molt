@@ -201,7 +201,9 @@ impl MoltFile {
         let typeck_result = typechecker
             .check(&resolved)
             .map_err(|e| Error::Typechecker(e, file_id))?;
-        dbg!(&typeck_result);
+        for (id, resolved_type) in typeck_result.iter_vars() {
+            println!("{}: {}", resolved.var_names[id.0], resolved_type);
+        }
         Ok(resolved)
     }
 
