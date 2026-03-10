@@ -9,13 +9,14 @@ use crate::{
     Id, Matcher, NodeType,
     molt_lang::{
         Expr, MAIN_FN_NAME, MoltFile, MoltFn, Stmt, Type,
+        builtin_fn::{BuiltinFn, builtins},
         context::Context,
-        interpreter::{builtins::BuiltinFn, value::StmtValue},
+        interpreter::value::StmtValue,
     },
     rust_grammar::Node,
 };
 
-use {builtins::builtins, value::Value};
+use value::Value;
 
 use error::Result;
 

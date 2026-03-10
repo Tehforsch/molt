@@ -1,3 +1,4 @@
+mod builtin_fn;
 mod context;
 mod grammar;
 mod interpreter;

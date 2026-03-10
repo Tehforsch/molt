@@ -1,36 +1,11 @@
-use std::collections::HashMap;
-
 use codespan_reporting::diagnostic::Label;
 
 use crate::{
     Diagnostic, FileId, Id,
-    molt_lang::{
-        Interpreter, InterpreterError,
-        interpreter::{RuntimeFn, value::Value},
-    },
+    molt_lang::{Interpreter, InterpreterError, builtin_fn::BuiltinFn, interpreter::value::Value},
 };
 
 use super::Result;
-
-#[derive(Clone, Copy)]
-pub enum BuiltinFn {
-    Assert,
-    AssertEq,
-    Print,
-    Dbg,
-}
-
-pub fn builtins<'a>() -> HashMap<String, RuntimeFn<'a>> {
-    [
-        ("assert", RuntimeFn::Builtin(BuiltinFn::Assert)),
-        ("assert_eq", RuntimeFn::Builtin(BuiltinFn::AssertEq)),
-        ("print", RuntimeFn::Builtin(BuiltinFn::Print)),
-        ("dbg", RuntimeFn::Builtin(BuiltinFn::Dbg)),
-    ]
-    .into_iter()
-    .map(|(name, f)| (name.to_string(), f))
-    .collect()
-}
 
 impl<'src> Interpreter<'src> {
     pub fn eval_builtin(&mut self, args: &[Value], builtin_fn: BuiltinFn) -> Result<()> {
