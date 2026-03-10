@@ -8,6 +8,8 @@ use crate::Mode;
 use crate::Var;
 use crate::molt_lang::MoltFile;
 use crate::molt_lang::MoltFn;
+use crate::molt_lang::builtin_fn::BuiltinFn;
+use crate::molt_lang::builtin_fn::builtins_def;
 use crate::molt_lang::grammar;
 use crate::parser;
 use crate::rust_grammar::Kind;
@@ -33,10 +35,28 @@ type Result<T, E = Error> = std::result::Result<T, E>;
 
 type ScopeIndex = usize;
 
+#[derive(PartialEq, Eq, Hash)]
+pub enum VarName {
+    Ident(Ident),
+    String(String),
+}
+
+impl From<&str> for VarName {
+    fn from(value: &str) -> Self {
+        Self::String(value.into())
+    }
+}
+
+impl From<&Ident> for VarName {
+    fn from(value: &Ident) -> Self {
+        Self::Ident(value.clone())
+    }
+}
+
 #[derive(Default)]
 struct Scope {
     parent: Option<ScopeIndex>,
-    variables: HashMap<Ident, VarId>,
+    variables: HashMap<VarName, VarId>,
     index: ScopeIndex,
 }
 
@@ -49,14 +69,16 @@ impl Scope {
         }
     }
 
-    fn insert(&mut self, var_name: Ident, var_id: VarId) {
-        self.variables.insert(var_name, var_id);
+    fn insert(&mut self, var_name: impl Into<VarName>, var_id: VarId) {
+        self.variables.insert(var_name.into(), var_id);
     }
 }
 
 pub struct Resolver {
     scopes: Vec<Scope>,
     num_vars: usize,
+    fn_map: HashMap<VarId, FnId>,
+    builtin_map: HashMap<VarId, BuiltinFn>,
 }
 
 impl Default for Resolver {
@@ -64,6 +86,8 @@ impl Default for Resolver {
         Self {
             num_vars: 0,
             scopes: vec![Scope::default()],
+            fn_map: HashMap::default(),
+            builtin_map: HashMap::default(),
         }
     }
 }
@@ -86,9 +110,9 @@ impl Resolver {
         VarId(self.num_vars - 1)
     }
 
-    fn register_var(&mut self, name: &Ident) -> VarId {
+    fn register_var(&mut self, name: impl Into<VarName>) -> VarId {
         let var_id = self.fresh_var_id();
-        self.active_scope_mut().insert(name.clone(), var_id);
+        self.active_scope_mut().insert(name, var_id);
         var_id
     }
 
@@ -96,7 +120,7 @@ impl Resolver {
         let mut scope_idx = Some(self.scopes.len() - 1);
         while let Some(idx) = scope_idx {
             let scope = &self.scopes[idx];
-            if let Some(val) = scope.variables.get(name) {
+            if let Some(val) = scope.variables.get(&VarName::Ident(name.clone())) {
                 return Ok(*val);
             }
             scope_idx = scope.parent;
@@ -106,6 +130,9 @@ impl Resolver {
 
     pub fn resolve_file(&mut self, file: grammar::MoltFile) -> Result<MoltFile> {
         let grammar::MoltFile { fns, stmts: _ } = file;
+        // Register all user defined functions
+        self.register_builtins();
+        self.register_user_fns(&fns);
         let fns: Vec<_> = fns
             .into_iter()
             .map(|f| self.resolve_fn(f))
@@ -114,6 +141,23 @@ impl Resolver {
             fns,
             num_vars: self.num_vars,
         })
+    }
+
+    fn register_builtins(&mut self) {
+        for (name, f) in builtins_def() {
+            let var = self.register_var(*name);
+            self.builtin_map.insert(var, *f);
+        }
+    }
+
+    fn register_user_fns(&mut self, fns: &[grammar::MoltFn]) {
+        for (i, f) in fns.iter().enumerate() {
+            if f.name.is_main() {
+                continue;
+            }
+            let var = self.register_var(f.name.unwrap_ident());
+            self.fn_map.insert(var, FnId(i));
+        }
     }
 
     fn resolve_fn(&mut self, f: grammar::MoltFn) -> Result<MoltFn> {

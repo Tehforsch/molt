@@ -22,3 +22,11 @@ pub fn builtins<'a>() -> HashMap<String, RuntimeFn<'a>> {
     .collect()
 }
 
+pub fn builtins_def<'a>() -> &'a [(&'a str, BuiltinFn)] {
+    &[
+        ("assert", BuiltinFn::Assert),
+        ("assert_eq", BuiltinFn::AssertEq),
+        ("print", BuiltinFn::Print),
+        ("dbg", BuiltinFn::Dbg),
+    ]
+}

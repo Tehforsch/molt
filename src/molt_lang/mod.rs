@@ -32,6 +32,9 @@ pub struct MoltFile {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 struct VarId(usize);
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct FnId(usize);
+
 #[derive(Debug)]
 pub enum FnName {
     Ident(Ident),
@@ -43,6 +46,13 @@ impl FnName {
         match self {
             FnName::Ident(ident) => ident == "main",
             FnName::ImplicitMain => true,
+        }
+    }
+
+    fn unwrap_ident(&self) -> &Ident {
+        match self {
+            FnName::Ident(ident) => ident,
+            FnName::ImplicitMain => panic!(),
         }
     }
 }
