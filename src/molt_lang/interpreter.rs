@@ -2,18 +2,14 @@ mod builtins;
 mod error;
 mod value;
 
-use std::collections::HashMap;
-
 use super::{LetLhs, LetStmt, Lit};
 use crate::{
-    Id, Matcher, NodeType,
+    Id, Matcher, Node,
     molt_lang::{
-        Expr, MAIN_FN_NAME, MoltFile, MoltFn, Stmt, Type,
-        builtin_fn::{BuiltinFn, builtins},
-        context::Context,
+        Expr, FnId, MoltFile, MoltFn, Stmt, Type, VarId, context::Context,
         interpreter::value::StmtValue,
     },
-    rust_grammar::Node,
+    node::NodeType,
 };
 
 use value::Value;
@@ -21,12 +17,6 @@ use value::Value;
 use error::Result;
 
 pub(crate) use error::Error;
-
-#[derive(Clone, Copy)]
-pub(crate) enum RuntimeFn<'a> {
-    UserDefined(&'a MoltFn),
-    Builtin(BuiltinFn),
-}
 
 #[derive(Default)]
 struct VarStack {
@@ -56,60 +46,55 @@ impl VarStack {
 
 pub(crate) struct Interpreter<'a> {
     vars: Vec<VarStack>,
-    fns: HashMap<String, RuntimeFn<'a>>,
+    fns: Vec<&'a MoltFn>,
     context: Context<'a>,
 }
 
 impl<'a> Interpreter<'a> {
-    pub(crate) fn run(file: &MoltFile, context: Context<'a>) -> Result<()> {
+    fn new(file: &'a MoltFile, context: Context<'a>) -> Interpreter<'a> {
         let mut interpreter = Self {
             vars: (0..file.num_vars).map(|_| VarStack::default()).collect(),
-            fns: builtins(),
+            fns: file.fns.iter().collect(),
             context,
         };
-        for f in file.fns.iter() {
-            interpreter.eval_fn_def(f)?;
+        for (id, f) in file.iter_fns() {
+            interpreter.eval_fn_def(f, id);
         }
+        for (id, f) in file.iter_builtins() {
+            interpreter.vars[id.0].push(Value::BuiltinFn(f));
+        }
+        interpreter
+    }
+
+    pub(crate) fn run(file: &'a MoltFile, context: Context<'a>) -> Result<()> {
+        let mut interpreter = Interpreter::new(file, context);
         for node in interpreter.context.real_ctx.iter() {
             // TODO reset interpreter here
-            interpreter.eval_main_fn_on_node(node)?;
+            interpreter.eval_main_fn_on_node(node, file.main_fn_id)?;
         }
         Ok(())
     }
 
     pub(crate) fn run_dry(file: &MoltFile, context: Context<'a>) -> Result<()> {
-        let mut interpreter = Self {
-            vars: (0..file.num_vars).map(|_| VarStack::default()).collect(),
-            fns: builtins(),
-            context,
-        };
-        for f in file.fns.iter() {
-            interpreter.eval_fn_def(f)?;
-        }
-        interpreter.eval_main_fn_dry()?;
+        let mut interpreter = Interpreter::new(file, context);
+        interpreter.eval_main_fn_dry(file.main_fn_id)?;
         Ok(())
     }
 
-    fn eval_main_fn_dry(&mut self) -> Result<()> {
-        let main_fn = self.lookup_fn(MAIN_FN_NAME)?;
-        let RuntimeFn::UserDefined(f) = main_fn else {
-            unreachable!()
-        };
+    fn eval_main_fn_dry(&mut self, main_fn_id: FnId) -> Result<()> {
+        let f = self.fns[main_fn_id.0];
         if !f.args.is_empty() {
             return Err(Error::InvalidMainFn);
         }
-        self.eval_fn_call(MAIN_FN_NAME, &[])?;
+        self.eval_user_defined_fn(&[], self.fns[main_fn_id.0])?;
         Ok(())
     }
 
-    fn eval_main_fn_on_node(&mut self, node: Id) -> Result<()> {
+    fn eval_main_fn_on_node(&mut self, node: Id, main_fn_id: FnId) -> Result<()> {
         let value = Value::Node(node);
         // Special handling to filter out non-matching node types
         // in the main function
-        let main_fn = self.lookup_fn(MAIN_FN_NAME)?;
-        let RuntimeFn::UserDefined(f) = main_fn else {
-            unreachable!()
-        };
+        let f = self.fns[main_fn_id.0];
         if f.args.len() != 1 {
             return Err(Error::InvalidMainFn);
         } else {
@@ -124,14 +109,12 @@ impl<'a> Interpreter<'a> {
                 return Ok(());
             }
         }
-        self.eval_fn_call(MAIN_FN_NAME, &[value])?;
+        self.eval_user_defined_fn(&[value], self.fns[main_fn_id.0])?;
         Ok(())
     }
 
-    fn eval_fn_def(&mut self, f: &'a MoltFn) -> Result<()> {
-        self.fns
-            .insert(f.name.to_string(), RuntimeFn::UserDefined(f));
-        Ok(())
+    fn eval_fn_def(&mut self, f: &'a MoltFn, id: FnId) {
+        self.vars[f.id.0].push(Value::UserFn(id));
     }
 
     fn eval_stmt(&mut self, stmt: &Stmt) -> Result<StmtValue> {
@@ -144,15 +127,12 @@ impl<'a> Interpreter<'a> {
         }
     }
 
-    fn eval_fn_call(&mut self, fn_name: &str, args: &[Value]) -> Result<StmtValue> {
-        match self.lookup_fn(fn_name)? {
-            // Inlining to make borrow checker happy. A simple alternative
-            // would be to clone the fn definitions.
-            RuntimeFn::UserDefined(user_fn) => {
-                self.eval_user_defined_fn(args, user_fn)?;
-            }
-            RuntimeFn::Builtin(builtin_fn) => self.eval_builtin(args, builtin_fn)?,
-        }
+    fn eval_fn_call(&mut self, fn_var_id: VarId, args: &[Value]) -> Result<StmtValue> {
+        match self.vars[fn_var_id.0].get() {
+            Value::UserFn(fn_id) => self.eval_user_defined_fn(args, self.fns[fn_id.0])?,
+            Value::BuiltinFn(builtin_fn) => self.eval_builtin(args, builtin_fn)?,
+            _ => unreachable!(), // TODO: verify in type checker.
+        };
         Ok(StmtValue::Value(Value::Unit))
     }
 
@@ -186,7 +166,7 @@ impl<'a> Interpreter<'a> {
         match expr {
             Expr::FnCall(fn_call) => {
                 let args = self.make_fn_args(&fn_call.args)?;
-                match self.eval_fn_call(&fn_call.fn_name.to_string(), &args)? {
+                match self.eval_fn_call(fn_call.id, &args)? {
                     StmtValue::Value(v) => Ok(v),
                     StmtValue::NoMatch => Ok(Value::Unit),
                 }
@@ -265,12 +245,5 @@ impl<'a> Interpreter<'a> {
                 Ok(StmtValue::Value(Value::Unit))
             }
         }
-    }
-
-    fn lookup_fn(&mut self, fn_name: &str) -> std::result::Result<RuntimeFn<'a>, Error> {
-        self.fns
-            .get(fn_name)
-            .cloned()
-            .ok_or(Error::undefined_fn(fn_name))
     }
 }

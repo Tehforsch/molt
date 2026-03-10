@@ -70,6 +70,8 @@ impl<'src> Interpreter<'src> {
             Value::Bool(b) => &format!("{}", b),
             Value::Node(id) => self.context.real_ctx().print(*id, self.context.real_src()),
             Value::Unit => "()",
+            Value::UserFn(f) => &format!("{:?}", f),
+            Value::BuiltinFn(f) => &format!("{:?}", f),
         };
         self.context.writer().write_line(content);
     }

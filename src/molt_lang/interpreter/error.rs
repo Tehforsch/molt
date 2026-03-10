@@ -1,14 +1,7 @@
 #[derive(Debug)]
 pub enum Error {
-    UndefinedFn(String),
     InvalidMainFn,
     Assertion,
-}
-
-impl Error {
-    pub(crate) fn undefined_fn(fn_name: &str) -> Self {
-        Self::UndefinedFn(fn_name.into())
-    }
 }
 
 pub(crate) type Result<T, E = Error> = std::result::Result<T, E>;

@@ -4,11 +4,15 @@ mod grammar;
 mod interpreter;
 mod resolver;
 
+use std::collections::HashMap;
+
 pub(crate) use context::Context;
 pub(crate) use grammar::FileStructureError;
 pub(crate) use interpreter::Error as InterpreterError;
 pub(crate) use interpreter::Interpreter;
 pub(crate) use resolver::Error as ResolverError;
+
+pub(crate) use builtin_fn::BuiltinFn;
 
 use codespan_reporting::files::Files;
 
@@ -26,7 +30,9 @@ const INPUT_VAR_NAME: &str = "input";
 #[derive(Debug)]
 pub struct MoltFile {
     pub fns: Vec<MoltFn>,
+    pub builtin_map: HashMap<VarId, BuiltinFn>,
     pub num_vars: usize,
+    pub main_fn_id: FnId,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -35,40 +41,48 @@ struct VarId(usize);
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 struct FnId(usize);
 
-#[derive(Debug)]
-pub enum FnName {
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum VarName {
     Ident(Ident),
-    ImplicitMain,
+    /// For "artificially" created name, such as builtin functions
+    /// or the implicit main function.
+    String(String),
 }
 
-impl FnName {
+impl VarName {
     fn is_main(&self) -> bool {
         match self {
-            FnName::Ident(ident) => ident == "main",
-            FnName::ImplicitMain => true,
-        }
-    }
-
-    fn unwrap_ident(&self) -> &Ident {
-        match self {
-            FnName::Ident(ident) => ident,
-            FnName::ImplicitMain => panic!(),
+            VarName::Ident(ident) => ident == "main",
+            VarName::String(s) => s == "main",
         }
     }
 }
 
-impl std::fmt::Display for FnName {
+impl std::fmt::Display for VarName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            FnName::Ident(ident) => write!(f, "{}", ident),
-            FnName::ImplicitMain => write!(f, "{MAIN_FN_NAME}"),
+            VarName::Ident(ident) => write!(f, "{}", ident),
+            VarName::String(s) => write!(f, "{}", s),
         }
+    }
+}
+
+impl From<&str> for VarName {
+    fn from(value: &str) -> Self {
+        Self::String(value.into())
+    }
+}
+
+impl From<&Ident> for VarName {
+    fn from(value: &Ident) -> Self {
+        Self::Ident(value.clone())
     }
 }
 
 #[derive(Debug)]
 pub struct MoltFn {
-    pub name: FnName,
+    pub name: VarName,
+    pub id: VarId,
     pub args: Vec<FnArg>,
     pub stmts: Vec<Stmt>,
 }
@@ -105,7 +119,7 @@ pub enum LetLhs {
 
 #[derive(Debug)]
 pub struct FnCall {
-    pub fn_name: Ident,
+    pub id: VarId,
     pub args: Vec<Expr>,
 }
 
@@ -164,7 +178,7 @@ impl MoltFile {
         let file: grammar::MoltFile =
             crate::parser::parse_str(source, Mode::Molt).map_err(|e| Error::parse(e, file_id))?;
         let file = file.add_implicit_main().map_err(Error::FileStructure)?;
-        let mut resolver = Resolver::default();
+        let resolver = Resolver::default();
         resolver
             .resolve_file(file)
             .map_err(|e| Error::Resolver(e, file_id))
@@ -180,5 +194,13 @@ impl MoltFile {
         } else {
             Err(Error::FileStructure(FileStructureError::NoInputVarName))
         }
+    }
+
+    fn iter_fns(&self) -> impl Iterator<Item = (FnId, &MoltFn)> {
+        self.fns.iter().enumerate().map(|(i, f)| (FnId(i), f))
+    }
+
+    fn iter_builtins(&self) -> impl Iterator<Item = (VarId, BuiltinFn)> {
+        self.builtin_map.iter().map(|(id, f)| (*id, *f))
     }
 }

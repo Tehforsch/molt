@@ -19,7 +19,7 @@ use crate::rust_grammar::parse_node_with_kind;
 #[derive(Debug)]
 pub(crate) enum Error {
     Parse(parser::Error),
-    UndefinedVar(Ident),
+    UndefinedVar(VarName),
 }
 
 impl std::fmt::Display for Error {
@@ -35,28 +35,10 @@ type Result<T, E = Error> = std::result::Result<T, E>;
 
 type ScopeIndex = usize;
 
-#[derive(PartialEq, Eq, Hash)]
-pub enum VarName {
-    Ident(Ident),
-    String(String),
-}
-
-impl From<&str> for VarName {
-    fn from(value: &str) -> Self {
-        Self::String(value.into())
-    }
-}
-
-impl From<&Ident> for VarName {
-    fn from(value: &Ident) -> Self {
-        Self::Ident(value.clone())
-    }
-}
-
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct Scope {
     parent: Option<ScopeIndex>,
-    variables: HashMap<VarName, VarId>,
+    variables: HashMap<String, VarId>,
     index: ScopeIndex,
 }
 
@@ -69,7 +51,7 @@ impl Scope {
         }
     }
 
-    fn insert(&mut self, var_name: impl Into<VarName>, var_id: VarId) {
+    fn insert(&mut self, var_name: &str, var_id: VarId) {
         self.variables.insert(var_name.into(), var_id);
     }
 }
@@ -110,17 +92,17 @@ impl Resolver {
         VarId(self.num_vars - 1)
     }
 
-    fn register_var(&mut self, name: impl Into<VarName>) -> VarId {
+    fn register_var(&mut self, name: &str) -> VarId {
         let var_id = self.fresh_var_id();
         self.active_scope_mut().insert(name, var_id);
         var_id
     }
 
-    fn lookup_var(&self, name: &Ident) -> Result<VarId> {
+    fn lookup_var(&self, name: &VarName) -> Result<VarId> {
         let mut scope_idx = Some(self.scopes.len() - 1);
         while let Some(idx) = scope_idx {
             let scope = &self.scopes[idx];
-            if let Some(val) = scope.variables.get(&VarName::Ident(name.clone())) {
+            if let Some(val) = scope.variables.get(&name.to_string()) {
                 return Ok(*val);
             }
             scope_idx = scope.parent;
@@ -128,7 +110,7 @@ impl Resolver {
         Err(Error::UndefinedVar(name.clone()))
     }
 
-    pub fn resolve_file(&mut self, file: grammar::MoltFile) -> Result<MoltFile> {
+    pub fn resolve_file(mut self, file: grammar::MoltFile) -> Result<MoltFile> {
         let grammar::MoltFile { fns, stmts: _ } = file;
         // Register all user defined functions
         self.register_builtins();
@@ -138,24 +120,29 @@ impl Resolver {
             .map(|f| self.resolve_fn(f))
             .collect::<Result<_>>()?;
         Ok(MoltFile {
+            main_fn_id: FnId(
+                fns.iter()
+                    .enumerate()
+                    .find(|(_, f)| f.name.is_main())
+                    .map(|(id, _)| id)
+                    .unwrap(),
+            ),
             fns,
+            builtin_map: self.builtin_map,
             num_vars: self.num_vars,
         })
     }
 
     fn register_builtins(&mut self) {
         for (name, f) in builtins_def() {
-            let var = self.register_var(*name);
+            let var = self.register_var(name);
             self.builtin_map.insert(var, *f);
         }
     }
 
     fn register_user_fns(&mut self, fns: &[grammar::MoltFn]) {
         for (i, f) in fns.iter().enumerate() {
-            if f.name.is_main() {
-                continue;
-            }
-            let var = self.register_var(f.name.unwrap_ident());
+            let var = self.register_var(&f.name.to_string());
             self.fn_map.insert(var, FnId(i));
         }
     }
@@ -169,6 +156,7 @@ impl Resolver {
             .map(|a| self.resolve_fn_arg(a))
             .collect::<Result<_>>()?;
         let result = MoltFn {
+            id: self.lookup_var(&f.name).unwrap(),
             name: f.name,
             args,
             stmts: f
@@ -182,7 +170,7 @@ impl Resolver {
     }
 
     fn resolve_fn_arg(&mut self, arg: grammar::FnArg) -> Result<FnArg> {
-        let var_id = self.register_var(&arg.var_name);
+        let var_id = self.register_var(&arg.var_name.to_string());
         Ok(FnArg {
             var_id,
             type_: self.resolve_type(arg.type_)?,
@@ -214,7 +202,7 @@ impl Resolver {
     fn resolve_let_lhs(&mut self, lhs: grammar::LetLhs, type_: Option<&Type>) -> Result<LetLhs> {
         Ok(match lhs {
             grammar::LetLhs::Var(ident) => {
-                let var_id = self.register_var(&ident);
+                let var_id = self.register_var(&ident.to_string());
                 LetLhs::Var(var_id)
             }
             grammar::LetLhs::Pat(pat) => LetLhs::Pat(self.resolve_pat(pat, type_)?),
@@ -223,7 +211,7 @@ impl Resolver {
 
     fn resolve_fn_call(&mut self, f: grammar::FnCall) -> Result<FnCall> {
         Ok(FnCall {
-            fn_name: f.fn_name,
+            id: self.lookup_var(&VarName::Ident(f.fn_name))?,
             args: f
                 .args
                 .into_iter()
@@ -242,7 +230,9 @@ impl Resolver {
     fn resolve_atom(&self, atom: &grammar::Atom) -> Result<Atom> {
         match atom {
             grammar::Atom::Lit(lit) => Ok(Atom::Lit(self.resolve_lit(lit)?)),
-            grammar::Atom::Var(ident) => Ok(Atom::Var(self.lookup_var(ident)?)),
+            grammar::Atom::Var(ident) => {
+                Ok(Atom::Var(self.lookup_var(&VarName::Ident(ident.clone()))?))
+            }
         }
     }
 
@@ -283,7 +273,7 @@ impl Resolver {
             vars: ctx
                 .iter_vars_ids()
                 .map(|(id, var)| {
-                    let var_id = self.register_var(var.ident());
+                    let var_id = self.register_var(&var.ident().to_string());
                     TokenVar { ctx_id: id, var_id }
                 })
                 .collect(),

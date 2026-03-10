@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream;
 
 use crate::molt_lang::grammar::{Atom, FnCall, Lit, TokenVar, TokenVars, Type};
-use crate::molt_lang::{FnName, INPUT_VAR_NAME, MAIN_FN_NAME};
+use crate::molt_lang::{INPUT_VAR_NAME, MAIN_FN_NAME, VarName};
 use crate::parser::parse::{self, Parse, ParseStream};
 use crate::parser::punctuated::Punctuated;
 use crate::parser::{Result, token};
@@ -64,7 +64,7 @@ impl MoltFile {
                 self.stmts.remove(0);
             }
             self.fns.push(MoltFn {
-                name: FnName::ImplicitMain,
+                name: VarName::String(MAIN_FN_NAME.into()),
                 args,
                 stmts: self.stmts.drain(..).collect(),
             });
@@ -90,7 +90,7 @@ impl Parse for MoltFn {
         }
 
         Ok(MoltFn {
-            name: FnName::Ident(name),
+            name: VarName::Ident(name),
             args,
             stmts,
         })

@@ -1,4 +1,7 @@
-use crate::Id;
+use crate::{
+    Id,
+    molt_lang::{BuiltinFn, FnId},
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Value {
@@ -9,6 +12,8 @@ pub enum Value {
     Node(Id),
     // TODO: Get rid of this once we have proper semantics
     Unit,
+    UserFn(FnId),
+    BuiltinFn(BuiltinFn),
 }
 
 impl Value {
@@ -19,11 +24,15 @@ impl Value {
             (Value::Bool(_), Value::Bool(_)) => true,
             (Value::Node(_), Value::Node(_)) => true,
             (Value::Unit, Value::Unit) => true,
+            (Value::UserFn(_), Value::UserFn(_)) => true,
+            (Value::BuiltinFn(_), Value::BuiltinFn(_)) => true,
             (Value::String(_), _) => false,
             (Value::Int(_), _) => false,
             (Value::Bool(_), _) => false,
             (Value::Node(_), _) => false,
             (Value::Unit, _) => false,
+            (Value::UserFn(_), _) => false,
+            (Value::BuiltinFn(_), _) => false,
         }
     }
 }
