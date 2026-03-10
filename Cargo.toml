@@ -51,7 +51,7 @@ name = "molt"
 path = "src/main.rs"
 
 [[test]]
-name = "mdtest"
+name = "markdown"
 harness = false
 
 [profile.dev]

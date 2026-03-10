@@ -1,6 +1,5 @@
 ---
 source: tests/mdtest.rs
-assertion_line: 113
 expression: output
 ---
 x

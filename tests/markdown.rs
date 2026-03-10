@@ -4,7 +4,7 @@ use molt::{Config, Contents, Error, Input, Source, Writer, emit_error};
 use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag, TagEnd};
 
 struct Section {
-    name: String,
+    name: Option<String>,
     code_blocks: Vec<CodeBlock>,
 }
 
@@ -38,31 +38,35 @@ struct TestConfig {
 fn parse_markdown(content: &str) -> Vec<Section> {
     let parser = Parser::new(content);
     let mut sections = Vec::new();
-    let mut current_section: Option<Section> = None;
+    let mut current_section = Section {
+        name: None,
+        code_blocks: Vec::new(),
+    };
     let mut in_heading = false;
     let mut in_code_block = false;
     let mut current_lang = String::new();
     let mut current_code = String::new();
+    let mut heading_name = String::new();
 
     for event in parser {
         match event {
             Event::Start(Tag::Heading { .. }) => {
-                if let Some(section) = current_section.take() {
-                    sections.push(section);
+                if !current_section.code_blocks.is_empty() {
+                    sections.push(current_section);
+                    current_section = Section {
+                        name: None,
+                        code_blocks: Vec::new(),
+                    };
                 }
                 in_heading = true;
-                current_section = Some(Section {
-                    name: String::new(),
-                    code_blocks: Vec::new(),
-                });
+                heading_name.clear();
             }
             Event::End(TagEnd::Heading(..)) => {
                 in_heading = false;
+                current_section.name = Some(heading_name.clone());
             }
             Event::Text(text) if in_heading => {
-                if let Some(ref mut section) = current_section {
-                    section.name.push_str(&text);
-                }
+                heading_name.push_str(&text);
             }
             Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(lang))) => {
                 in_code_block = true;
@@ -74,21 +78,18 @@ fn parse_markdown(content: &str) -> Vec<Section> {
             }
             Event::End(TagEnd::CodeBlock) => {
                 in_code_block = false;
-                if let Some(ref mut section) = current_section {
-                    section.code_blocks.push(CodeBlock {
-                        lang: Lang::new(&current_lang).unwrap_or_else(|| {
-                            panic!("Unexpected lang in md block: {current_lang}")
-                        }),
-                        content: current_code.clone(),
-                    });
-                }
+                current_section.code_blocks.push(CodeBlock {
+                    lang: Lang::new(&current_lang)
+                        .unwrap_or_else(|| panic!("Unexpected lang in md block: {current_lang}")),
+                    content: current_code.clone(),
+                });
             }
             _ => {}
         }
     }
 
-    if let Some(section) = current_section {
-        sections.push(section);
+    if !current_section.code_blocks.is_empty() {
+        sections.push(current_section);
     }
 
     sections
@@ -153,11 +154,11 @@ fn run_section(md_file: &Path, section: &Section) {
         )
     });
 
-    let snapshot_name = format!(
-        "{}__{}",
-        md_file.file_stem().unwrap().to_str().unwrap(),
-        section.name.replace(' ', "_")
-    );
+    let file_stem = md_file.file_stem().unwrap().to_str().unwrap();
+    let snapshot_name = match &section.name {
+        Some(name) => format!("{file_stem}__{}", name.replace(' ', "_")),
+        None => file_stem.to_string(),
+    };
     insta::with_settings!({
         snapshot_path => "snapshots",
     }, {
