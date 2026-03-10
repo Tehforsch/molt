@@ -6,7 +6,7 @@ use codespan_reporting::diagnostic::{Diagnostic, Label};
 
 use crate::input::{FileId, Input};
 use crate::modify::ModifyError;
-use crate::molt_lang::{FileStructureError, InterpreterError, ResolverError};
+use crate::molt_lang::{FileStructureError, InterpreterError, ResolverError, TypeError};
 
 #[derive(Debug)]
 pub enum Error {
@@ -17,6 +17,7 @@ pub enum Error {
     Modify(ModifyError),
     Io(io::Error),
     Interpreter(InterpreterError),
+    Typechecker(TypeError, FileId),
 }
 
 impl Error {
@@ -40,6 +41,7 @@ impl Error {
             Error::Modify(_) => None,
             Error::Io(_) => None,
             Error::Interpreter(_) => None,
+            Error::Typechecker(_, _) => None,
         }
     }
 }
@@ -103,6 +105,7 @@ impl std::fmt::Display for Error {
             Error::Modify(s) => write!(f, "{s}"),
             Error::Io(s) => write!(f, "{s}"),
             Error::Interpreter(s) => write!(f, "{s}"),
+            Error::Typechecker(error, _) => write!(f, "{error}"),
         }
     }
 }

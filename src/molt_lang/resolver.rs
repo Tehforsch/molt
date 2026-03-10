@@ -200,7 +200,7 @@ impl Resolver {
         let type_ = l.type_.map(|t| self.resolve_type(t)).transpose()?;
         Ok(LetStmt {
             lhs: self.resolve_let_lhs(l.lhs, type_.as_ref())?,
-            _type_: type_,
+            type_,
             rhs: l.rhs.map(|e| self.resolve_expr(e)).transpose()?,
         })
     }

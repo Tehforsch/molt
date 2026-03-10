@@ -3,6 +3,7 @@ mod context;
 mod grammar;
 mod interpreter;
 mod resolver;
+mod typechecker;
 
 use std::collections::HashMap;
 
@@ -11,6 +12,7 @@ pub(crate) use grammar::FileStructureError;
 pub(crate) use interpreter::Error as InterpreterError;
 pub(crate) use interpreter::Interpreter;
 pub(crate) use resolver::Error as ResolverError;
+pub(crate) use typechecker::Error as TypeError;
 
 pub(crate) use builtin_fn::BuiltinFn;
 
@@ -19,6 +21,7 @@ use codespan_reporting::files::Files;
 use crate::Ctx;
 use crate::Id;
 use crate::molt_lang::resolver::Resolver;
+use crate::molt_lang::typechecker::Typechecker;
 use crate::rust_grammar::Ident;
 use crate::rust_grammar::Kind;
 use crate::rust_grammar::Node;
@@ -94,7 +97,7 @@ pub struct FnArg {
     pub type_: Type,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Type {
     Kind(Kind),
     Unit,
@@ -109,7 +112,7 @@ pub enum Stmt {
 #[derive(Debug)]
 pub struct LetStmt {
     pub lhs: LetLhs,
-    pub _type_: Option<Type>,
+    pub type_: Option<Type>,
     pub rhs: Option<Expr>,
 }
 
@@ -142,6 +145,16 @@ pub enum Lit {
     Str(String),
     Int(i64),
     Bool(bool),
+}
+
+impl Lit {
+    fn type_(&self) -> typechecker::Type {
+        match self {
+            Lit::Str(_) => typechecker::Type::Str,
+            Lit::Int(_) => typechecker::Type::Int,
+            Lit::Bool(_) => typechecker::Type::Bool,
+        }
+    }
 }
 
 pub struct Pat {
@@ -181,9 +194,15 @@ impl MoltFile {
             crate::parser::parse_str(source, Mode::Molt).map_err(|e| Error::parse(e, file_id))?;
         let file = file.add_implicit_main().map_err(Error::FileStructure)?;
         let resolver = Resolver::default();
-        resolver
+        let resolved = resolver
             .resolve_file(file)
-            .map_err(|e| Error::Resolver(e, file_id))
+            .map_err(|e| Error::Resolver(e, file_id))?;
+        let typechecker = Typechecker::default();
+        let typeck_result = typechecker
+            .check(&resolved)
+            .map_err(|e| Error::Typechecker(e, file_id))?;
+        dbg!(&typeck_result);
+        Ok(resolved)
     }
 
     pub(crate) fn check_has_main_fn_with_input(&self) -> Result<(), Error> {

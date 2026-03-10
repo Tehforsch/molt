@@ -131,6 +131,14 @@ macro_rules! define_kind {
                 )*
                 None
             }
+
+            pub(crate) fn into_node_kind(self) -> NodeKind {
+                match self {
+                    $(
+                        Kind::$variant_name => NodeKind::$kind_name,
+                    )*
+                }
+            }
         }
 
         impl KindType<NodeKind> for Kind {
