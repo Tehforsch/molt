@@ -67,6 +67,7 @@ impl MoltFile {
                 name: VarName::String(MAIN_FN_NAME.into()),
                 args,
                 stmts: self.stmts.drain(..).collect(),
+                return_type: Some(Type::Unit),
             });
         }
         Ok(self)
@@ -82,6 +83,12 @@ impl Parse for MoltFn {
         parenthesized!(args_content in input);
         let args = Punctuated::parse_terminated_with(&args_content, FnArg::parse)?;
 
+        let return_type = if input.peek(Token![->]) {
+            let _: Token![->] = input.parse()?;
+            Some(input.parse()?)
+        } else {
+            None
+        };
         let body;
         braced!(body in input);
         let mut stmts = vec![];
@@ -93,6 +100,7 @@ impl Parse for MoltFn {
             name: VarName::Ident(name),
             args,
             stmts,
+            return_type,
         })
     }
 }

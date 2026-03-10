@@ -98,7 +98,9 @@ impl<'a> Interpreter<'a> {
         if f.args.len() != 1 {
             return Err(Error::InvalidMainFn);
         } else {
-            let Type::Kind(kind) = &f.args[0].type_;
+            let Type::Kind(kind) = &f.args[0].type_ else {
+                unreachable!() // TODO: Ensure type checker makes sure this never happens.
+            };
             if !self
                 .context
                 .real_ctx

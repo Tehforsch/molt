@@ -19,6 +19,7 @@ pub struct MoltFn {
     pub name: VarName,
     pub args: Punctuated<FnArg, Comma>,
     pub stmts: Vec<Stmt>,
+    pub return_type: Option<Type>,
 }
 
 #[derive(Debug)]
@@ -30,6 +31,7 @@ pub struct FnArg {
 #[derive(Debug, Clone)]
 pub enum Type {
     Kind(Kind),
+    Unit,
 }
 
 #[derive(Debug)]

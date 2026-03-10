@@ -85,6 +85,7 @@ pub struct MoltFn {
     pub id: VarId,
     pub args: Vec<FnArg>,
     pub stmts: Vec<Stmt>,
+    pub return_type: Type,
 }
 
 #[derive(Debug)]
@@ -96,6 +97,7 @@ pub struct FnArg {
 #[derive(Debug)]
 pub enum Type {
     Kind(Kind),
+    Unit,
 }
 
 #[derive(Debug)]

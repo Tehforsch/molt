@@ -164,6 +164,11 @@ impl Resolver {
                 .into_iter()
                 .map(|s| self.resolve_stmt(s))
                 .collect::<Result<_>>()?,
+            return_type: f
+                .return_type
+                .map(|t| self.resolve_type(t))
+                .transpose()?
+                .unwrap_or(default_function_type()),
         };
         self.scopes.pop();
         Ok(result)
@@ -180,6 +185,7 @@ impl Resolver {
     fn resolve_type(&mut self, arg: grammar::Type) -> Result<Type> {
         Ok(match arg {
             grammar::Type::Kind(ident) => Type::Kind(ident),
+            grammar::Type::Unit => Type::Unit,
         })
     }
 
@@ -281,4 +287,8 @@ impl Resolver {
             node,
         })
     }
+}
+
+fn default_function_type() -> Type {
+    Type::Unit
 }
