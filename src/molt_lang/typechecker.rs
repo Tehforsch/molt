@@ -125,7 +125,8 @@ impl Typechecker {
 
     fn add_var(&mut self, id: VarId, type_: Type) -> TypeId {
         let type_id = self.add_type(type_);
-        self.vars.insert(id, type_id);
+        let before = self.vars.insert(id, type_id);
+        assert!(before.is_none());
         type_id
     }
 
@@ -230,7 +231,12 @@ impl Typechecker {
                     self.unify(type_id, rhs)?;
                 }
             }
-            super::LetLhs::Pat(_) => todo!(),
+            super::LetLhs::Pat(pat) => {
+                for var in pat.vars.iter() {
+                    let kind = pat.ctx.get_var_kind(var.ctx_id);
+                    self.add_var(var.var_id, Type::Kind(kind));
+                }
+            }
         }
         Ok(())
     }

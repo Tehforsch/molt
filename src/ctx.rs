@@ -213,6 +213,11 @@ impl<Node: NodeType> Ctx<Node> {
         self.get_var_by_name(name).unwrap().1.kind
     }
 
+    pub(crate) fn get_var_kind(&self, id: Id) -> Node::Kind {
+        let var = self.get_var(id);
+        var.kind
+    }
+
     pub(crate) fn iter(&self) -> impl Iterator<Item = Id> {
         (0..self.nodes.len()).map(|id| Id(InternalId::Item(id), self.mode))
     }
