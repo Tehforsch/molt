@@ -150,7 +150,7 @@ impl<'a> Interpreter<'a> {
             RuntimeFn::UserDefined(user_fn) => {
                 self.eval_user_defined_fn(args, user_fn)?;
             }
-            RuntimeFn::Builtin(builtin_fn) => self.eval_builtin(args, builtin_fn),
+            RuntimeFn::Builtin(builtin_fn) => self.eval_builtin(args, builtin_fn)?,
         }
         Ok(StmtValue::Value(Value::Unit))
     }

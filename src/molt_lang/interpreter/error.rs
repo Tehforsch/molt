@@ -2,6 +2,7 @@
 pub enum Error {
     UndefinedFn(String),
     InvalidMainFn,
+    Assertion,
 }
 
 impl Error {

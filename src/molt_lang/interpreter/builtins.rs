@@ -5,19 +5,23 @@ use codespan_reporting::diagnostic::Label;
 use crate::{
     Diagnostic, FileId, Id,
     molt_lang::{
-        Interpreter,
+        Interpreter, InterpreterError,
         interpreter::{RuntimeFn, value::Value},
     },
 };
 
+use super::Result;
+
 #[derive(Clone, Copy)]
 pub enum BuiltinFn {
+    Assert,
     Print,
     Dbg,
 }
 
 pub fn builtins<'a>() -> HashMap<String, RuntimeFn<'a>> {
     [
+        ("assert", RuntimeFn::Builtin(BuiltinFn::Assert)),
         ("print", RuntimeFn::Builtin(BuiltinFn::Print)),
         ("dbg", RuntimeFn::Builtin(BuiltinFn::Dbg)),
     ]
@@ -27,10 +31,30 @@ pub fn builtins<'a>() -> HashMap<String, RuntimeFn<'a>> {
 }
 
 impl<'src> Interpreter<'src> {
-    pub fn eval_builtin(&mut self, args: &[Value], builtin_fn: BuiltinFn) {
+    pub fn eval_builtin(&mut self, args: &[Value], builtin_fn: BuiltinFn) -> Result<()> {
         match builtin_fn {
-            BuiltinFn::Print => self.eval_print(args),
-            BuiltinFn::Dbg => self.eval_dbg(args),
+            BuiltinFn::Assert => self.eval_assert(args),
+            BuiltinFn::Print => {
+                self.eval_print(args);
+                Ok(())
+            }
+            BuiltinFn::Dbg => {
+                self.eval_dbg(args);
+                Ok(())
+            }
+        }
+    }
+
+    fn eval_assert(&self, args: &[Value]) -> Result<()> {
+        assert_eq!(args.len(), 1); // Resolver makes sure
+        if let Value::Bool(b) = args[0] {
+            if !b {
+                Err(InterpreterError::Assertion)
+            } else {
+                Ok(())
+            }
+        } else {
+            unreachable!() // TODO: make sure in type checker
         }
     }
 
