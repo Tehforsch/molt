@@ -15,6 +15,7 @@ use super::Result;
 #[derive(Clone, Copy)]
 pub enum BuiltinFn {
     Assert,
+    AssertEq,
     Print,
     Dbg,
 }
@@ -22,6 +23,7 @@ pub enum BuiltinFn {
 pub fn builtins<'a>() -> HashMap<String, RuntimeFn<'a>> {
     [
         ("assert", RuntimeFn::Builtin(BuiltinFn::Assert)),
+        ("assert_eq", RuntimeFn::Builtin(BuiltinFn::AssertEq)),
         ("print", RuntimeFn::Builtin(BuiltinFn::Print)),
         ("dbg", RuntimeFn::Builtin(BuiltinFn::Dbg)),
     ]
@@ -34,6 +36,7 @@ impl<'src> Interpreter<'src> {
     pub fn eval_builtin(&mut self, args: &[Value], builtin_fn: BuiltinFn) -> Result<()> {
         match builtin_fn {
             BuiltinFn::Assert => self.eval_assert(args),
+            BuiltinFn::AssertEq => self.eval_assert_eq(args),
             BuiltinFn::Print => {
                 self.eval_print(args);
                 Ok(())
@@ -55,6 +58,16 @@ impl<'src> Interpreter<'src> {
             }
         } else {
             unreachable!() // TODO: make sure in type checker
+        }
+    }
+
+    fn eval_assert_eq(&self, args: &[Value]) -> Result<()> {
+        assert_eq!(args.len(), 2); // Resolver makes sure
+        assert!(args[0].is_comparable_to(&args[1])); // TODO: make sure in type checker
+        if args[0].eq(&args[1]) {
+            Ok(())
+        } else {
+            Err(InterpreterError::Assertion)
         }
     }
 

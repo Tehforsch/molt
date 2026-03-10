@@ -1,3 +1,0 @@
-```molt error
-let input;
-```

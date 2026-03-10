@@ -1,3 +1,4 @@
 ```molt
-print(5);
+let x = 5;
+assert_eq(x, 5);
 ```
