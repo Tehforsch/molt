@@ -53,7 +53,7 @@ pub(crate) struct Interpreter<'a> {
 impl<'a> Interpreter<'a> {
     fn new(file: &'a MoltFile, context: Context<'a>) -> Interpreter<'a> {
         let mut interpreter = Self {
-            vars: (0..file.num_vars).map(|_| VarStack::default()).collect(),
+            vars: file.var_names.iter().map(|_| VarStack::default()).collect(),
             fns: file.fns.iter().collect(),
             context,
         };

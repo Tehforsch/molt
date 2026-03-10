@@ -58,7 +58,7 @@ impl Scope {
 
 pub struct Resolver {
     scopes: Vec<Scope>,
-    num_vars: usize,
+    var_names: Vec<String>,
     fn_map: HashMap<VarId, FnId>,
     builtin_map: HashMap<VarId, BuiltinFn>,
 }
@@ -66,7 +66,7 @@ pub struct Resolver {
 impl Default for Resolver {
     fn default() -> Self {
         Self {
-            num_vars: 0,
+            var_names: vec![],
             scopes: vec![Scope::default()],
             fn_map: HashMap::default(),
             builtin_map: HashMap::default(),
@@ -87,13 +87,9 @@ impl Resolver {
         self.scopes.len()
     }
 
-    fn fresh_var_id(&mut self) -> VarId {
-        self.num_vars += 1;
-        VarId(self.num_vars - 1)
-    }
-
     fn register_var(&mut self, name: &str) -> VarId {
-        let var_id = self.fresh_var_id();
+        self.var_names.push(name.into());
+        let var_id = VarId(self.var_names.len() - 1);
         self.active_scope_mut().insert(name, var_id);
         var_id
     }
@@ -127,9 +123,9 @@ impl Resolver {
                     .map(|(id, _)| id)
                     .unwrap(),
             ),
+            var_names: self.var_names,
             fns,
             builtin_map: self.builtin_map,
-            num_vars: self.num_vars,
         })
     }
 

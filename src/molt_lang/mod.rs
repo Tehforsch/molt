@@ -33,8 +33,8 @@ const INPUT_VAR_NAME: &str = "input";
 #[derive(Debug)]
 pub struct MoltFile {
     pub fns: Vec<MoltFn>,
+    pub var_names: Vec<String>,
     pub builtin_map: HashMap<VarId, BuiltinFn>,
-    pub num_vars: usize,
     pub main_fn_id: FnId,
 }
 
