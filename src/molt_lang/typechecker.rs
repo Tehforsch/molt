@@ -138,19 +138,17 @@ impl Typechecker {
     }
 
     pub(crate) fn check(mut self, file: &MoltFile) -> Result<Self, Error> {
-        for f in file.fns.iter() {
-            self.declare_fn(f);
-        }
+        let fn_return_types: Vec<_> = file.fns.iter().map(|f| self.declare_fn(f)).collect();
         for (id, f) in file.builtin_map.iter() {
             self.declare_builtin(*id, *f);
         }
-        for f in file.fns.iter() {
-            self.check_fn(f)?;
+        for (f, type_id) in file.fns.iter().zip(fn_return_types) {
+            self.check_fn(f, type_id)?;
         }
         Ok(self)
     }
 
-    fn declare_fn(&mut self, f: &MoltFn) {
+    fn declare_fn(&mut self, f: &MoltFn) -> TypeId {
         let input = f
             .args
             .iter()
@@ -162,9 +160,8 @@ impl Typechecker {
             })
             .collect();
         let output = self.add_type(f.return_type.clone().into());
-        self.add_var(f.id, Type::Fun(input, output))
-            .unwrap() // We already checked that the fn only exists once during resolution
-        ;
+        self.add_var(f.id, Type::Fun(input, output)).unwrap(); // We already checked that the fn only exists once during resolution
+        output
     }
 
     fn declare_builtin(&mut self, id: VarId, f: BuiltinFn) {
@@ -172,19 +169,22 @@ impl Typechecker {
         self.add_var(id, builtin_type).unwrap();
     }
 
-    fn check_fn(&mut self, f: &MoltFn) -> Result<(), Error> {
+    fn check_fn(&mut self, f: &MoltFn, fn_return_type: TypeId) -> Result<(), Error> {
         for stmt in f.stmts.iter() {
-            self.check_stmt(stmt)?;
+            self.check_stmt(stmt, fn_return_type)?;
         }
         Ok(())
     }
 
-    fn check_stmt(&mut self, stmt: &Stmt) -> Result<(), Error> {
+    fn check_stmt(&mut self, stmt: &Stmt, surrounding_fn_return_type: TypeId) -> Result<(), Error> {
         match stmt {
-            Stmt::ExprStmt(expr) => {
+            Stmt::Expr(expr) => {
                 self.infer_expr(expr)?;
             }
             Stmt::Let(let_stmt) => self.check_let(let_stmt)?,
+            Stmt::Return(ret_stmt) => {
+                self.check_return_stmt(ret_stmt, surrounding_fn_return_type)?
+            }
         }
         Ok(())
     }
@@ -237,6 +237,22 @@ impl Typechecker {
                 }
             }
         }
+        Ok(())
+    }
+
+    fn check_return_stmt(
+        &mut self,
+        ret_stmt: &super::ReturnStmt,
+        fn_return_type: TypeId,
+    ) -> Result<(), Error> {
+        let expr_type = ret_stmt
+            .expr
+            .as_ref()
+            .map(|expr| self.infer_expr(expr))
+            .unwrap_or_else(|| {
+                Ok(self.add_type(Type::Unit)) // Default return type 
+            })?;
+        self.unify(fn_return_type, expr_type)?;
         Ok(())
     }
 

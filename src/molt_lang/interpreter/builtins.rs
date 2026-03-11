@@ -8,19 +8,18 @@ use crate::{
 use super::Result;
 
 impl<'src> Interpreter<'src> {
-    pub fn eval_builtin(&mut self, args: &[Value], builtin_fn: BuiltinFn) -> Result<()> {
+    pub fn eval_builtin(&mut self, args: &[Value], builtin_fn: BuiltinFn) -> Result<Value> {
         match builtin_fn {
-            BuiltinFn::Assert => self.eval_assert(args),
-            BuiltinFn::AssertEq => self.eval_assert_eq(args),
+            BuiltinFn::Assert => self.eval_assert(args)?,
+            BuiltinFn::AssertEq => self.eval_assert_eq(args)?,
             BuiltinFn::Print => {
                 self.eval_print(args);
-                Ok(())
             }
             BuiltinFn::Dbg => {
                 self.eval_dbg(args);
-                Ok(())
             }
-        }
+        };
+        Ok(Value::Unit)
     }
 
     fn eval_assert(&self, args: &[Value]) -> Result<()> {

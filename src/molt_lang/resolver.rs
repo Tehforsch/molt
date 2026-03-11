@@ -197,9 +197,16 @@ impl Resolver {
 
     fn resolve_stmt(&mut self, stmt: grammar::Stmt) -> Result<Stmt> {
         match stmt {
-            grammar::Stmt::ExprStmt(e) => Ok(Stmt::ExprStmt(self.resolve_expr(e)?)),
+            grammar::Stmt::Expr(e) => Ok(Stmt::Expr(self.resolve_expr(e)?)),
             grammar::Stmt::Let(l) => Ok(Stmt::Let(self.resolve_let_stmt(l)?)),
+            grammar::Stmt::Return(s) => Ok(Stmt::Return(self.resolve_return_stmt(s)?)),
         }
+    }
+
+    fn resolve_return_stmt(&mut self, l: grammar::ReturnStmt) -> Result<ReturnStmt> {
+        Ok(ReturnStmt {
+            expr: l.expr.map(|e| self.resolve_expr(e)).transpose()?,
+        })
     }
 
     fn resolve_let_stmt(&mut self, l: grammar::LetStmt) -> Result<LetStmt> {

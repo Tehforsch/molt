@@ -1,6 +1,6 @@
 use proc_macro2::{Span, TokenStream};
 
-use crate::molt_lang::grammar::{Atom, FnCall, Lit, TokenVar, TokenVars, Type};
+use crate::molt_lang::grammar::{Atom, FnCall, Lit, ReturnStmt, TokenVar, TokenVars, Type};
 use crate::molt_lang::{INPUT_VAR_NAME, MAIN_FN_NAME};
 use crate::parser::parse::{self, Parse, ParseStream};
 use crate::parser::punctuated::Punctuated;
@@ -147,11 +147,22 @@ impl Parse for Stmt {
         let lookahead = input.lookahead1();
         if lookahead.peek(Token![let]) {
             Ok(Stmt::Let(input.parse()?))
+        } else if lookahead.peek(Token![return]) {
+            Ok(Stmt::Return(input.parse()?))
         } else {
             let expr: Expr = input.parse()?;
             let _: Token![;] = input.parse()?;
-            Ok(Stmt::ExprStmt(expr))
+            Ok(Stmt::Expr(expr))
         }
+    }
+}
+
+impl Parse for ReturnStmt {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let _: Token![return] = input.parse()?;
+        let expr = Some(input.parse()?);
+        let _: Token![;] = input.parse()?;
+        Ok(ReturnStmt { expr })
     }
 }
 

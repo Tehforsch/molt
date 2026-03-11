@@ -122,42 +122,61 @@ impl<'a> Interpreter<'a> {
     fn eval_stmt(&mut self, stmt: &Stmt) -> Result<StmtValue> {
         match stmt {
             Stmt::Let(let_stmt) => self.eval_let(let_stmt),
-            Stmt::ExprStmt(expr) => {
+            Stmt::Expr(expr) => {
                 self.eval_expr(expr)?;
                 Ok(StmtValue::Value(Value::Unit))
+            }
+            Stmt::Return(ret) => {
+                let val = if let Some(expr) = &ret.expr {
+                    self.eval_expr(expr)?
+                } else {
+                    Value::Unit
+                };
+                Ok(StmtValue::Return(val))
             }
         }
     }
 
     fn eval_fn_call(&mut self, fn_var_id: VarId, args: &[Value]) -> Result<StmtValue> {
         match self.vars[fn_var_id.0].get() {
-            Value::UserFn(fn_id) => self.eval_user_defined_fn(args, self.fns[fn_id.0])?,
-            Value::BuiltinFn(builtin_fn) => self.eval_builtin(args, builtin_fn)?,
+            Value::UserFn(fn_id) => self.eval_user_defined_fn(args, self.fns[fn_id.0]),
+            Value::BuiltinFn(builtin_fn) => {
+                self.eval_builtin(args, builtin_fn).map(StmtValue::Value)
+            }
             _ => unreachable!(), // TODO: verify in type checker.
-        };
-        Ok(StmtValue::Value(Value::Unit))
+        }
     }
 
-    fn eval_user_defined_fn(&mut self, args: &[Value], user_fn: &MoltFn) -> Result<(), Error> {
+    fn eval_user_defined_fn(
+        &mut self,
+        args: &[Value],
+        user_fn: &MoltFn,
+    ) -> Result<StmtValue, Error> {
         assert_eq!(user_fn.args.len(), args.len()); // todo verify this at resolution time
         for (arg, val) in user_fn.args.iter().zip(args.iter()) {
             self.vars[arg.var_id.0].push(val.clone());
         }
-        self.eval_block(user_fn)?;
+        let val = self.eval_block(user_fn)?;
+        let val = match val {
+            StmtValue::NoMatch => Value::Unit,
+            StmtValue::Value(_) => Value::Unit,
+            StmtValue::Return(value) => value,
+        };
         for arg in user_fn.args.iter() {
             self.vars[arg.var_id.0].pop();
         }
-        Ok(())
+        Ok(StmtValue::Value(val))
     }
 
-    fn eval_block(&mut self, user_fn: &MoltFn) -> Result<(), Error> {
+    fn eval_block(&mut self, user_fn: &MoltFn) -> Result<StmtValue, Error> {
         for stmt in user_fn.stmts.iter() {
             match self.eval_stmt(stmt)? {
-                StmtValue::NoMatch => break,
+                StmtValue::NoMatch => return Ok(StmtValue::NoMatch),
+                StmtValue::Return(val) => return Ok(StmtValue::Return(val)),
                 StmtValue::Value(_) => {}
             }
         }
-        Ok(())
+        Ok(StmtValue::Value(Value::Unit))
     }
 
     fn make_fn_args(&mut self, args: &[Expr]) -> Result<Vec<Value>> {
@@ -171,6 +190,7 @@ impl<'a> Interpreter<'a> {
                 match self.eval_fn_call(fn_call.id, &args)? {
                     StmtValue::Value(v) => Ok(v),
                     StmtValue::NoMatch => Ok(Value::Unit),
+                    StmtValue::Return(_) => unreachable!(),
                 }
             }
             Expr::Atom(atom) => self.eval_atom(atom),

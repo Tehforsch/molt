@@ -37,8 +37,10 @@ impl Value {
     }
 }
 
+#[derive(Debug)]
 pub enum StmtValue {
     NoMatch,
     #[allow(unused)]
     Value(Value),
+    Return(Value),
 }

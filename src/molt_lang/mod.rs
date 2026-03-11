@@ -70,8 +70,14 @@ pub enum Type {
 
 #[derive(Debug)]
 pub enum Stmt {
-    ExprStmt(Expr),
+    Expr(Expr),
     Let(LetStmt),
+    Return(ReturnStmt),
+}
+
+#[derive(Debug)]
+pub struct ReturnStmt {
+    pub expr: Option<Expr>,
 }
 
 #[derive(Debug)]
