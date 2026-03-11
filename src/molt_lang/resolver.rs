@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::rc::Rc;
 
 use super::*;
@@ -20,13 +21,18 @@ use crate::rust_grammar::parse_node_with_kind;
 pub(crate) enum Error {
     Parse(parser::Error),
     UndefinedVar(VarName),
+    DuplicateDefinitionFn(VarName),
 }
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // TODO format these
         match self {
             Error::Parse(error) => write!(f, "{:?}", error),
             Error::UndefinedVar(ident) => write!(f, "Undefined variable: '{:?}'", ident),
+            Error::DuplicateDefinitionFn(ident) => {
+                write!(f, "Function defined twice: '{:?}'", ident)
+            }
         }
     }
 }
@@ -115,6 +121,7 @@ impl Resolver {
             .into_iter()
             .map(|f| self.resolve_fn(f))
             .collect::<Result<_>>()?;
+        check_names_unique(&fns)?;
         Ok(MoltFile {
             main_fn_id: FnId(
                 fns.iter()
@@ -283,6 +290,16 @@ impl Resolver {
             node,
         })
     }
+}
+
+fn check_names_unique(fns: &[MoltFn]) -> Result<()> {
+    let mut set = HashSet::new();
+    for f in fns.iter() {
+        if !set.insert(&f.name) {
+            return Err(ResolverError::DuplicateDefinitionFn(f.name.clone()));
+        }
+    }
+    Ok(())
 }
 
 fn default_function_type() -> Type {

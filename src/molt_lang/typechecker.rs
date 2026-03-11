@@ -123,11 +123,14 @@ impl Typechecker {
         TypeId(self.types.len() - 1)
     }
 
-    fn add_var(&mut self, id: VarId, type_: Type) -> TypeId {
+    fn add_var(&mut self, id: VarId, type_: Type) -> Result<TypeId, Error> {
         let type_id = self.add_type(type_);
-        let before = self.vars.insert(id, type_id);
-        assert!(before.is_none());
-        type_id
+        if let Some(before) = self.vars.get(&id) {
+            self.unify(type_id, *before)?;
+        } else {
+            self.vars.insert(id, type_id);
+        }
+        Ok(type_id)
     }
 
     fn resolve(&self, id: TypeId) -> TypeId {
@@ -162,15 +165,22 @@ impl Typechecker {
         let input = f
             .args
             .iter()
-            .map(|arg| self.add_var(arg.var_id, arg.type_.clone().into()))
+            .map(|arg| {
+                self.add_var(arg.var_id, arg.type_.clone().into())
+                    // At this point, the variable cannot have been in scope before, so
+                    // this always returns Ok(..)
+                    .unwrap()
+            })
             .collect();
         let output = self.add_type(f.return_type.clone().into());
-        self.add_var(f.id, Type::Fun(input, output));
+        self.add_var(f.id, Type::Fun(input, output))
+            .unwrap() // We already checked that the fn only exists once during resolution
+        ;
     }
 
     fn declare_builtin(&mut self, id: VarId, f: BuiltinFn) {
         let builtin_type = self.builtin_type(f);
-        self.add_var(id, builtin_type);
+        self.add_var(id, builtin_type).unwrap();
     }
 
     fn check_fn(&mut self, f: &MoltFn) -> Result<(), Error> {
@@ -209,7 +219,7 @@ impl Typechecker {
 
     fn infer_atom(&mut self, atom: &super::Atom) -> Result<TypeId, Error> {
         match atom {
-            super::Atom::Var(var_id) => Ok(self.add_var(*var_id, Type::Var)),
+            super::Atom::Var(var_id) => Ok(self.add_var(*var_id, Type::Var)?),
             super::Atom::Lit(lit) => Ok(self.add_type(lit.type_())),
         }
     }
@@ -226,7 +236,7 @@ impl Typechecker {
                     self.add_var(*var_id, type_.clone().into())
                 } else {
                     self.add_var(*var_id, Type::Var)
-                };
+                }?;
                 if let Some(rhs) = rhs {
                     self.unify(type_id, rhs)?;
                 }
@@ -234,7 +244,7 @@ impl Typechecker {
             super::LetLhs::Pat(pat) => {
                 for var in pat.vars.iter() {
                     let kind = pat.ctx.get_var_kind(var.ctx_id);
-                    self.add_var(var.var_id, Type::Kind(kind));
+                    self.add_var(var.var_id, Type::Kind(kind))?;
                 }
             }
         }
