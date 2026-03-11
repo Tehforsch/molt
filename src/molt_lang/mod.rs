@@ -169,13 +169,11 @@ impl MoltFile {
             .resolve_file(file)
             .map_err(|e| Error::Resolver(e, file_id))?;
         let typechecker = Typechecker::default();
-        let typeck_result = typechecker
+        let typeck = typechecker
             .check(&resolved)
             .map_err(|e| Error::Typechecker(e, file_id))?;
         if debug_print {
-            for (id, resolved_type) in typeck_result.iter_vars() {
-                println!("{}: {}", resolved.var_names[id.0], resolved_type);
-            }
+            typeck.debug_print(&resolved);
         }
         Ok(resolved)
     }

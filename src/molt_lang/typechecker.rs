@@ -48,12 +48,12 @@ impl std::fmt::Display for ResolvedType {
         match self {
             ResolvedType::Kind(kind) => write!(f, "{}", kind),
             ResolvedType::Var => write!(f, "var"),
-            ResolvedType::Int => write!(f, "Int"),
-            ResolvedType::Bool => write!(f, "Bool"),
-            ResolvedType::Str => write!(f, "Str"),
-            ResolvedType::Unit => write!(f, "Unit"),
+            ResolvedType::Int => write!(f, "int"),
+            ResolvedType::Bool => write!(f, "bool"),
+            ResolvedType::Str => write!(f, "str"),
+            ResolvedType::Unit => write!(f, "()"),
             ResolvedType::Fun(args, ret) => {
-                write!(f, "Fn(")?;
+                write!(f, "fn(")?;
                 for (i, arg) in args.iter().enumerate() {
                     write!(f, "{arg}")?;
                     if i != args.len() - 1 {
@@ -91,9 +91,11 @@ pub(super) struct Typechecker {
 
 impl Typechecker {
     pub(crate) fn iter_vars(&self) -> impl Iterator<Item = (VarId, ResolvedType)> {
-        self.vars
-            .iter()
-            .map(|(var, id)| (*var, self.types[self.resolve(*id).0].clone()))
+        let mut keys: Vec<_> = self.vars.keys().collect();
+        keys.sort_by_key(|id| id.0);
+        keys.into_iter()
+            .map(|k| (k, self.vars[k]))
+            .map(|(var, id)| (*var, self.types[self.resolve(id).0].clone()))
             .map(|(var, type_)| (var, self.as_resolved(&type_)))
     }
 
@@ -112,6 +114,12 @@ impl Typechecker {
                     .collect(),
                 Box::new(self.as_resolved(&self.types[type_id.0])),
             ),
+        }
+    }
+
+    pub(crate) fn debug_print(&self, file: &MoltFile) {
+        for (id, resolved_type) in self.iter_vars() {
+            println!("{}: {}", file.var_names[id.0], resolved_type);
         }
     }
 
@@ -140,10 +148,16 @@ impl Typechecker {
     pub(crate) fn check(mut self, file: &MoltFile) -> Result<Self, Error> {
         let fn_return_types: Vec<_> = file.fns.iter().map(|f| self.declare_fn(f)).collect();
         for (id, f) in file.builtin_map.iter() {
+            println!("");
+            println!("DECLARE {:?}", f);
             self.declare_builtin(*id, *f);
+            self.debug_print(file);
         }
         for (f, type_id) in file.fns.iter().zip(fn_return_types) {
+            println!("");
+            println!("CHECK {:?}", f.name);
             self.check_fn(f, type_id)?;
+            self.debug_print(file);
         }
         Ok(self)
     }
