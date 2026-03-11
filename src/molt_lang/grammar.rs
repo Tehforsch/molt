@@ -41,6 +41,13 @@ pub enum Stmt {
     Expr(ExprStmt),
     Let(LetStmt),
     Return(ReturnStmt),
+    Assignment(Assignment),
+}
+
+#[derive(Debug)]
+pub struct Assignment {
+    pub lhs: Ident,
+    pub rhs: Expr,
 }
 
 #[derive(Debug)]

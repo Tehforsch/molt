@@ -1,7 +1,7 @@
 use proc_macro2::{Span, TokenStream};
 
 use crate::molt_lang::grammar::{
-    Atom, ExprStmt, FnCall, Lit, ReturnStmt, TokenVar, TokenVars, Type,
+    Assignment, Atom, ExprStmt, FnCall, Lit, ReturnStmt, TokenVar, TokenVars, Type,
 };
 use crate::molt_lang::{INPUT_VAR_NAME, MAIN_FN_NAME};
 use crate::parser::parse::{self, Parse, ParseStream};
@@ -151,6 +151,8 @@ impl Parse for Stmt {
             Ok(Stmt::Let(input.parse()?))
         } else if lookahead.peek(Token![return]) {
             Ok(Stmt::Return(input.parse()?))
+        } else if lookahead.peek(Ident::peek_any) && input.peek2(Token![=]) {
+            Ok(Stmt::Assignment(input.parse()?))
         } else {
             let expr: Expr = input.parse()?;
             let has_trailing_semi = if input.peek(Token![;]) {
@@ -164,6 +166,16 @@ impl Parse for Stmt {
                 has_trailing_semi,
             }))
         }
+    }
+}
+
+impl Parse for Assignment {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let lhs = input.parse()?;
+        let _: Token![=] = input.parse()?;
+        let rhs = input.parse()?;
+        let _: Token![;] = input.parse()?;
+        Ok(Assignment { lhs, rhs })
     }
 }
 

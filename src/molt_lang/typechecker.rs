@@ -243,6 +243,9 @@ impl Typechecker {
             Stmt::Return(ret_stmt) => {
                 self.check_return_stmt(ret_stmt, surrounding_fn_return_type)?
             }
+            Stmt::Assignment(assignment) => {
+                self.check_assignment(assignment)?;
+            }
         }
         Ok(())
     }
@@ -315,6 +318,12 @@ impl Typechecker {
             })?;
         self.unify(fn_return_type, expr_type)?;
         Ok(())
+    }
+
+    fn check_assignment(&mut self, a: &super::Assignment) -> Result<(), Error> {
+        let lhs = self.lookup(a.lhs).unwrap(); // Resolver makes sure this exists
+        let rhs = self.infer_expr(&a.rhs)?;
+        self.unify(lhs, rhs)
     }
 
     fn unify(&mut self, t1: TypeId, t2: TypeId) -> Result<(), Error> {

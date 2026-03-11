@@ -5,8 +5,9 @@ mod value;
 use super::{LetLhs, LetStmt, Lit};
 use crate::{
     Id, Matcher, Node,
+    modify::Modification,
     molt_lang::{
-        Expr, FnId, MoltFile, MoltFn, Stmt, Type, VarId, context::Context,
+        Assignment, Expr, FnId, MoltFile, MoltFn, Stmt, Type, VarId, context::Context,
         interpreter::value::StmtValue,
     },
     node::NodeType,
@@ -48,6 +49,7 @@ pub(crate) struct Interpreter<'a> {
     vars: Vec<VarStack>,
     fns: Vec<&'a MoltFn>,
     context: Context<'a>,
+    modifications: Vec<Modification>,
 }
 
 impl<'a> Interpreter<'a> {
@@ -56,6 +58,7 @@ impl<'a> Interpreter<'a> {
             vars: file.var_names.iter().map(|_| VarStack::default()).collect(),
             fns: file.fns.iter().collect(),
             context,
+            modifications: vec![],
         };
         for (id, f) in file.iter_fns() {
             interpreter.eval_fn_def(f, id);
@@ -134,6 +137,7 @@ impl<'a> Interpreter<'a> {
                 };
                 Ok(StmtValue::Return(val))
             }
+            Stmt::Assignment(assignment) => self.eval_assignment(assignment),
         }
     }
 
@@ -210,6 +214,30 @@ impl<'a> Interpreter<'a> {
             Lit::Int(x) => Ok(Value::Int(*x)),
             Lit::Bool(b) => Ok(Value::Bool(*b)),
         }
+    }
+
+    fn eval_assignment(&mut self, assignment: &Assignment) -> Result<StmtValue> {
+        let val = self.vars[assignment.lhs.0].pop();
+        let new_val = match val {
+            Value::String(_)
+            | Value::Int(_)
+            | Value::Bool(_)
+            | Value::Unit
+            | Value::UserFn(_)
+            | Value::BuiltinFn(_) => self.eval_expr(&assignment.rhs)?,
+            Value::Node(id) => {
+                let Value::Node(new_val) = self.eval_expr(&assignment.rhs)? else {
+                    unreachable!() // type checker ensures
+                };
+                self.modifications.push(Modification {
+                    old: id,
+                    new: new_val,
+                });
+                Value::Node(new_val)
+            }
+        };
+        self.vars[assignment.lhs.0].push(new_val);
+        Ok(StmtValue::Value(Value::Unit))
     }
 
     fn eval_let(&mut self, let_stmt: &LetStmt) -> Result<StmtValue> {

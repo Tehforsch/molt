@@ -5,7 +5,6 @@ use crate::{
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Value {
-    #[allow(unused)]
     String(String),
     Int(i64),
     Bool(bool),

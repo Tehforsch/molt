@@ -202,7 +202,15 @@ impl Resolver {
             grammar::Stmt::Expr(e) => Ok(self.resolve_expr_stmt(e, is_last_stmt_in_block)?),
             grammar::Stmt::Let(l) => Ok(Stmt::Let(self.resolve_let_stmt(l)?)),
             grammar::Stmt::Return(s) => Ok(Stmt::Return(self.resolve_return_stmt(s)?)),
+            grammar::Stmt::Assignment(a) => Ok(Stmt::Assignment(self.resolve_assignment(a)?)),
         }
+    }
+
+    fn resolve_assignment(&mut self, s: grammar::Assignment) -> Result<Assignment> {
+        let lhs = self.lookup_var(&s.lhs)?;
+        let rhs = self.resolve_expr(s.rhs)?;
+
+        Ok(Assignment { lhs, rhs })
     }
 
     fn resolve_expr_stmt(
@@ -297,6 +305,7 @@ impl Resolver {
         }
         let ctx = Rc::new(RefCell::new(pat_ctx));
         let Some(Type::Kind(kind)) = type_ else {
+            dbg!(&type_);
             todo!() // Error handling!
         };
         let node = crate::parser::parse_with_ctx(

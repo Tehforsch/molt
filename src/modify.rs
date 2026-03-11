@@ -20,14 +20,19 @@ pub enum ModifyError {
     Overlap,
 }
 
+pub struct Modification {
+    pub old: Id,
+    pub new: Id,
+}
+
 #[derive(Debug)]
-struct Modification {
+struct Modification2 {
     span: Span,
     new_code: String,
 }
 
 pub struct Modify<'a> {
-    modifications: Vec<Modification>,
+    modifications: Vec<Modification2>,
     code: String,
     rust_file_path: &'a Path,
     config: &'a Config,
@@ -69,7 +74,7 @@ impl<'a> Modify<'a> {
         Ok(self.code.clone())
     }
 
-    fn post_modification_check_ok(&self, modification: &Modification) -> Result<bool, Error> {
+    fn post_modification_check_ok(&self, modification: &Modification2) -> Result<bool, Error> {
         let command = self.config.check.as_ref().unwrap();
         let original_code = &self.code;
         let new_code = modification.apply(original_code.clone());
@@ -115,7 +120,7 @@ impl<'a> Modify<'a> {
     }
 }
 
-impl Modification {
+impl Modification2 {
     fn apply(&self, mut code: String) -> String {
         let range = self.span.byte_range();
         code.replace_range(range, &self.new_code);
@@ -166,7 +171,7 @@ fn write_to_file(input: &Input, rust_file_id: FileId, code: String) -> Result<()
 fn prepare_modifications(
     _match_result: &MatchResult,
     _modifies: &[(Id, Id)],
-) -> Result<Vec<Modification>, Error> {
+) -> Result<Vec<Modification2>, Error> {
     todo!()
     // let mut all_modifications: Vec<_> = modifies
     //     .iter()
@@ -185,7 +190,7 @@ fn prepare_modifications(
     // Ok(all_modifications)
 }
 
-fn check_overlap(modifications: &[Modification]) -> Result<(), Error> {
+fn check_overlap(modifications: &[Modification2]) -> Result<(), Error> {
     let mut last_byte = None;
     for tf in modifications.iter() {
         if let Some(last_byte) = last_byte
@@ -202,7 +207,7 @@ fn check_overlap(modifications: &[Modification]) -> Result<(), Error> {
 type MatchCtx<N> = N;
 
 #[allow(unused)]
-fn make_modification(ctx: &MatchCtx<Node>, match_: &Match, input: Id, output: Id) -> Modification {
+fn make_modification(ctx: &MatchCtx<Node>, match_: &Match, input: Id, output: Id) -> Modification2 {
     todo!()
     // let ast = match_.get_binding(input).id.unwrap();
     // let ast_span = ctx.real_ctx.get_span(ast);
