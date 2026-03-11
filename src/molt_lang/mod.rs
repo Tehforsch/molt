@@ -152,7 +152,7 @@ pub struct TokenVar {
 }
 
 impl MoltFile {
-    pub fn new(input: &Input) -> Result<Self, Error> {
+    pub fn new(input: &Input, debug_print: bool) -> Result<Self, Error> {
         let file_id = input.molt_file_id();
         let source = input.source(file_id).unwrap();
         let file: grammar::MoltFile =
@@ -166,8 +166,10 @@ impl MoltFile {
         let typeck_result = typechecker
             .check(&resolved)
             .map_err(|e| Error::Typechecker(e, file_id))?;
-        for (id, resolved_type) in typeck_result.iter_vars() {
-            println!("{}: {}", resolved.var_names[id.0], resolved_type);
+        if debug_print {
+            for (id, resolved_type) in typeck_result.iter_vars() {
+                println!("{}: {}", resolved.var_names[id.0], resolved_type);
+            }
         }
         Ok(resolved)
     }

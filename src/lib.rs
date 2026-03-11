@@ -70,7 +70,7 @@ pub fn run_internal(
     config: crate::Config,
     _cargo_root: Option<&PathBuf>,
 ) -> Result<(), Error> {
-    let molt_file = molt_lang::MoltFile::new(input)?;
+    let molt_file = molt_lang::MoltFile::new(input, config.debug_print)?;
 
     if input.iter_rust_src().count() == 0 {
         // Fake some context so we can run.
