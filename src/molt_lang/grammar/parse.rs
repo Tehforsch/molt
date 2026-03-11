@@ -116,8 +116,29 @@ impl Parse for FnArg {
 
 impl Parse for Type {
     fn parse(input: ParseStream) -> Result<Self> {
-        let kind: Kind = input.parse()?;
-        Ok(Type::Kind(kind))
+        let mut lh = input.lookahead1();
+        if Kind::peek(&mut lh) {
+            let kind = input.parse().unwrap();
+            Ok(Type::Kind(kind))
+        } else if lh.peek(Ident::peek_any) {
+            let ident: Ident = input.parse()?;
+            if ident == "bool" {
+                Ok(Type::Bool)
+            } else if ident == "int" {
+                Ok(Type::Int)
+            } else if ident == "str" {
+                Ok(Type::Str)
+            } else {
+                let e = lh.error();
+                let m = e.messages().last().unwrap();
+                Err(crate::parser::Error::new(
+                    ident.span(),
+                    format!("{} or primitives `bool`, `int`, `str`", m),
+                ))
+            }
+        } else {
+            Err(lh.error())
+        }
     }
 }
 

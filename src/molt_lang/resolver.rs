@@ -189,6 +189,9 @@ impl Resolver {
         Ok(match arg {
             grammar::Type::Kind(ident) => Type::Kind(ident),
             grammar::Type::Unit => Type::Unit,
+            grammar::Type::Int => Type::Int,
+            grammar::Type::Bool => Type::Bool,
+            grammar::Type::Str => Type::Str,
         })
     }
 

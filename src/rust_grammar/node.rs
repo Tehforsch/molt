@@ -169,6 +169,17 @@ macro_rules! define_kind {
             }
         }
 
+        impl Kind {
+            pub(crate) fn peek(lookahead: &mut crate::parser::lookahead::Lookahead1) -> bool {
+                $(
+                    if lookahead.peek(kind_kws::$variant_name) {
+                        return true
+                    }
+                )*
+                false
+            }
+        }
+
         fn is_of_kind(node: &Node, pat_kind: Kind) -> bool {
             $(
                 match_impl!(node, pat_kind, $variant_name, $parse_ty $(,$sub_ty)?);

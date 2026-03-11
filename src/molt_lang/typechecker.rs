@@ -72,6 +72,9 @@ impl From<crate::molt_lang::Type> for Type {
         match value {
             super::Type::Kind(kind) => Type::Kind(kind),
             super::Type::Unit => Type::Unit,
+            super::Type::Int => Type::Int,
+            super::Type::Bool => Type::Bool,
+            super::Type::Str => Type::Str,
         }
     }
 }

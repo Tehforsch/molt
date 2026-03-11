@@ -31,6 +31,9 @@ pub struct FnArg {
 #[derive(Debug, Clone)]
 pub enum Type {
     Kind(Kind),
+    Int,
+    Bool,
+    Str,
     Unit,
 }
 
