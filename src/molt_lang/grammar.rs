@@ -84,6 +84,7 @@ pub struct FnCall {
 pub enum Expr {
     FnCall(FnCall),
     Atom(Atom),
+    Pat(Pat),
 }
 
 #[derive(Debug)]

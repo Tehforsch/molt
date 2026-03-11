@@ -1,6 +1,12 @@
 use codespan_reporting::files::Files;
 
-use crate::{Config, Ctx, FileId, Input, rust_grammar::Node, writer::Writer};
+use crate::{
+    Config, Ctx, FileId, Input,
+    molt_lang::{PatId, ResolvedPat},
+    rust_grammar::Node,
+    storage::Storage,
+    writer::Writer,
+};
 
 pub struct Context<'a> {
     pub real_id: FileId,
@@ -9,6 +15,8 @@ pub struct Context<'a> {
     pub input: &'a Input,
     pub writer: &'a Writer,
     pub config: &'a Config,
+
+    pub pats: &'a Storage<PatId, ResolvedPat>,
 }
 
 impl Context<'_> {
@@ -26,5 +34,9 @@ impl Context<'_> {
 
     pub(crate) fn input(&self) -> &Input {
         self.input
+    }
+
+    pub(crate) fn get_pat(&self, id: PatId) -> &ResolvedPat {
+        &self.pats[id]
     }
 }

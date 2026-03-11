@@ -391,8 +391,7 @@ fn span_of_unexpected_ignoring_nones(mut cursor: Cursor) -> Option<(Span, Delimi
 }
 
 fn kind_matches(ctx: &Ctx<Node>, ident: &Ident, kind: NodeKind) -> bool {
-    ctx.get_kind_by_name(&ident.to_string())
-        .is_comparable_to(kind)
+    ctx.get_kind_by_name(ident).is_comparable_to(kind)
 }
 
 impl<'a> ParseBuffer<'a> {

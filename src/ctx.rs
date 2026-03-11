@@ -96,31 +96,13 @@ impl Id {
 /// The real representation of a pattern variable.
 /// Contains its name and the kind of the variable.
 pub(crate) struct Var<K> {
-    // TODO: Pick one of name / ident or
-    // replace with `NodeId<Ident>`
-    name: String,
     ident: Ident,
     kind: K,
 }
 
-impl<K: std::fmt::Debug + PartialEq> PartialEq for Var<K> {
-    fn eq(&self, other: &Self) -> bool {
-        debug_assert_eq!(self.kind, other.kind);
-        self.name.eq(&other.name)
-    }
-}
-
 impl<K: Copy> Var<K> {
     pub(crate) fn new(ident: Ident, kind: K) -> Self {
-        Self {
-            name: ident.to_string(),
-            ident,
-            kind,
-        }
-    }
-
-    pub(crate) fn name(&self) -> &str {
-        &self.name
+        Self { ident, kind }
     }
 
     pub(crate) fn ident(&self) -> &Ident {
@@ -152,7 +134,7 @@ impl<Node: NodeType> Ctx<Node> {
     }
 
     pub(crate) fn add_var<T: ToNode<Node>>(&mut self, var: Var<Node::Kind>) -> NodeId<T> {
-        let id = if let Some((id, _)) = self.get_var_by_name(&var.name) {
+        let id = if let Some((id, _)) = self.get_var_by_name(var.ident()) {
             id
         } else {
             self.add_var_internal(var)
@@ -201,21 +183,16 @@ impl<Node: NodeType> Ctx<Node> {
         }
     }
 
-    fn get_var_by_name(&self, name: &str) -> Option<(Id, &Var<Node::Kind>)> {
+    fn get_var_by_name(&self, ident: &Ident) -> Option<(Id, &Var<Node::Kind>)> {
         self.vars
             .iter()
             .enumerate()
-            .find(|(_, var)| var.name == name)
+            .find(|(_, var)| var.ident() == ident)
             .map(|(i, var)| (Id(InternalId::Var(i), self.mode), var))
     }
 
-    pub(crate) fn get_kind_by_name(&self, name: &str) -> Node::Kind {
+    pub(crate) fn get_kind_by_name(&self, name: &Ident) -> Node::Kind {
         self.get_var_by_name(name).unwrap().1.kind
-    }
-
-    pub(crate) fn get_var_kind(&self, id: Id) -> Node::Kind {
-        let var = self.get_var(id);
-        var.kind
     }
 
     pub(crate) fn iter(&self) -> impl Iterator<Item = Id> {
@@ -224,13 +201,6 @@ impl<Node: NodeType> Ctx<Node> {
 
     pub(crate) fn iter_vars(&self) -> impl Iterator<Item = &Var<Node::Kind>> {
         self.vars.iter()
-    }
-
-    pub(crate) fn iter_vars_ids(&self) -> impl Iterator<Item = (Id, &Var<Node::Kind>)> {
-        self.vars
-            .iter()
-            .enumerate()
-            .map(|(i, v)| (Id(InternalId::Var(i), self.mode), v))
     }
 
     pub(crate) fn get_span(&self, id: impl Into<Id>) -> Span {

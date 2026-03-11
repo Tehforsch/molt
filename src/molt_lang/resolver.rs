@@ -12,10 +12,11 @@ use crate::molt_lang::MoltFn;
 use crate::molt_lang::builtin_fn::BuiltinFn;
 use crate::molt_lang::builtin_fn::builtins_def;
 use crate::molt_lang::grammar;
+use crate::molt_lang::typechecker::TypecheckResult;
 use crate::parser;
-use crate::rust_grammar::Kind;
 use crate::rust_grammar::Node;
 use crate::rust_grammar::parse_node_with_kind;
+use crate::storage::Storage;
 
 #[derive(Debug)]
 pub(crate) enum Error {
@@ -64,9 +65,10 @@ impl Scope {
 
 pub struct Resolver {
     scopes: Vec<Scope>,
-    var_names: Vec<String>,
+    var_names: Vec<Ident>,
     fn_map: HashMap<VarId, FnId>,
     builtin_map: HashMap<VarId, BuiltinFn>,
+    pats: Storage<PatId, UnresolvedPat>,
 }
 
 impl Default for Resolver {
@@ -76,6 +78,7 @@ impl Default for Resolver {
             scopes: vec![Scope::default()],
             fn_map: HashMap::default(),
             builtin_map: HashMap::default(),
+            pats: Storage::default(),
         }
     }
 }
@@ -93,10 +96,11 @@ impl Resolver {
         self.scopes.len()
     }
 
-    fn register_var(&mut self, name: &str) -> VarId {
-        self.var_names.push(name.into());
+    fn register_var(&mut self, name: &Ident) -> VarId {
+        let name_str = name.to_string();
+        self.var_names.push(name.clone());
         let var_id = VarId(self.var_names.len() - 1);
-        self.active_scope_mut().insert(name, var_id);
+        self.active_scope_mut().insert(&name_str, var_id);
         var_id
     }
 
@@ -112,7 +116,16 @@ impl Resolver {
         Err(Error::UndefinedVar(name.clone()))
     }
 
-    pub fn resolve_file(mut self, file: grammar::MoltFile) -> Result<MoltFile> {
+    fn lookup_or_register_var(&mut self, name: &Ident) -> Result<VarId> {
+        Ok(self
+            .lookup_var(name) // TODO: the implicit clone in the error variant here is ugly
+            .unwrap_or_else(|_| self.register_var(name)))
+    }
+
+    pub fn resolve_file(
+        mut self,
+        file: grammar::MoltFile,
+    ) -> Result<(MoltFile, Storage<PatId, UnresolvedPat>)> {
         let grammar::MoltFile { fns, stmts: _ } = file;
         // Register all user defined functions
         self.register_builtins();
@@ -122,30 +135,33 @@ impl Resolver {
             .map(|f| self.resolve_fn(f))
             .collect::<Result<_>>()?;
         check_names_unique(&fns)?;
-        Ok(MoltFile {
-            main_fn_id: FnId(
-                fns.iter()
-                    .enumerate()
-                    .find(|(_, f)| f.name == MAIN_FN_NAME)
-                    .map(|(id, _)| id)
-                    .unwrap(),
-            ),
-            var_names: self.var_names,
-            fns,
-            builtin_map: self.builtin_map,
-        })
+        Ok((
+            MoltFile {
+                main_fn_id: FnId(
+                    fns.iter()
+                        .enumerate()
+                        .find(|(_, f)| f.name == MAIN_FN_NAME)
+                        .map(|(id, _)| id)
+                        .unwrap(),
+                ),
+                var_names: self.var_names,
+                fns,
+                builtin_map: self.builtin_map,
+            },
+            self.pats,
+        ))
     }
 
     fn register_builtins(&mut self) {
         for (name, f) in builtins_def() {
-            let var = self.register_var(name);
-            self.builtin_map.insert(var, *f);
+            let var = self.register_var(&name);
+            self.builtin_map.insert(var, f);
         }
     }
 
     fn register_user_fns(&mut self, fns: &[grammar::MoltFn]) {
         for (i, f) in fns.iter().enumerate() {
-            let var = self.register_var(&f.name.to_string());
+            let var = self.register_var(&f.name);
             self.fn_map.insert(var, FnId(i));
         }
     }
@@ -180,7 +196,7 @@ impl Resolver {
     }
 
     fn resolve_fn_arg(&mut self, arg: grammar::FnArg) -> Result<FnArg> {
-        let var_id = self.register_var(&arg.var_name.to_string());
+        let var_id = self.register_var(&arg.var_name);
         Ok(FnArg {
             var_id,
             type_: self.resolve_type(arg.type_)?,
@@ -241,19 +257,19 @@ impl Resolver {
     fn resolve_let_stmt(&mut self, l: grammar::LetStmt) -> Result<LetStmt> {
         let type_ = l.type_.map(|t| self.resolve_type(t)).transpose()?;
         Ok(LetStmt {
-            lhs: self.resolve_let_lhs(l.lhs, type_.as_ref())?,
+            lhs: self.resolve_let_lhs(l.lhs)?,
             type_,
             rhs: l.rhs.map(|e| self.resolve_expr(e)).transpose()?,
         })
     }
 
-    fn resolve_let_lhs(&mut self, lhs: grammar::LetLhs, type_: Option<&Type>) -> Result<LetLhs> {
+    fn resolve_let_lhs(&mut self, lhs: grammar::LetLhs) -> Result<LetLhs> {
         Ok(match lhs {
             grammar::LetLhs::Var(ident) => {
-                let var_id = self.register_var(&ident.to_string());
+                let var_id = self.register_var(&ident);
                 LetLhs::Var(var_id)
             }
-            grammar::LetLhs::Pat(pat) => LetLhs::Pat(self.resolve_pat(pat, type_)?),
+            grammar::LetLhs::Pat(pat) => LetLhs::Pat(self.resolve_pat(pat)?),
         })
     }
 
@@ -272,6 +288,7 @@ impl Resolver {
         match expr {
             grammar::Expr::FnCall(f) => Ok(Expr::FnCall(self.resolve_fn_call(f)?)),
             grammar::Expr::Atom(atom) => Ok(Expr::Atom(self.resolve_atom(&atom)?)),
+            grammar::Expr::Pat(pat) => Ok(Expr::Pat(self.resolve_pat(pat)?)),
         }
     }
 
@@ -296,37 +313,16 @@ impl Resolver {
         }
     }
 
-    fn resolve_pat(&mut self, p: grammar::Pat, type_: Option<&Type>) -> Result<Pat> {
-        let mut pat_ctx = Ctx::<Node>::new(Mode::Molt);
-        for var in p.vars.into_iter() {
-            let kind = Kind::infer_from_name(&var.name.to_string())
-                .unwrap_or_else(|| panic!("For now, names need to be called like their kind. Identifier {:?} does not follow this rule.", var.name.to_string()));
-            pat_ctx.add_var::<Node>(Var::new(var.name, kind));
-        }
-        let ctx = Rc::new(RefCell::new(pat_ctx));
-        let Some(Type::Kind(kind)) = type_ else {
-            dbg!(&type_);
-            todo!() // Error handling!
+    fn resolve_pat(&mut self, p: grammar::Pat) -> Result<PatId> {
+        let pat = UnresolvedPat {
+            tokens: p.tokens,
+            vars: p
+                .vars
+                .into_iter()
+                .map(|x| self.lookup_or_register_var(&x.name))
+                .collect::<Result<_>>()?,
         };
-        let node = crate::parser::parse_with_ctx(
-            ctx.clone(),
-            |stream| parse_node_with_kind(stream, *kind),
-            p.tokens,
-            Mode::Molt,
-        )
-        .map_err(Error::Parse)?;
-        let ctx = ctx.replace(Ctx::new(Mode::Molt));
-        Ok(Pat {
-            vars: ctx
-                .iter_vars_ids()
-                .map(|(id, var)| {
-                    let var_id = self.register_var(&var.ident().to_string());
-                    TokenVar { ctx_id: id, var_id }
-                })
-                .collect(),
-            ctx,
-            node,
-        })
+        Ok(self.pats.add(pat))
     }
 }
 
@@ -342,4 +338,52 @@ fn check_names_unique(fns: &[MoltFn]) -> Result<()> {
 
 fn default_function_type() -> Type {
     Type::Unit
+}
+
+pub(crate) fn resolve_pats(
+    file: &MoltFile,
+    typeck: &TypecheckResult,
+    unresolved: Storage<PatId, UnresolvedPat>,
+) -> Result<Storage<PatId, ResolvedPat>> {
+    unresolved
+        .into_iter_enumerate()
+        .map(|(i, pat)| resolve_pat(file, typeck, pat, i))
+        .collect()
+}
+
+fn resolve_pat(
+    file: &MoltFile,
+    typeck: &TypecheckResult,
+    p: UnresolvedPat,
+    id: PatId,
+) -> Result<ResolvedPat> {
+    let mut pat_ctx = Ctx::<Node>::new(Mode::Molt);
+    let vars = p
+        .vars
+        .iter()
+        .map(|var_id| {
+            let typechecker::Type::Kind(kind) = typeck.get_type(*var_id).unwrap() else {
+                unreachable!()
+            };
+            let name = &file.var_names[var_id.0];
+            let ctx_id = pat_ctx.add_var::<Node>(Var::new(name.clone(), *kind));
+            TokenVar {
+                ctx_id: ctx_id.into(),
+                var_id: *var_id,
+            }
+        })
+        .collect();
+    let typechecker::Type::Kind(kind) = typeck.get_pat_type(id).unwrap() else {
+        unreachable!()
+    };
+    let ctx = Rc::new(RefCell::new(pat_ctx));
+    let node = crate::parser::parse_with_ctx(
+        ctx.clone(),
+        |stream| parse_node_with_kind(stream, *kind),
+        p.tokens,
+        Mode::Molt,
+    )
+    .map_err(Error::Parse)?;
+    let ctx = ctx.replace(Ctx::new(Mode::Molt));
+    Ok(ResolvedPat { vars, ctx, node })
 }

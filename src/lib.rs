@@ -16,6 +16,7 @@ mod pattern;
 pub(crate) mod rule;
 mod rust_grammar;
 mod span;
+mod storage;
 #[cfg(test)]
 mod tests;
 mod writer;
@@ -70,7 +71,7 @@ pub fn run_internal(
     config: crate::Config,
     _cargo_root: Option<&PathBuf>,
 ) -> Result<(), Error> {
-    let molt_file = molt_lang::MoltFile::new(input, config.debug_print)?;
+    let (molt_file, pats) = molt_lang::MoltFile::new(input)?;
 
     if input.iter_rust_src().count() == 0 {
         // Fake some context so we can run.
@@ -85,6 +86,7 @@ pub fn run_internal(
             input,
             writer,
             config: &config,
+            pats: &pats,
         };
         crate::molt_lang::Interpreter::run_dry(&molt_file, context).map_err(Error::Interpreter)?;
     } else {
@@ -98,6 +100,7 @@ pub fn run_internal(
                 input,
                 writer,
                 config: &config,
+                pats: &pats,
             };
             crate::molt_lang::Interpreter::run(&molt_file, context).map_err(Error::Interpreter)?;
         }

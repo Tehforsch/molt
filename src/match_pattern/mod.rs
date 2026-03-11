@@ -91,7 +91,7 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
         if self.ctx.config().debug_print {
             println!(
                 "\tBind ${} to {}",
-                &self.ctx.get_var(key).name(),
+                &self.ctx.get_var(key).ident(),
                 self.ctx.print(id)
             );
         }

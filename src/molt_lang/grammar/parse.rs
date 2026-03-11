@@ -6,6 +6,7 @@ use crate::molt_lang::grammar::{
 use crate::molt_lang::{INPUT_VAR_NAME, MAIN_FN_NAME};
 use crate::parser::parse::{self, Parse, ParseStream};
 use crate::parser::punctuated::Punctuated;
+use crate::parser::token::Brace;
 use crate::parser::{Result, token};
 use crate::rust_grammar::ext::IdentExt;
 use crate::rust_grammar::{Ident, Kind, LitBool, LitInt, LitStr};
@@ -241,6 +242,8 @@ impl Parse for Expr {
             Ok(Expr::Atom(Atom::Lit(Lit::Str(input.parse()?))))
         } else if LitBool::peek(input) {
             Ok(Expr::Atom(Atom::Lit(Lit::Bool(input.parse()?))))
+        } else if input.peek(Brace) {
+            Ok(Expr::Pat(input.parse()?))
         } else if input.peek(Ident::peek_any) {
             if input.peek2(token::Paren) {
                 Ok(Expr::FnCall(input.parse()?))

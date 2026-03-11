@@ -198,6 +198,7 @@ impl<'a> Interpreter<'a> {
                 }
             }
             Expr::Atom(atom) => self.eval_atom(atom),
+            Expr::Pat(pat) => self.eval_pat(pat),
         }
     }
 
@@ -214,6 +215,11 @@ impl<'a> Interpreter<'a> {
             Lit::Int(x) => Ok(Value::Int(*x)),
             Lit::Bool(b) => Ok(Value::Bool(*b)),
         }
+    }
+
+    fn eval_pat(&self, pat: &super::PatId) -> Result<Value> {
+        let pat = self.context.get_pat(*pat);
+        Ok(Value::Node(pat.node))
     }
 
     fn eval_assignment(&mut self, assignment: &Assignment) -> Result<StmtValue> {
@@ -256,6 +262,7 @@ impl<'a> Interpreter<'a> {
                     // error handling
                     todo!()
                 };
+                let pat = self.context.get_pat(*pat);
                 let rules = crate::rule::Rules::default();
                 let mut matcher = Matcher::from_interpreter_ctx(&self.context, &pat.ctx, &rules);
                 for var in pat.vars.iter() {

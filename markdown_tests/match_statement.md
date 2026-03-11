@@ -6,6 +6,8 @@ fn main() {
 
 ```molt
 let input: Stmt;
+let ident: Ident;
+let expr: Expr;
 let { $ident.foo($expr); }: Stmt = input;
 print(ident);
 ```

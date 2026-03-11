@@ -2,20 +2,25 @@ use std::collections::HashMap;
 
 use crate::{
     KindType,
-    molt_lang::{BuiltinFn, MoltFile, MoltFn, Stmt, VarId},
-    rust_grammar::Kind,
+    molt_lang::{BuiltinFn, MoltFile, MoltFn, PatId, Stmt, UnresolvedPat, VarId},
+    rust_grammar::{Ident, Kind},
+    storage::Storage,
 };
 
 #[derive(Debug)]
 pub(crate) enum Error {
     TypeMismatch(Type, Type),
+    UntypedVar(Ident),
 }
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Error::TypeMismatch(t1, t2) => {
-                write!(f, "Error: type mismatch. Expected {t1:?}, found {t2:?}")
+                write!(f, "Type mismatch. Expected {t1:?}, found {t2:?}")
+            }
+            Error::UntypedVar(t2) => {
+                write!(f, "Could not infer type for variable `{t2}`")
             }
         }
     }
@@ -111,28 +116,75 @@ enum VarType {
     Scheme(Scheme),
 }
 
-#[derive(Default)]
-pub(super) struct Typechecker {
+pub(super) struct TypecheckResult {
     types: Vec<Type>,
     substitutions: HashMap<TypeId, TypeId>,
     vars: HashMap<VarId, VarType>,
+    pat_types: HashMap<PatId, TypeId>,
 }
 
-impl Typechecker {
+impl TypecheckResult {
+    // duplication :|
+    pub(super) fn get_type(&self, var: VarId) -> Option<&Type> {
+        let type_id = match &self.vars[&var] {
+            VarType::Mono(type_id) => type_id,
+            VarType::Scheme(_) => {
+                // Don't iterate over schemes
+                return None;
+            }
+        };
+        Some(&self.types[self.resolve(*type_id).0])
+    }
+
+    pub(super) fn get_pat_type(&self, pat: PatId) -> Option<&Type> {
+        let type_id = &self.pat_types[&pat];
+        Some(&self.types[self.resolve(*type_id).0])
+    }
+
+    // duplication :|
+    fn resolve(&self, id: TypeId) -> TypeId {
+        self.substitutions
+            .get(&id)
+            .map(|id| self.resolve(*id))
+            .unwrap_or(id)
+    }
+}
+
+pub(super) struct Typechecker<'a> {
+    types: Vec<Type>,
+    substitutions: HashMap<TypeId, TypeId>,
+    vars: HashMap<VarId, VarType>,
+    pats: &'a Storage<PatId, UnresolvedPat>,
+    pat_types: HashMap<PatId, TypeId>,
+}
+
+impl<'a> Typechecker<'a> {
+    pub(super) fn new(pats: &'a Storage<PatId, UnresolvedPat>) -> Self {
+        Self {
+            types: Default::default(),
+            substitutions: Default::default(),
+            vars: Default::default(),
+            pat_types: Default::default(),
+            pats,
+        }
+    }
+
+    pub(super) fn get_type(&self, var: VarId) -> Option<&Type> {
+        let type_id = match &self.vars[&var] {
+            VarType::Mono(type_id) => type_id,
+            VarType::Scheme(_) => {
+                // Don't iterate over schemes
+                return None;
+            }
+        };
+        Some(&self.types[self.resolve(*type_id).0])
+    }
+
     pub(crate) fn iter_vars(&self) -> impl Iterator<Item = (VarId, ResolvedType)> {
         let mut keys: Vec<_> = self.vars.keys().cloned().collect();
         keys.sort_by_key(|id| id.0);
-        keys.into_iter().filter_map(|var| {
-            let type_id = match &self.vars[&var] {
-                VarType::Mono(type_id) => type_id,
-                VarType::Scheme(_) => {
-                    // Don't iterate over schemes
-                    return None;
-                }
-            };
-            let ty_ = self.types[self.resolve(*type_id).0].clone();
-            Some((var, self.as_resolved(&ty_)))
-        })
+        keys.into_iter()
+            .filter_map(|var| self.get_type(var).map(|ty| (var, self.as_resolved(ty))))
     }
 
     fn as_resolved(&self, type_: &Type) -> ResolvedType {
@@ -182,6 +234,13 @@ impl Typechecker {
         self.add_var_type(id, VarType::Mono(type_id))
     }
 
+    fn add_pat(&mut self, pat: PatId, type_: Type) -> Result<TypeId, Error> {
+        let type_id = self.add_type(type_);
+        let entry_before = self.pat_types.insert(pat, type_id);
+        assert!(entry_before.is_none());
+        Ok(type_id)
+    }
+
     fn resolve(&self, id: TypeId) -> TypeId {
         self.substitutions
             .get(&id)
@@ -189,7 +248,7 @@ impl Typechecker {
             .unwrap_or(id)
     }
 
-    pub(crate) fn check(mut self, file: &MoltFile) -> Result<Self, Error> {
+    pub(crate) fn check(mut self, file: &MoltFile) -> Result<TypecheckResult, Error> {
         let fn_return_types: Vec<_> = file.fns.iter().map(|f| self.declare_fn(f)).collect();
         for (id, f) in file.builtin_map.iter() {
             println!();
@@ -203,7 +262,23 @@ impl Typechecker {
             self.check_fn(f, type_id)?;
             self.debug_print(file);
         }
-        Ok(self)
+        self.check_no_untyped_vars(file)?;
+        Ok(TypecheckResult {
+            types: self.types,
+            substitutions: self.substitutions,
+            vars: self.vars,
+            pat_types: self.pat_types,
+        })
+    }
+
+    pub(crate) fn check_no_untyped_vars(&self, file: &MoltFile) -> Result<(), Error> {
+        for id in self.vars.keys() {
+            if let Some(Type::Var) = self.get_type(*id) {
+                let name = file.var_names.get(id.0).unwrap().clone();
+                return Err(Error::UntypedVar(name));
+            }
+        }
+        Ok(())
     }
 
     fn declare_fn(&mut self, f: &MoltFn) -> TypeId {
@@ -267,7 +342,13 @@ impl Typechecker {
                 Ok(output)
             }
             super::Expr::Atom(atom) => self.infer_atom(atom),
+            super::Expr::Pat(pat) => self.infer_pat(pat),
         }
+    }
+
+    fn infer_pat(&mut self, _: &PatId) -> Result<TypeId, Error> {
+        // TODO: Check correctness
+        Ok(self.add_type(Type::Var))
     }
 
     fn infer_atom(&mut self, atom: &super::Atom) -> Result<TypeId, Error> {
@@ -283,23 +364,30 @@ impl Typechecker {
             .as_ref()
             .map(|rhs| self.infer_expr(rhs))
             .transpose()?;
-        match &let_stmt.lhs {
+        let type_id = match &let_stmt.lhs {
             super::LetLhs::Var(var_id) => {
-                let type_id = if let Some(ref type_) = let_stmt.type_ {
-                    self.add_var(*var_id, type_.clone().into())
+                let type_ = if let Some(ref type_) = let_stmt.type_ {
+                    type_.clone().into()
                 } else {
-                    self.add_var(*var_id, Type::Var)
-                }?;
-                if let Some(rhs) = rhs {
-                    self.unify(type_id, rhs)?;
-                }
+                    Type::Var
+                };
+                self.add_var(*var_id, type_)?
             }
-            super::LetLhs::Pat(pat) => {
+            super::LetLhs::Pat(pat_id) => {
+                let pat = &self.pats[*pat_id];
                 for var in pat.vars.iter() {
-                    let kind = pat.ctx.get_var_kind(var.ctx_id);
-                    self.add_var(var.var_id, Type::Kind(kind))?;
+                    self.add_var(*var, Type::Var)?;
                 }
+                let type_ = if let Some(ref type_) = let_stmt.type_ {
+                    type_.clone().into()
+                } else {
+                    Type::Var
+                };
+                self.add_pat(*pat_id, type_)?
             }
+        };
+        if let Some(rhs) = rhs {
+            self.unify(type_id, rhs)?;
         }
         Ok(())
     }
@@ -343,7 +431,7 @@ impl Typechecker {
                 self.substitutions.insert(t2, t1);
             }
             (Type::Kind(kind1), Type::Kind(kind2)) => {
-                if kind1.is_comparable_to(kind2.into_node_kind()) {
+                if !kind1.is_comparable_to(kind2.into_node_kind()) {
                     return make_error();
                 }
             }

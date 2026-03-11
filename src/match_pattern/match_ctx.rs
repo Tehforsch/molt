@@ -60,23 +60,28 @@ impl<'a, Node: NodeType> MatchCtx<'a, Node> {
         }
         println!("--------------------------------");
         for (idx, var) in self.molt_ctx.iter_vars().enumerate() {
-            println!("MoltVar({:02}): {:14} = {:?}", idx, "", var.name());
+            println!(
+                "MoltVar({:02}): {:14} = {:?}",
+                idx,
+                "",
+                var.ident().to_string()
+            );
         }
     }
 
-    fn print_real(&self, id: Id) -> &str {
-        self.real_ctx.print(id, self.real_src())
+    fn print_real(&self, id: Id) -> String {
+        self.real_ctx.print(id, self.real_src()).into()
     }
 
-    fn print_molt(&self, id: Id) -> &str {
+    fn print_molt(&self, id: Id) -> String {
         if id.is_var() {
-            self.molt_ctx.get_var(id).name()
+            self.molt_ctx.get_var(id).ident().to_string()
         } else {
-            self.molt_ctx.print(id, self.molt_src())
+            self.molt_ctx.print(id, self.molt_src()).into()
         }
     }
 
-    pub fn print(&self, id: Id) -> &str {
+    pub fn print(&self, id: Id) -> String {
         match id.mode() {
             Mode::Real => self.print_real(id),
             Mode::Molt => self.print_molt(id),
