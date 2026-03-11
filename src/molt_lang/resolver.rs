@@ -20,8 +20,8 @@ use crate::rust_grammar::parse_node_with_kind;
 #[derive(Debug)]
 pub(crate) enum Error {
     Parse(parser::Error),
-    UndefinedVar(VarName),
-    DuplicateDefinitionFn(VarName),
+    UndefinedVar(Ident),
+    DuplicateDefinitionFn(Ident),
 }
 
 impl std::fmt::Display for Error {
@@ -100,7 +100,7 @@ impl Resolver {
         var_id
     }
 
-    fn lookup_var(&self, name: &VarName) -> Result<VarId> {
+    fn lookup_var(&self, name: &Ident) -> Result<VarId> {
         let mut scope_idx = Some(self.scopes.len() - 1);
         while let Some(idx) = scope_idx {
             let scope = &self.scopes[idx];
@@ -126,7 +126,7 @@ impl Resolver {
             main_fn_id: FnId(
                 fns.iter()
                     .enumerate()
-                    .find(|(_, f)| f.name.is_main())
+                    .find(|(_, f)| f.name == MAIN_FN_NAME)
                     .map(|(id, _)| id)
                     .unwrap(),
             ),
@@ -223,7 +223,7 @@ impl Resolver {
 
     fn resolve_fn_call(&mut self, f: grammar::FnCall) -> Result<FnCall> {
         Ok(FnCall {
-            id: self.lookup_var(&VarName::Ident(f.fn_name))?,
+            id: self.lookup_var(&f.fn_name)?,
             args: f
                 .args
                 .into_iter()
@@ -242,9 +242,7 @@ impl Resolver {
     fn resolve_atom(&self, atom: &grammar::Atom) -> Result<Atom> {
         match atom {
             grammar::Atom::Lit(lit) => Ok(Atom::Lit(self.resolve_lit(lit)?)),
-            grammar::Atom::Var(ident) => {
-                Ok(Atom::Var(self.lookup_var(&VarName::Ident(ident.clone()))?))
-            }
+            grammar::Atom::Var(ident) => Ok(Atom::Var(self.lookup_var(ident)?)),
         }
     }
 

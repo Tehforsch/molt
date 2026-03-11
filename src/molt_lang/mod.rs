@@ -44,47 +44,9 @@ struct VarId(usize);
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 struct FnId(usize);
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum VarName {
-    Ident(Ident),
-    /// For "artificially" created name, such as builtin functions
-    /// or the implicit main function.
-    String(String),
-}
-
-impl VarName {
-    fn is_main(&self) -> bool {
-        match self {
-            VarName::Ident(ident) => ident == "main",
-            VarName::String(s) => s == "main",
-        }
-    }
-}
-
-impl std::fmt::Display for VarName {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            VarName::Ident(ident) => write!(f, "{}", ident),
-            VarName::String(s) => write!(f, "{}", s),
-        }
-    }
-}
-
-impl From<&str> for VarName {
-    fn from(value: &str) -> Self {
-        Self::String(value.into())
-    }
-}
-
-impl From<&Ident> for VarName {
-    fn from(value: &Ident) -> Self {
-        Self::Ident(value.clone())
-    }
-}
-
 #[derive(Debug)]
 pub struct MoltFn {
-    pub name: VarName,
+    pub name: Ident,
     pub id: VarId,
     pub args: Vec<FnArg>,
     pub stmts: Vec<Stmt>,
@@ -214,7 +176,7 @@ impl MoltFile {
         if self
             .fns
             .iter()
-            .any(|f| f.name.is_main() && !f.args.is_empty())
+            .any(|f| f.name == MAIN_FN_NAME && !f.args.is_empty())
         {
             Ok(())
         } else {

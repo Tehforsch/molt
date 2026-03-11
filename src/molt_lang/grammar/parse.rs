@@ -1,7 +1,7 @@
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 
 use crate::molt_lang::grammar::{Atom, FnCall, Lit, TokenVar, TokenVars, Type};
-use crate::molt_lang::{INPUT_VAR_NAME, MAIN_FN_NAME, VarName};
+use crate::molt_lang::{INPUT_VAR_NAME, MAIN_FN_NAME};
 use crate::parser::parse::{self, Parse, ParseStream};
 use crate::parser::punctuated::Punctuated;
 use crate::parser::{Result, token};
@@ -49,7 +49,7 @@ impl MoltFile {
     pub fn add_implicit_main(mut self) -> Result<Self, FileStructureError> {
         // Clearly very ugly, but we need to get started somehow.
         if !self.stmts.is_empty() {
-            if self.fns.iter().any(|f| MAIN_FN_NAME == f.name.to_string()) {
+            if self.fns.iter().any(|f| f.name == MAIN_FN_NAME) {
                 return Err(FileStructureError::MainFnAndTopLevelStmtExist);
             }
             let mut args = Punctuated::new();
@@ -64,7 +64,7 @@ impl MoltFile {
                 self.stmts.remove(0);
             }
             self.fns.push(MoltFn {
-                name: VarName::String(MAIN_FN_NAME.into()),
+                name: Ident::new(MAIN_FN_NAME, Span::call_site()),
                 args,
                 stmts: self.stmts.drain(..).collect(),
                 return_type: Some(Type::Unit),
@@ -97,7 +97,7 @@ impl Parse for MoltFn {
         }
 
         Ok(MoltFn {
-            name: VarName::Ident(name),
+            name,
             args,
             stmts,
             return_type,
