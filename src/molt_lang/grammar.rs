@@ -38,9 +38,15 @@ pub enum Type {
 
 #[derive(Debug)]
 pub enum Stmt {
-    Expr(Expr),
+    Expr(ExprStmt),
     Let(LetStmt),
     Return(ReturnStmt),
+}
+
+#[derive(Debug)]
+pub struct ExprStmt {
+    pub expr: Expr,
+    pub has_trailing_semi: bool,
 }
 
 #[derive(Debug)]

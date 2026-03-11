@@ -158,6 +158,7 @@ impl Resolver {
             .into_iter()
             .map(|a| self.resolve_fn_arg(a))
             .collect::<Result<_>>()?;
+        let num_stmts = f.stmts.len();
         let result = MoltFn {
             id: self.lookup_var(&f.name).unwrap(),
             name: f.name,
@@ -165,7 +166,8 @@ impl Resolver {
             stmts: f
                 .stmts
                 .into_iter()
-                .map(|s| self.resolve_stmt(s))
+                .enumerate()
+                .map(|(i, s)| self.resolve_stmt(s, i == num_stmts - 1))
                 .collect::<Result<_>>()?,
             return_type: f
                 .return_type
@@ -195,11 +197,30 @@ impl Resolver {
         })
     }
 
-    fn resolve_stmt(&mut self, stmt: grammar::Stmt) -> Result<Stmt> {
+    fn resolve_stmt(&mut self, stmt: grammar::Stmt, is_last_stmt_in_block: bool) -> Result<Stmt> {
         match stmt {
-            grammar::Stmt::Expr(e) => Ok(Stmt::Expr(self.resolve_expr(e)?)),
+            grammar::Stmt::Expr(e) => Ok(self.resolve_expr_stmt(e, is_last_stmt_in_block)?),
             grammar::Stmt::Let(l) => Ok(Stmt::Let(self.resolve_let_stmt(l)?)),
             grammar::Stmt::Return(s) => Ok(Stmt::Return(self.resolve_return_stmt(s)?)),
+        }
+    }
+
+    fn resolve_expr_stmt(
+        &mut self,
+        s: grammar::ExprStmt,
+        is_last_stmt_in_block: bool,
+    ) -> Result<Stmt> {
+        let expr = self.resolve_expr(s.expr)?;
+        if !s.has_trailing_semi {
+            if is_last_stmt_in_block {
+                Ok(Stmt::Return(ReturnStmt { expr: Some(expr) }))
+            } else {
+                // We should never get here, since a missing semi should cause a
+                // parsing error upstream
+                unreachable!()
+            }
+        } else {
+            Ok(Stmt::Expr(expr))
         }
     }
 

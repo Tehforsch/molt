@@ -1,6 +1,8 @@
 use proc_macro2::{Span, TokenStream};
 
-use crate::molt_lang::grammar::{Atom, FnCall, Lit, ReturnStmt, TokenVar, TokenVars, Type};
+use crate::molt_lang::grammar::{
+    Atom, ExprStmt, FnCall, Lit, ReturnStmt, TokenVar, TokenVars, Type,
+};
 use crate::molt_lang::{INPUT_VAR_NAME, MAIN_FN_NAME};
 use crate::parser::parse::{self, Parse, ParseStream};
 use crate::parser::punctuated::Punctuated;
@@ -151,8 +153,16 @@ impl Parse for Stmt {
             Ok(Stmt::Return(input.parse()?))
         } else {
             let expr: Expr = input.parse()?;
-            let _: Token![;] = input.parse()?;
-            Ok(Stmt::Expr(expr))
+            let has_trailing_semi = if input.peek(Token![;]) {
+                let _: Token![;] = input.parse()?;
+                true
+            } else {
+                false
+            };
+            Ok(Stmt::Expr(ExprStmt {
+                expr,
+                has_trailing_semi,
+            }))
         }
     }
 }
