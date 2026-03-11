@@ -32,6 +32,30 @@ pub enum Type {
     Fun(Vec<TypeId>, TypeId),
 }
 
+impl Type {
+    fn substitute(&mut self, old: TypeId, new: TypeId) {
+        match self {
+            Type::Var | Type::Kind(_) | Type::Int | Type::Bool | Type::Str | Type::Unit => {}
+            Type::Fun(args, output) => {
+                for id in args.iter_mut() {
+                    if *id == old {
+                        *id = new;
+                    }
+                }
+                if *output == old {
+                    *output = new;
+                }
+            }
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct Scheme {
+    generalized: Vec<TypeId>,
+    type_id: TypeId,
+}
+
 #[derive(Debug, Clone)]
 pub enum ResolvedType {
     Var,
@@ -82,21 +106,33 @@ impl From<crate::molt_lang::Type> for Type {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 struct TypeId(usize);
 
+enum VarType {
+    Mono(TypeId),
+    Scheme(Scheme),
+}
+
 #[derive(Default)]
 pub(super) struct Typechecker {
     types: Vec<Type>,
     substitutions: HashMap<TypeId, TypeId>,
-    vars: HashMap<VarId, TypeId>,
+    vars: HashMap<VarId, VarType>,
 }
 
 impl Typechecker {
     pub(crate) fn iter_vars(&self) -> impl Iterator<Item = (VarId, ResolvedType)> {
-        let mut keys: Vec<_> = self.vars.keys().collect();
+        let mut keys: Vec<_> = self.vars.keys().cloned().collect();
         keys.sort_by_key(|id| id.0);
-        keys.into_iter()
-            .map(|k| (k, self.vars[k]))
-            .map(|(var, id)| (*var, self.types[self.resolve(id).0].clone()))
-            .map(|(var, type_)| (var, self.as_resolved(&type_)))
+        keys.into_iter().filter_map(|var| {
+            let type_id = match &self.vars[&var] {
+                VarType::Mono(type_id) => type_id,
+                VarType::Scheme(_) => {
+                    // Don't iterate over schemes
+                    return None;
+                }
+            };
+            let ty_ = self.types[self.resolve(*type_id).0].clone();
+            Some((var, self.as_resolved(&ty_)))
+        })
     }
 
     fn as_resolved(&self, type_: &Type) -> ResolvedType {
@@ -128,14 +164,22 @@ impl Typechecker {
         TypeId(self.types.len() - 1)
     }
 
-    fn add_var(&mut self, id: VarId, type_: Type) -> Result<TypeId, Error> {
-        let type_id = self.add_type(type_);
-        if let Some(before) = self.vars.get(&id) {
-            self.unify(type_id, *before)?;
+    fn add_var_type(&mut self, id: VarId, type_: VarType) -> Result<TypeId, Error> {
+        let type_id = match &type_ {
+            VarType::Mono(type_id) => *type_id,
+            VarType::Scheme(scheme) => scheme.type_id,
+        };
+        if let Some(before) = self.lookup(id) {
+            self.unify(type_id, before)?;
         } else {
-            self.vars.insert(id, type_id);
+            self.vars.insert(id, type_);
         }
         Ok(type_id)
+    }
+
+    fn add_var(&mut self, id: VarId, type_: Type) -> Result<TypeId, Error> {
+        let type_id = self.add_type(type_);
+        self.add_var_type(id, VarType::Mono(type_id))
     }
 
     fn resolve(&self, id: TypeId) -> TypeId {
@@ -180,7 +224,7 @@ impl Typechecker {
 
     fn declare_builtin(&mut self, id: VarId, f: BuiltinFn) {
         let builtin_type = self.builtin_type(f);
-        self.add_var(id, builtin_type).unwrap();
+        self.add_var_type(id, builtin_type).unwrap();
     }
 
     fn check_fn(&mut self, f: &MoltFn, fn_return_type: TypeId) -> Result<(), Error> {
@@ -213,7 +257,10 @@ impl Typechecker {
                     .collect::<Result<_, Error>>()?;
                 let output = self.add_type(Type::Var);
                 let fn_type = self.add_type(Type::Fun(input, output));
-                self.unify(fn_type, self.vars[&fn_call.id])?;
+                // We know the function is defined,
+                // so we can unwrap
+                let lookup = self.lookup(fn_call.id).unwrap();
+                self.unify(fn_type, lookup)?;
                 Ok(output)
             }
             super::Expr::Atom(atom) => self.infer_atom(atom),
@@ -309,16 +356,49 @@ impl Typechecker {
         Ok(())
     }
 
-    pub(crate) fn builtin_type(&mut self, f: BuiltinFn) -> Type {
-        let (input, output) = match f {
-            BuiltinFn::Assert => (vec![self.add_type(Type::Bool)], self.add_type(Type::Unit)),
+    pub(crate) fn builtin_type(&mut self, f: BuiltinFn) -> VarType {
+        let mut mk_fn_type = |args: Vec<Type>, output| {
+            let args = args.into_iter().map(|arg| self.add_type(arg)).collect();
+            let output = self.add_type(output);
+            VarType::Mono(self.add_type(Type::Fun(args, output)))
+        };
+        match f {
+            BuiltinFn::Print => mk_fn_type(vec![Type::Var], Type::Unit),
+            BuiltinFn::Dbg => mk_fn_type(vec![Type::Var], Type::Unit),
+            BuiltinFn::Assert => mk_fn_type(vec![Type::Bool], Type::Unit),
             BuiltinFn::AssertEq => {
                 let t = self.add_type(Type::Var);
-                (vec![t, t], self.add_type(Type::Unit))
+                let add_type = self.add_type(Type::Unit);
+                let type_id = self.add_type(Type::Fun(vec![t, t], add_type));
+                VarType::Scheme(Scheme {
+                    type_id,
+                    generalized: vec![t],
+                })
             }
-            BuiltinFn::Print => (vec![self.add_type(Type::Var)], self.add_type(Type::Unit)),
-            BuiltinFn::Dbg => (vec![self.add_type(Type::Var)], self.add_type(Type::Unit)),
-        };
-        Type::Fun(input, output)
+        }
+    }
+
+    fn lookup(&mut self, id: VarId) -> Option<TypeId> {
+        #[allow(clippy::manual_map)] // borrowck
+        if let Some(var) = self.vars.get(&id) {
+            Some(match var {
+                VarType::Mono(id) => *id,
+                VarType::Scheme(scheme) => {
+                    let scheme = scheme.clone(); // make borrowck happy
+                    self.instantiate(&scheme)
+                }
+            })
+        } else {
+            None
+        }
+    }
+
+    fn instantiate(&mut self, scheme: &Scheme) -> TypeId {
+        let mut new_type = self.types[scheme.type_id.0].clone();
+        for var in scheme.generalized.iter() {
+            let new_var = self.add_type(Type::Var);
+            new_type.substitute(*var, new_var);
+        }
+        self.add_type(new_type)
     }
 }

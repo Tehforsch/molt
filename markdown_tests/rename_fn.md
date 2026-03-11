@@ -1,10 +1,10 @@
 ```molt
-fn test() {
-    print(5);
+fn test(x: int) {
+    print(x);
 }
 
 fn main() {
     let foo = test;
-    foo();
+    foo(5);
 }
 ```
