@@ -89,16 +89,12 @@ pub(super) struct Typechecker {
     vars: HashMap<VarId, TypeId>,
 }
 
-pub(super) struct TypecheckResult {
-    vars: HashMap<VarId, Type>,
-    types: Vec<Type>,
-}
-
-impl TypecheckResult {
+impl Typechecker {
     pub(crate) fn iter_vars(&self) -> impl Iterator<Item = (VarId, ResolvedType)> {
         self.vars
             .iter()
-            .map(|(id, type_)| (*id, self.as_resolved(type_)))
+            .map(|(var, id)| (*var, self.types[self.resolve(*id).0].clone()))
+            .map(|(var, type_)| (var, self.as_resolved(&type_)))
     }
 
     fn as_resolved(&self, type_: &Type) -> ResolvedType {
@@ -118,9 +114,7 @@ impl TypecheckResult {
             ),
         }
     }
-}
 
-impl Typechecker {
     fn add_type(&mut self, t: Type) -> TypeId {
         self.types.push(t);
         TypeId(self.types.len() - 1)
@@ -143,7 +137,7 @@ impl Typechecker {
             .unwrap_or(id)
     }
 
-    pub(crate) fn check(mut self, file: &MoltFile) -> Result<TypecheckResult, Error> {
+    pub(crate) fn check(mut self, file: &MoltFile) -> Result<Self, Error> {
         for f in file.fns.iter() {
             self.declare_fn(f);
         }
@@ -153,15 +147,7 @@ impl Typechecker {
         for f in file.fns.iter() {
             self.check_fn(f)?;
         }
-        let vars = self
-            .vars
-            .iter()
-            .map(|(var, id)| (*var, self.types[self.resolve(*id).0].clone()))
-            .collect();
-        Ok(TypecheckResult {
-            vars,
-            types: self.types,
-        })
+        Ok(self)
     }
 
     fn declare_fn(&mut self, f: &MoltFn) {
