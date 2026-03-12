@@ -8,15 +8,15 @@ mod typechecker;
 
 use std::collections::HashMap;
 
+pub(crate) use builtin_fn::BuiltinFn;
 pub(crate) use context::Context;
 pub(crate) use grammar::FileStructureError;
+pub(crate) use index_types::PatId;
 pub(crate) use interpreter::Error as InterpreterError;
 pub(crate) use interpreter::Interpreter;
 use proc_macro2::TokenStream;
 pub(crate) use resolver::Error as ResolverError;
 pub(crate) use typechecker::Error as TypeError;
-
-pub(crate) use builtin_fn::BuiltinFn;
 
 use codespan_reporting::files::Files;
 
@@ -30,7 +30,7 @@ use crate::rust_grammar::Kind;
 use crate::rust_grammar::Node;
 use crate::storage::Storage;
 use crate::{Error, Input, Mode};
-use index_types::{FnId, PatId, VarId};
+use index_types::{FnId, VarId};
 
 const MAIN_FN_NAME: &str = "main";
 const INPUT_VAR_NAME: &str = "input";

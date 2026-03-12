@@ -2,7 +2,7 @@ use std::path::Path;
 
 use similar::{ChangeTag, TextDiff};
 
-use crate::modify::Modification2;
+use crate::{input::FilePath, modify::Modification2};
 
 #[derive(Clone)]
 enum Color {
@@ -49,7 +49,7 @@ impl ColoredText {
 const NUM_LINES_CONTEXT: usize = 4;
 
 impl Modification2 {
-    pub fn get_diff(&self, old_code: &str, filename: &Path, colorized: bool) -> String {
+    pub fn get_diff(&self, old_code: &str, filename: FilePath, colorized: bool) -> String {
         let range = self.span.byte_range();
         let new_excerpt = &self.new_code;
         let mut new_code = old_code.to_string();
@@ -59,16 +59,16 @@ impl Modification2 {
         format_diff(diff, filename, colorized)
     }
 
-    pub fn show_diff(&self, old_code: &str, filename: &Path) {
+    pub fn show_diff(&self, old_code: &str, filename: FilePath) {
         let diff_output = self.get_diff(old_code, filename, true);
         print!("{diff_output}");
     }
 }
 
-fn format_diff(diff: TextDiff<str>, filename: &Path, colorized: bool) -> String {
+fn format_diff(diff: TextDiff<str>, filename: FilePath, colorized: bool) -> String {
     let mut output = String::new();
 
-    let header = ColoredText::new(format!("--- {}\n", filename.to_string_lossy()), Color::Bold);
+    let header = ColoredText::new(format!("--- {}\n", filename), Color::Bold);
     output.push_str(&header.print(colorized));
 
     for group in diff.grouped_ops(NUM_LINES_CONTEXT).iter() {

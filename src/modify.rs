@@ -1,15 +1,33 @@
 #![allow(unused)]
 mod diff;
 
+use std::collections::HashMap;
 use std::io::{self, Write};
 use std::path::Path;
 
+use crate::input::FilePath;
+use crate::molt_lang::PatId;
 use crate::rust_grammar::Node;
 use crate::{Config, Id, Match, Span};
 use codespan_reporting::files::Files;
 
 use crate::ctrl_c::FileRestorer;
 use crate::{Error, FileId, Input};
+
+#[derive(Default)]
+pub(crate) struct ModMap {
+    mods: Vec<Modification>,
+}
+
+impl ModMap {
+    fn iter(&self) -> impl Iterator<Item = &Modification> {
+        self.mods.iter()
+    }
+
+    pub(crate) fn extend(&mut self, modifications: Vec<Modification>) {
+        self.mods.extend(modifications);
+    }
+}
 
 // lol
 type MatchResult<'a> = &'a ();
@@ -25,6 +43,11 @@ pub struct Modification {
     pub new: Id,
 }
 
+enum NodeSpec {
+    Rust(Id),    // Refers to a concrete node in the current rust file
+    Molt(PatId), // Refers to a pattern node in the molt file
+}
+
 #[derive(Debug)]
 struct Modification2 {
     span: Span,
@@ -34,7 +57,7 @@ struct Modification2 {
 pub struct Modify<'a> {
     modifications: Vec<Modification2>,
     code: String,
-    rust_file_path: &'a Path,
+    rust_file_path: FilePath<'a>,
     config: &'a Config,
     cargo_root: Option<&'a Path>,
 }
@@ -45,12 +68,11 @@ impl<'a> Modify<'a> {
         config: &'a Config,
         rust_file_id: FileId,
         cargo_root: Option<&'a Path>,
-        match_result: MatchResult<'a>,
-        modifies: &'a [(Id, Id)],
+        modifications: ModMap,
     ) -> Result<Self, Error> {
         let code = input.source(rust_file_id).unwrap().to_owned();
-        let filename = input.name(rust_file_id).unwrap().unwrap_path();
-        let modifications = prepare_modifications(&match_result, modifies)?;
+        let filename = input.name(rust_file_id).unwrap();
+        let modifications = prepare_modifications(modifications)?;
         Ok(Self {
             modifications,
             code,
@@ -75,6 +97,9 @@ impl<'a> Modify<'a> {
     }
 
     fn post_modification_check_ok(&self, modification: &Modification2) -> Result<bool, Error> {
+        if self.rust_file_path.is_from_string() {
+            return Ok(true);
+        }
         let command = self.config.check.as_ref().unwrap();
         let original_code = &self.code;
         let new_code = modification.apply(original_code.clone());
@@ -102,20 +127,20 @@ impl<'a> Modify<'a> {
         new_code: String,
         original_code: String,
     ) -> Result<(), Error> {
-        std::fs::write(self.rust_file_path, new_code)?;
+        std::fs::write(self.rust_file_path.unwrap_path(), new_code)?;
         FileRestorer::global()
-            .remember_original_file_contents(self.rust_file_path, original_code)
+            .remember_original_file_contents(self.rust_file_path.unwrap_path(), original_code)
             .map_err(Error::Io)
     }
 
     fn forget_temporary_modification(&self) -> Result<(), Error> {
         FileRestorer::global()
-            .forget_file(self.rust_file_path)
+            .forget_file(self.rust_file_path.unwrap_path())
             .map_err(Error::Io)
     }
 
     fn restore_temporary_modification(&self, original_code: &str) -> Result<(), Error> {
-        std::fs::write(self.rust_file_path, original_code)?;
+        std::fs::write(self.rust_file_path.unwrap_path(), original_code)?;
         self.forget_temporary_modification()
     }
 }
@@ -132,21 +157,13 @@ pub fn modify(
     input: &Input,
     config: &Config,
     rust_file_id: FileId,
-    match_result: MatchResult,
-    modifies: Vec<(Id, Id)>,
+    modifications: ModMap,
     cargo_root: Option<&Path>,
 ) -> Result<(), Error> {
-    let modify = Modify::new(
-        input,
-        config,
-        rust_file_id,
-        cargo_root,
-        match_result,
-        &modifies,
-    )?;
+    let modify = Modify::new(input, config, rust_file_id, cargo_root, modifications)?;
     if !modify.modifications.is_empty() {
         let new_code = modify.get_modified_contents()?;
-        write_to_file(input, rust_file_id, new_code)?;
+        // write_to_file(input, rust_file_id, new_code)?;
     }
     Ok(())
 }
@@ -168,25 +185,13 @@ fn write_to_file(input: &Input, rust_file_id: FileId, code: String) -> Result<()
     Ok(())
 }
 
-fn prepare_modifications(
-    _match_result: &MatchResult,
-    _modifies: &[(Id, Id)],
-) -> Result<Vec<Modification2>, Error> {
+fn prepare_modifications(modifications: ModMap) -> Result<Vec<Modification2>, Error> {
     todo!()
-    // let mut all_modifications: Vec<_> = modifies
-    //     .iter()
-    //     .flat_map(|(input_var, output_var)| {
-    //         match_result
-    //             .matches
-    //             .iter()
-    //             .map(|match_| make_modification(&match_result.ctx, match_, *input_var, *output_var))
-    //     })
-    //     .collect();
-    //
+    // let modifications: Vec<Modification2> = modifications.into_iter().map(|m| {}).collect();
     // // Sort modifications by their spans to ensure proper ordering
-    // all_modifications.sort_by_key(|t| t.span.byte_range().start);
+    // modifications.sort_by_key(|t| t.span.byte_range().start);
     //
-    // check_overlap(&all_modifications)?;
+    // check_overlap(&modifications)?;
     // Ok(all_modifications)
 }
 
