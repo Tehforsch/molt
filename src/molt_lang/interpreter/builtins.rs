@@ -2,6 +2,7 @@ use codespan_reporting::diagnostic::Label;
 
 use crate::{
     Diagnostic, FileId, Id,
+    modify::NodeSpec,
     molt_lang::{Interpreter, InterpreterError, builtin_fn::BuiltinFn, interpreter::value::Value},
 };
 
@@ -54,8 +55,11 @@ impl<'src> Interpreter<'src> {
     fn eval_dbg(&self, args: &[Value]) {
         for val in args.iter() {
             match val {
-                Value::Node(id) => {
+                Value::Node(NodeSpec::Rust(id)) => {
                     self.emit_diagnostic(self.context.real_id, *id);
+                }
+                Value::Node(_) => {
+                    todo!();
                 }
                 val => self.print_val(val),
             }
@@ -67,7 +71,12 @@ impl<'src> Interpreter<'src> {
             Value::String(s) => s,
             Value::Int(x) => &format!("{}", x),
             Value::Bool(b) => &format!("{}", b),
-            Value::Node(id) => self.context.real_ctx().print(*id, self.context.real_src()),
+            Value::Node(NodeSpec::Rust(id)) => {
+                self.context.real_ctx().print(*id, self.context.real_src())
+            }
+            Value::Node(_) => {
+                todo!()
+            }
             Value::Unit => "()",
             Value::UserFn(f) => &format!("{:?}", f),
             Value::BuiltinFn(f) => &format!("{:?}", f),

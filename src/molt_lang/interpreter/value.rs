@@ -1,5 +1,5 @@
 use crate::{
-    Id,
+    modify::NodeSpec,
     molt_lang::{BuiltinFn, FnId},
 };
 
@@ -8,7 +8,7 @@ pub enum Value {
     String(String),
     Int(i64),
     Bool(bool),
-    Node(Id),
+    Node(NodeSpec),
     // TODO: Get rid of this once we have proper semantics
     Unit,
     UserFn(FnId),

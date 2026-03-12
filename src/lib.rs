@@ -23,25 +23,27 @@ mod writer;
 
 use std::path::{Path, PathBuf};
 
-use crate::{molt_lang::Context, rust_grammar::Node};
+use crate::{modify::Modify, molt_lang::Context, rust_grammar::Node};
 use codespan_reporting::files::Files;
 
 // TODO make the CmpSyn trait private
 // and fix the resulting warnings.
 pub use cmp_syn::CmpSyn;
 pub use config::Config;
-pub(crate) use ctx::{Ctx, Id, NodeId, Var};
 pub use error::{Error, emit_error};
 pub use input::{Contents, Input, Source};
+pub use writer::Writer;
+
+pub(crate) use ctx::{Ctx, Id, NodeId, Var};
 pub(crate) use input::{Diagnostic, FileId};
 pub(crate) use match_pattern::{Match, Matcher};
+pub(crate) use modify::ModMap;
 pub(crate) use node::{KindType, NodeType, ToNode};
 pub(crate) use node_list::{
     List, ListMatchingMode, NodeList, PatNodeList, RealNodeList, Single, SingleMatchingMode,
 };
 pub(crate) use pattern::Pattern;
 pub(crate) use span::{Span, Spanned, SpannedPat, WithSpan};
-pub use writer::Writer;
 
 struct RustFile;
 
@@ -69,7 +71,7 @@ pub fn run_internal(
     input: &Input,
     writer: &Writer,
     config: crate::Config,
-    _cargo_root: Option<&PathBuf>,
+    cargo_root: Option<&PathBuf>,
 ) -> Result<(), Error> {
     let molt_file = molt_lang::MoltFile::new(input)?;
 
@@ -88,7 +90,7 @@ pub fn run_internal(
             config: &config,
             pats: &molt_file.pats,
         };
-        crate::molt_lang::Interpreter::run_dry(&molt_file, context).map_err(Error::Interpreter)?;
+        crate::molt_lang::Interpreter::run_dry(&molt_file, &context).map_err(Error::Interpreter)?;
     } else {
         molt_file.check_has_main_fn_with_input()?;
         for rust_file_id in input.iter_rust_src() {
@@ -102,7 +104,14 @@ pub fn run_internal(
                 config: &config,
                 pats: &molt_file.pats,
             };
-            crate::molt_lang::Interpreter::run(&molt_file, context).map_err(Error::Interpreter)?;
+            let modifications = crate::molt_lang::Interpreter::run(&molt_file, context.clone())
+                .map_err(Error::Interpreter)?;
+            Modify::run(
+                context,
+                rust_file_id,
+                cargo_root.map(|path| path.as_path()),
+                modifications,
+            )?;
         }
     }
     Ok(())

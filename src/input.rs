@@ -17,17 +17,24 @@ pub enum FileId {
     Molt,
 }
 
+#[derive(Copy, Clone)]
 pub enum FilePath<'a> {
     Path(&'a Path),
     FromString,
 }
 
 impl<'a> FilePath<'a> {
+    #[allow(unused)] // TODO
     pub(crate) fn unwrap_path(&self) -> &'a Path {
         match self {
             FilePath::Path(path) => path,
             FilePath::FromString => panic!("unwrap_path called on FromString variant."),
         }
+    }
+
+    #[allow(unused)] // TODO
+    pub(crate) fn is_from_string(&self) -> bool {
+        matches!(self, Self::FromString)
     }
 }
 

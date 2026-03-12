@@ -1,18 +1,18 @@
 #![allow(unused)]
 mod diff;
 
+use std::collections::HashMap;
 use std::io::{self, Write};
 use std::path::Path;
 
+use crate::input::FilePath;
+use crate::molt_lang::{Context, PatId};
 use crate::rust_grammar::Node;
-use crate::{Config, Id, Match, Span};
+use crate::{Config, Id, Match, Span, Var};
 use codespan_reporting::files::Files;
 
 use crate::ctrl_c::FileRestorer;
 use crate::{Error, FileId, Input};
-
-// lol
-type MatchResult<'a> = &'a ();
 
 #[derive(Debug, thiserror::Error)]
 pub enum ModifyError {
@@ -20,243 +20,97 @@ pub enum ModifyError {
     Overlap,
 }
 
-pub struct Modification {
-    pub old: Id,
-    pub new: Id,
+pub type Result<T, E = ModifyError> = std::result::Result<T, E>;
+
+#[derive(Default)]
+pub(crate) struct ModMap {
+    mods: Vec<Modification>,
+}
+
+impl ModMap {
+    fn iter(&self) -> impl Iterator<Item = &Modification> {
+        self.mods.iter()
+    }
+
+    pub(crate) fn extend(&mut self, modifications: Vec<Modification>) {
+        self.mods.extend(modifications);
+    }
 }
 
 #[derive(Debug)]
-struct Modification2 {
-    span: Span,
-    new_code: String,
+pub struct Modification {
+    pub old: NodeSpec,
+    pub new: NodeSpec,
+}
+
+#[derive(Debug)]
+pub struct Change {
+    pub new_code: String,
+    pub span: Span,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum NodeSpec {
+    Rust(Id),                       // Refers to a concrete node in the current rust file
+    MoltPat { pat: PatId },         // Refers to a pattern in the molt file
+    MoltVar { id: Id, pat: PatId }, // Refers to a variable in a pattern in the molt file
 }
 
 pub struct Modify<'a> {
-    modifications: Vec<Modification2>,
     code: String,
-    rust_file_path: &'a Path,
-    config: &'a Config,
+    rust_file_path: FilePath<'a>,
     cargo_root: Option<&'a Path>,
+    ctx: Context<'a>,
 }
 
 impl<'a> Modify<'a> {
-    pub fn new(
-        input: &'a Input,
-        config: &'a Config,
+    pub fn run(
+        ctx: Context<'a>,
         rust_file_id: FileId,
         cargo_root: Option<&'a Path>,
-        match_result: MatchResult<'a>,
-        modifies: &'a [(Id, Id)],
-    ) -> Result<Self, Error> {
-        let code = input.source(rust_file_id).unwrap().to_owned();
-        let filename = input.name(rust_file_id).unwrap().unwrap_path();
-        let modifications = prepare_modifications(&match_result, modifies)?;
-        Ok(Self {
-            modifications,
+        modifications: ModMap,
+    ) -> Result<(), Error> {
+        let code = ctx.input.source(rust_file_id).unwrap().to_owned();
+        let filename = ctx.input.name(rust_file_id).unwrap();
+        let modify = Self {
             code,
+            ctx,
             rust_file_path: filename,
-            config,
             cargo_root,
+        };
+        for m in modifications.mods.into_iter() {
+            modify.apply(m)?;
+        }
+        Ok(())
+    }
+
+    fn apply(&self, m: Modification) -> Result<()> {
+        let change = self.get_change(m)?;
+        Ok(())
+    }
+
+    fn get_change(&self, m: Modification) -> Result<Change> {
+        assert!(matches!(m.old, NodeSpec::Rust(_))); // TODO: resolve chain if not the case
+        let span = self.ctx.get_span(m.old);
+        Ok(Change {
+            span,
+            new_code: self.get_modified_code(m.new),
         })
     }
 
-    pub fn get_modified_contents(mut self) -> Result<String, Error> {
-        for modification in self.modifications.iter().rev() {
-            modification.show_diff(&self.code, self.rust_file_path);
-            let not_interactive_or_user_said_yes =
-                !self.config.interactive || ask_user_for_confirmation();
-            let no_compile_check_or_code_still_compiles =
-                self.config.check.is_none() || self.post_modification_check_ok(modification)?;
-            if not_interactive_or_user_said_yes && no_compile_check_or_code_still_compiles {
-                self.code = modification.apply(self.code.clone());
-            }
+    fn get_modified_code(&self, new: NodeSpec) -> String {
+        let mut code = self.ctx.print(new);
+        while let Some(var) = self.contained_variables(new).next() {
+            self.replace_first_variable(var);
         }
-        Ok(self.code.clone())
-    }
-
-    fn post_modification_check_ok(&self, modification: &Modification2) -> Result<bool, Error> {
-        let command = self.config.check.as_ref().unwrap();
-        let original_code = &self.code;
-        let new_code = modification.apply(original_code.clone());
-        self.write_temporary_code_to_file(new_code, original_code.clone())?;
-
-        // TODO: This is probably not the right way to
-        // do this, but I am not sure how to do this robustly.
-        let mut cmd = std::process::Command::new("/usr/bin/env");
-        cmd.arg("sh").arg("-c").arg(command);
-        if let Some(root) = self.cargo_root {
-            cmd.current_dir(root);
-        }
-        let output = cmd.output()?;
-        if output.status.success() {
-            self.forget_temporary_modification()?;
-            Ok(true)
-        } else {
-            self.restore_temporary_modification(original_code)?;
-            Ok(false)
-        }
-    }
-
-    fn write_temporary_code_to_file(
-        &self,
-        new_code: String,
-        original_code: String,
-    ) -> Result<(), Error> {
-        std::fs::write(self.rust_file_path, new_code)?;
-        FileRestorer::global()
-            .remember_original_file_contents(self.rust_file_path, original_code)
-            .map_err(Error::Io)
-    }
-
-    fn forget_temporary_modification(&self) -> Result<(), Error> {
-        FileRestorer::global()
-            .forget_file(self.rust_file_path)
-            .map_err(Error::Io)
-    }
-
-    fn restore_temporary_modification(&self, original_code: &str) -> Result<(), Error> {
-        std::fs::write(self.rust_file_path, original_code)?;
-        self.forget_temporary_modification()
-    }
-}
-
-impl Modification2 {
-    fn apply(&self, mut code: String) -> String {
-        let range = self.span.byte_range();
-        code.replace_range(range, &self.new_code);
         code
     }
-}
 
-pub fn modify(
-    input: &Input,
-    config: &Config,
-    rust_file_id: FileId,
-    match_result: MatchResult,
-    modifies: Vec<(Id, Id)>,
-    cargo_root: Option<&Path>,
-) -> Result<(), Error> {
-    let modify = Modify::new(
-        input,
-        config,
-        rust_file_id,
-        cargo_root,
-        match_result,
-        &modifies,
-    )?;
-    if !modify.modifications.is_empty() {
-        let new_code = modify.get_modified_contents()?;
-        write_to_file(input, rust_file_id, new_code)?;
+    fn contained_variables(&self, new: NodeSpec) -> impl Iterator<Item = &Var<Node>> {
+        vec![].into_iter() // TODO obviously
     }
-    Ok(())
-}
 
-fn ask_user_for_confirmation() -> bool {
-    print!("Apply this modification? (y/N): ");
-    io::stdout().flush().unwrap();
-
-    let mut input = String::new();
-    io::stdin().read_line(&mut input).unwrap();
-
-    matches!(input.trim().to_lowercase().as_str(), "y" | "yes")
-}
-
-fn write_to_file(input: &Input, rust_file_id: FileId, code: String) -> Result<(), Error> {
-    let path = input.name(rust_file_id).unwrap();
-    let path = path.unwrap_path();
-    std::fs::write(path, code)?;
-    Ok(())
-}
-
-fn prepare_modifications(
-    _match_result: &MatchResult,
-    _modifies: &[(Id, Id)],
-) -> Result<Vec<Modification2>, Error> {
-    todo!()
-    // let mut all_modifications: Vec<_> = modifies
-    //     .iter()
-    //     .flat_map(|(input_var, output_var)| {
-    //         match_result
-    //             .matches
-    //             .iter()
-    //             .map(|match_| make_modification(&match_result.ctx, match_, *input_var, *output_var))
-    //     })
-    //     .collect();
-    //
-    // // Sort modifications by their spans to ensure proper ordering
-    // all_modifications.sort_by_key(|t| t.span.byte_range().start);
-    //
-    // check_overlap(&all_modifications)?;
-    // Ok(all_modifications)
-}
-
-fn check_overlap(modifications: &[Modification2]) -> Result<(), Error> {
-    let mut last_byte = None;
-    for tf in modifications.iter() {
-        if let Some(last_byte) = last_byte
-            && tf.span.byte_range().start <= last_byte
-        {
-            return Err(ModifyError::Overlap.into());
-        }
-        last_byte = Some(tf.span.byte_range().end);
+    fn replace_first_variable(&self, var: &Var<Node>) {
+        todo!()
     }
-    Ok(())
 }
-
-// temp
-type MatchCtx<N> = N;
-
-#[allow(unused)]
-fn make_modification(ctx: &MatchCtx<Node>, match_: &Match, input: Id, output: Id) -> Modification2 {
-    todo!()
-    // let ast = match_.get_binding(input).id.unwrap();
-    // let ast_span = ctx.real_ctx.get_span(ast);
-    // Modification {
-    //     span: ast_span,
-    //     new_code: get_modified_code(ctx, match_, output),
-    // }
-}
-
-#[allow(unused)]
-fn get_modified_code(_ctx: &MatchCtx<Node>, _match_: &Match, _output: Id) -> String {
-    todo!()
-    // let binding = match_.get_binding(output);
-    // let mut code = if let Some(real_binding) = binding.real {
-    //     ctx.print(real_binding).to_string()
-    // } else {
-    //     let pat_id = binding.molt.unwrap();
-    //     if pat_id.is_var() {
-    //         get_modified_code(ctx, match_, pat_id)
-    //     } else {
-    //         ctx.print(binding.molt.unwrap()).to_string()
-    //     }
-    // };
-    // loop {
-    //     let variables = contained_variables(&code);
-    //     if variables.is_empty() {
-    //         break;
-    //     }
-    //     replace_first_variable(ctx, match_, &mut code, variables);
-    // }
-    // code
-}
-
-// fn replace_first_variable(
-//     ctx: &MatchCtx<Node>,
-//     match_: &Match,
-//     sc: &mut String,
-//     mut vars: Vec<TokenVar>,
-// ) {
-//     if let Some(var) = vars.pop() {
-//         let var_id = ctx.molt_ctx.get_id_by_name(&var.name);
-//         let new_code = get_modified_code(ctx, match_, var_id);
-//         sc.replace_range(var.span.byte_range(), &new_code);
-//     }
-// }
-//
-// fn contained_variables(code: &str) -> Vec<TokenVar> {
-//     let mut vars = vec![];
-//     let tokens = TokenStream::from_str(code).unwrap();
-//     get_vars_in_token_stream(&mut vars, tokens);
-//     vars
-// }
