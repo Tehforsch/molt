@@ -207,7 +207,7 @@ impl<'a> Typechecker<'a> {
 
     pub(crate) fn debug_print(&self, file: &MoltFile) {
         for (id, resolved_type) in self.iter_vars() {
-            println!("{}: {}", file.var_names[id.0], resolved_type);
+            println!("{}: {}", file.var_names[id], resolved_type);
         }
     }
 

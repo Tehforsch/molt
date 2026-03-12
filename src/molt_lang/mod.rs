@@ -37,7 +37,7 @@ const INPUT_VAR_NAME: &str = "input";
 #[derive(Debug)]
 pub struct MoltFile {
     pub fns: Storage<FnId, MoltFn>,
-    pub var_names: Vec<Ident>,
+    pub var_names: Storage<VarId, Ident>,
     pub builtin_map: HashMap<VarId, BuiltinFn>,
     pub main_fn_id: FnId,
 }

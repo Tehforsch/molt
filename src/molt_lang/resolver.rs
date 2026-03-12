@@ -65,7 +65,7 @@ impl Scope {
 
 pub struct Resolver {
     scopes: Vec<Scope>,
-    var_names: Vec<Ident>,
+    var_names: Storage<VarId, Ident>,
     fn_map: HashMap<VarId, FnId>,
     builtin_map: HashMap<VarId, BuiltinFn>,
     pats: Storage<PatId, UnresolvedPat>,
@@ -74,7 +74,7 @@ pub struct Resolver {
 impl Default for Resolver {
     fn default() -> Self {
         Self {
-            var_names: vec![],
+            var_names: Storage::default(),
             scopes: vec![Scope::default()],
             fn_map: HashMap::default(),
             builtin_map: HashMap::default(),
@@ -98,8 +98,7 @@ impl Resolver {
 
     fn register_var(&mut self, name: &Ident) -> VarId {
         let name_str = name.to_string();
-        self.var_names.push(name.clone());
-        let var_id = VarId(self.var_names.len() - 1);
+        let var_id = self.var_names.add(name.clone());
         self.active_scope_mut().insert(&name_str, var_id);
         var_id
     }
@@ -359,7 +358,7 @@ fn resolve_pat(
             let typechecker::Type::Kind(kind) = typeck.get_type(*var_id).unwrap() else {
                 unreachable!()
             };
-            let name = &file.var_names[var_id.0];
+            let name = &file.var_names[*var_id];
             let ctx_id = pat_ctx.add_var::<Node>(Var::new(name.clone(), *kind));
             TokenVar {
                 ctx_id: ctx_id.into(),
