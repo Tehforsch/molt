@@ -1,6 +1,7 @@
 mod builtin_fn;
 mod context;
 mod grammar;
+mod index_types;
 mod interpreter;
 mod resolver;
 mod typechecker;
@@ -28,8 +29,8 @@ use crate::rust_grammar::Ident;
 use crate::rust_grammar::Kind;
 use crate::rust_grammar::Node;
 use crate::storage::Storage;
-use crate::storage::StorageIndex;
 use crate::{Error, Input, Mode};
+use index_types::{FnId, PatId, VarId};
 
 const MAIN_FN_NAME: &str = "main";
 const INPUT_VAR_NAME: &str = "input";
@@ -40,45 +41,6 @@ pub struct MoltFile {
     pub var_names: Storage<VarId, Ident>,
     pub builtin_map: HashMap<VarId, BuiltinFn>,
     pub main_fn_id: FnId,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-struct VarId(usize);
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-struct FnId(usize);
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub(crate) struct PatId(usize);
-
-impl StorageIndex for VarId {
-    fn to_index(self) -> usize {
-        self.0
-    }
-
-    fn from_index(index: usize) -> Self {
-        Self(index)
-    }
-}
-
-impl StorageIndex for FnId {
-    fn to_index(self) -> usize {
-        self.0
-    }
-
-    fn from_index(index: usize) -> Self {
-        Self(index)
-    }
-}
-
-impl StorageIndex for PatId {
-    fn to_index(self) -> usize {
-        self.0
-    }
-
-    fn from_index(index: usize) -> Self {
-        Self(index)
-    }
 }
 
 #[derive(Debug)]
@@ -238,10 +200,6 @@ impl MoltFile {
         } else {
             Err(Error::FileStructure(FileStructureError::NoInputVarName))
         }
-    }
-
-    fn iter_fns(&self) -> impl Iterator<Item = (FnId, &MoltFn)> {
-        self.fns.iter().enumerate().map(|(i, f)| (FnId(i), f))
     }
 
     fn iter_builtins(&self) -> impl Iterator<Item = (VarId, BuiltinFn)> {

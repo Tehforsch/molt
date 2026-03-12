@@ -152,10 +152,10 @@ impl Resolver {
         }
     }
 
-    fn register_user_fns(&mut self, fns: &[grammar::MoltFn]) {
-        for (i, f) in fns.iter().enumerate() {
+    fn register_user_fns(&mut self, fns: &Storage<FnId, grammar::MoltFn>) {
+        for (i, f) in fns.enumerate() {
             let var = self.register_var(&f.name);
-            self.fn_map.insert(var, FnId(i));
+            self.fn_map.insert(var, i);
         }
     }
 

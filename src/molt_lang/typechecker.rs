@@ -4,7 +4,7 @@ use crate::{
     KindType,
     molt_lang::{BuiltinFn, MoltFile, MoltFn, PatId, Stmt, UnresolvedPat, VarId},
     rust_grammar::{Ident, Kind},
-    storage::Storage,
+    storage::{Storage, StorageIndex},
 };
 
 #[derive(Debug)]
@@ -182,7 +182,7 @@ impl<'a> Typechecker<'a> {
 
     pub(crate) fn iter_vars(&self) -> impl Iterator<Item = (VarId, ResolvedType)> {
         let mut keys: Vec<_> = self.vars.keys().cloned().collect();
-        keys.sort_by_key(|id| id.0);
+        keys.sort_by_key(|id| id.to_index());
         keys.into_iter()
             .filter_map(|var| self.get_type(var).map(|ty| (var, self.as_resolved(ty))))
     }
@@ -274,7 +274,7 @@ impl<'a> Typechecker<'a> {
     pub(crate) fn check_no_untyped_vars(&self, file: &MoltFile) -> Result<(), Error> {
         for id in self.vars.keys() {
             if let Some(Type::Var) = self.get_type(*id) {
-                let name = file.var_names.get(id.0).unwrap().clone();
+                let name = file.var_names[*id].clone();
                 return Err(Error::UntypedVar(name));
             }
         }

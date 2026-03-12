@@ -10,17 +10,18 @@ use crate::parser::token::Brace;
 use crate::parser::{Result, token};
 use crate::rust_grammar::ext::IdentExt;
 use crate::rust_grammar::{Ident, Kind, LitBool, LitInt, LitStr};
+use crate::storage::Storage;
 
 use super::{Expr, FnArg, LetLhs, LetStmt, MoltFile, MoltFn, Pat, Stmt};
 
 impl Parse for MoltFile {
     fn parse(input: ParseStream) -> Result<Self> {
-        let mut fns = vec![];
+        let mut fns = Storage::default();
         let mut stmts = vec![];
         while !input.is_empty() {
             let lookahead = input.lookahead1();
             if lookahead.peek(Token![fn]) {
-                fns.push(input.parse()?);
+                fns.add(input.parse()?);
             } else {
                 stmts.push(input.parse()?);
             }
@@ -66,7 +67,7 @@ impl MoltFile {
                 });
                 self.stmts.remove(0);
             }
-            self.fns.push(MoltFn {
+            self.fns.add(MoltFn {
                 name: Ident::new(MAIN_FN_NAME, Span::call_site()),
                 args,
                 stmts: self.stmts.drain(..).collect(),

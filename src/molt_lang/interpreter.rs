@@ -11,6 +11,7 @@ use crate::{
         interpreter::value::StmtValue,
     },
     node::NodeType,
+    storage::Storage,
 };
 
 use value::Value;
@@ -46,8 +47,8 @@ impl VarStack {
 }
 
 pub(crate) struct Interpreter<'a> {
-    vars: Vec<VarStack>,
-    fns: Vec<&'a MoltFn>,
+    vars: Storage<VarId, VarStack>,
+    fns: Storage<FnId, &'a MoltFn>,
     context: Context<'a>,
     modifications: Vec<Modification>,
 }
@@ -60,11 +61,11 @@ impl<'a> Interpreter<'a> {
             context,
             modifications: vec![],
         };
-        for (id, f) in file.iter_fns() {
+        for (id, f) in file.fns.enumerate() {
             interpreter.eval_fn_def(f, id);
         }
         for (id, f) in file.iter_builtins() {
-            interpreter.vars[id.0].push(Value::BuiltinFn(f));
+            interpreter.vars[id].push(Value::BuiltinFn(f));
         }
         interpreter
     }
@@ -85,11 +86,11 @@ impl<'a> Interpreter<'a> {
     }
 
     fn eval_main_fn_dry(&mut self, main_fn_id: FnId) -> Result<()> {
-        let f = self.fns[main_fn_id.0];
+        let f = self.fns[main_fn_id];
         if !f.args.is_empty() {
             return Err(Error::InvalidMainFn);
         }
-        self.eval_user_defined_fn(&[], self.fns[main_fn_id.0])?;
+        self.eval_user_defined_fn(&[], self.fns[main_fn_id])?;
         Ok(())
     }
 
@@ -97,7 +98,7 @@ impl<'a> Interpreter<'a> {
         let value = Value::Node(node);
         // Special handling to filter out non-matching node types
         // in the main function
-        let f = self.fns[main_fn_id.0];
+        let f = self.fns[main_fn_id];
         if f.args.len() != 1 {
             return Err(Error::InvalidMainFn);
         } else {
@@ -114,12 +115,12 @@ impl<'a> Interpreter<'a> {
                 return Ok(());
             }
         }
-        self.eval_user_defined_fn(&[value], self.fns[main_fn_id.0])?;
+        self.eval_user_defined_fn(&[value], self.fns[main_fn_id])?;
         Ok(())
     }
 
     fn eval_fn_def(&mut self, f: &'a MoltFn, id: FnId) {
-        self.vars[f.id.0].push(Value::UserFn(id));
+        self.vars[f.id].push(Value::UserFn(id));
     }
 
     fn eval_stmt(&mut self, stmt: &Stmt) -> Result<StmtValue> {
@@ -142,8 +143,8 @@ impl<'a> Interpreter<'a> {
     }
 
     fn eval_fn_call(&mut self, fn_var_id: VarId, args: &[Value]) -> Result<StmtValue> {
-        match self.vars[fn_var_id.0].get() {
-            Value::UserFn(fn_id) => self.eval_user_defined_fn(args, self.fns[fn_id.0]),
+        match self.vars[fn_var_id].get() {
+            Value::UserFn(fn_id) => self.eval_user_defined_fn(args, self.fns[fn_id]),
             Value::BuiltinFn(builtin_fn) => {
                 self.eval_builtin(args, builtin_fn).map(StmtValue::Value)
             }
@@ -158,7 +159,7 @@ impl<'a> Interpreter<'a> {
     ) -> Result<StmtValue, Error> {
         assert_eq!(user_fn.args.len(), args.len()); // todo verify this at resolution time
         for (arg, val) in user_fn.args.iter().zip(args.iter()) {
-            self.vars[arg.var_id.0].push(val.clone());
+            self.vars[arg.var_id].push(val.clone());
         }
         let val = self.eval_block(user_fn)?;
         let val = match val {
@@ -167,7 +168,7 @@ impl<'a> Interpreter<'a> {
             StmtValue::Return(value) => value,
         };
         for arg in user_fn.args.iter() {
-            self.vars[arg.var_id.0].pop();
+            self.vars[arg.var_id].pop();
         }
         Ok(StmtValue::Value(val))
     }
@@ -204,7 +205,7 @@ impl<'a> Interpreter<'a> {
 
     fn eval_atom(&self, atom: &super::Atom) -> Result<Value> {
         match atom {
-            super::Atom::Var(var_id) => Ok(self.vars[var_id.0].get().clone()),
+            super::Atom::Var(var_id) => Ok(self.vars[*var_id].get().clone()),
             super::Atom::Lit(lit) => self.eval_lit(lit),
         }
     }
@@ -223,7 +224,7 @@ impl<'a> Interpreter<'a> {
     }
 
     fn eval_assignment(&mut self, assignment: &Assignment) -> Result<StmtValue> {
-        let val = self.vars[assignment.lhs.0].pop();
+        let val = self.vars[assignment.lhs].pop();
         let new_val = match val {
             Value::String(_)
             | Value::Int(_)
@@ -242,7 +243,7 @@ impl<'a> Interpreter<'a> {
                 Value::Node(new_val)
             }
         };
-        self.vars[assignment.lhs.0].push(new_val);
+        self.vars[assignment.lhs].push(new_val);
         Ok(StmtValue::Value(Value::Unit))
     }
 
@@ -251,7 +252,7 @@ impl<'a> Interpreter<'a> {
             LetLhs::Var(var_id) => {
                 if let Some(rhs) = &let_stmt.rhs {
                     let val = self.eval_expr(rhs)?;
-                    self.vars[var_id.0].push(val);
+                    self.vars[*var_id].push(val);
                 }
                 Ok(StmtValue::Value(Value::Unit))
             }
@@ -268,7 +269,7 @@ impl<'a> Interpreter<'a> {
                 for var in pat.vars.iter() {
                     // Look up if this variable was previously bound to
                     // something.
-                    let bound_to = self.vars[var.var_id.0].try_get().map(|val| {
+                    let bound_to = self.vars[var.var_id].try_get().map(|val| {
                         let Value::Node(bound_to) = val else {
                             todo!()
                             // error handling
@@ -297,7 +298,7 @@ impl<'a> Interpreter<'a> {
                 };
 
                 for (id, val) in new_bindings {
-                    self.vars[id.0].push(val);
+                    self.vars[id].push(val);
                 }
                 Ok(StmtValue::Value(Value::Unit))
             }

@@ -2,14 +2,16 @@ mod parse;
 
 use proc_macro2::TokenStream;
 
+use crate::molt_lang::index_types::FnId;
 use crate::parser::punctuated::Punctuated;
 use crate::parser::token::Comma;
 use crate::rust_grammar::{Ident, Kind, LitBool, LitInt, LitStr};
+use crate::storage::Storage;
 pub use parse::FileStructureError;
 
 #[derive(Debug)]
 pub(crate) struct MoltFile {
-    pub fns: Vec<MoltFn>,
+    pub fns: Storage<FnId, MoltFn>,
     pub stmts: Vec<Stmt>,
 }
 

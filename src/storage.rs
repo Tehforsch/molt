@@ -30,6 +30,10 @@ impl<I: StorageIndex, T> Storage<I, T> {
         self.items.iter()
     }
 
+    pub(crate) fn into_iter(self) -> impl Iterator<Item = T> {
+        self.items.into_iter()
+    }
+
     pub(crate) fn enumerate(&self) -> impl Iterator<Item = (I, &T)> {
         self.items
             .iter()
@@ -59,6 +63,13 @@ impl<I: StorageIndex, T> std::ops::Index<I> for Storage<I, T> {
         &self.items[index.to_index()]
     }
 }
+
+impl<I: StorageIndex, T> std::ops::IndexMut<I> for Storage<I, T> {
+    fn index_mut(&mut self, index: I) -> &mut Self::Output {
+        &mut self.items[index.to_index()]
+    }
+}
+
 impl<I: StorageIndex, T> FromIterator<T> for Storage<I, T> {
     fn from_iter<It: IntoIterator<Item = T>>(iter: It) -> Self {
         Self {
