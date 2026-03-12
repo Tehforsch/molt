@@ -205,6 +205,7 @@ impl<'a> Typechecker<'a> {
         }
     }
 
+    #[allow(unused)] // For now.
     pub(crate) fn debug_print(&self, file: &MoltFile) {
         for (id, resolved_type) in self.iter_vars() {
             println!("{}: {}", file.var_names[id], resolved_type);
@@ -251,16 +252,10 @@ impl<'a> Typechecker<'a> {
     pub(crate) fn check(mut self, file: &MoltFile) -> Result<TypecheckResult, Error> {
         let fn_return_types: Vec<_> = file.fns.iter().map(|f| self.declare_fn(f)).collect();
         for (id, f) in file.builtin_map.iter() {
-            println!();
-            println!("DECLARE {:?}", f);
             self.declare_builtin(*id, *f);
-            self.debug_print(file);
         }
         for (f, type_id) in file.fns.iter().zip(fn_return_types) {
-            println!();
-            println!("CHECK {:?}", f.name);
             self.check_fn(f, type_id)?;
-            self.debug_print(file);
         }
         self.check_no_untyped_vars(file)?;
         Ok(TypecheckResult {
