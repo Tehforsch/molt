@@ -130,20 +130,14 @@ impl Resolver {
         // Register all user defined functions
         self.register_builtins();
         self.register_user_fns(&fns);
-        let fns: Vec<_> = fns
+        let fns: Storage<_, _> = fns
             .into_iter()
             .map(|f| self.resolve_fn(f))
             .collect::<Result<_>>()?;
         check_names_unique(&fns)?;
         Ok((
             MoltFile {
-                main_fn_id: FnId(
-                    fns.iter()
-                        .enumerate()
-                        .find(|(_, f)| f.name == MAIN_FN_NAME)
-                        .map(|(id, _)| id)
-                        .unwrap(),
-                ),
+                main_fn_id: fns.find_id(|f| f.name == MAIN_FN_NAME),
                 var_names: self.var_names,
                 fns,
                 builtin_map: self.builtin_map,

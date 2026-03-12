@@ -5,6 +5,7 @@ pub trait StorageIndex {
     fn from_index(index: usize) -> Self;
 }
 
+#[derive(Debug)]
 pub struct Storage<I: StorageIndex, T> {
     items: Vec<T>,
     _marker: PhantomData<I>,
@@ -25,11 +26,29 @@ impl<I: StorageIndex, T> Storage<I, T> {
         I::from_index(self.items.len() - 1)
     }
 
+    pub(crate) fn iter(&self) -> impl Iterator<Item = &T> {
+        self.items.iter()
+    }
+
+    pub(crate) fn enumerate(&self) -> impl Iterator<Item = (I, &T)> {
+        self.items
+            .iter()
+            .enumerate()
+            .map(|(i, t)| (I::from_index(i), t))
+    }
+
     pub(crate) fn into_iter_enumerate(self) -> impl Iterator<Item = (I, T)> {
         self.items
             .into_iter()
             .enumerate()
             .map(|(i, t)| (I::from_index(i), t))
+    }
+
+    pub(crate) fn find_id(&self, f: impl Fn(&T) -> bool) -> I {
+        self.enumerate()
+            .find(|(_, t)| f(t))
+            .map(|(id, _)| id)
+            .unwrap()
     }
 }
 
@@ -46,5 +65,13 @@ impl<I: StorageIndex, T> FromIterator<T> for Storage<I, T> {
             items: iter.into_iter().collect(),
             _marker: PhantomData,
         }
+    }
+}
+
+impl<I: StorageIndex, T> std::ops::Deref for Storage<I, T> {
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        &self.items
     }
 }
