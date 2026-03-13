@@ -71,7 +71,7 @@ pub fn run_internal(
     config: crate::Config,
     _cargo_root: Option<&PathBuf>,
 ) -> Result<(), Error> {
-    let (molt_file, pats) = molt_lang::MoltFile::new(input)?;
+    let molt_file = molt_lang::MoltFile::new(input)?;
 
     if input.iter_rust_src().count() == 0 {
         // Fake some context so we can run.
@@ -86,7 +86,7 @@ pub fn run_internal(
             input,
             writer,
             config: &config,
-            pats: &pats,
+            pats: &molt_file.pats,
         };
         crate::molt_lang::Interpreter::run_dry(&molt_file, context).map_err(Error::Interpreter)?;
     } else {
@@ -100,7 +100,7 @@ pub fn run_internal(
                 input,
                 writer,
                 config: &config,
-                pats: &pats,
+                pats: &molt_file.pats,
             };
             crate::molt_lang::Interpreter::run(&molt_file, context).map_err(Error::Interpreter)?;
         }
