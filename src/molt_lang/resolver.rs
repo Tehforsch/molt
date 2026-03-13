@@ -121,10 +121,7 @@ impl Resolver {
             .unwrap_or_else(|_| self.register_var(name)))
     }
 
-    pub fn resolve_file(
-        mut self,
-        file: grammar::MoltFile,
-    ) -> Result<(MoltFile, Storage<PatId, UnresolvedPat>)> {
+    pub fn resolve_file(mut self, file: grammar::MoltFile) -> Result<PartialMoltFile> {
         let grammar::MoltFile { fns, stmts: _ } = file;
         // Register all user defined functions
         self.register_builtins();
@@ -134,15 +131,13 @@ impl Resolver {
             .map(|f| self.resolve_fn(f))
             .collect::<Result<_>>()?;
         check_names_unique(&fns)?;
-        Ok((
-            MoltFile {
-                main_fn_id: fns.find_id(|f| f.name == MAIN_FN_NAME),
-                var_names: self.var_names,
-                fns,
-                builtin_map: self.builtin_map,
-            },
-            self.pats,
-        ))
+        Ok(PartialMoltFile {
+            main_fn_id: fns.find_id(|f| f.name == MAIN_FN_NAME),
+            var_names: self.var_names,
+            fns,
+            builtin_map: self.builtin_map,
+            pats: self.pats,
+        })
     }
 
     fn register_builtins(&mut self) {
@@ -333,19 +328,23 @@ fn default_function_type() -> Type {
     Type::Unit
 }
 
-pub(crate) fn resolve_pats(
-    file: &MoltFile,
-    typeck: &TypecheckResult,
-    unresolved: Storage<PatId, UnresolvedPat>,
-) -> Result<Storage<PatId, ResolvedPat>> {
-    unresolved
+pub(crate) fn resolve_pats(file: PartialMoltFile, typeck: &TypecheckResult) -> Result<MoltFile> {
+    let pats = file
+        .pats
         .into_iter_enumerate()
-        .map(|(i, pat)| resolve_pat(file, typeck, pat, i))
-        .collect()
+        .map(|(i, pat)| resolve_pat(&file.var_names, typeck, pat, i))
+        .collect::<Result<_>>()?;
+    Ok(MoltFile {
+        fns: file.fns,
+        var_names: file.var_names,
+        builtin_map: file.builtin_map,
+        main_fn_id: file.main_fn_id,
+        pats,
+    })
 }
 
 fn resolve_pat(
-    file: &MoltFile,
+    var_names: &Storage<VarId, Ident>,
     typeck: &TypecheckResult,
     p: UnresolvedPat,
     id: PatId,
@@ -358,7 +357,7 @@ fn resolve_pat(
             let typechecker::Type::Kind(kind) = typeck.get_type(*var_id).unwrap() else {
                 unreachable!()
             };
-            let name = &file.var_names[*var_id];
+            let name = &var_names[*var_id];
             let ctx_id = pat_ctx.add_var::<Node>(Var::new(name.clone(), *kind));
             TokenVar {
                 ctx_id: ctx_id.into(),

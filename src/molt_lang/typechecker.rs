@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     KindType,
-    molt_lang::{BuiltinFn, MoltFile, MoltFn, PatId, Stmt, UnresolvedPat, VarId},
+    molt_lang::{BuiltinFn, MoltFile, MoltFn, PartialMoltFile, PatId, Stmt, UnresolvedPat, VarId},
     rust_grammar::{Ident, Kind},
     storage::{Storage, StorageIndex},
 };
@@ -249,7 +249,7 @@ impl<'a> Typechecker<'a> {
             .unwrap_or(id)
     }
 
-    pub(crate) fn check(mut self, file: &MoltFile) -> Result<TypecheckResult, Error> {
+    pub(crate) fn check(mut self, file: &PartialMoltFile) -> Result<TypecheckResult, Error> {
         let fn_return_types: Vec<_> = file.fns.iter().map(|f| self.declare_fn(f)).collect();
         for (id, f) in file.builtin_map.iter() {
             self.declare_builtin(*id, *f);
@@ -266,7 +266,7 @@ impl<'a> Typechecker<'a> {
         })
     }
 
-    pub(crate) fn check_no_untyped_vars(&self, file: &MoltFile) -> Result<(), Error> {
+    pub(crate) fn check_no_untyped_vars(&self, file: &PartialMoltFile) -> Result<(), Error> {
         for id in self.vars.keys() {
             if let Some(Type::Var) = self.get_type(*id) {
                 let name = file.var_names[*id].clone();

@@ -36,11 +36,20 @@ const MAIN_FN_NAME: &str = "main";
 const INPUT_VAR_NAME: &str = "input";
 
 #[derive(Debug)]
+struct PartialMoltFile {
+    pub fns: Storage<FnId, MoltFn>,
+    pub var_names: Storage<VarId, Ident>,
+    pub builtin_map: HashMap<VarId, BuiltinFn>,
+    pub main_fn_id: FnId,
+    pub pats: Storage<PatId, UnresolvedPat>,
+}
+
 pub struct MoltFile {
     pub fns: Storage<FnId, MoltFn>,
     pub var_names: Storage<VarId, Ident>,
     pub builtin_map: HashMap<VarId, BuiltinFn>,
     pub main_fn_id: FnId,
+    pub pats: Storage<PatId, ResolvedPat>,
 }
 
 #[derive(Debug)]
@@ -171,23 +180,21 @@ pub struct TokenVar {
 }
 
 impl MoltFile {
-    pub fn new(input: &Input) -> Result<(Self, Storage<PatId, ResolvedPat>), Error> {
+    pub fn new(input: &Input) -> Result<Self, Error> {
         let file_id = input.molt_file_id();
         let source = input.source(file_id).unwrap();
         let file: grammar::MoltFile =
             crate::parser::parse_str(source, Mode::Molt).map_err(|e| Error::parse(e, file_id))?;
         let file = file.add_implicit_main().map_err(Error::FileStructure)?;
         let resolver = Resolver::default();
-        let (resolved, pats) = resolver
+        let partial = resolver
             .resolve_file(file)
             .map_err(|e| Error::Resolver(e, file_id))?;
-        let typechecker = Typechecker::new(&pats);
+        let typechecker = Typechecker::new(&partial.pats);
         let typeck = typechecker
-            .check(&resolved)
+            .check(&partial)
             .map_err(|e| Error::Typechecker(e, file_id))?;
-        let pats =
-            resolve_pats(&resolved, &typeck, pats).map_err(|e| Error::Resolver(e, file_id))?;
-        Ok((resolved, pats))
+        resolve_pats(partial, &typeck).map_err(|e| Error::Resolver(e, file_id))
     }
 
     pub(crate) fn check_has_main_fn_with_input(&self) -> Result<(), Error> {
