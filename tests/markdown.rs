@@ -13,6 +13,7 @@ enum Lang {
     Molt,
     MoltError,
     Rust,
+    RustReference,
 }
 
 impl Lang {
@@ -21,6 +22,7 @@ impl Lang {
             "molt" => Some(Self::Molt),
             "molt error" => Some(Self::MoltError),
             "rust" => Some(Self::Rust),
+            "rust reference" => Some(Self::RustReference),
             _ => None,
         }
     }
@@ -103,10 +105,13 @@ fn filter_code_blocks(section: &Section, f: impl Fn(Lang) -> bool) -> Vec<&CodeB
         .collect()
 }
 
-fn run_on_str(c: TestConfig, molt_src: &str, rust_sources: &[&str]) -> Result<String, Error> {
+fn run_on_str(c: TestConfig, molt_src: &str, rust_sources: &[&CodeBlock]) -> Result<String, Error> {
     let mut input = Input::new(Source::String(Contents::new(molt_src.to_string())));
-    for src in rust_sources {
-        input = input.with_rust_src(src.to_string())?;
+    let (sources, references): (Vec<_>, Vec<_>) = rust_sources
+        .iter()
+        .partition::<Vec<&CodeBlock>, _>(|src| matches!(src.lang, Lang::Rust));
+    for src in sources {
+        input = input.with_rust_src(src.content.to_string())?;
     }
     let writer = Writer::buffer();
     if c.should_error {
@@ -117,17 +122,40 @@ fn run_on_str(c: TestConfig, molt_src: &str, rust_sources: &[&str]) -> Result<St
     } else {
         let result = molt::run(&input, &writer, Config::default(), None);
         // Otherwise, emit the error to stderr
-        if result.is_err() {
-            emit_error(&Writer::default(), &input, result).unwrap();
+        match result {
+            Err(_) => {
+                emit_error(&Writer::default(), &input, result).unwrap();
+            }
+            Ok(result) => {
+                check_modifications(result, &references);
+            }
         }
     }
     Ok(writer.into_string().unwrap())
 }
 
+fn check_modifications(result: molt::RunResult, references: &[&CodeBlock]) {
+    if result.modifications_by_file.is_empty() {
+        // Language test without any match/transformation
+        // logic.
+        return;
+    }
+    assert_eq!(result.modifications_by_file.len(), 1);
+    let result = result.modifications_by_file.into_iter().next().unwrap().1;
+    if references.is_empty() {
+        assert_eq!(result.num_modifications, 0);
+    } else {
+        assert_eq!(references.len(), 1);
+        assert_eq!(result.new_code, references[0].content);
+    }
+}
+
 fn run_section(md_file: &Path, section: &Section) {
     let molt_blocks =
         filter_code_blocks(section, |lang| matches!(lang, Lang::Molt | Lang::MoltError));
-    let rust_blocks = filter_code_blocks(section, |lang| matches!(lang, Lang::Rust));
+    let rust_blocks = filter_code_blocks(section, |lang| {
+        matches!(lang, Lang::Rust | Lang::RustReference)
+    });
 
     assert!(!section.code_blocks.is_empty());
     assert_eq!(
@@ -139,14 +167,14 @@ fn run_section(md_file: &Path, section: &Section) {
         molt_blocks.len()
     );
 
-    let rust_sources: Vec<&str> = rust_blocks.iter().map(|b| b.content.as_str()).collect();
     let should_error = match &molt_blocks[0].lang {
         Lang::Molt => false,
         Lang::MoltError => true,
         Lang::Rust => unreachable!(),
+        Lang::RustReference => unreachable!(),
     };
     let config = TestConfig { should_error };
-    let output = run_on_str(config, &molt_blocks[0].content, &rust_sources).unwrap_or_else(|e| {
+    let output = run_on_str(config, &molt_blocks[0].content, &rust_blocks).unwrap_or_else(|e| {
         panic!(
             "{}: section {:?}: molt run failed: {e:?}",
             md_file.display(),

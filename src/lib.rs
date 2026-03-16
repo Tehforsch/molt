@@ -21,9 +21,16 @@ mod storage;
 mod tests;
 mod writer;
 
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
-use crate::{modify::Modify, molt_lang::Context, rust_grammar::Node};
+use crate::{
+    modify::{FileModificationResult, Modify},
+    molt_lang::Context,
+    rust_grammar::Node,
+};
 use codespan_reporting::files::Files;
 
 // TODO make the CmpSyn trait private
@@ -67,13 +74,20 @@ impl RustFile {
     }
 }
 
+pub struct RunResult {
+    pub modifications_by_file: HashMap<FileId, FileModificationResult>,
+}
+
 pub fn run_internal(
     input: &Input,
     writer: &Writer,
     config: crate::Config,
     cargo_root: Option<&PathBuf>,
-) -> Result<(), Error> {
+) -> Result<RunResult, Error> {
     let molt_file = molt_lang::MoltFile::new(input)?;
+    let mut result = RunResult {
+        modifications_by_file: HashMap::default(),
+    };
 
     if input.iter_rust_src().count() == 0 {
         // Fake some context so we can run.
@@ -106,15 +120,16 @@ pub fn run_internal(
             };
             let modifications = crate::molt_lang::Interpreter::run(&molt_file, context.clone())
                 .map_err(Error::Interpreter)?;
-            Modify::run(
+            let new_code = Modify::run(
                 context,
                 rust_file_id,
                 cargo_root.map(|path| path.as_path()),
                 modifications,
             )?;
+            result.modifications_by_file.insert(rust_file_id, new_code);
         }
     }
-    Ok(())
+    Ok(result)
 }
 
 pub fn run(
@@ -122,7 +137,7 @@ pub fn run(
     writer: &Writer,
     config: crate::Config,
     _cargo_root: Option<&PathBuf>,
-) -> Result<(), Error> {
+) -> Result<RunResult, Error> {
     emit_error(
         writer,
         input,

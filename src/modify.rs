@@ -51,9 +51,13 @@ pub struct Change {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum NodeSpec {
-    Rust(Id),                       // Refers to a concrete node in the current rust file
-    MoltPat { pat: PatId },         // Refers to a pattern in the molt file
-    MoltVar { id: Id, pat: PatId }, // Refers to a variable in a pattern in the molt file
+    Real(Id),                    // Refers to a node in the real file
+    Molt { id: Id, pat: PatId }, // Refers to a node in the molt file
+}
+
+pub struct FileModificationResult {
+    pub new_code: String,
+    pub num_modifications: usize,
 }
 
 pub struct Modify<'a> {
@@ -61,6 +65,8 @@ pub struct Modify<'a> {
     rust_file_path: FilePath<'a>,
     cargo_root: Option<&'a Path>,
     ctx: Context<'a>,
+
+    changes: Vec<Change>,
 }
 
 impl<'a> Modify<'a> {
@@ -69,29 +75,38 @@ impl<'a> Modify<'a> {
         rust_file_id: FileId,
         cargo_root: Option<&'a Path>,
         modifications: ModMap,
-    ) -> Result<(), Error> {
+    ) -> Result<FileModificationResult, Error> {
         let code = ctx.input.source(rust_file_id).unwrap().to_owned();
         let filename = ctx.input.name(rust_file_id).unwrap();
-        let modify = Self {
+        let mut modify = Self {
             code,
             ctx,
             rust_file_path: filename,
             cargo_root,
+            changes: vec![],
         };
+        let num_modifications = modifications.mods.len();
         for m in modifications.mods.into_iter() {
             modify.apply(m)?;
         }
-        Ok(())
+        Ok(FileModificationResult {
+            new_code: modify.code,
+            num_modifications,
+        })
     }
 
-    fn apply(&self, m: Modification) -> Result<()> {
+    fn apply(&mut self, m: Modification) -> Result<()> {
         let change = self.get_change(m)?;
+        let range = change.span.byte_range();
+        self.code.replace_range(range, &change.new_code);
+        self.changes.push(change);
         Ok(())
     }
 
     fn get_change(&self, m: Modification) -> Result<Change> {
-        assert!(matches!(m.old, NodeSpec::Rust(_))); // TODO: resolve chain if not the case
+        assert!(matches!(m.old, NodeSpec::Real(_))); // TODO: resolve chain if not the case
         let span = self.ctx.get_span(m.old);
+        let span = self.translate_span(span);
         Ok(Change {
             span,
             new_code: self.get_modified_code(m.new),
@@ -112,5 +127,27 @@ impl<'a> Modify<'a> {
 
     fn replace_first_variable(&self, var: &Var<Node>) {
         todo!()
+    }
+
+    fn translate_span(&self, span: Span) -> Span {
+        let start = span.byte_range().start;
+        let end = span.byte_range().end;
+        Span::new(
+            self.translate_byte_position(start),
+            self.translate_byte_position(end),
+        )
+    }
+
+    fn translate_byte_position(&self, pos: usize) -> usize {
+        let mut pos = pos;
+        for change in &self.changes {
+            let range = change.span.byte_range();
+            let old_len = range.end - range.start;
+            let new_len = change.new_code.len();
+            if pos >= range.end {
+                pos = pos - old_len + new_len;
+            }
+        }
+        pos
     }
 }

@@ -44,20 +44,15 @@ impl Context<'_> {
 
     pub(crate) fn get_span(&self, new: NodeSpec) -> Span {
         match new {
-            NodeSpec::Rust(id) => self.real_ctx.get_span(id),
-            NodeSpec::MoltPat { pat: _ } => todo!(),
-            NodeSpec::MoltVar { id: _, pat: _ } => todo!(),
+            NodeSpec::Real(id) => self.real_ctx.get_span(id),
+            NodeSpec::Molt { id: _, pat: _ } => todo!(),
         }
     }
 
     pub(crate) fn print(&self, new: NodeSpec) -> String {
         match new {
-            NodeSpec::Rust(id) => self.real_ctx.print(id, self.real_code()).into(),
-            NodeSpec::MoltPat { pat } => {
-                let pat = &self.pats[pat];
-                pat.ctx.print(pat.node, self.molt_code()).into()
-            }
-            NodeSpec::MoltVar { pat, id } => self.pats[pat].ctx.print(id, self.molt_code()).into(),
+            NodeSpec::Real(id) => self.real_ctx.print(id, self.real_code()).into(),
+            NodeSpec::Molt { pat, id } => self.pats[pat].ctx.print(id, self.molt_code()).into(),
         }
     }
 

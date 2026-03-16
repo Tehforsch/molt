@@ -55,7 +55,7 @@ impl<'src> Interpreter<'src> {
     fn eval_dbg(&self, args: &[Value]) {
         for val in args.iter() {
             match val {
-                Value::Node(NodeSpec::Rust(id)) => {
+                Value::Node(NodeSpec::Real(id)) => {
                     self.emit_diagnostic(self.context.real_id, *id);
                 }
                 Value::Node(_) => {
@@ -71,7 +71,7 @@ impl<'src> Interpreter<'src> {
             Value::String(s) => s,
             Value::Int(x) => &format!("{}", x),
             Value::Bool(b) => &format!("{}", b),
-            Value::Node(NodeSpec::Rust(id)) => {
+            Value::Node(NodeSpec::Real(id)) => {
                 self.context.real_ctx().print(*id, self.context.real_src())
             }
             Value::Node(_) => {

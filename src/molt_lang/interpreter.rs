@@ -97,7 +97,7 @@ impl<'a> Interpreter<'a> {
     }
 
     fn eval_main_fn_on_node(&mut self, node: Id, main_fn_id: FnId) -> Result<()> {
-        let value = Value::Node(NodeSpec::Rust(node));
+        let value = Value::Node(NodeSpec::Real(node));
         // Special handling to filter out non-matching node types
         // in the main function
         let f = self.fns[main_fn_id];
@@ -221,7 +221,8 @@ impl<'a> Interpreter<'a> {
     }
 
     fn eval_pat(&self, pat: &super::PatId) -> Result<Value> {
-        Ok(Value::Node(NodeSpec::MoltPat { pat: *pat }))
+        let id = self.context.pats[*pat].node;
+        Ok(Value::Node(NodeSpec::Molt { pat: *pat, id }))
     }
 
     fn eval_assignment(&mut self, assignment: &Assignment) -> Result<StmtValue> {
@@ -273,7 +274,7 @@ impl<'a> Interpreter<'a> {
                     // Look up if this variable was previously bound to
                     // something.
                     let bound_to = self.vars[var.var_id].try_get().map(|val| {
-                        let Value::Node(NodeSpec::Rust(bound_to)) = val else {
+                        let Value::Node(NodeSpec::Real(bound_to)) = val else {
                             todo!()
                             // error handling
                         };
@@ -281,7 +282,7 @@ impl<'a> Interpreter<'a> {
                     });
                     matcher.add_var(var.ctx_id, bound_to);
                 }
-                let new_bindings: Vec<_> = if let Value::Node(NodeSpec::Rust(real)) = real_id {
+                let new_bindings: Vec<_> = if let Value::Node(NodeSpec::Real(real)) = real_id {
                     let match_ = matcher.get_matches(pat.node, real);
                     if let Some(match_) = match_ {
                         match_
@@ -289,7 +290,7 @@ impl<'a> Interpreter<'a> {
                             .map(|var| {
                                 let bound_to = match_.get_binding(var).id.unwrap();
                                 let var_id = pat.get_var_id(var);
-                                (var_id, Value::Node(NodeSpec::Rust(bound_to)))
+                                (var_id, Value::Node(NodeSpec::Real(bound_to)))
                             })
                             .collect()
                     } else {
