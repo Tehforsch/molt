@@ -1,13 +1,16 @@
 use crate::Span;
 
+#[derive(Debug)]
 struct Change {
     span: Span,
-    len_delta: usize,
+    len_delta: i32,
 }
 
+#[derive(Debug)]
 pub struct ChangeBuffer {
     code: String,
     changes: Vec<Change>,
+    span: Option<Span>,
 }
 
 impl ChangeBuffer {
@@ -15,16 +18,28 @@ impl ChangeBuffer {
         Self {
             code,
             changes: vec![],
+            span: None,
+        }
+    }
+
+    pub(crate) fn new_subspan(code: String, span: Span) -> Self {
+        Self {
+            code,
+            changes: vec![],
+            span: Some(span),
         }
     }
 
     pub fn code(self) -> String {
-        self.code
+        match self.span {
+            Some(span) => self.code[self.translate_span(span).byte_range()].into(),
+            None => self.code,
+        }
     }
 
     pub fn make_change(&mut self, span: Span, new_code: &str) {
         let range = span.byte_range();
-        let len_delta = new_code.len() - (range.end - range.start);
+        let len_delta: i32 = new_code.len() as i32 - (range.end - range.start) as i32;
         let span = self.translate_span(span);
         let range = span.byte_range();
         self.code.replace_range(range.clone(), new_code);
@@ -45,7 +60,7 @@ impl ChangeBuffer {
         for change in &self.changes {
             let range = change.span.byte_range();
             if pos >= range.end {
-                pos += change.len_delta;
+                pos = (pos as i32 + change.len_delta) as usize;
             }
         }
         pos

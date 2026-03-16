@@ -2,6 +2,7 @@ use codespan_reporting::files::Files;
 
 use crate::{
     Config, Ctx, FileId, Input, Span,
+    change_buffer::ChangeBuffer,
     modify::NodeSpec,
     molt_lang::{PatId, ResolvedPat},
     rust_grammar::Node,
@@ -42,17 +43,32 @@ impl Context<'_> {
         &self.pats[id]
     }
 
-    pub(crate) fn get_span(&self, new: NodeSpec) -> Span {
+    pub(crate) fn get_span(&self, new: &NodeSpec) -> Span {
         match new {
-            NodeSpec::Real(id) => self.real_ctx.get_span(id),
-            NodeSpec::Molt { id: _, pat: _ } => todo!(),
+            NodeSpec::Real(id) => self.real_ctx.get_span(*id),
+            NodeSpec::Molt {
+                id: _,
+                vars: _,
+                pat: _,
+            } => todo!(),
         }
     }
 
-    pub(crate) fn print(&self, new: NodeSpec) -> String {
+    pub(crate) fn print(&self, new: &NodeSpec) -> String {
         match new {
-            NodeSpec::Real(id) => self.real_ctx.print(id, self.real_code()).into(),
-            NodeSpec::Molt { pat, id } => self.pats[pat].ctx.print(id, self.molt_code()).into(),
+            NodeSpec::Real(id) => self.real_ctx.print(*id, self.real_code()).into(),
+            NodeSpec::Molt { pat, id, vars } => {
+                let ctx = &self.pats[*pat].ctx;
+                let mut output =
+                    ChangeBuffer::new_subspan(self.molt_code().into(), ctx.get_span(*id));
+                assert_eq!(vars.len(), self.pats[*pat].vars.len());
+                for (var, token_var) in vars.iter().zip(self.pats[*pat].vars.iter()) {
+                    let span = token_var.span;
+                    let new_code = self.print(var);
+                    output.make_change(span, &new_code);
+                }
+                output.code()
+            }
         }
     }
 

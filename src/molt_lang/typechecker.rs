@@ -370,7 +370,7 @@ impl<'a> Typechecker<'a> {
             }
             super::LetLhs::Pat(pat_id) => {
                 let pat = &self.pats[*pat_id];
-                for var in pat.vars.iter() {
+                for (var, _) in pat.vars.iter() {
                     self.add_var(*var, Type::Var)?;
                 }
                 let type_ = if let Some(ref type_) = let_stmt.type_ {

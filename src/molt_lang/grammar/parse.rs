@@ -277,11 +277,13 @@ impl Parse for TokenVars {
     fn parse(input: ParseStream) -> crate::parser::Result<Self> {
         let mut vars = TokenVars(vec![]);
         loop {
+            let marker = input.marker();
             if input.cursor().eof() {
                 break;
             } else if input.parse::<Token![$]>().is_ok() {
                 let name = input.parse()?;
-                vars.0.push(TokenVar { name });
+                let span = input.span_from_marker(marker);
+                vars.0.push(TokenVar { name, span });
             } else if input.cursor().any_group().is_some() {
                 let inner_vars: TokenVars = input.step(|cursor| {
                     let (inner, _delim, _span, rest) = cursor.any_group().unwrap();

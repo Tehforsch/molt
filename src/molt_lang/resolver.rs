@@ -307,7 +307,7 @@ impl Resolver {
             vars: p
                 .vars
                 .into_iter()
-                .map(|x| self.lookup_or_register_var(&x.name))
+                .map(|x| Ok((self.lookup_or_register_var(&x.name)?, x.span)))
                 .collect::<Result<_>>()?,
         };
         Ok(self.pats.add(pat))
@@ -353,7 +353,7 @@ fn resolve_pat(
     let vars = p
         .vars
         .iter()
-        .map(|var_id| {
+        .map(|(var_id, span)| {
             let typechecker::Type::Kind(kind) = typeck.get_type(*var_id).unwrap() else {
                 unreachable!()
             };
@@ -362,6 +362,7 @@ fn resolve_pat(
             TokenVar {
                 ctx_id: ctx_id.into(),
                 var_id: *var_id,
+                span: *span,
             }
         })
         .collect();

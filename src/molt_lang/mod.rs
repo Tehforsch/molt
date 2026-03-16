@@ -22,6 +22,7 @@ use codespan_reporting::files::Files;
 
 use crate::Ctx;
 use crate::Id;
+use crate::Span;
 use crate::molt_lang::resolver::Resolver;
 use crate::molt_lang::resolver::resolve_pats;
 use crate::molt_lang::typechecker::Typechecker;
@@ -146,7 +147,7 @@ impl Lit {
 
 #[derive(Debug)]
 pub struct UnresolvedPat {
-    pub vars: Vec<VarId>,
+    pub vars: Vec<(VarId, Span)>,
     pub tokens: TokenStream,
 }
 
@@ -177,6 +178,7 @@ impl std::fmt::Debug for ResolvedPat {
 pub struct TokenVar {
     pub ctx_id: Id,
     pub var_id: VarId,
+    pub span: Span,
 }
 
 impl MoltFile {

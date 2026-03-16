@@ -2,6 +2,7 @@ mod parse;
 
 use proc_macro2::TokenStream;
 
+use crate::Span;
 use crate::molt_lang::index_types::FnId;
 use crate::parser::punctuated::Punctuated;
 use crate::parser::token::Comma;
@@ -111,6 +112,7 @@ pub struct Pat {
 #[derive(Debug, Clone)]
 pub struct TokenVar {
     pub name: Ident,
+    pub span: Span,
 }
 
 pub struct TokenVars(pub Vec<TokenVar>);

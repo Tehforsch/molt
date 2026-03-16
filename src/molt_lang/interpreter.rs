@@ -220,9 +220,23 @@ impl<'a> Interpreter<'a> {
         }
     }
 
-    fn eval_pat(&self, pat: &super::PatId) -> Result<Value> {
-        let id = self.context.pats[*pat].node;
-        Ok(Value::Node(NodeSpec::Molt { pat: *pat, id }))
+    fn eval_pat(&self, pat_id: &super::PatId) -> Result<Value> {
+        let pat = &self.context.pats[*pat_id];
+        let vars = pat
+            .vars
+            .iter()
+            .map(|var| {
+                let Value::Node(val) = self.vars[var.var_id].get() else {
+                    unreachable!() // type checker 
+                };
+                val
+            })
+            .collect();
+        Ok(Value::Node(NodeSpec::Molt {
+            pat: *pat_id,
+            id: pat.node,
+            vars,
+        }))
     }
 
     fn eval_assignment(&mut self, assignment: &Assignment) -> Result<StmtValue> {
@@ -240,7 +254,7 @@ impl<'a> Interpreter<'a> {
                 };
                 self.modifications.push(Modification {
                     old: id,
-                    new: new_val,
+                    new: new_val.clone(),
                 });
                 Value::Node(new_val)
             }

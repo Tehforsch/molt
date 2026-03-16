@@ -7,7 +7,7 @@ use std::path::Path;
 
 use crate::change_buffer::ChangeBuffer;
 use crate::input::FilePath;
-use crate::molt_lang::{Context, PatId};
+use crate::molt_lang::{Context, PatId, TokenVar};
 use crate::rust_grammar::Node;
 use crate::{Config, Id, Match, Span, Var};
 use codespan_reporting::files::Files;
@@ -44,10 +44,14 @@ pub struct Modification {
     pub new: NodeSpec,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum NodeSpec {
-    Real(Id),                    // Refers to a node in the real file
-    Molt { id: Id, pat: PatId }, // Refers to a node in the molt file
+    Real(Id), // Refers to a node in the real file
+    Molt {
+        id: Id,
+        pat: PatId,
+        vars: Vec<NodeSpec>,
+    }, // Refers to a node in the molt file
 }
 
 pub struct FileModificationResult {
@@ -89,24 +93,12 @@ impl<'a> Modify<'a> {
 
     fn apply(&mut self, m: Modification) -> Result<()> {
         assert!(matches!(m.old, NodeSpec::Real(_))); // TODO: resolve chain if not the case
-        let span = self.ctx.get_span(m.old);
-        self.code.make_change(span, &self.get_modified_code(m.new));
+        let span = self.ctx.get_span(&m.old);
+        self.code.make_change(span, &self.get_modified_code(&m.new));
         Ok(())
     }
 
-    fn get_modified_code(&self, new: NodeSpec) -> String {
-        let mut code = self.ctx.print(new);
-        while let Some(var) = self.contained_variables(new).next() {
-            self.replace_first_variable(var);
-        }
-        code
-    }
-
-    fn contained_variables(&self, new: NodeSpec) -> impl Iterator<Item = &Var<Node>> {
-        vec![].into_iter() // TODO obviously
-    }
-
-    fn replace_first_variable(&self, var: &Var<Node>) {
-        todo!()
+    fn get_modified_code(&self, new: &NodeSpec) -> String {
+        self.ctx.print(new)
     }
 }
