@@ -11,3 +11,7 @@ let expr: Expr;
 let { $ident.foo($expr); }: Stmt = input;
 print(ident);
 ```
+
+```output
+hello
+```

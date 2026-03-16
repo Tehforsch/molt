@@ -2,6 +2,7 @@ use std::path::Path;
 
 use molt::{Config, Contents, Error, Input, Source, Writer, emit_error};
 use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag, TagEnd};
+use similar::{ChangeTag, TextDiff};
 
 struct Section {
     name: Option<String>,
@@ -14,6 +15,7 @@ enum Lang {
     MoltError,
     Rust,
     RustReference,
+    Output,
 }
 
 impl Lang {
@@ -23,6 +25,7 @@ impl Lang {
             "molt error" => Some(Self::MoltError),
             "rust" => Some(Self::Rust),
             "rust reference" => Some(Self::RustReference),
+            "output" => Some(Self::Output),
             _ => None,
         }
     }
@@ -156,6 +159,7 @@ fn run_section(md_file: &Path, section: &Section) {
     let rust_blocks = filter_code_blocks(section, |lang| {
         matches!(lang, Lang::Rust | Lang::RustReference)
     });
+    let output_blocks = filter_code_blocks(section, |lang| matches!(lang, Lang::Output));
 
     assert!(!section.code_blocks.is_empty());
     assert_eq!(
@@ -166,12 +170,18 @@ fn run_section(md_file: &Path, section: &Section) {
         section.name,
         molt_blocks.len()
     );
+    assert!(
+        output_blocks.len() <= 1,
+        "{}: section {:?}: expected at most one output block, found {}",
+        md_file.display(),
+        section.name,
+        output_blocks.len()
+    );
 
     let should_error = match &molt_blocks[0].lang {
         Lang::Molt => false,
         Lang::MoltError => true,
-        Lang::Rust => unreachable!(),
-        Lang::RustReference => unreachable!(),
+        Lang::Rust | Lang::RustReference | Lang::Output => unreachable!(),
     };
     let config = TestConfig { should_error };
     let output = run_on_str(config, &molt_blocks[0].content, &rust_blocks).unwrap_or_else(|e| {
@@ -182,16 +192,29 @@ fn run_section(md_file: &Path, section: &Section) {
         )
     });
 
-    let file_stem = md_file.file_stem().unwrap().to_str().unwrap();
-    let snapshot_name = match &section.name {
-        Some(name) => format!("{file_stem}__{}", name.replace(' ', "_")),
-        None => file_stem.to_string(),
+    let expected = match output_blocks.first() {
+        Some(block) => block.content.trim_end(),
+        None => "",
     };
-    insta::with_settings!({
-        snapshot_path => "snapshots",
-    }, {
-        insta::assert_snapshot!(snapshot_name, output);
-    });
+    let output = output.trim_end();
+    if output != expected {
+        let diff = TextDiff::from_lines(expected, output);
+        let mut diff_output = String::new();
+        for change in diff.iter_all_changes() {
+            let sign = match change.tag() {
+                ChangeTag::Delete => "-",
+                ChangeTag::Insert => "+",
+                ChangeTag::Equal => " ",
+            };
+            diff_output.push_str(&format!("{sign}{change}"));
+        }
+        panic!(
+            "{}: section {:?}: output mismatch\n{}",
+            md_file.display(),
+            section.name,
+            diff_output
+        );
+    }
 }
 
 fn mdtest(path: &Path) -> Result<(), Box<dyn std::error::Error>> {

@@ -7,3 +7,7 @@ fn main() {
     print(foo());
 }
 ```
+
+```output
+hello
+```

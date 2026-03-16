@@ -11,3 +11,7 @@ fn main(input: Expr) {
     print(expr);
 }
 ```
+
+```output
+5
+```

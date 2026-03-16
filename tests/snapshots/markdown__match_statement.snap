@@ -1,5 +1,0 @@
----
-source: tests/markdown.rs
-expression: output
----
-hello
