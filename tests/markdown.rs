@@ -149,7 +149,7 @@ fn check_modifications(result: molt::RunResult, references: &[&CodeBlock]) {
         assert_eq!(result.num_modifications, 0);
     } else {
         assert_eq!(references.len(), 1);
-        assert_eq!(result.new_code, references[0].content);
+        assert_eq!(result.new_code.code(), references[0].content);
     }
 }
 

@@ -1,6 +1,7 @@
 #![allow(private_interfaces)]
 #[macro_use]
 mod parser;
+mod change_buffer;
 mod cmp_syn;
 mod config;
 mod ctrl_c;

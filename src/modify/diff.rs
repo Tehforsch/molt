@@ -2,7 +2,7 @@ use std::path::Path;
 
 use similar::{ChangeTag, TextDiff};
 
-use crate::{input::FilePath, modify::Change};
+use crate::{Span, input::FilePath};
 
 #[derive(Clone)]
 enum Color {
@@ -48,21 +48,25 @@ impl ColoredText {
 
 const NUM_LINES_CONTEXT: usize = 4;
 
-impl Change {
-    pub fn get_diff(&self, old_code: &str, filename: FilePath, colorized: bool) -> String {
-        let range = self.span.byte_range();
-        let new_excerpt = &self.new_code;
-        let mut new_code = old_code.to_string();
-        new_code.replace_range(range, new_excerpt);
+pub fn get_diff(
+    span: Span,
+    new_code: &str,
+    old_code: &str,
+    filename: FilePath,
+    colorized: bool,
+) -> String {
+    let range = span.byte_range();
+    let new_excerpt = &new_code;
+    let mut new_code = old_code.to_string();
+    new_code.replace_range(range, new_excerpt);
 
-        let diff = TextDiff::from_lines(old_code, &new_code);
-        format_diff(diff, filename, colorized)
-    }
+    let diff = TextDiff::from_lines(old_code, &new_code);
+    format_diff(diff, filename, colorized)
+}
 
-    pub fn show_diff(&self, old_code: &str, filename: FilePath) {
-        let diff_output = self.get_diff(old_code, filename, true);
-        print!("{diff_output}");
-    }
+pub fn show_diff(span: Span, new_code: &str, old_code: &str, filename: FilePath) {
+    let diff_output = get_diff(span, new_code, old_code, filename, true);
+    print!("{diff_output}");
 }
 
 fn format_diff(diff: TextDiff<str>, filename: FilePath, colorized: bool) -> String {
