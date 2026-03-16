@@ -341,9 +341,9 @@ impl<'a> Typechecker<'a> {
         }
     }
 
-    fn infer_pat(&mut self, _: &PatId) -> Result<TypeId, Error> {
+    fn infer_pat(&mut self, id: &PatId) -> Result<TypeId, Error> {
         // TODO: Check correctness
-        Ok(self.add_type(Type::Var))
+        self.add_pat(*id, Type::Var)
     }
 
     fn infer_atom(&mut self, atom: &super::Atom) -> Result<TypeId, Error> {
