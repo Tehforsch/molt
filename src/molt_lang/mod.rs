@@ -41,7 +41,6 @@ struct PartialMoltFile {
     pub fns: Storage<FnId, MoltFn>,
     pub var_names: Storage<VarId, Ident>,
     pub builtin_map: HashMap<VarId, BuiltinFn>,
-    pub main_fn_id: FnId,
     pub pats: Storage<PatId, UnresolvedPat>,
 }
 
@@ -49,8 +48,13 @@ pub struct MoltFile {
     pub fns: Storage<FnId, MoltFn>,
     pub var_names: Storage<VarId, Ident>,
     pub builtin_map: HashMap<VarId, BuiltinFn>,
-    pub main_fn_id: FnId,
     pub pats: Storage<PatId, ResolvedPat>,
+}
+
+impl MoltFile {
+    fn main_fn_id(&self) -> FnId {
+        self.fns.find_id(|f| f.name == MAIN_FN_NAME)
+    }
 }
 
 #[derive(Debug)]

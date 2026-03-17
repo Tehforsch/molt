@@ -132,7 +132,6 @@ impl Resolver {
             .collect::<Result<_>>()?;
         check_names_unique(&fns)?;
         Ok(PartialMoltFile {
-            main_fn_id: fns.find_id(|f| f.name == MAIN_FN_NAME),
             var_names: self.var_names,
             fns,
             builtin_map: self.builtin_map,
@@ -378,7 +377,6 @@ pub(crate) fn resolve_pats(file: PartialMoltFile, typeck: &TypecheckResult) -> R
         fns: file.fns,
         var_names: file.var_names,
         builtin_map: file.builtin_map,
-        main_fn_id: file.main_fn_id,
         pats,
     })
 }
