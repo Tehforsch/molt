@@ -18,6 +18,14 @@ use value::Value;
 
 use error::Result;
 
+macro_rules! typechecker_bug {
+    () => {
+        unreachable!("Expected different type, this is a bug in the typechecker.")
+    };
+}
+
+use typechecker_bug;
+
 pub(crate) use error::Error;
 
 #[derive(Default)]
@@ -291,8 +299,7 @@ impl<'a> Interpreter<'a> {
                     // something.
                     let bound_to = self.vars[var.var_id].try_get().map(|val| {
                         let Value::Node(NodeSpec::Real(bound_to)) = val else {
-                            todo!()
-                            // error handling
+                            typechecker_bug!()
                         };
                         bound_to
                     });
@@ -313,8 +320,7 @@ impl<'a> Interpreter<'a> {
                         return Ok(StmtValue::NoMatch);
                     }
                 } else {
-                    // error handling
-                    todo!()
+                    typechecker_bug!()
                 };
 
                 for (id, val) in new_bindings {

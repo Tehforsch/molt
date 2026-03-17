@@ -32,7 +32,7 @@ impl<'src> Interpreter<'src> {
                 Ok(())
             }
         } else {
-            unreachable!() // TODO: make sure in type checker
+            super::typechecker_bug!()
         }
     }
 
