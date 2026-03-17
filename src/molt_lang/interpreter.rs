@@ -7,7 +7,7 @@ use crate::{
     Id, Matcher, ModMap, Node,
     modify::{Modification, NodeSpec},
     molt_lang::{
-        Assignment, Expr, FnId, MoltFile, MoltFn, Stmt, Type, VarId, context::Context,
+        Assignment, Expr, FnId, List, MoltFile, MoltFn, Stmt, Type, VarId, context::Context,
         interpreter::value::StmtValue,
     },
     node::NodeType,
@@ -214,10 +214,11 @@ impl<'a> Interpreter<'a> {
         }
     }
 
-    fn eval_atom(&self, atom: &super::Atom) -> Result<Value> {
+    fn eval_atom(&mut self, atom: &super::Atom) -> Result<Value> {
         match atom {
             super::Atom::Var(var_id) => Ok(self.vars[*var_id].get().clone()),
             super::Atom::Lit(lit) => self.eval_lit(lit),
+            super::Atom::List(list) => self.eval_list(list),
         }
     }
 
@@ -227,6 +228,15 @@ impl<'a> Interpreter<'a> {
             Lit::Int(x) => Ok(Value::Int(*x)),
             Lit::Bool(b) => Ok(Value::Bool(*b)),
         }
+    }
+
+    fn eval_list(&mut self, list: &List) -> Result<Value> {
+        Ok(Value::List(
+            list.items
+                .iter()
+                .map(|item| self.eval_expr(item))
+                .collect::<Result<_>>()?,
+        ))
     }
 
     fn eval_pat(&self, pat_id: &super::PatId) -> Result<Value> {
@@ -256,6 +266,7 @@ impl<'a> Interpreter<'a> {
             | Value::Int(_)
             | Value::Bool(_)
             | Value::Unit
+            | Value::List(_)
             | Value::UserFn(_)
             | Value::BuiltinFn(_) => self.eval_expr(&assignment.rhs)?,
             Value::Node(id) => {

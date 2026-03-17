@@ -13,6 +13,7 @@ pub enum Value {
     Unit,
     UserFn(FnId),
     BuiltinFn(BuiltinFn),
+    List(Vec<Value>),
 }
 
 impl Value {
@@ -25,6 +26,7 @@ impl Value {
             (Value::Unit, Value::Unit) => true,
             (Value::UserFn(_), Value::UserFn(_)) => true,
             (Value::BuiltinFn(_), Value::BuiltinFn(_)) => true,
+            (Value::List(_), Value::List(_)) => true,
             (Value::String(_), _) => false,
             (Value::Int(_), _) => false,
             (Value::Bool(_), _) => false,
@@ -32,6 +34,7 @@ impl Value {
             (Value::Unit, _) => false,
             (Value::UserFn(_), _) => false,
             (Value::BuiltinFn(_), _) => false,
+            (Value::List(_), _) => false,
         }
     }
 }

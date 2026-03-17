@@ -76,6 +76,7 @@ pub enum Type {
     Bool,
     Str,
     Unit,
+    List(TypeId),
     Fun(Vec<TypeId>, TypeId),
 }
 
@@ -83,6 +84,11 @@ impl Type {
     fn substitute(&mut self, old: TypeId, new: TypeId) {
         match self {
             Type::Var | Type::Kind(_) | Type::Int | Type::Bool | Type::Str | Type::Unit => {}
+            Type::List(ty) => {
+                if *ty == old {
+                    *ty = new;
+                }
+            }
             Type::Fun(args, output) => {
                 for id in args.iter_mut() {
                     if *id == old {
@@ -111,6 +117,7 @@ pub enum ResolvedType {
     Bool,
     Str,
     Unit,
+    List(Box<ResolvedType>),
     Fun(Vec<ResolvedType>, Box<ResolvedType>),
 }
 
@@ -123,6 +130,7 @@ impl std::fmt::Display for ResolvedType {
             ResolvedType::Bool => write!(f, "bool"),
             ResolvedType::Str => write!(f, "str"),
             ResolvedType::Unit => write!(f, "()"),
+            ResolvedType::List(ty) => write!(f, "List<{}>", ty),
             ResolvedType::Fun(args, ret) => {
                 write!(f, "fn(")?;
                 for (i, arg) in args.iter().enumerate() {
@@ -134,18 +142,6 @@ impl std::fmt::Display for ResolvedType {
                 write!(f, ")")?;
                 write!(f, " -> {}", ret)
             }
-        }
-    }
-}
-
-impl From<crate::molt_lang::Type> for Type {
-    fn from(value: crate::molt_lang::Type) -> Self {
-        match value {
-            super::Type::Kind(kind) => Type::Kind(kind),
-            super::Type::Unit => Type::Unit,
-            super::Type::Int => Type::Int,
-            super::Type::Bool => Type::Bool,
-            super::Type::Str => Type::Str,
         }
     }
 }
@@ -244,6 +240,7 @@ impl<'a> Typechecker<'a> {
             Type::Bool => ResolvedType::Bool,
             Type::Str => ResolvedType::Str,
             Type::Unit => ResolvedType::Unit,
+            Type::List(ty) => ResolvedType::List(Box::new(self.as_resolved(&self.types[ty.0]))),
             Type::Fun(type_ids, type_id) => ResolvedType::Fun(
                 type_ids
                     .iter()
@@ -262,6 +259,21 @@ impl<'a> Typechecker<'a> {
     pub(crate) fn debug_print(&self, file: &MoltFile) {
         for (id, resolved_type) in self.iter_vars() {
             println!("{}: {}", file.var_names[id], resolved_type);
+        }
+    }
+
+    fn convert_raw_type(&mut self, t: &super::Type) -> Type {
+        match t {
+            super::Type::Kind(kind) => Type::Kind(*kind),
+            super::Type::Unit => Type::Unit,
+            super::Type::Int => Type::Int,
+            super::Type::Bool => Type::Bool,
+            super::Type::Str => Type::Str,
+            super::Type::List(ty) => {
+                let ty = self.convert_raw_type(ty);
+                let ty = self.add_type(ty);
+                Type::List(ty)
+            }
         }
     }
 
@@ -334,13 +346,15 @@ impl<'a> Typechecker<'a> {
             .args
             .iter()
             .map(|arg| {
-                self.add_var(arg.var_id, arg.type_.clone().into())
+                let arg_ty = self.convert_raw_type(&arg.type_);
+                self.add_var(arg.var_id, arg_ty)
                     // At this point, the variable cannot have been in scope before, so
                     // this always returns Ok(..)
                     .unwrap()
             })
             .collect();
-        let output = self.add_type(f.return_type.clone().into());
+        let t = self.convert_raw_type(&f.return_type);
+        let output = self.add_type(t);
         self.add_var(f.id, Type::Fun(input, output)).unwrap(); // We already checked that the fn only exists once during resolution
         output
     }
@@ -434,7 +448,24 @@ impl<'a> Typechecker<'a> {
         match atom {
             super::Atom::Var(var_id) => Ok(self.add_var(*var_id, Type::Var)?),
             super::Atom::Lit(lit) => Ok(self.add_type(lit.type_())),
+            super::Atom::List(list) => Ok(self.infer_list(list)?),
         }
+    }
+
+    fn infer_list(&mut self, list: &super::List) -> Result<TypeId, Error> {
+        let inner_ty: Option<TypeId> = list
+            .items
+            .first()
+            .map(|item| self.infer_expr(item))
+            .transpose()?;
+        if list.items.len() > 1 {
+            for item in list.items[1..].iter() {
+                let expr_ty = self.infer_expr(item)?;
+                self.unify(inner_ty.unwrap(), expr_ty)?;
+            }
+        }
+        let inner_ty = inner_ty.unwrap_or(self.add_type(Type::Var));
+        Ok(self.add_type(Type::List(inner_ty)))
     }
 
     fn check_let(&mut self, let_stmt: &super::LetStmt) -> Result<(), Error> {
@@ -443,25 +474,18 @@ impl<'a> Typechecker<'a> {
             .as_ref()
             .map(|rhs| self.infer_expr(rhs))
             .transpose()?;
+        let type_ = if let Some(ref type_) = let_stmt.type_ {
+            self.convert_raw_type(type_)
+        } else {
+            Type::Var
+        };
         let type_id = match &let_stmt.lhs {
-            super::LetLhs::Var(var_id) => {
-                let type_ = if let Some(ref type_) = let_stmt.type_ {
-                    type_.clone().into()
-                } else {
-                    Type::Var
-                };
-                self.add_var(*var_id, type_)?
-            }
+            super::LetLhs::Var(var_id) => self.add_var(*var_id, type_)?,
             super::LetLhs::Pat(pat_id) => {
                 let pat = &self.pats[*pat_id];
                 for (var, _) in pat.vars.iter() {
                     self.add_var(*var, Type::Var)?;
                 }
-                let type_ = if let Some(ref type_) = let_stmt.type_ {
-                    type_.clone().into()
-                } else {
-                    Type::Var
-                };
                 self.add_pat(*pat_id, type_)?
             }
         };
@@ -568,6 +592,9 @@ impl<'a> Typechecker<'a> {
             (Type::Bool, Type::Bool) => {}
             (Type::Str, Type::Str) => {}
             (Type::Unit, Type::Unit) => {}
+            (Type::List(ty1), Type::List(ty2)) => {
+                self.unify(*ty1, *ty2)?;
+            }
             (Type::Fun(args1, ret1), Type::Fun(args2, ret2)) => {
                 if args1.len() != args2.len() {
                     return make_error();
@@ -577,7 +604,17 @@ impl<'a> Typechecker<'a> {
                 }
                 self.unify(*ret1, *ret2)?;
             }
-            (_, _) => return make_error(),
+            // Write out the remaining types here instead of
+            // a catchall, so we notices it when adding variants.
+            (Type::Int, _)
+            | (Type::Bool, _)
+            | (Type::Str, _)
+            | (Type::Unit, _)
+            | (Type::Kind(_), _)
+            | (Type::List(_), _)
+            | (Type::Fun(_, _), _) => {
+                return make_error();
+            }
         }
         Ok(())
     }
@@ -589,9 +626,16 @@ impl<'a> Typechecker<'a> {
             VarType::Mono(self.add_type(Type::Fun(args, output)))
         };
         match f {
-            BuiltinFn::Print => mk_fn_type(vec![Type::Var], Type::Unit),
-            BuiltinFn::Dbg => mk_fn_type(vec![Type::Var], Type::Unit),
             BuiltinFn::Assert => mk_fn_type(vec![Type::Bool], Type::Unit),
+            BuiltinFn::Print | BuiltinFn::Dbg => {
+                let t = self.add_type(Type::Var);
+                let add_type = self.add_type(Type::Unit);
+                let type_id = self.add_type(Type::Fun(vec![t], add_type));
+                VarType::Scheme(Scheme {
+                    type_id,
+                    generalized: vec![t],
+                })
+            }
             BuiltinFn::AssertEq => {
                 let t = self.add_type(Type::Var);
                 let add_type = self.add_type(Type::Unit);

@@ -49,6 +49,7 @@ pub enum Type {
     Int,
     Bool,
     Str,
+    List(Box<Type>),
     Unit,
 }
 
@@ -114,6 +115,7 @@ pub enum Expr {
 pub enum Atom {
     Lit(Lit),
     Var(Ident),
+    List(List),
 }
 
 #[derive(Debug)]
@@ -121,6 +123,11 @@ pub enum Lit {
     Int(LitInt),
     Str(LitStr),
     Bool(LitBool),
+}
+
+#[derive(Debug)]
+pub struct List {
+    pub items: Punctuated<Expr, Comma>,
 }
 
 #[derive(Debug)]

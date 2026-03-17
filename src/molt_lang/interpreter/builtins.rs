@@ -66,21 +66,34 @@ impl<'src> Interpreter<'src> {
         }
     }
 
-    fn print_val(&self, val: &Value) {
-        let content = match val {
-            Value::String(s) => s,
-            Value::Int(x) => &format!("{}", x),
-            Value::Bool(b) => &format!("{}", b),
-            Value::Node(NodeSpec::Real(id)) => {
-                self.context.real_ctx().print(*id, self.context.real_src())
-            }
+    fn value_to_string(&self, val: &Value) -> String {
+        match val {
+            Value::String(s) => s.clone(),
+            Value::Int(x) => format!("{}", x),
+            Value::Bool(b) => format!("{}", b),
+            Value::Node(NodeSpec::Real(id)) => self
+                .context
+                .real_ctx()
+                .print(*id, self.context.real_src())
+                .into(),
             Value::Node(_) => {
                 todo!()
             }
-            Value::Unit => "()",
-            Value::UserFn(f) => &format!("{:?}", f),
-            Value::BuiltinFn(f) => &format!("{:?}", f),
-        };
+            Value::Unit => "()".into(),
+            Value::List(l) => format!(
+                "[{}]",
+                l.iter()
+                    .map(|l| self.value_to_string(l))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
+            Value::UserFn(f) => format!("{:?}", f),
+            Value::BuiltinFn(f) => format!("{:?}", f),
+        }
+    }
+
+    fn print_val(&self, val: &Value) {
+        let content = &self.value_to_string(val);
         self.context.writer().write_line(content);
     }
 

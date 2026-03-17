@@ -1,12 +1,12 @@
 use proc_macro2::{Span, TokenStream};
 
 use crate::molt_lang::grammar::{
-    Assignment, Atom, Block, ExprStmt, FnCall, Lit, ReturnStmt, TokenVar, TokenVars, Type,
+    Assignment, Atom, Block, ExprStmt, FnCall, List, Lit, ReturnStmt, TokenVar, TokenVars, Type,
 };
 use crate::molt_lang::{INPUT_VAR_NAME, MAIN_FN_NAME};
 use crate::parser::parse::{self, Parse, ParseStream};
 use crate::parser::punctuated::Punctuated;
-use crate::parser::token::Brace;
+use crate::parser::token::{Brace, Bracket};
 use crate::parser::{Result, token};
 use crate::rust_grammar::ext::IdentExt;
 use crate::rust_grammar::{Ident, Kind, LitBool, LitInt, LitStr};
@@ -132,12 +132,17 @@ impl Parse for Type {
                 Ok(Type::Int)
             } else if ident == "str" {
                 Ok(Type::Str)
+            } else if ident == "List" {
+                let _: Token![<] = input.parse()?;
+                let ty = input.parse()?;
+                let _: Token![>] = input.parse()?;
+                Ok(Type::List(Box::new(ty)))
             } else {
                 let e = lh.error();
                 let m = e.messages().last().unwrap();
                 Err(crate::parser::Error::new(
                     ident.span(),
-                    format!("{} or primitives `bool`, `int`, `str`", m),
+                    format!("{} or primitives `bool`, `int`, `str`, `List`", m),
                 ))
             }
         } else {
@@ -289,6 +294,8 @@ impl Parse for Expr {
             Ok(Expr::Atom(Atom::Lit(Lit::Str(input.parse()?))))
         } else if LitBool::peek(input) {
             Ok(Expr::Atom(Atom::Lit(Lit::Bool(input.parse()?))))
+        } else if input.peek(Bracket) {
+            Ok(Expr::Atom(Atom::List(input.parse()?)))
         } else if input.peek(Brace) {
             Ok(Expr::Pat(input.parse()?))
         } else if input.peek(Ident::peek_any) {
@@ -300,6 +307,15 @@ impl Parse for Expr {
         } else {
             Err(lookahead.error())
         }
+    }
+}
+
+impl Parse for List {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let content;
+        bracketed!(content in input);
+        let items = Punctuated::parse_terminated_with(&content, Expr::parse)?;
+        Ok(List { items })
     }
 }
 

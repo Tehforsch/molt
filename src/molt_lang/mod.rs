@@ -78,6 +78,7 @@ pub enum Type {
     Int,
     Bool,
     Str,
+    List(Box<Type>),
     Unit,
 }
 
@@ -137,6 +138,12 @@ pub enum Expr {
 pub enum Atom {
     Var(VarId),
     Lit(Lit),
+    List(List),
+}
+
+#[derive(Debug)]
+pub struct List {
+    items: Vec<Expr>,
 }
 
 #[derive(Debug)]

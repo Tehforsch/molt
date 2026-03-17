@@ -207,6 +207,7 @@ impl Resolver {
             grammar::Type::Unit => Type::Unit,
             grammar::Type::Int => Type::Int,
             grammar::Type::Bool => Type::Bool,
+            grammar::Type::List(ty) => Type::List(Box::new(self.resolve_type(*ty)?)),
             grammar::Type::Str => Type::Str,
         })
     }
@@ -311,15 +312,16 @@ impl Resolver {
     fn resolve_expr(&mut self, expr: grammar::Expr) -> Result<Expr> {
         match expr {
             grammar::Expr::FnCall(f) => Ok(Expr::FnCall(self.resolve_fn_call(f)?)),
-            grammar::Expr::Atom(atom) => Ok(Expr::Atom(self.resolve_atom(&atom)?)),
+            grammar::Expr::Atom(atom) => Ok(Expr::Atom(self.resolve_atom(atom)?)),
             grammar::Expr::Pat(pat) => Ok(Expr::Pat(self.resolve_pat(pat)?)),
         }
     }
 
-    fn resolve_atom(&self, atom: &grammar::Atom) -> Result<Atom> {
+    fn resolve_atom(&mut self, atom: grammar::Atom) -> Result<Atom> {
         match atom {
-            grammar::Atom::Lit(lit) => Ok(Atom::Lit(self.resolve_lit(lit)?)),
-            grammar::Atom::Var(ident) => Ok(Atom::Var(self.lookup_var(ident)?)),
+            grammar::Atom::Lit(lit) => Ok(Atom::Lit(self.resolve_lit(&lit)?)),
+            grammar::Atom::Var(ident) => Ok(Atom::Var(self.lookup_var(&ident)?)),
+            grammar::Atom::List(list) => Ok(Atom::List(self.resolve_list(list)?)),
         }
     }
 
@@ -335,6 +337,16 @@ impl Resolver {
             grammar::Lit::Str(lit_str) => Ok(Lit::Str(lit_str.value())),
             grammar::Lit::Bool(lit_bool) => Ok(Lit::Bool(lit_bool.value())),
         }
+    }
+
+    fn resolve_list(&mut self, lit: grammar::List) -> Result<List> {
+        Ok(List {
+            items: lit
+                .items
+                .into_iter()
+                .map(|e| self.resolve_expr(e))
+                .collect::<Result<_>>()?,
+        })
     }
 
     fn resolve_pat(&mut self, p: grammar::Pat) -> Result<PatId> {

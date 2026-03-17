@@ -4,11 +4,11 @@ fn main() -> Foo {
 ```
 
 ```output
-error: expected one of: `Arm`, `Expr`, `Field`, `Ident`, `Item`, `ImplItem`, `Lit`, `Pat`, `Stmt`, `Type`, `Vis`, `Generics`, `Fn`, `Mod` or primitives `bool`, `int`, `str`
+error: expected one of: `Arm`, `Expr`, `Field`, `Ident`, `Item`, `ImplItem`, `Lit`, `Pat`, `Stmt`, `Type`, `Vis`, `Generics`, `Fn`, `Mod` or primitives `bool`, `int`, `str`, `List`
   ┌─ test input:1:14
   │
 1 │ fn main() -> Foo {
-  │              ^^^ expected one of: `Arm`, `Expr`, `Field`, `Ident`, `Item`, `ImplItem`, `Lit`, `Pat`, `Stmt`, `Type`, `Vis`, `Generics`, `Fn`, `Mod` or primitives `bool`, `int`, `str`
+  │              ^^^ expected one of: `Arm`, `Expr`, `Field`, `Ident`, `Item`, `ImplItem`, `Lit`, `Pat`, `Stmt`, `Type`, `Vis`, `Generics`, `Fn`, `Mod` or primitives `bool`, `int`, `str`, `List`
   │
-  = expected one of: `Arm`, `Expr`, `Field`, `Ident`, `Item`, `ImplItem`, `Lit`, `Pat`, `Stmt`, `Type`, `Vis`, `Generics`, `Fn`, `Mod` or primitives `bool`, `int`, `str`
+  = expected one of: `Arm`, `Expr`, `Field`, `Ident`, `Item`, `ImplItem`, `Lit`, `Pat`, `Stmt`, `Type`, `Vis`, `Generics`, `Fn`, `Mod` or primitives `bool`, `int`, `str`, `List`
 ```
