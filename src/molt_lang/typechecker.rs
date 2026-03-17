@@ -316,6 +316,9 @@ impl<'a> Typechecker<'a> {
             Stmt::Assignment(assignment) => {
                 self.check_assignment(assignment)?;
             }
+            Stmt::If(if_stmt) => {
+                self.check_if(if_stmt, surrounding_fn_return_type)?;
+            }
         }
         Ok(())
     }
@@ -400,6 +403,23 @@ impl<'a> Typechecker<'a> {
                 Ok(self.add_type(Type::Unit)) // Default return type 
             })?;
         self.unify(fn_return_type, expr_type)?;
+        Ok(())
+    }
+
+    fn check_if(
+        &mut self,
+        if_stmt: &super::If,
+        surrounding_fn_return_type: TypeId,
+    ) -> Result<(), Error> {
+        for branch in if_stmt.if_branches.iter() {
+            let ty = self.infer_expr(&branch.0)?;
+            let bool_ty = self.add_type(Type::Bool);
+            self.unify(ty, bool_ty)?;
+
+            for stmt in &branch.1 {
+                self.check_stmt(stmt, surrounding_fn_return_type)?;
+            }
+        }
         Ok(())
     }
 

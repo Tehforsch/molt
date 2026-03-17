@@ -2,7 +2,7 @@ mod builtins;
 mod error;
 mod value;
 
-use super::{LetLhs, LetStmt, Lit};
+use super::{If, LetLhs, LetStmt, Lit};
 use crate::{
     Id, Matcher, ModMap, Node,
     modify::{Modification, NodeSpec},
@@ -149,6 +149,7 @@ impl<'a> Interpreter<'a> {
                 Ok(StmtValue::Return(val))
             }
             Stmt::Assignment(assignment) => self.eval_assignment(assignment),
+            Stmt::If(if_) => self.eval_if(if_),
         }
     }
 
@@ -171,7 +172,7 @@ impl<'a> Interpreter<'a> {
         for (arg, val) in user_fn.args.iter().zip(args.iter()) {
             self.vars[arg.var_id].push(val.clone());
         }
-        let val = self.eval_block(user_fn)?;
+        let val = self.eval_block(&user_fn.stmts)?;
         let val = match val {
             StmtValue::NoMatch => Value::Unit,
             StmtValue::Value(_) => Value::Unit,
@@ -183,8 +184,8 @@ impl<'a> Interpreter<'a> {
         Ok(StmtValue::Value(val))
     }
 
-    fn eval_block(&mut self, user_fn: &MoltFn) -> Result<StmtValue, Error> {
-        for stmt in user_fn.stmts.iter() {
+    fn eval_block(&mut self, stmts: &[Stmt]) -> Result<StmtValue, Error> {
+        for stmt in stmts.iter() {
             match self.eval_stmt(stmt)? {
                 StmtValue::NoMatch => return Ok(StmtValue::NoMatch),
                 StmtValue::Return(val) => return Ok(StmtValue::Return(val)),
@@ -329,5 +330,25 @@ impl<'a> Interpreter<'a> {
                 Ok(StmtValue::Value(Value::Unit))
             }
         }
+    }
+
+    fn eval_if(&mut self, if_: &If) -> Result<StmtValue> {
+        let mut run_else = true;
+        for (cond, block) in &if_.if_branches {
+            let val = self.eval_expr(cond)?;
+            let Value::Bool(val) = val else {
+                typechecker_bug!()
+            };
+            if val {
+                run_else = false;
+                self.eval_block(block)?;
+            }
+        }
+        if let Some(ref else_branch) = if_.else_branch
+            && run_else
+        {
+            self.eval_block(else_branch)?;
+        }
+        Ok(StmtValue::Value(Value::Unit))
     }
 }

@@ -12,7 +12,7 @@ use crate::rust_grammar::ext::IdentExt;
 use crate::rust_grammar::{Ident, Kind, LitBool, LitInt, LitStr};
 use crate::storage::Storage;
 
-use super::{Expr, FnArg, LetLhs, LetStmt, MoltFile, MoltFn, Pat, Stmt};
+use super::{Expr, FnArg, If, LetLhs, LetStmt, MoltFile, MoltFn, Pat, Stmt};
 
 impl Parse for MoltFile {
     fn parse(input: ParseStream) -> Result<Self> {
@@ -149,7 +149,9 @@ impl Parse for Type {
 impl Parse for Stmt {
     fn parse(input: ParseStream) -> Result<Self> {
         let lookahead = input.lookahead1();
-        if lookahead.peek(Token![let]) {
+        if lookahead.peek(Token![if]) {
+            Ok(Stmt::If(input.parse()?))
+        } else if lookahead.peek(Token![let]) {
             Ok(Stmt::Let(input.parse()?))
         } else if lookahead.peek(Token![return]) {
             Ok(Stmt::Return(input.parse()?))
@@ -168,6 +170,48 @@ impl Parse for Stmt {
                 has_trailing_semi,
             }))
         }
+    }
+}
+
+fn parse_block(input: ParseStream) -> Result<Vec<Stmt>> {
+    let body;
+    braced!(body in input);
+    let mut stmts = vec![];
+    while !body.is_empty() {
+        stmts.push(body.parse()?);
+    }
+    Ok(stmts)
+}
+
+impl Parse for If {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let mut if_branches = vec![];
+
+        let _: Token![if] = input.parse()?;
+        let condition: Expr = input.parse()?;
+        let body = parse_block(input)?;
+        if_branches.push((condition, body));
+
+        while input.peek(Token![else]) {
+            let _: Token![else] = input.parse()?;
+            if input.peek(Token![if]) {
+                let _: Token![if] = input.parse()?;
+                let condition: Expr = input.parse()?;
+                let body = parse_block(input)?;
+                if_branches.push((condition, body));
+            } else {
+                let body = parse_block(input)?;
+                return Ok(If {
+                    if_branches,
+                    else_branch: Some(body),
+                });
+            }
+        }
+
+        Ok(If {
+            if_branches,
+            else_branch: None,
+        })
     }
 }
 

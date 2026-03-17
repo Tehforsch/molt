@@ -48,6 +48,7 @@ impl<I: StorageIndex, T> Storage<I, T> {
             .map(|(i, t)| (I::from_index(i), t))
     }
 
+    #[track_caller]
     pub(crate) fn find_id(&self, f: impl Fn(&T) -> bool) -> I {
         self.enumerate()
             .find(|(_, t)| f(t))
