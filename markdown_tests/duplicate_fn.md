@@ -5,5 +5,5 @@ fn foo() { }
 ```
 
 ```output
-error: Function defined twice: 'Ident { sym: foo, span: bytes(18..21) }'
+error: Function defined twice: 'foo'
 ```

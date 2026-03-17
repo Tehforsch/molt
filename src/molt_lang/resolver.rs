@@ -30,9 +30,9 @@ impl std::fmt::Display for Error {
         // TODO format these
         match self {
             Error::Parse(error) => write!(f, "{:?}", error),
-            Error::UndefinedVar(ident) => write!(f, "Undefined variable: '{:?}'", ident),
+            Error::UndefinedVar(ident) => write!(f, "Undefined variable: '{}'", ident),
             Error::DuplicateDefinitionFn(ident) => {
-                write!(f, "Function defined twice: '{:?}'", ident)
+                write!(f, "Function defined twice: '{}'", ident)
             }
         }
     }
