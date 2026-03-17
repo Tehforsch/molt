@@ -1,7 +1,7 @@
 use proc_macro2::{Span, TokenStream};
 
 use crate::molt_lang::grammar::{
-    Assignment, Atom, ExprStmt, FnCall, Lit, ReturnStmt, TokenVar, TokenVars, Type,
+    Assignment, Atom, Block, ExprStmt, FnCall, Lit, ReturnStmt, TokenVar, TokenVars, Type,
 };
 use crate::molt_lang::{INPUT_VAR_NAME, MAIN_FN_NAME};
 use crate::parser::parse::{self, Parse, ParseStream};
@@ -103,7 +103,7 @@ impl Parse for MoltFn {
         Ok(MoltFn {
             name,
             args,
-            stmts,
+            stmts: stmts.into_iter().collect(),
             return_type,
         })
     }
@@ -173,14 +173,16 @@ impl Parse for Stmt {
     }
 }
 
-fn parse_block(input: ParseStream) -> Result<Vec<Stmt>> {
-    let body;
-    braced!(body in input);
-    let mut stmts = vec![];
-    while !body.is_empty() {
-        stmts.push(body.parse()?);
+impl Parse for Block {
+    fn parse(input: ParseStream) -> Result<Block> {
+        let body;
+        braced!(body in input);
+        let mut stmts = vec![];
+        while !body.is_empty() {
+            stmts.push(body.parse()?);
+        }
+        Ok(stmts.into_iter().collect())
     }
-    Ok(stmts)
 }
 
 impl Parse for If {
@@ -189,7 +191,7 @@ impl Parse for If {
 
         let _: Token![if] = input.parse()?;
         let condition: Expr = input.parse()?;
-        let body = parse_block(input)?;
+        let body = Block::parse(input)?;
         if_branches.push((condition, body));
 
         while input.peek(Token![else]) {
@@ -197,10 +199,10 @@ impl Parse for If {
             if input.peek(Token![if]) {
                 let _: Token![if] = input.parse()?;
                 let condition: Expr = input.parse()?;
-                let body = parse_block(input)?;
+                let body = input.parse()?;
                 if_branches.push((condition, body));
             } else {
-                let body = parse_block(input)?;
+                let body = input.parse()?;
                 return Ok(If {
                     if_branches,
                     else_branch: Some(body),

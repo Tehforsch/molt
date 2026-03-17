@@ -20,8 +20,31 @@ pub(crate) struct MoltFile {
 pub struct MoltFn {
     pub name: Ident,
     pub args: Punctuated<FnArg, Comma>,
-    pub stmts: Vec<Stmt>,
+    pub stmts: Block,
     pub return_type: Option<Type>,
+}
+
+#[derive(Debug)]
+pub struct Block {
+    pub stmts: Vec<Stmt>,
+}
+
+impl FromIterator<Stmt> for Block {
+    fn from_iter<T: IntoIterator<Item = Stmt>>(iter: T) -> Self {
+        Self {
+            stmts: iter.into_iter().collect(),
+        }
+    }
+}
+
+impl Block {
+    pub(crate) fn len(&self) -> usize {
+        self.stmts.len()
+    }
+
+    pub(crate) fn into_iter(self) -> impl Iterator<Item = Stmt> {
+        self.stmts.into_iter()
+    }
 }
 
 #[derive(Debug)]
@@ -50,8 +73,8 @@ pub enum Stmt {
 
 #[derive(Debug)]
 pub struct If {
-    pub if_branches: Vec<(Expr, Vec<Stmt>)>,
-    pub else_branch: Option<Vec<Stmt>>,
+    pub if_branches: Vec<(Expr, Block)>,
+    pub else_branch: Option<Block>,
 }
 
 #[derive(Debug)]
