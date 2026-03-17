@@ -240,7 +240,8 @@ impl<'a> Interpreter<'a> {
     }
 
     fn eval_assignment(&mut self, assignment: &Assignment) -> Result<StmtValue> {
-        let val = self.vars[assignment.lhs].pop();
+        let val = self.vars[assignment.lhs].get(); // it seems natural to `pop` here, but we might
+        // refer to the value of the var in the rhs, so we only get here.
         let new_val = match val {
             Value::String(_)
             | Value::Int(_)
@@ -259,6 +260,7 @@ impl<'a> Interpreter<'a> {
                 Value::Node(new_val)
             }
         };
+        self.vars[assignment.lhs].pop();
         self.vars[assignment.lhs].push(new_val);
         Ok(StmtValue::Value(Value::Unit))
     }
