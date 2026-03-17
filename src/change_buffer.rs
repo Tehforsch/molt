@@ -1,12 +1,12 @@
 use crate::Span;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Change {
     span: Span,
     len_delta: i32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ChangeBuffer {
     code: String,
     changes: Vec<Change>,

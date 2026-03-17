@@ -54,6 +54,7 @@ pub enum NodeSpec {
     }, // Refers to a node in the molt file
 }
 
+#[derive(Clone)]
 pub struct FileModificationResult {
     pub new_code: ChangeBuffer,
     pub num_modifications: usize,

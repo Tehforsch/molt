@@ -28,6 +28,7 @@ use std::{
 };
 
 use crate::{
+    input::FilePath,
     modify::{FileModificationResult, Modify},
     molt_lang::Context,
     rust_grammar::Node,
@@ -127,8 +128,23 @@ pub fn run_internal(
                 cargo_root.map(|path| path.as_path()),
                 modifications,
             )?;
-            result.modifications_by_file.insert(rust_file_id, new_code);
+            result
+                .modifications_by_file
+                .insert(rust_file_id, new_code.clone());
+            match input.name(rust_file_id).unwrap() {
+                FilePath::Path(path) => {
+                    write_to_file(path, new_code)?;
+                }
+                FilePath::FromString => {
+                    // Test run
+                }
+            }
         }
+    }
+    if let Some(cargo_root) = cargo_root
+        && !result.modifications_by_file.is_empty()
+    {
+        run_cargo_fmt(cargo_root)?;
     }
     Ok(result)
 }
@@ -137,13 +153,18 @@ pub fn run(
     input: &Input,
     writer: &Writer,
     config: crate::Config,
-    _cargo_root: Option<&PathBuf>,
+    cargo_root: Option<&PathBuf>,
 ) -> Result<RunResult, Error> {
     emit_error(
         writer,
         input,
-        run_internal(input, writer, config, _cargo_root),
+        run_internal(input, writer, config, cargo_root),
     )
+}
+
+fn write_to_file(path: &Path, modification: FileModificationResult) -> Result<(), Error> {
+    std::fs::write(path, modification.new_code.code()).map_err(Error::Io)?;
+    Ok(())
 }
 
 #[allow(unused)]
