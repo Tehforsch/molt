@@ -121,6 +121,10 @@ impl Resolver {
             .unwrap_or_else(|_| self.register_var(name)))
     }
 
+    fn make_scope(&mut self) -> Scope {
+        Scope::child_of(self.active_scope(), self.next_scope_index())
+    }
+
     pub fn resolve_file(mut self, file: grammar::MoltFile) -> Result<PartialMoltFile> {
         let grammar::MoltFile { fns, stmts: _ } = file;
         // Register all user defined functions
@@ -154,32 +158,39 @@ impl Resolver {
     }
 
     fn resolve_fn(&mut self, f: grammar::MoltFn) -> Result<MoltFn> {
-        let scope = Scope::child_of(self.active_scope(), self.next_scope_index());
-        self.scopes.push(scope);
         let args = f
             .args
             .into_iter()
             .map(|a| self.resolve_fn_arg(a))
             .collect::<Result<_>>()?;
-        let num_stmts = f.stmts.len();
+        let id = self.lookup_var(&f.name).unwrap();
+        let scope = self.make_scope();
+        let stmts = self.resolve_block(f.stmts, scope)?;
         let result = MoltFn {
-            id: self.lookup_var(&f.name).unwrap(),
+            id,
             name: f.name,
             args,
-            stmts: f
-                .stmts
-                .into_iter()
-                .enumerate()
-                .map(|(i, s)| self.resolve_stmt(s, i == num_stmts - 1))
-                .collect::<Result<_>>()?,
+            stmts,
             return_type: f
                 .return_type
                 .map(|t| self.resolve_type(t))
                 .transpose()?
                 .unwrap_or(default_function_type()),
         };
-        self.scopes.pop();
         Ok(result)
+    }
+
+    fn resolve_block(&mut self, f: grammar::Block, scope: Scope) -> Result<Vec<Stmt>> {
+        self.scopes.push(scope);
+        let num_stmts = f.stmts.len();
+        let result = f
+            .stmts
+            .into_iter()
+            .enumerate()
+            .map(|(i, s)| self.resolve_stmt(s, i == num_stmts - 1))
+            .collect::<Result<_>>();
+        self.scopes.pop();
+        result
     }
 
     fn resolve_fn_arg(&mut self, arg: grammar::FnArg) -> Result<FnArg> {
@@ -223,30 +234,16 @@ impl Resolver {
             .into_iter()
             .map(|(cond, stmts)| {
                 let cond = self.resolve_expr(cond)?;
-                let scope = Scope::child_of(self.active_scope(), self.next_scope_index());
-                self.scopes.push(scope);
-                let num_stmts = stmts.len();
-                let stmts = stmts
-                    .into_iter()
-                    .enumerate()
-                    .map(|(i, s)| self.resolve_stmt(s, i == num_stmts - 1))
-                    .collect::<Result<_>>()?;
-                self.scopes.pop();
+                let scope = self.make_scope();
+                let stmts = self.resolve_block(stmts, scope)?;
                 Ok((cond, stmts))
             })
             .collect::<Result<_>>()?;
         let else_branch = i
             .else_branch
             .map(|stmts| {
-                let scope = Scope::child_of(self.active_scope(), self.next_scope_index());
-                self.scopes.push(scope);
-                let num_stmts = stmts.len();
-                let stmts = stmts
-                    .into_iter()
-                    .enumerate()
-                    .map(|(i, s)| self.resolve_stmt(s, i == num_stmts - 1))
-                    .collect::<Result<_>>()?;
-                self.scopes.pop();
+                let scope = self.make_scope();
+                let stmts = self.resolve_block(stmts, scope)?;
                 Ok(stmts)
             })
             .transpose()?;

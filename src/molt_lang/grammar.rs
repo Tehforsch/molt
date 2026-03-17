@@ -37,16 +37,6 @@ impl FromIterator<Stmt> for Block {
     }
 }
 
-impl Block {
-    pub(crate) fn len(&self) -> usize {
-        self.stmts.len()
-    }
-
-    pub(crate) fn into_iter(self) -> impl Iterator<Item = Stmt> {
-        self.stmts.into_iter()
-    }
-}
-
 #[derive(Debug)]
 pub struct FnArg {
     pub var_name: Ident,
