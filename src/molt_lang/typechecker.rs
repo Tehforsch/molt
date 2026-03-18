@@ -209,7 +209,27 @@ impl TypecheckResult {
     }
 }
 
-struct AlwaysReturnsType;
+/// Used to check control flow logic - represents
+/// whether a given statement returns in all
+/// possible ways through the control flow (in all
+/// branches of an if). We don't do any complex
+/// analysis here, but simply check for a literal return
+/// stmt in the branches.
+#[derive(Clone, Copy)]
+enum Returns {
+    Always,
+    NotAlways,
+}
+
+impl Returns {
+    fn add_branch(&mut self, other: Self) {
+        let new = match (&self, other) {
+            (Returns::Always, Returns::Always) => Returns::Always,
+            _ => Returns::NotAlways,
+        };
+        *self = new;
+    }
+}
 
 pub(super) struct Typechecker<'a> {
     types: Storage<TypeId, Type>,
@@ -385,8 +405,8 @@ impl<'a> Typechecker<'a> {
     }
 
     fn check_fn(&mut self, f: &MoltFn, fn_return_type: TypeId) -> Result<(), Error> {
-        let always_returns = self.check_block(&f.stmts, fn_return_type)?;
-        if always_returns.is_none() {
+        let returns = self.check_block(&f.stmts, fn_return_type)?;
+        if let Returns::NotAlways = returns {
             let unit = self.add_type(Type::Unit);
             let span = self.var_span(f.id);
             let ret_type = self.as_resolved(&self.types[self.resolve(fn_return_type)].clone());
@@ -396,24 +416,20 @@ impl<'a> Typechecker<'a> {
         Ok(())
     }
 
-    fn check_block(
-        &mut self,
-        block: &[Stmt],
-        fn_return_type: TypeId,
-    ) -> Result<Option<AlwaysReturnsType>, Error> {
+    fn check_block(&mut self, block: &[Stmt], fn_return_type: TypeId) -> Result<Returns, Error> {
         for stmt in block.iter() {
-            if let Some(always_returned) = self.check_stmt(stmt, fn_return_type)? {
-                return Ok(Some(always_returned));
+            if let Returns::Always = self.check_stmt(stmt, fn_return_type)? {
+                return Ok(Returns::Always);
             }
         }
-        Ok(None)
+        Ok(Returns::NotAlways)
     }
 
     fn check_stmt(
         &mut self,
         stmt: &Stmt,
         surrounding_fn_return_type: TypeId,
-    ) -> Result<Option<AlwaysReturnsType>, Error> {
+    ) -> Result<Returns, Error> {
         match stmt {
             Stmt::Expr(expr) => {
                 self.infer_expr(expr)?;
@@ -421,21 +437,21 @@ impl<'a> Typechecker<'a> {
             Stmt::Let(let_stmt) => self.check_let(let_stmt)?,
             Stmt::Return(ret_stmt) => {
                 self.check_return_stmt(ret_stmt, surrounding_fn_return_type)?;
-                return Ok(Some(AlwaysReturnsType));
+                return Ok(Returns::Always);
             }
             Stmt::Assignment(assignment) => {
                 self.check_assignment(assignment)?;
             }
             Stmt::If(if_stmt) => {
-                if let Some(always_returns) = self.check_if(if_stmt, surrounding_fn_return_type)? {
-                    return Ok(Some(always_returns));
+                if let Returns::Always = self.check_if(if_stmt, surrounding_fn_return_type)? {
+                    return Ok(Returns::Always);
                 }
             }
             Stmt::For(for_stmt) => {
                 self.check_for(for_stmt, surrounding_fn_return_type)?;
             }
         }
-        Ok(None)
+        Ok(Returns::NotAlways)
     }
 
     fn infer_expr(&mut self, expr: &super::Expr) -> Result<TypeId, Error> {
@@ -549,35 +565,21 @@ impl<'a> Typechecker<'a> {
         &mut self,
         if_stmt: &super::If,
         surrounding_fn_return_type: TypeId,
-    ) -> Result<Option<AlwaysReturnsType>, Error> {
-        let mut always_returns = true;
+    ) -> Result<Returns, Error> {
+        let mut returns = Returns::Always;
         for branch in if_stmt.if_branches.iter() {
             let ty = self.infer_expr(&branch.0)?;
             let bool_ty = self.add_type(Type::Bool);
             self.unify(ty, bool_ty)?;
 
-            if self
-                .check_block(&branch.1, surrounding_fn_return_type)?
-                .is_none()
-            {
-                always_returns = false;
-            }
+            returns.add_branch(self.check_block(&branch.1, surrounding_fn_return_type)?);
         }
         if let Some(else_branch) = &if_stmt.else_branch {
-            if self
-                .check_block(else_branch, surrounding_fn_return_type)?
-                .is_none()
-            {
-                always_returns = false;
-            }
+            returns.add_branch(self.check_block(else_branch, surrounding_fn_return_type)?);
         } else {
-            always_returns = false;
+            returns = Returns::NotAlways;
         }
-        if always_returns {
-            Ok(Some(AlwaysReturnsType))
-        } else {
-            Ok(None)
-        }
+        Ok(returns)
     }
 
     fn check_for(
