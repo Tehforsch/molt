@@ -2,7 +2,7 @@ mod builtins;
 mod error;
 mod value;
 
-use super::{If, LetLhs, LetStmt, Lit};
+use super::{For, If, LetLhs, LetStmt, Lit};
 use crate::{
     Id, Matcher, ModMap, Node,
     modify::{Modification, NodeSpec},
@@ -135,7 +135,7 @@ impl<'a> Interpreter<'a> {
 
     fn eval_stmt(&mut self, stmt: &Stmt) -> Result<StmtValue> {
         match stmt {
-            Stmt::Let(let_stmt) => self.eval_let(let_stmt),
+            Stmt::Let(let_stmt) => self.eval_let_stmt(let_stmt),
             Stmt::Expr(expr) => {
                 self.eval_expr(expr)?;
                 Ok(StmtValue::Value(Value::Unit))
@@ -150,6 +150,7 @@ impl<'a> Interpreter<'a> {
             }
             Stmt::Assignment(assignment) => self.eval_assignment(assignment),
             Stmt::If(if_) => self.eval_if(if_),
+            Stmt::For(for_) => self.eval_for(for_),
         }
     }
 
@@ -285,62 +286,90 @@ impl<'a> Interpreter<'a> {
         Ok(StmtValue::Value(Value::Unit))
     }
 
-    fn eval_let(&mut self, let_stmt: &LetStmt) -> Result<StmtValue> {
-        match &let_stmt.lhs {
+    fn eval_let_stmt(&mut self, let_stmt: &LetStmt) -> Result<StmtValue> {
+        let rhs = if let Some(expr) = &let_stmt.rhs {
+            self.eval_expr(expr)?
+        } else {
+            if let LetLhs::Pat(_) = let_stmt.lhs {
+                // error handling, should be handled in
+                // parser/resolver.
+                todo!()
+            }
+            return Ok(StmtValue::Value(Value::Unit));
+        };
+        self.eval_variable_init(&let_stmt.lhs, rhs)
+    }
+
+    fn eval_for(&mut self, for_: &For) -> Result<StmtValue> {
+        let iterable = self.eval_expr(&for_.iterable)?;
+        let Value::List(list) = iterable else {
+            typechecker_bug!()
+        };
+        for val in list.into_iter() {
+            self.eval_variable_init(&for_.lhs, val)?;
+            self.eval_block(&for_.stmts)?;
+        }
+        Ok(StmtValue::Value(Value::Unit))
+    }
+
+    fn eval_variable_init(&mut self, lhs: &LetLhs, rhs: Value) -> Result<StmtValue, Error> {
+        match lhs {
             LetLhs::Var(var_id) => {
-                if let Some(rhs) = &let_stmt.rhs {
-                    let val = self.eval_expr(rhs)?;
-                    self.vars[*var_id].push(val);
-                }
+                self.vars[*var_id].push(rhs);
                 Ok(StmtValue::Value(Value::Unit))
             }
             LetLhs::Pat(pat) => {
-                let real_id = if let Some(expr) = &let_stmt.rhs {
-                    self.eval_expr(expr)?
-                } else {
-                    // error handling
-                    todo!()
-                };
-                let pat = self.context.get_pat(*pat);
-                let rules = crate::rule::Rules::default();
-                let mut matcher = Matcher::from_interpreter_ctx(self.context, &pat.ctx, &rules);
-                // TODO: Think about what it means if NodeSpec::Molt* is encountered
-                // in any of the following if lets
-                for var in pat.vars.iter() {
-                    // Look up if this variable was previously bound to
-                    // something.
-                    let bound_to = self.vars[var.var_id].try_get().map(|val| {
-                        let Value::Node(NodeSpec::Real(bound_to)) = val else {
-                            typechecker_bug!()
-                        };
-                        bound_to
-                    });
-                    matcher.add_var(var.ctx_id, bound_to);
-                }
-                let new_bindings: Vec<_> = if let Value::Node(NodeSpec::Real(real)) = real_id {
-                    let match_ = matcher.get_matches(pat.node, real);
-                    if let Some(match_) = match_ {
-                        match_
-                            .iter_vars()
-                            .map(|var| {
-                                let bound_to = match_.get_binding(var).id.unwrap();
-                                let var_id = pat.get_var_id(var);
-                                (var_id, Value::Node(NodeSpec::Real(bound_to)))
-                            })
-                            .collect()
-                    } else {
-                        return Ok(StmtValue::NoMatch);
-                    }
-                } else {
-                    typechecker_bug!()
-                };
-
-                for (id, val) in new_bindings {
-                    self.vars[id].push(val);
+                if let Some(value) = self.eval_let_lhs_pat(pat, rhs)? {
+                    return Ok(value);
                 }
                 Ok(StmtValue::Value(Value::Unit))
             }
         }
+    }
+
+    fn eval_let_lhs_pat(
+        &mut self,
+        pat: &super::PatId,
+        real_id: Value,
+    ) -> Result<Option<StmtValue>> {
+        let pat = self.context.get_pat(*pat);
+        let rules = crate::rule::Rules::default();
+        let mut matcher = Matcher::from_interpreter_ctx(self.context, &pat.ctx, &rules);
+        for var in pat.vars.iter() {
+            // Look up if this variable was previously bound to
+            // something.
+            let bound_to = self.vars[var.var_id].try_get().map(|val| {
+                let Value::Node(NodeSpec::Real(bound_to)) = val else {
+                    typechecker_bug!()
+                };
+                bound_to
+            });
+            matcher.add_var(var.ctx_id, bound_to);
+        }
+        let new_bindings: Vec<_> = if let Value::Node(NodeSpec::Real(real)) = real_id {
+            let match_ = matcher.get_matches(pat.node, real);
+            if let Some(match_) = match_ {
+                match_
+                    .iter_vars()
+                    .map(|var| {
+                        let bound_to = match_.get_binding(var).id.unwrap();
+                        let var_id = pat.get_var_id(var);
+                        (var_id, Value::Node(NodeSpec::Real(bound_to)))
+                    })
+                    .collect()
+            } else {
+                return Ok(Some(StmtValue::NoMatch));
+            }
+        } else {
+            typechecker_bug!()
+        };
+        // TODO: Think about what it means if NodeSpec::Molt* is encountered
+        // in any of the following if lets
+
+        for (id, val) in new_bindings {
+            self.vars[id].push(val);
+        }
+        Ok(None)
     }
 
     fn eval_if(&mut self, if_: &If) -> Result<StmtValue> {

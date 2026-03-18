@@ -219,6 +219,7 @@ impl Resolver {
             grammar::Stmt::Return(s) => Ok(Stmt::Return(self.resolve_return_stmt(s)?)),
             grammar::Stmt::Assignment(a) => Ok(Stmt::Assignment(self.resolve_assignment(a)?)),
             grammar::Stmt::If(i) => Ok(Stmt::If(self.resolve_if(i)?)),
+            grammar::Stmt::For(f) => Ok(Stmt::For(self.resolve_for(f)?)),
         }
     }
 
@@ -251,6 +252,27 @@ impl Resolver {
         Ok(If {
             if_branches,
             else_branch,
+        })
+    }
+
+    fn resolve_for(&mut self, f: grammar::For) -> Result<For> {
+        let iterable = self.resolve_expr(f.iterable)?;
+        let scope = self.make_scope();
+        self.scopes.push(scope);
+        let lhs = self.resolve_let_lhs(f.lhs)?;
+        let num_stmts = f.block.stmts.len();
+        let stmts = f
+            .block
+            .stmts
+            .into_iter()
+            .enumerate()
+            .map(|(i, s)| self.resolve_stmt(s, i == num_stmts - 1))
+            .collect::<Result<_>>()?;
+        self.scopes.pop();
+        Ok(For {
+            lhs,
+            iterable,
+            stmts,
         })
     }
 

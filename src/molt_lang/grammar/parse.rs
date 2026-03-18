@@ -12,7 +12,7 @@ use crate::rust_grammar::ext::IdentExt;
 use crate::rust_grammar::{Ident, Kind, LitBool, LitInt, LitStr};
 use crate::storage::Storage;
 
-use super::{Expr, FnArg, If, LetLhs, LetStmt, MoltFile, MoltFn, Pat, Stmt};
+use super::{Expr, FnArg, For, If, LetLhs, LetStmt, MoltFile, MoltFn, Pat, Stmt};
 
 impl Parse for MoltFile {
     fn parse(input: ParseStream) -> Result<Self> {
@@ -156,6 +156,8 @@ impl Parse for Stmt {
         let lookahead = input.lookahead1();
         if lookahead.peek(Token![if]) {
             Ok(Stmt::If(input.parse()?))
+        } else if lookahead.peek(Token![for]) {
+            Ok(Stmt::For(input.parse()?))
         } else if lookahead.peek(Token![let]) {
             Ok(Stmt::Let(input.parse()?))
         } else if lookahead.peek(Token![return]) {
@@ -218,6 +220,21 @@ impl Parse for If {
         Ok(If {
             if_branches,
             else_branch: None,
+        })
+    }
+}
+
+impl Parse for For {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let _: Token![for] = input.parse()?;
+        let lhs: LetLhs = input.parse()?;
+        let _: Token![in] = input.parse()?;
+        let iterable: Expr = input.parse()?;
+        let block = Block::parse(input)?;
+        Ok(For {
+            lhs,
+            iterable,
+            block,
         })
     }
 }

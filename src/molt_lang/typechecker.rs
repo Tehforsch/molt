@@ -23,12 +23,20 @@ pub(crate) enum ErrorKind {
         found: ResolvedType,
     },
     UntypedVar(Ident),
+    NotIterable(ResolvedType),
 }
 
 impl Error {
     fn type_mismatch(expected: ResolvedType, found: ResolvedType) -> Self {
         Self {
             kind: ErrorKind::TypeMismatch { expected, found },
+            labels: Vec::new(),
+        }
+    }
+
+    fn type_not_iterable(ty: ResolvedType) -> Self {
+        Self {
+            kind: ErrorKind::NotIterable(ty),
             labels: Vec::new(),
         }
     }
@@ -57,6 +65,9 @@ impl std::fmt::Display for Error {
             }
             ErrorKind::UntypedVar(ident) => {
                 write!(f, "could not infer type for variable `{ident}`")
+            }
+            ErrorKind::NotIterable(ty) => {
+                write!(f, "cannot iterate over type `{ty}`")
             }
         }
     }
@@ -411,6 +422,9 @@ impl<'a> Typechecker<'a> {
                     return Ok(Some(always_returns));
                 }
             }
+            Stmt::For(for_stmt) => {
+                self.check_for(for_stmt, surrounding_fn_return_type)?;
+            }
         }
         Ok(None)
     }
@@ -479,16 +493,7 @@ impl<'a> Typechecker<'a> {
         } else {
             Type::Var
         };
-        let type_id = match &let_stmt.lhs {
-            super::LetLhs::Var(var_id) => self.add_var(*var_id, type_)?,
-            super::LetLhs::Pat(pat_id) => {
-                let pat = &self.pats[*pat_id];
-                for (var, _) in pat.vars.iter() {
-                    self.add_var(*var, Type::Var)?;
-                }
-                self.add_pat(*pat_id, type_)?
-            }
-        };
+        let type_id = self.infer_let_lhs(&let_stmt.lhs, type_)?;
         if let Some(rhs) = rhs {
             let span = match &let_stmt.lhs {
                 super::LetLhs::Var(var_id) => self.var_span(*var_id),
@@ -503,6 +508,19 @@ impl<'a> Typechecker<'a> {
                 .map_err(|e| e.with_label(span, format!("expected `{lhs_type}`")))?;
         }
         Ok(())
+    }
+
+    fn infer_let_lhs(&mut self, lhs: &super::LetLhs, type_: Type) -> Result<TypeId, Error> {
+        match lhs {
+            super::LetLhs::Var(var_id) => self.add_var(*var_id, type_),
+            super::LetLhs::Pat(pat_id) => {
+                let pat = &self.pats[*pat_id];
+                for (var, _) in pat.vars.iter() {
+                    self.add_var(*var, Type::Var)?;
+                }
+                self.add_pat(*pat_id, type_)
+            }
+        }
     }
 
     fn check_return_stmt(
@@ -550,6 +568,33 @@ impl<'a> Typechecker<'a> {
             Ok(Some(AlwaysReturnsType))
         } else {
             Ok(None)
+        }
+    }
+
+    fn check_for(
+        &mut self,
+        for_: &super::For,
+        surrounding_fn_return_type: TypeId,
+    ) -> Result<(), Error> {
+        let iterable_type = self.infer_expr(&for_.iterable)?;
+        let item_type_id = self.get_item_type(iterable_type)?;
+        let var_type = self.infer_let_lhs(&for_.lhs, self.types[item_type_id.0].clone())?;
+        self.unify(var_type, item_type_id)?;
+        self.check_block(&for_.stmts, surrounding_fn_return_type)?;
+        Ok(())
+    }
+
+    fn get_item_type(&self, id: TypeId) -> Result<TypeId, Error> {
+        let ty = &self.types[id.0];
+        match ty {
+            Type::Var
+            | Type::Kind(_)
+            | Type::Int
+            | Type::Bool
+            | Type::Str
+            | Type::Unit
+            | Type::Fun(_, _) => Err(Error::type_not_iterable(self.as_resolved(ty))),
+            Type::List(inner) => Ok(*inner),
         }
     }
 
