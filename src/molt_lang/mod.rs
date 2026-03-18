@@ -203,7 +203,7 @@ impl MoltFile {
         let partial = resolver
             .resolve_file(file)
             .map_err(|e| Error::Resolver(e, file_id))?;
-        let typechecker = Typechecker::new(&partial.pats);
+        let typechecker = Typechecker::new(&partial.var_names, &partial.pats);
         let typeck = typechecker
             .check(&partial)
             .map_err(|e| Error::Typechecker(e, file_id))?;

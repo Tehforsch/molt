@@ -5,5 +5,5 @@ if 5 {
 ```
 
 ```output
-error: Type mismatch. Expected Int, found Bool
+error: type mismatch: expected `int`, found `bool`
 ```

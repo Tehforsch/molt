@@ -7,22 +7,64 @@ use crate::{
     storage::{Storage, StorageIndex},
 };
 
-#[derive(Debug)]
-pub(crate) enum Error {
-    TypeMismatch(Type, Type),
+pub(crate) struct Error {
+    pub(crate) kind: ErrorKind,
+    pub(crate) labels: Vec<ErrorLabel>,
+}
+
+pub(crate) struct ErrorLabel {
+    pub(crate) span: crate::Span,
+    pub(crate) message: String,
+}
+
+pub(crate) enum ErrorKind {
+    TypeMismatch {
+        expected: ResolvedType,
+        found: ResolvedType,
+    },
     UntypedVar(Ident),
+}
+
+impl Error {
+    fn type_mismatch(expected: ResolvedType, found: ResolvedType) -> Self {
+        Self {
+            kind: ErrorKind::TypeMismatch { expected, found },
+            labels: Vec::new(),
+        }
+    }
+
+    fn untyped_var(ident: Ident) -> Self {
+        Self {
+            kind: ErrorKind::UntypedVar(ident),
+            labels: Vec::new(),
+        }
+    }
+
+    fn with_label(mut self, span: crate::Span, message: impl Into<String>) -> Self {
+        self.labels.push(ErrorLabel {
+            span,
+            message: message.into(),
+        });
+        self
+    }
 }
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Error::TypeMismatch(t1, t2) => {
-                write!(f, "Type mismatch. Expected {t1:?}, found {t2:?}")
+        match &self.kind {
+            ErrorKind::TypeMismatch { expected, found } => {
+                write!(f, "type mismatch: expected `{expected}`, found `{found}`")
             }
-            Error::UntypedVar(t2) => {
-                write!(f, "Could not infer type for variable `{t2}`")
+            ErrorKind::UntypedVar(ident) => {
+                write!(f, "could not infer type for variable `{ident}`")
             }
         }
+    }
+}
+
+impl std::fmt::Debug for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(self, f)
     }
 }
 
@@ -156,16 +198,21 @@ pub(super) struct Typechecker<'a> {
     types: Vec<Type>,
     substitutions: HashMap<TypeId, TypeId>,
     vars: HashMap<VarId, VarType>,
+    var_names: &'a Storage<VarId, Ident>,
     pats: &'a Storage<PatId, UnresolvedPat>,
     pat_types: HashMap<PatId, TypeId>,
 }
 
 impl<'a> Typechecker<'a> {
-    pub(super) fn new(pats: &'a Storage<PatId, UnresolvedPat>) -> Self {
+    pub(super) fn new(
+        var_names: &'a Storage<VarId, Ident>,
+        pats: &'a Storage<PatId, UnresolvedPat>,
+    ) -> Self {
         Self {
             types: Default::default(),
             substitutions: Default::default(),
             vars: Default::default(),
+            var_names,
             pat_types: Default::default(),
             pats,
         }
@@ -205,6 +252,10 @@ impl<'a> Typechecker<'a> {
                 Box::new(self.as_resolved(&self.types[type_id.0])),
             ),
         }
+    }
+
+    fn var_span(&self, id: VarId) -> crate::Span {
+        self.var_names[id].span().byte_range().into()
     }
 
     #[allow(unused)] // For now.
@@ -259,7 +310,7 @@ impl<'a> Typechecker<'a> {
         for (f, type_id) in file.fns.iter().zip(fn_return_types) {
             self.check_fn(f, type_id)?;
         }
-        self.check_no_untyped_vars(file)?;
+        self.check_no_untyped_vars()?;
         Ok(TypecheckResult {
             types: self.types,
             substitutions: self.substitutions,
@@ -268,11 +319,11 @@ impl<'a> Typechecker<'a> {
         })
     }
 
-    pub(crate) fn check_no_untyped_vars(&self, file: &PartialMoltFile) -> Result<(), Error> {
+    pub(crate) fn check_no_untyped_vars(&self) -> Result<(), Error> {
         for id in self.vars.keys() {
             if let Some(Type::Var) = self.get_type(*id) {
-                let name = file.var_names[*id].clone();
-                return Err(Error::UntypedVar(name));
+                let name = self.var_names[*id].clone();
+                return Err(Error::untyped_var(name));
             }
         }
         Ok(())
@@ -303,7 +354,10 @@ impl<'a> Typechecker<'a> {
         let always_returns = self.check_block(&f.stmts, fn_return_type)?;
         if always_returns.is_none() {
             let unit = self.add_type(Type::Unit);
-            self.unify(unit, fn_return_type)?;
+            let span = self.var_span(f.id);
+            let ret_type = self.as_resolved(&self.types[self.resolve(fn_return_type).0].clone());
+            self.unify(unit, fn_return_type)
+                .map_err(|e| e.with_label(span, format!("expects return type `{ret_type}`")))?;
         }
         Ok(())
     }
@@ -357,10 +411,13 @@ impl<'a> Typechecker<'a> {
                     .collect::<Result<_, Error>>()?;
                 let output = self.add_type(Type::Var);
                 let fn_type = self.add_type(Type::Fun(input, output));
-                // We know the function is defined,
-                // so we can unwrap
+                // We know the function exists, so
+                // we can unwrap.
                 let lookup = self.lookup(fn_call.id).unwrap();
-                self.unify(fn_type, lookup)?;
+                let span = self.var_span(fn_call.id);
+                let fn_resolved = self.as_resolved(&self.types[self.resolve(lookup).0].clone());
+                self.unify(fn_type, lookup)
+                    .map_err(|e| e.with_label(span, format!("has type `{fn_resolved}`")))?;
                 Ok(output)
             }
             super::Expr::Atom(atom) => self.infer_atom(atom),
@@ -409,7 +466,17 @@ impl<'a> Typechecker<'a> {
             }
         };
         if let Some(rhs) = rhs {
-            self.unify(type_id, rhs)?;
+            let span = match &let_stmt.lhs {
+                super::LetLhs::Var(var_id) => self.var_span(*var_id),
+                super::LetLhs::Pat(_) => {
+                    // No single variable to label for pattern bindings
+                    self.unify(type_id, rhs)?;
+                    return Ok(());
+                }
+            };
+            let lhs_type = self.as_resolved(&self.types[self.resolve(type_id).0].clone());
+            self.unify(type_id, rhs)
+                .map_err(|e| e.with_label(span, format!("expected `{lhs_type}`")))?;
         }
         Ok(())
     }
@@ -423,9 +490,7 @@ impl<'a> Typechecker<'a> {
             .expr
             .as_ref()
             .map(|expr| self.infer_expr(expr))
-            .unwrap_or_else(|| {
-                Ok(self.add_type(Type::Unit)) // Default return type 
-            })?;
+            .unwrap_or_else(|| Ok(self.add_type(Type::Unit)))?;
         self.unify(fn_return_type, expr_type)
     }
 
@@ -467,7 +532,10 @@ impl<'a> Typechecker<'a> {
     fn check_assignment(&mut self, a: &super::Assignment) -> Result<(), Error> {
         let lhs = self.lookup(a.lhs).unwrap(); // Resolver makes sure this exists
         let rhs = self.infer_expr(&a.rhs)?;
+        let span = self.var_span(a.lhs);
+        let lhs_type = self.as_resolved(&self.types[self.resolve(lhs).0].clone());
         self.unify(lhs, rhs)
+            .map_err(|e| e.with_label(span, format!("has type `{lhs_type}`")))
     }
 
     fn unify(&mut self, t1: TypeId, t2: TypeId) -> Result<(), Error> {
@@ -478,7 +546,12 @@ impl<'a> Typechecker<'a> {
         }
         let type1 = self.types[t1.0].clone();
         let type2 = self.types[t2.0].clone();
-        let make_error = || Err(Error::TypeMismatch(type1.clone(), type2.clone()));
+        let make_error = || {
+            Err(Error::type_mismatch(
+                self.as_resolved(&type1),
+                self.as_resolved(&type2),
+            ))
+        };
         match (&type1, &type2) {
             (Type::Var, _) => {
                 self.substitutions.insert(t1, t2);

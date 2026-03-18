@@ -4,5 +4,9 @@ fn main() -> int {
 ```
 
 ```output
-error: Type mismatch. Expected Unit, found Int
+error: type mismatch: expected `()`, found `int`
+  ┌─ test input:1:4
+  │
+1 │ fn main() -> int {
+  │    ---- expects return type `int`
 ```

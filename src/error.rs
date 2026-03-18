@@ -49,6 +49,19 @@ impl Error {
 pub(crate) fn make_error_diagnostic(err: &Error) -> Diagnostic<FileId> {
     let message = format!("{err}");
     let mut diagnostic = Diagnostic::error().with_message(&message);
+
+    if let Error::Typechecker(type_err, file_id) = err {
+        let labels: Vec<_> = type_err
+            .labels
+            .iter()
+            .map(|l| Label::secondary(*file_id, l.span.byte_range()).with_message(&l.message))
+            .collect();
+        if !labels.is_empty() {
+            diagnostic = diagnostic.with_labels(labels);
+        }
+        return diagnostic;
+    }
+
     if let Some((span, file)) = err.span_and_file_id() {
         diagnostic = diagnostic.with_labels(vec![
             Label::primary(file, span.byte_range()).with_message(&message),

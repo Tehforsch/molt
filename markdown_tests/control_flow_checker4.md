@@ -9,5 +9,5 @@ fn main() -> int {
 ```
 
 ```output
-error: Type mismatch. Expected Int, found Str
+error: type mismatch: expected `int`, found `str`
 ```
