@@ -1,14 +1,19 @@
 mod builtins;
 mod error;
 mod value;
+mod var_stack;
 
 use super::{For, If, LetLhs, LetStmt, Lit};
 use crate::{
     Id, Matcher, ModMap, Node,
     modify::{Modification, NodeSpec},
     molt_lang::{
-        Assignment, Expr, FnId, List, MoltFile, MoltFn, Stmt, Type, VarId, context::Context,
-        interpreter::value::StmtValue,
+        Assignment, Expr, FnId, List, MoltFile, MoltFn, Stmt, Type, VarId,
+        context::Context,
+        interpreter::{
+            value::StmtValue,
+            var_stack::{VarHandle, VarStack, Vars},
+        },
     },
     node::NodeType,
     storage::Storage,
@@ -26,54 +31,45 @@ macro_rules! typechecker_bug {
 
 use typechecker_bug;
 
+#[derive(Default)]
+struct Scope {
+    handles: Vec<VarHandle>,
+}
+
+impl Scope {
+    fn add(&mut self, handle: VarHandle) {
+        self.handles.push(handle)
+    }
+}
+
 pub(crate) use error::Error;
 
-#[derive(Default)]
-struct VarStack {
-    values: Vec<Value>,
-}
-
-impl VarStack {
-    // TODO document why this is push/pop and not set/get (see recursion)
-    fn push(&mut self, val: Value) {
-        self.values.push(val)
-    }
-
-    fn pop(&mut self) -> Value {
-        self.values.pop().unwrap()
-    }
-
-    fn get(&self) -> Value {
-        // We unwrap here since the resolver will have reported
-        // an undefined variable if the stack is empty at run time
-        self.values.last().unwrap().clone()
-    }
-
-    fn try_get(&self) -> Option<Value> {
-        self.values.last().cloned()
-    }
-}
-
 pub(crate) struct Interpreter<'a> {
-    vars: Storage<VarId, VarStack>,
+    vars: Vars,
     fns: Storage<FnId, &'a MoltFn>,
     context: &'a Context<'a>,
     modifications: Vec<Modification>,
 }
 
 impl<'a> Interpreter<'a> {
+    fn clear_scope(&mut self, scope: Scope) {
+        for var in scope.handles {
+            self.vars.pop(var);
+        }
+    }
+
     fn new(file: &'a MoltFile, context: &'a Context<'a>) -> Interpreter<'a> {
         let mut interpreter = Self {
-            vars: file.var_names.iter().map(|_| VarStack::default()).collect(),
+            vars: Vars::new(file.var_names.iter().map(|_| VarStack::default()).collect()),
             fns: file.fns.iter().collect(),
             context,
             modifications: vec![],
         };
         for (id, f) in file.fns.enumerate() {
-            interpreter.eval_fn_def(f, id);
+            interpreter.eval_fn_def(f, id).destroy();
         }
         for (id, f) in file.iter_builtins() {
-            interpreter.vars[id].push(Value::BuiltinFn(f));
+            interpreter.vars.set(id, Value::BuiltinFn(f)).destroy();
         }
         interpreter
     }
@@ -129,13 +125,13 @@ impl<'a> Interpreter<'a> {
         Ok(())
     }
 
-    fn eval_fn_def(&mut self, f: &'a MoltFn, id: FnId) {
-        self.vars[f.id].push(Value::UserFn(id));
+    fn eval_fn_def(&mut self, f: &'a MoltFn, id: FnId) -> VarHandle {
+        self.vars.set(f.id, Value::UserFn(id))
     }
 
-    fn eval_stmt(&mut self, stmt: &Stmt) -> Result<StmtValue> {
+    fn eval_stmt(&mut self, scope: &mut Scope, stmt: &Stmt) -> Result<StmtValue> {
         match stmt {
-            Stmt::Let(let_stmt) => self.eval_let_stmt(let_stmt),
+            Stmt::Let(let_stmt) => self.eval_let_stmt(scope, let_stmt),
             Stmt::Expr(expr) => {
                 self.eval_expr(expr)?;
                 Ok(StmtValue::Value(Value::Unit))
@@ -150,12 +146,12 @@ impl<'a> Interpreter<'a> {
             }
             Stmt::Assignment(assignment) => self.eval_assignment(assignment),
             Stmt::If(if_) => self.eval_if(if_),
-            Stmt::For(for_) => self.eval_for(for_),
+            Stmt::For(for_) => self.eval_for(scope, for_),
         }
     }
 
     fn eval_fn_call(&mut self, fn_var_id: VarId, args: &[Value]) -> Result<StmtValue> {
-        match self.vars[fn_var_id].get() {
+        match self.vars.get(fn_var_id) {
             Value::UserFn(fn_id) => self.eval_user_defined_fn(args, self.fns[fn_id]),
             Value::BuiltinFn(builtin_fn) => {
                 self.eval_builtin(args, builtin_fn).map(StmtValue::Value)
@@ -170,8 +166,9 @@ impl<'a> Interpreter<'a> {
         user_fn: &MoltFn,
     ) -> Result<StmtValue, Error> {
         assert_eq!(user_fn.args.len(), args.len()); // todo verify this at resolution time
+        let mut handles = vec![];
         for (arg, val) in user_fn.args.iter().zip(args.iter()) {
-            self.vars[arg.var_id].push(val.clone());
+            handles.push(self.vars.set(arg.var_id, val.clone()));
         }
         let val = self.eval_block(&user_fn.stmts)?;
         let val = match val {
@@ -179,20 +176,22 @@ impl<'a> Interpreter<'a> {
             StmtValue::Value(_) => Value::Unit,
             StmtValue::Return(value) => value,
         };
-        for arg in user_fn.args.iter() {
-            self.vars[arg.var_id].pop();
+        for handle in handles.into_iter() {
+            self.vars.pop(handle);
         }
         Ok(StmtValue::Value(val))
     }
 
     fn eval_block(&mut self, stmts: &[Stmt]) -> Result<StmtValue, Error> {
+        let mut scope = Scope::default();
         for stmt in stmts.iter() {
-            match self.eval_stmt(stmt)? {
+            match self.eval_stmt(&mut scope, stmt)? {
                 StmtValue::NoMatch => return Ok(StmtValue::NoMatch),
                 StmtValue::Return(val) => return Ok(StmtValue::Return(val)),
                 StmtValue::Value(_) => {}
             }
         }
+        self.clear_scope(scope);
         Ok(StmtValue::Value(Value::Unit))
     }
 
@@ -217,7 +216,7 @@ impl<'a> Interpreter<'a> {
 
     fn eval_atom(&mut self, atom: &super::Atom) -> Result<Value> {
         match atom {
-            super::Atom::Var(var_id) => Ok(self.vars[*var_id].get().clone()),
+            super::Atom::Var(var_id) => Ok(self.vars.get(*var_id).clone()),
             super::Atom::Lit(lit) => self.eval_lit(lit),
             super::Atom::List(list) => self.eval_list(list),
         }
@@ -246,7 +245,7 @@ impl<'a> Interpreter<'a> {
             .vars
             .iter()
             .map(|var| {
-                let Value::Node(val) = self.vars[var.var_id].get() else {
+                let Value::Node(val) = self.vars.get(var.var_id) else {
                     unreachable!() // type checker 
                 };
                 val
@@ -260,8 +259,9 @@ impl<'a> Interpreter<'a> {
     }
 
     fn eval_assignment(&mut self, assignment: &Assignment) -> Result<StmtValue> {
-        let val = self.vars[assignment.lhs].get(); // it seems natural to `pop` here, but we might
-        // refer to the value of the var in the rhs, so we only get here.
+        // it seems natural to `pop` here, but we might
+        // refer to the value of the var in the rhs, so we only `get` here.
+        let val = self.vars.get(assignment.lhs);
         let new_val = match val {
             Value::String(_)
             | Value::Int(_)
@@ -281,12 +281,11 @@ impl<'a> Interpreter<'a> {
                 Value::Node(new_val)
             }
         };
-        self.vars[assignment.lhs].pop();
-        self.vars[assignment.lhs].push(new_val);
+        self.vars.replace(assignment.lhs, new_val);
         Ok(StmtValue::Value(Value::Unit))
     }
 
-    fn eval_let_stmt(&mut self, let_stmt: &LetStmt) -> Result<StmtValue> {
+    fn eval_let_stmt(&mut self, scope: &mut Scope, let_stmt: &LetStmt) -> Result<StmtValue> {
         let rhs = if let Some(expr) = &let_stmt.rhs {
             self.eval_expr(expr)?
         } else {
@@ -297,29 +296,34 @@ impl<'a> Interpreter<'a> {
             }
             return Ok(StmtValue::Value(Value::Unit));
         };
-        self.eval_variable_init(&let_stmt.lhs, rhs)
+        self.eval_variable_init(scope, &let_stmt.lhs, rhs)
     }
 
-    fn eval_for(&mut self, for_: &For) -> Result<StmtValue> {
+    fn eval_for(&mut self, scope: &mut Scope, for_: &For) -> Result<StmtValue> {
         let iterable = self.eval_expr(&for_.iterable)?;
         let Value::List(list) = iterable else {
             typechecker_bug!()
         };
         for val in list.into_iter() {
-            self.eval_variable_init(&for_.lhs, val)?;
+            self.eval_variable_init(scope, &for_.lhs, val)?;
             self.eval_block(&for_.stmts)?;
         }
         Ok(StmtValue::Value(Value::Unit))
     }
 
-    fn eval_variable_init(&mut self, lhs: &LetLhs, rhs: Value) -> Result<StmtValue, Error> {
+    fn eval_variable_init(
+        &mut self,
+        scope: &mut Scope,
+        lhs: &LetLhs,
+        rhs: Value,
+    ) -> Result<StmtValue, Error> {
         match lhs {
             LetLhs::Var(var_id) => {
-                self.vars[*var_id].push(rhs);
+                scope.add(self.vars.set(*var_id, rhs));
                 Ok(StmtValue::Value(Value::Unit))
             }
             LetLhs::Pat(pat) => {
-                if let Some(value) = self.eval_let_lhs_pat(pat, rhs)? {
+                if let Some(value) = self.eval_let_lhs_pat(scope, pat, rhs)? {
                     return Ok(value);
                 }
                 Ok(StmtValue::Value(Value::Unit))
@@ -329,6 +333,7 @@ impl<'a> Interpreter<'a> {
 
     fn eval_let_lhs_pat(
         &mut self,
+        scope: &mut Scope,
         pat: &super::PatId,
         real_id: Value,
     ) -> Result<Option<StmtValue>> {
@@ -338,7 +343,7 @@ impl<'a> Interpreter<'a> {
         for var in pat.vars.iter() {
             // Look up if this variable was previously bound to
             // something.
-            let bound_to = self.vars[var.var_id].try_get().map(|val| {
+            let bound_to = self.vars.try_get(var.var_id).map(|val| {
                 let Value::Node(NodeSpec::Real(bound_to)) = val else {
                     typechecker_bug!()
                 };
@@ -367,7 +372,7 @@ impl<'a> Interpreter<'a> {
         // in any of the following if lets
 
         for (id, val) in new_bindings {
-            self.vars[id].push(val);
+            scope.add(self.vars.set(id, val));
         }
         Ok(None)
     }
