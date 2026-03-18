@@ -3,15 +3,33 @@ use crate::{
     storage::Storage,
 };
 
+/// Contains a stack of values for a variable
+/// at runtime. For most variables, there will
+/// only ever be one value on the stack. The exception
+/// are variables used in recursive function calls, which
+/// are identified with a fixed variable id but
+/// may be represented by an arbitrary (and unknown before
+/// runtime) number of values.
 #[derive(Default)]
 pub(super) struct VarStack {
     values: Vec<Value>,
 }
 
+/// This is a helper type that serves as a reminder
+/// to clean up any variable initialization by `pop`ing
+/// the corresponding value off the `VarStack`.
+///
+/// Forgetting this value unintentionally will result in
+/// a runtime error that should occur basically immediately
+/// when a new interpreter feature is implemented, to point
+/// out that there is a bug in the interpreter.
 pub(super) struct VarHandle(VarId);
 
 impl VarHandle {
-    pub(crate) fn destroy(self) -> VarId {
+    /// Intentionally destroys a handle without causing an
+    /// error. This is used to intentionally keep variables
+    /// on the stack forever and is used for global variables.
+    pub(crate) fn leave_on_stack(self) -> VarId {
         let id = self.0;
         std::mem::forget(self);
         id
@@ -21,7 +39,7 @@ impl VarHandle {
 impl Drop for VarHandle {
     fn drop(&mut self) {
         // I want linear types, drop bombs are ugly
-        panic!("Unused var handle, call .pop(). This is an error in the interpreter.")
+        panic!("Unused var handle, call .pop(). This is an bug in the interpreter.")
     }
 }
 
@@ -66,7 +84,7 @@ impl Vars {
     }
 
     pub(crate) fn pop(&mut self, handle: VarHandle) -> Value {
-        let id = handle.destroy();
+        let id = handle.leave_on_stack();
         self.storage[id].pop()
     }
 
@@ -79,6 +97,6 @@ impl Vars {
         // Intentionally destroy the handle here,
         // there is another handle out there that will
         // take care of the var.
-        self.set(id, new_val).destroy();
+        self.set(id, new_val).leave_on_stack();
     }
 }

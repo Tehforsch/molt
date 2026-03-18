@@ -66,10 +66,13 @@ impl<'a> Interpreter<'a> {
             modifications: vec![],
         };
         for (id, f) in file.fns.enumerate() {
-            interpreter.eval_fn_def(f, id).destroy();
+            interpreter.eval_fn_def(f, id).leave_on_stack();
         }
         for (id, f) in file.iter_builtins() {
-            interpreter.vars.set(id, Value::BuiltinFn(f)).destroy();
+            interpreter
+                .vars
+                .set(id, Value::BuiltinFn(f))
+                .leave_on_stack();
         }
         interpreter
     }

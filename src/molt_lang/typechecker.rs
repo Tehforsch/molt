@@ -479,7 +479,6 @@ impl<'a> Typechecker<'a> {
     }
 
     fn infer_pat(&mut self, id: &PatId) -> Result<TypeId, Error> {
-        // TODO: Check correctness
         self.add_pat(*id, Type::Var)
     }
 

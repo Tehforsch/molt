@@ -38,7 +38,6 @@ impl<'src> Interpreter<'src> {
 
     fn eval_assert_eq(&self, args: &[Value]) -> Result<()> {
         assert_eq!(args.len(), 2); // Resolver makes sure
-        assert!(args[0].is_comparable_to(&args[1])); // TODO: make sure in type checker
         if args[0].eq(&args[1]) {
             Ok(())
         } else {
