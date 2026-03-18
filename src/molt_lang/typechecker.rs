@@ -160,6 +160,16 @@ impl std::fmt::Display for ResolvedType {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 struct TypeId(usize);
 
+impl StorageIndex for TypeId {
+    fn to_index(self) -> usize {
+        self.0
+    }
+
+    fn from_index(index: usize) -> Self {
+        Self(index)
+    }
+}
+
 enum VarType {
     Mono(TypeId),
     Scheme(Scheme),
@@ -202,7 +212,7 @@ impl TypecheckResult {
 struct AlwaysReturnsType;
 
 pub(super) struct Typechecker<'a> {
-    types: Vec<Type>,
+    types: Storage<TypeId, Type>,
     substitutions: HashMap<TypeId, TypeId>,
     vars: HashMap<VarId, VarType>,
     var_names: &'a Storage<VarId, Ident>,
@@ -233,7 +243,7 @@ impl<'a> Typechecker<'a> {
                 return None;
             }
         };
-        Some(&self.types[self.resolve(*type_id).0])
+        Some(&self.types[self.resolve(*type_id)])
     }
 
     pub(crate) fn iter_vars(&self) -> impl Iterator<Item = (VarId, ResolvedType)> {
@@ -251,13 +261,13 @@ impl<'a> Typechecker<'a> {
             Type::Bool => ResolvedType::Bool,
             Type::Str => ResolvedType::Str,
             Type::Unit => ResolvedType::Unit,
-            Type::List(ty) => ResolvedType::List(Box::new(self.as_resolved(&self.types[ty.0]))),
+            Type::List(ty) => ResolvedType::List(Box::new(self.as_resolved(&self.types[*ty]))),
             Type::Fun(type_ids, type_id) => ResolvedType::Fun(
                 type_ids
                     .iter()
-                    .map(|t| self.as_resolved(&self.types[t.0]))
+                    .map(|t| self.as_resolved(&self.types[*t]))
                     .collect(),
-                Box::new(self.as_resolved(&self.types[type_id.0])),
+                Box::new(self.as_resolved(&self.types[*type_id])),
             ),
         }
     }
@@ -289,8 +299,7 @@ impl<'a> Typechecker<'a> {
     }
 
     fn add_type(&mut self, t: Type) -> TypeId {
-        self.types.push(t);
-        TypeId(self.types.len() - 1)
+        self.types.add(t)
     }
 
     fn add_var_type(&mut self, id: VarId, type_: VarType) -> Result<TypeId, Error> {
@@ -335,7 +344,7 @@ impl<'a> Typechecker<'a> {
         }
         self.check_no_untyped_vars()?;
         Ok(TypecheckResult {
-            types: self.types,
+            types: self.types.into_iter().collect(),
             substitutions: self.substitutions,
             vars: self.vars,
             pat_types: self.pat_types,
@@ -380,7 +389,7 @@ impl<'a> Typechecker<'a> {
         if always_returns.is_none() {
             let unit = self.add_type(Type::Unit);
             let span = self.var_span(f.id);
-            let ret_type = self.as_resolved(&self.types[self.resolve(fn_return_type).0].clone());
+            let ret_type = self.as_resolved(&self.types[self.resolve(fn_return_type)].clone());
             self.unify(unit, fn_return_type)
                 .map_err(|e| e.with_label(span, format!("expects return type `{ret_type}`")))?;
         }
@@ -443,7 +452,7 @@ impl<'a> Typechecker<'a> {
                 // we can unwrap.
                 let lookup = self.lookup(fn_call.id).unwrap();
                 let span = self.var_span(fn_call.id);
-                let fn_resolved = self.as_resolved(&self.types[self.resolve(lookup).0].clone());
+                let fn_resolved = self.as_resolved(&self.types[self.resolve(lookup)].clone());
                 self.unify(fn_type, lookup)
                     .map_err(|e| e.with_label(span, format!("has type `{fn_resolved}`")))?;
                 Ok(output)
@@ -503,7 +512,7 @@ impl<'a> Typechecker<'a> {
                     return Ok(());
                 }
             };
-            let lhs_type = self.as_resolved(&self.types[self.resolve(type_id).0].clone());
+            let lhs_type = self.as_resolved(&self.types[self.resolve(type_id)].clone());
             self.unify(type_id, rhs)
                 .map_err(|e| e.with_label(span, format!("expected `{lhs_type}`")))?;
         }
@@ -578,14 +587,14 @@ impl<'a> Typechecker<'a> {
     ) -> Result<(), Error> {
         let iterable_type = self.infer_expr(&for_.iterable)?;
         let item_type_id = self.get_item_type(iterable_type)?;
-        let var_type = self.infer_let_lhs(&for_.lhs, self.types[item_type_id.0].clone())?;
+        let var_type = self.infer_let_lhs(&for_.lhs, self.types[item_type_id].clone())?;
         self.unify(var_type, item_type_id)?;
         self.check_block(&for_.stmts, surrounding_fn_return_type)?;
         Ok(())
     }
 
     fn get_item_type(&self, id: TypeId) -> Result<TypeId, Error> {
-        let ty = &self.types[id.0];
+        let ty = &self.types[id];
         match ty {
             Type::Var
             | Type::Kind(_)
@@ -602,7 +611,7 @@ impl<'a> Typechecker<'a> {
         let lhs = self.lookup(a.lhs).unwrap(); // Resolver makes sure this exists
         let rhs = self.infer_expr(&a.rhs)?;
         let span = self.var_span(a.lhs);
-        let lhs_type = self.as_resolved(&self.types[self.resolve(lhs).0].clone());
+        let lhs_type = self.as_resolved(&self.types[self.resolve(lhs)].clone());
         self.unify(lhs, rhs)
             .map_err(|e| e.with_label(span, format!("has type `{lhs_type}`")))
     }
@@ -613,8 +622,8 @@ impl<'a> Typechecker<'a> {
         if t1 == t2 {
             return Ok(());
         }
-        let type1 = self.types[t1.0].clone();
-        let type2 = self.types[t2.0].clone();
+        let type1 = self.types[t1].clone();
+        let type2 = self.types[t2].clone();
         let make_error = || {
             Err(Error::type_mismatch(
                 self.as_resolved(&type1),
@@ -709,7 +718,7 @@ impl<'a> Typechecker<'a> {
     }
 
     fn instantiate(&mut self, scheme: &Scheme) -> TypeId {
-        let mut new_type = self.types[scheme.type_id.0].clone();
+        let mut new_type = self.types[scheme.type_id].clone();
         for var in scheme.generalized.iter() {
             let new_var = self.add_type(Type::Var);
             new_type.substitute(*var, new_var);
