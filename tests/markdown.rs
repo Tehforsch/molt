@@ -227,4 +227,4 @@ fn mdtest(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-datatest_stable::harness!(mdtest, "markdown_tests/", r"\.md$");
+datatest_stable::harness!(mdtest, "tests/markdown/", r"\.md$");
