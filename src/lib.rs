@@ -49,9 +49,7 @@ pub(crate) use input::{Diagnostic, FileId};
 pub(crate) use match_pattern::{Match, Matcher};
 pub(crate) use modify::ModMap;
 pub(crate) use node::{KindType, NodeType, ToNode};
-pub(crate) use node_list::{
-    List, ListMatchingMode, NodeList, PatNodeList, RealNodeList, Single, SingleMatchingMode,
-};
+pub(crate) use node_list::NodeList;
 pub(crate) use pattern::Pattern;
 pub(crate) use span::{Span, Spanned, SpannedPat, WithSpan};
 

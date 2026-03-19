@@ -308,7 +308,7 @@ fn ambig_ty(input: ParseStream, allow_plus: bool) -> Result<Type> {
         if content.is_empty() {
             return Ok(Type::Tuple(TypeTuple {
                 paren_token,
-                elems: NodeList::empty(input.mode()),
+                elems: NodeList::empty_real(),
             }));
         }
         if content.peek(Lifetime) {

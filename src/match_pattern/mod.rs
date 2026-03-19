@@ -4,10 +4,9 @@ use std::collections::HashMap;
 
 use crate::cmp_syn::CmpSyn;
 use crate::match_pattern::match_ctx::MatchCtx;
-use crate::node_list::List;
 use crate::rule::{DoesNotRequireRule, RequiresRule};
 use crate::{
-    Id, NodeId, NodeList, NodeType, PatNodeList, Pattern, RealNodeList, Single, SingleMatchingMode,
+    Id, NodeId, NodeList, NodeType, Pattern,
     rule::{Rule, RuleKey, Rules},
 };
 
@@ -154,12 +153,11 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
     ) -> IsMatch {
         match (ts1, ts2) {
             (Pattern::Item(ts1), Pattern::Item(ts2)) => {
-                self.cmp_lists_real(ts1.items(), ts2.items())
+                self.cmp_lists_real(ts1.as_ref(), ts2.as_ref())
             }
-            (Pattern::Item(ts1), Pattern::Var(ts2)) => match ts2 {
-                PatNodeList::Single(single) => self.cmp_lists_single(ts1, single),
-                PatNodeList::List(list) => self.cmp_lists_list(ts1, list),
-            },
+            (Pattern::Item(_), Pattern::Var(_)) => {
+                todo!()
+            }
             (Pattern::Var(_), _) => unreachable!(),
         }
     }
@@ -170,31 +168,6 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
             self.cmp_nodes(*item1, *item2)?;
         }
         IsMatch::Ok(())
-    }
-
-    fn cmp_lists_single<T: CmpSyn<Node>, P>(
-        &mut self,
-        ts1: &RealNodeList<T, P>,
-        ts2: &Single<T, P>,
-    ) -> IsMatch {
-        match ts2.mode() {
-            SingleMatchingMode::Any => todo!(),
-            SingleMatchingMode::All => {
-                for item1 in ts1.iter() {
-                    self.cmp_ids((*item1).into(), ts2.item().into())?;
-                }
-            }
-        }
-        IsMatch::Ok(())
-    }
-
-    fn cmp_lists_list<T: CmpSyn<Node>, P>(
-        &mut self,
-        _: &RealNodeList<T, P>,
-        _: &List<T, P>,
-    ) -> IsMatch {
-        // TODO: Figure out what to do with this.
-        todo!()
     }
 
     /// Compare two types that do not have a rule to toggle their behavior.

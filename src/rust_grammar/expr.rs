@@ -1621,7 +1621,7 @@ impl ParseListOrItem for ExprTuple {
 
     fn parse_list_or_item(input: ParseStream) -> Result<ListOrItem<Self::Target, Self::Punct>> {
         if input.is_empty() {
-            return Ok(ListOrItem::List(NodeList::empty(input.mode())));
+            return Ok(ListOrItem::List(NodeList::empty_real()));
         }
 
         let first = input.parse_spanned_pat::<Expr>()?;
@@ -1680,7 +1680,7 @@ impl ParseListOrItem for ExprArray {
 
     fn parse_list_or_item(input: ParseStream) -> Result<ListOrItem<Self::Target, Self::Punct>> {
         if input.is_empty() {
-            return Ok(ListOrItem::List(NodeList::empty(input.mode())));
+            return Ok(ListOrItem::List(NodeList::empty_real()));
         }
         let first = input.parse_spanned_pat::<Expr>()?;
         // TODO make this prettier. This might be a pattern that
