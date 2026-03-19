@@ -26,6 +26,25 @@ pub(crate) enum ErrorKind {
     NotIterable(ResolvedType),
 }
 
+fn as_resolved(types: &Storage<TypeId, Type>, type_: &Type) -> ResolvedType {
+    match type_ {
+        Type::Var => ResolvedType::Var,
+        Type::Kind(kind) => ResolvedType::Kind(*kind),
+        Type::Int => ResolvedType::Int,
+        Type::Bool => ResolvedType::Bool,
+        Type::Str => ResolvedType::Str,
+        Type::Unit => ResolvedType::Unit,
+        Type::List(ty) => ResolvedType::List(Box::new(as_resolved(types, &types[*ty]))),
+        Type::Fun(type_ids, type_id) => ResolvedType::Fun(
+            type_ids
+                .iter()
+                .map(|t| as_resolved(types, &types[*t]))
+                .collect(),
+            Box::new(as_resolved(types, &types[*type_id])),
+        ),
+    }
+}
+
 impl Error {
     fn type_mismatch(expected: ResolvedType, found: ResolvedType) -> Self {
         Self {
@@ -176,7 +195,7 @@ enum VarType {
 }
 
 pub(super) struct TypecheckResult {
-    types: Vec<Type>,
+    types: Storage<TypeId, Type>,
     substitutions: HashMap<TypeId, TypeId>,
     vars: HashMap<VarId, VarType>,
     pat_types: HashMap<PatId, TypeId>,
@@ -184,20 +203,19 @@ pub(super) struct TypecheckResult {
 
 impl TypecheckResult {
     // duplication :|
-    pub(super) fn get_type(&self, var: VarId) -> Option<&Type> {
+    pub(super) fn get_type(&self, var: VarId) -> &Type {
         let type_id = match &self.vars[&var] {
             VarType::Mono(type_id) => type_id,
             VarType::Scheme(_) => {
-                // Don't iterate over schemes
-                return None;
+                unreachable!()
             }
         };
-        Some(&self.types[self.resolve(*type_id).0])
+        &self.types[self.resolve(*type_id)]
     }
 
     pub(super) fn get_pat_type(&self, pat: PatId) -> Option<&Type> {
         let type_id = &self.pat_types[&pat];
-        Some(&self.types[self.resolve(*type_id).0])
+        Some(&self.types[self.resolve(*type_id)])
     }
 
     // duplication :|
@@ -273,25 +291,6 @@ impl<'a> Typechecker<'a> {
             .filter_map(|var| self.get_type(var).map(|ty| (var, self.as_resolved(ty))))
     }
 
-    fn as_resolved(&self, type_: &Type) -> ResolvedType {
-        match type_ {
-            Type::Var => ResolvedType::Var,
-            Type::Kind(kind) => ResolvedType::Kind(*kind),
-            Type::Int => ResolvedType::Int,
-            Type::Bool => ResolvedType::Bool,
-            Type::Str => ResolvedType::Str,
-            Type::Unit => ResolvedType::Unit,
-            Type::List(ty) => ResolvedType::List(Box::new(self.as_resolved(&self.types[*ty]))),
-            Type::Fun(type_ids, type_id) => ResolvedType::Fun(
-                type_ids
-                    .iter()
-                    .map(|t| self.as_resolved(&self.types[*t]))
-                    .collect(),
-                Box::new(self.as_resolved(&self.types[*type_id])),
-            ),
-        }
-    }
-
     fn var_span(&self, id: VarId) -> crate::Span {
         self.var_names[id].span().byte_range().into()
     }
@@ -364,7 +363,7 @@ impl<'a> Typechecker<'a> {
         }
         self.check_no_untyped_vars()?;
         Ok(TypecheckResult {
-            types: self.types.into_iter().collect(),
+            types: self.types,
             substitutions: self.substitutions,
             vars: self.vars,
             pat_types: self.pat_types,
@@ -725,5 +724,9 @@ impl<'a> Typechecker<'a> {
             new_type.substitute(*var, new_var);
         }
         self.add_type(new_type)
+    }
+
+    fn as_resolved(&self, ty: &Type) -> ResolvedType {
+        as_resolved(&self.types, ty)
     }
 }

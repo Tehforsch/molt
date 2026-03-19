@@ -421,7 +421,7 @@ fn resolve_pat(
         .vars
         .iter()
         .map(|(var_id, span)| {
-            let typechecker::Type::Kind(kind) = typeck.get_type(*var_id).unwrap() else {
+            let typechecker::Type::Kind(kind) = typeck.get_type(*var_id) else {
                 unreachable!()
             };
             let name = &var_names[*var_id];
