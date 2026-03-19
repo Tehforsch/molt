@@ -211,8 +211,9 @@ impl MoltFile {
     pub fn new(input: &Input) -> Result<Self, Error> {
         let file_id = input.molt_file_id();
         let source = input.source(file_id).unwrap();
-        let file: grammar::MoltFile =
-            crate::parser::parse_str(source, Mode::Molt).map_err(|e| Error::parse(e, file_id))?;
+        let file: grammar::MoltFile = crate::parser::parse_str(source, Mode::Molt)
+            .map_err(|e| Error::parse(e, file_id))?
+            .into_item();
         let file = file.add_implicit_main().map_err(Error::FileStructure)?;
         let resolver = Resolver::default();
         let partial = resolver

@@ -2599,7 +2599,8 @@ fn multi_index(
     let mut offset = 0;
     for part in float_repr.split('.') {
         let mut index: Index = crate::parser::parse::parse_str(part, input.mode())
-            .map_err(|err| Error::new(float_span, err))?;
+            .map_err(|err| Error::new(float_span, err))?
+            .item;
         let part_end = offset + part.len();
         index.span = float_token.subspan(offset..part_end).unwrap_or(float_span);
 

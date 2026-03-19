@@ -1,10 +1,11 @@
-use crate::{Ctx, Mode, NodeList};
+use crate::parser::parse_str;
+use crate::{Mode, NodeList};
 
 use crate::parser::error::Result;
-use crate::parser::parse::{Parse, ParseStream, parse_str_ctx};
+use crate::parser::parse::{Parse, ParseResult, ParseStream};
 use crate::rust_grammar::attr::Attribute;
 use crate::rust_grammar::item::{Item, Items};
-use crate::rust_grammar::{Node, whitespace};
+use crate::rust_grammar::whitespace;
 
 #[derive(Debug)]
 /// A complete file of Rust source code.
@@ -24,7 +25,7 @@ impl Parse for File {
     }
 }
 
-pub fn parse_file(mut content: &str, mode: Mode) -> Result<(File, Ctx<Node>)> {
+pub fn parse_file(mut content: &str, mode: Mode) -> Result<ParseResult<File>> {
     // Strip the BOM if it is present
     const BOM: &str = "\u{feff}";
     if content.starts_with(BOM) {
@@ -45,7 +46,7 @@ pub fn parse_file(mut content: &str, mode: Mode) -> Result<(File, Ctx<Node>)> {
         }
     }
 
-    let (mut file, ctx): (File, _) = parse_str_ctx(content, mode)?;
-    file.shebang = shebang;
-    Ok((file, ctx))
+    let mut result = parse_str::<File>(content, mode)?;
+    result.item_mut().shebang = shebang;
+    Ok(result)
 }

@@ -29,6 +29,28 @@ pub(crate) type ParseCtx = Rc<RefCell<Ctx<Node>>>;
 pub(crate) use crate::parser::error::{Error, Result};
 pub(crate) use crate::parser::lookahead::{Lookahead1, Peek};
 
+pub struct ParseResult<T> {
+    pub item: T,
+    pub ctx: Ctx<Node>,
+}
+
+impl<T> ParseResult<T> {
+    pub(crate) fn item_mut(&mut self) -> &mut T {
+        &mut self.item
+    }
+
+    pub(crate) fn into_item(self) -> T {
+        self.item
+    }
+
+    pub(crate) fn map<S>(self, f: impl Fn(T) -> S) -> ParseResult<S> {
+        ParseResult {
+            ctx: self.ctx,
+            item: f(self.item),
+        }
+    }
+}
+
 /// Parsing interface implemented by types that can be parsed in a default
 /// way from a token stream. This trait is for types that aren't represented
 /// as nodes but stored within the AST structs directly.
@@ -808,24 +830,25 @@ fn parse2_impl<T>(
     f: impl FnOnce(ParseStream) -> Result<T>,
     tokens: TokenStream,
     mode: Mode,
-) -> Result<T> {
+) -> Result<ParseResult<T>> {
     let buf = TokenBuffer::new2(tokens);
     let state = tokens_to_parse_buffer(ctx.clone(), &buf, mode);
     let node = f(&state)?;
     state.check_unexpected()?;
-    if let Some((unexpected_span, delimiter)) = span_of_unexpected_ignoring_nones(state.cursor()) {
+    let item = if let Some((unexpected_span, delimiter)) =
+        span_of_unexpected_ignoring_nones(state.cursor())
+    {
         Err(err_unexpected_token(unexpected_span, delimiter))
     } else {
         Ok(node)
-    }
+    }?;
+    Ok(ParseResult {
+        item,
+        ctx: ctx.replace(Ctx::new(mode)),
+    })
 }
 
-pub(crate) fn parse_str<T: Parse>(s: &str, mode: Mode) -> Result<T> {
-    let ctx = Rc::new(RefCell::new(Ctx::new(mode)));
-    parse2_impl(ctx, T::parse, proc_macro2::TokenStream::from_str(s)?, mode)
-}
-
-pub(crate) fn parse_str_ctx<T: Parse>(s: &str, mode: Mode) -> Result<(T, Ctx<Node>)> {
+pub(crate) fn parse_str<T: Parse>(s: &str, mode: Mode) -> Result<ParseResult<T>> {
     let ctx = Rc::new(RefCell::new(Ctx::new(mode)));
     parse2_impl(
         ctx.clone(),
@@ -833,16 +856,16 @@ pub(crate) fn parse_str_ctx<T: Parse>(s: &str, mode: Mode) -> Result<(T, Ctx<Nod
         proc_macro2::TokenStream::from_str(s)?,
         mode,
     )
-    .map(|t| (t, ctx.replace(Ctx::new(mode))))
 }
 
 pub(crate) fn parse_with_ctx<T>(
-    ctx: ParseCtx,
+    ctx: Ctx<Node>,
     f: impl FnOnce(ParseStream) -> Result<T>,
     tokens: TokenStream,
     mode: Mode,
-) -> Result<T> {
-    parse2_impl(ctx.clone(), f, tokens, mode)
+) -> Result<ParseResult<T>> {
+    let ctx = Rc::new(RefCell::new(ctx));
+    parse2_impl(ctx, f, tokens, mode)
 }
 
 fn err_unexpected_token(span: Span, delimiter: Delimiter) -> Error {

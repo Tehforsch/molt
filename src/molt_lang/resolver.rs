@@ -1,7 +1,5 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::rc::Rc;
 
 use super::*;
 use crate::Ctx;
@@ -438,14 +436,16 @@ fn resolve_pat(
     let typechecker::Type::Kind(kind) = typeck.get_pat_type(id).unwrap() else {
         unreachable!()
     };
-    let ctx = Rc::new(RefCell::new(pat_ctx));
-    let node = crate::parser::parse_with_ctx(
-        ctx.clone(),
+    let result = crate::parser::parse_with_ctx(
+        pat_ctx,
         |stream| parse_node_with_kind(stream, *kind),
         p.tokens,
         Mode::Molt,
     )
     .map_err(Error::Parse)?;
-    let ctx = ctx.replace(Ctx::new(Mode::Molt));
-    Ok(ResolvedPat { vars, ctx, node })
+    Ok(ResolvedPat {
+        vars,
+        ctx: result.ctx,
+        node: result.item,
+    })
 }

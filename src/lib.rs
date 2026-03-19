@@ -31,6 +31,7 @@ use crate::{
     input::FilePath,
     modify::{FileModificationResult, Modify},
     molt_lang::Context,
+    parser::parse::ParseResult,
     rust_grammar::Node,
 };
 use codespan_reporting::files::Files;
@@ -68,11 +69,12 @@ pub(crate) enum Mode {
 }
 
 impl RustFile {
-    fn new(input: &Input, file_id: FileId) -> Result<(Self, Ctx<Node>), Error> {
+    fn new(input: &Input, file_id: FileId) -> Result<ParseResult<Self>, Error> {
         let source = input.source(file_id).unwrap();
-        crate::rust_grammar::parse_file(source, Mode::Real)
-            .map_err(|e| Error::parse(e, file_id))
-            .map(|(_, ctx)| (RustFile, ctx))
+        let x: ParseResult<RustFile> = crate::rust_grammar::parse_file(source, Mode::Real)
+            .map_err(|e| Error::parse(e, file_id))?
+            .map(|_| RustFile);
+        Ok(x)
     }
 }
 
@@ -110,11 +112,11 @@ pub fn run_internal(
     } else {
         molt_file.check_has_main_fn_with_input()?;
         for rust_file_id in input.iter_rust_src() {
-            let (_, real_ctx) = RustFile::new(input, rust_file_id)?;
+            let parse_result = RustFile::new(input, rust_file_id)?;
             let context = Context {
                 real_id: rust_file_id,
                 molt_id: input.molt_file_id(),
-                real_ctx: &real_ctx,
+                real_ctx: &parse_result.ctx,
                 input,
                 writer,
                 config: &config,
