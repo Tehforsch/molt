@@ -10,11 +10,13 @@ use crate::molt_lang::MoltFn;
 use crate::molt_lang::builtin_fn::BuiltinFn;
 use crate::molt_lang::builtin_fn::builtins_def;
 use crate::molt_lang::grammar;
+use crate::molt_lang::typechecker::ResolvedType;
 use crate::molt_lang::typechecker::TypecheckResult;
 use crate::parser;
 use crate::rust_grammar::Node;
 use crate::rust_grammar::parse_node_with_kind;
 use crate::storage::Storage;
+use crate::typechecker_bug;
 
 #[derive(Debug)]
 pub(crate) enum Error {
@@ -421,11 +423,17 @@ fn resolve_pat(
         .vars
         .iter()
         .map(|(var_id, span)| {
-            let typechecker::Type::Kind(kind) = typeck.get_type(*var_id) else {
-                unreachable!()
-            };
             let name = &var_names[*var_id];
-            let ctx_id = pat_ctx.add_var::<Node>(Var::new(name.clone(), *kind));
+            let ctx_id = match typeck.get_type(*var_id) {
+                ResolvedType::Kind(kind) => pat_ctx.add_var::<Node>(Var::new(name.clone(), kind)),
+                ResolvedType::List(ty) => {
+                    let ResolvedType::Kind(kind) = *ty else {
+                        typechecker_bug!()
+                    };
+                    pat_ctx.add_list_var::<Node>(Var::new(name.clone(), kind))
+                }
+                _ => typechecker_bug!(),
+            };
             TokenVar {
                 ctx_id: ctx_id.into(),
                 var_id: *var_id,

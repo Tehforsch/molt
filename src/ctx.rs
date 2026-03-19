@@ -142,6 +142,10 @@ impl<Node: NodeType> Ctx<Node> {
         id.typed()
     }
 
+    pub(crate) fn add_list_var<T: ToNode<Node>>(&mut self, kind: Var<Node::Kind>) -> NodeId<T> {
+        todo!()
+    }
+
     pub(crate) fn add_pat<T: ToNode<Node>>(&mut self, item: SpannedPat<T>) -> NodeId<T> {
         match item.item {
             Pattern::Item(_) => self.add(item.unwrap_real()),

@@ -23,6 +23,7 @@ use value::Value;
 
 use error::Result;
 
+#[macro_export]
 macro_rules! typechecker_bug {
     () => {
         unreachable!("Expected different type, this is a bug in the typechecker.")

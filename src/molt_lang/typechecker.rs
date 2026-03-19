@@ -2,7 +2,9 @@ use std::collections::HashMap;
 
 use crate::{
     KindType,
-    molt_lang::{BuiltinFn, MoltFile, MoltFn, PartialMoltFile, PatId, Stmt, UnresolvedPat, VarId},
+    molt_lang::{
+        BuiltinFn, LetLhs, MoltFile, MoltFn, PartialMoltFile, PatId, Stmt, UnresolvedPat, VarId,
+    },
     rust_grammar::{Ident, Kind},
     storage::{Storage, StorageIndex},
 };
@@ -203,14 +205,14 @@ pub(super) struct TypecheckResult {
 
 impl TypecheckResult {
     // duplication :|
-    pub(super) fn get_type(&self, var: VarId) -> &Type {
+    pub(super) fn get_type(&self, var: VarId) -> ResolvedType {
         let type_id = match &self.vars[&var] {
             VarType::Mono(type_id) => type_id,
             VarType::Scheme(_) => {
                 unreachable!()
             }
         };
-        &self.types[self.resolve(*type_id)]
+        as_resolved(&self.types, &self.types[self.resolve(*type_id)])
     }
 
     pub(super) fn get_pat_type(&self, pat: PatId) -> Option<&Type> {
@@ -517,6 +519,7 @@ impl<'a> Typechecker<'a> {
             Type::Var
         };
         let type_id = self.infer_let_lhs(&let_stmt.lhs, type_)?;
+        if let LetLhs::Pat(_) = let_stmt.lhs {};
         if let Some(rhs) = rhs {
             let span = match &let_stmt.lhs {
                 super::LetLhs::Var(var_id) => self.var_span(*var_id),
