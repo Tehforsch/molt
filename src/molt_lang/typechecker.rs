@@ -595,16 +595,19 @@ impl<'a> Typechecker<'a> {
         Ok(())
     }
 
-    fn get_item_type(&self, id: TypeId) -> Result<TypeId> {
+    fn get_item_type(&mut self, id: TypeId) -> Result<TypeId> {
+        let id = self.resolve(id);
         let ty = &self.types[id];
         match ty {
-            Type::Var
-            | Type::Kind(_)
-            | Type::Int
-            | Type::Bool
-            | Type::Str
-            | Type::Unit
-            | Type::Fun(_, _) => Err(Error::type_not_iterable(self.get_qualified(ty))),
+            Type::Var => {
+                let item_type = self.add_type(Type::Var);
+                let list_type = self.add_type(Type::List(item_type));
+                self.unify(id, list_type)?;
+                Ok(item_type)
+            }
+            Type::Kind(_) | Type::Int | Type::Bool | Type::Str | Type::Unit | Type::Fun(_, _) => {
+                Err(Error::type_not_iterable(self.get_qualified(ty)))
+            }
             Type::List(inner) => Ok(*inner),
         }
     }

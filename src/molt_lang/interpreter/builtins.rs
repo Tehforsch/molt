@@ -57,8 +57,8 @@ impl<'src> Interpreter<'src> {
                 Value::Node(NodeSpec::Real(id)) => {
                     self.emit_diagnostic(self.context.real_id, *id);
                 }
-                Value::Node(_) => {
-                    todo!();
+                Value::Node(NodeSpec::Molt { id, .. }) => {
+                    self.emit_diagnostic(self.context.molt_id, *id);
                 }
                 val => self.print_val(val),
             }
