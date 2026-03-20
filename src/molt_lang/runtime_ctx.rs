@@ -4,7 +4,7 @@ use crate::{
     Config, Ctx, FileId, Input, Span,
     change_buffer::ChangeBuffer,
     modify::NodeSpec,
-    molt_lang::{PatId, ResolvedPat},
+    molt_lang::{ParsedPat, PatId},
     rust_grammar::Node,
     storage::Storage,
     writer::Writer,
@@ -19,7 +19,7 @@ pub struct RuntimeCtx<'a> {
     pub writer: &'a Writer,
     pub config: &'a Config,
 
-    pub pats: &'a Storage<PatId, ResolvedPat>,
+    pub pats: &'a Storage<PatId, ParsedPat>,
 }
 
 impl RuntimeCtx<'_> {
@@ -39,7 +39,7 @@ impl RuntimeCtx<'_> {
         self.input
     }
 
-    pub(crate) fn get_pat(&self, id: PatId) -> &ResolvedPat {
+    pub(crate) fn get_pat(&self, id: PatId) -> &ParsedPat {
         &self.pats[id]
     }
 

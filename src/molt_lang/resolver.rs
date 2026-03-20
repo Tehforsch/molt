@@ -69,7 +69,7 @@ pub struct Resolver {
     var_names: Storage<VarId, Ident>,
     fn_map: HashMap<VarId, FnId>,
     builtin_map: HashMap<VarId, BuiltinFn>,
-    pats: Storage<PatId, UnresolvedPat>,
+    pats: Storage<PatId, UnparsedPat>,
 }
 
 impl Default for Resolver {
@@ -126,7 +126,7 @@ impl Resolver {
         Scope::child_of(self.active_scope(), self.next_scope_index())
     }
 
-    pub fn resolve_file(mut self, file: grammar::MoltFile) -> Result<PartialMoltFile> {
+    pub fn resolve_file(mut self, file: grammar::MoltFile) -> Result<ResolvedMoltFile> {
         let grammar::MoltFile { fns, stmts: _ } = file;
         // Register all user defined functions
         self.register_builtins();
@@ -136,7 +136,7 @@ impl Resolver {
             .map(|f| self.resolve_fn(f))
             .collect::<Result<_>>()?;
         check_names_unique(&fns)?;
-        Ok(PartialMoltFile {
+        Ok(ResolvedMoltFile {
             var_names: self.var_names,
             fns,
             builtin_map: self.builtin_map,
@@ -373,7 +373,7 @@ impl Resolver {
     }
 
     fn resolve_pat(&mut self, p: grammar::Pat) -> Result<PatId> {
-        let pat = UnresolvedPat {
+        let pat = UnparsedPat {
             tokens: p.tokens,
             vars: p
                 .vars
@@ -399,11 +399,11 @@ fn default_function_type() -> Type {
     Type::Unit
 }
 
-pub(crate) fn resolve_pats(file: PartialMoltFile, typeck: &TypecheckResult) -> Result<MoltFile> {
+pub(crate) fn parse_pats(file: ResolvedMoltFile, typeck: &TypecheckResult) -> Result<MoltFile> {
     let pats = file
         .pats
         .into_iter_enumerate()
-        .map(|(i, pat)| resolve_pat(&file.var_names, typeck, pat, i))
+        .map(|(i, pat)| parse_pat(&file.var_names, typeck, pat, i))
         .collect::<Result<_>>()?;
     Ok(MoltFile {
         fns: file.fns,
@@ -413,12 +413,12 @@ pub(crate) fn resolve_pats(file: PartialMoltFile, typeck: &TypecheckResult) -> R
     })
 }
 
-fn resolve_pat(
+fn parse_pat(
     var_names: &Storage<VarId, Ident>,
     typeck: &TypecheckResult,
-    p: UnresolvedPat,
+    p: UnparsedPat,
     id: PatId,
-) -> Result<ResolvedPat> {
+) -> Result<ParsedPat> {
     let mut pat_ctx = Ctx::<Node>::new(Mode::Molt);
     let vars = p
         .vars
@@ -453,7 +453,7 @@ fn resolve_pat(
         Mode::Molt,
     )
     .map_err(Error::Parse)?;
-    Ok(ResolvedPat {
+    Ok(ParsedPat {
         vars,
         ctx: result.ctx,
         node: result.item,

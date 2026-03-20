@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     KindType,
     molt_lang::{
-        BuiltinFn, LetLhs, MoltFile, MoltFn, PartialMoltFile, PatId, Stmt, UnresolvedPat, VarId,
+        BuiltinFn, LetLhs, MoltFile, MoltFn, PatId, ResolvedMoltFile, Stmt, UnparsedPat, VarId,
     },
     rust_grammar::{Ident, Kind},
     storage::{Storage, StorageIndex},
@@ -258,14 +258,14 @@ pub(super) struct Typechecker<'a> {
     substitutions: HashMap<TypeId, TypeId>,
     vars: HashMap<VarId, VarType>,
     var_names: &'a Storage<VarId, Ident>,
-    pats: &'a Storage<PatId, UnresolvedPat>,
+    pats: &'a Storage<PatId, UnparsedPat>,
     pat_types: HashMap<PatId, TypeId>,
 }
 
 impl<'a> Typechecker<'a> {
     pub(super) fn new(
         var_names: &'a Storage<VarId, Ident>,
-        pats: &'a Storage<PatId, UnresolvedPat>,
+        pats: &'a Storage<PatId, UnparsedPat>,
     ) -> Self {
         Self {
             types: Default::default(),
@@ -357,7 +357,7 @@ impl<'a> Typechecker<'a> {
             .unwrap_or(id)
     }
 
-    pub(crate) fn check(mut self, file: &PartialMoltFile) -> Result<TypecheckResult> {
+    pub(crate) fn check(mut self, file: &ResolvedMoltFile) -> Result<TypecheckResult> {
         let fn_return_types: Vec<_> = file.fns.iter().map(|f| self.declare_fn(f)).collect();
         for (id, f) in file.builtin_map.iter() {
             self.declare_builtin(*id, *f);
