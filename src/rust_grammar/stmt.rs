@@ -114,7 +114,7 @@ impl ParseList for Block {
             if input.is_empty() {
                 break;
             }
-            let stmt = input.parse_spanned_pat::<StmtAllowNoSemi>()?;
+            let stmt = input.parse_spanned_term::<StmtAllowNoSemi>()?;
             let requires_semicolon = match stmt.get_item() {
                 Some(Stmt::Expr(stmt, None)) => input
                     .ctx()
@@ -127,7 +127,7 @@ impl ParseList for Block {
                 // A pattern variable statement has an implicit semicolon
                 None => false,
             };
-            stmts.push(input.add_pat(stmt));
+            stmts.push(input.add_term(stmt));
             if input.is_empty() {
                 break;
             } else if requires_semicolon {
@@ -312,7 +312,7 @@ fn stmt_expr(
     allow_nosemi: AllowNoSemi,
     mut attrs: Vec<Attribute>,
 ) -> Result<Stmt> {
-    let e = input.parse_spanned_pat::<ExprEarlierBoundaryRule>()?;
+    let e = input.parse_spanned_term::<ExprEarlierBoundaryRule>()?;
 
     let mut attr_target = None;
     loop {
@@ -403,11 +403,11 @@ fn stmt_expr(
         _ => {
             if semi_token.is_some() {
                 Ok(Stmt::Expr(
-                    input.add_pat(e.with_span(expr_span)),
+                    input.add_term(e.with_span(expr_span)),
                     semi_token,
                 ))
             } else if allow_nosemi.0 || e.get_property(RequiresSemiToBeStmt) {
-                Ok(Stmt::Expr(input.add_pat(e.with_span(expr_span)), None))
+                Ok(Stmt::Expr(input.add_term(e.with_span(expr_span)), None))
             } else {
                 Err(input.error("expected semicolon"))
             }

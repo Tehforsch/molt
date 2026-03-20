@@ -411,7 +411,7 @@ fn ambig_ty(input: ParseStream, allow_plus: bool) -> Result<Type> {
         }
         Ok(Type::Paren(TypeParen {
             paren_token,
-            elem: input.add_pat(first.with_span(span)),
+            elem: input.add_term(first.with_span(span)),
         }))
     } else if lookahead.peek(Token![fn])
         || lookahead.peek(Token![unsafe])
@@ -535,21 +535,21 @@ impl ParseListOrItem for TypeTuple {
     type Punct = Token![,];
 
     fn parse_list_or_item(input: ParseStream) -> Result<ListOrItem<Self::Target, Self::Punct>> {
-        let first = input.parse_spanned_pat::<Type>()?;
+        let first = input.parse_spanned_term::<Type>()?;
 
         if input.peek(Token![,]) {
             let mut elems: Punctuated<_, Token![,]> = Punctuated::new();
             elems.push_value(first);
             elems.push_punct(input.parse()?);
             while !input.is_empty() {
-                elems.push_value(input.parse_spanned_pat::<Type>()?);
+                elems.push_value(input.parse_spanned_term::<Type>()?);
                 if input.is_empty() {
                     break;
                 }
                 elems.push_punct(input.parse()?);
             }
             Ok(ListOrItem::List(NodeList::Item(
-                elems.into_iter().map(|ty| input.add_pat(ty)).collect(),
+                elems.into_iter().map(|ty| input.add_term(ty)).collect(),
             )))
         } else {
             Ok(ListOrItem::Item(first))
@@ -831,9 +831,9 @@ fn parse_bare_fn_arg(input: ParseStream, allow_self: bool) -> Result<BareFnArg> 
         Some(ty) if !has_mut_self => ty,
         _ => {
             name = None;
-            input.add_pat(
+            input.add_term(
                 Type::Verbatim(verbatim::between(&begin, input))
-                    .pattern_with_span(crate::Span::fake()),
+                    .term_with_span(crate::Span::fake()),
             )
         }
     };

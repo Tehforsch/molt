@@ -25,11 +25,11 @@ macro_rules! define_node {
             /// full `CmpSyn` implementation, because off-diagonal
             /// comparisons exists (such as `Item` and `ImplItem`.)
             /// These are checked in the real `CmpSyn` impl below.
-            fn cmp_syn_diagonal(&self, ctx: &mut Matcher<Node>, pat: &Self) -> IsMatch<bool> {
+            fn cmp_syn_diagonal(&self, ctx: &mut Matcher<Node>, term: &Self) -> IsMatch<bool> {
                 match self {
                     $(
                         Node::$variant_name(t1) => {
-                            if let Node::$variant_name(t2) = pat {
+                            if let Node::$variant_name(t2) = term {
                                 ctx.cmp_syn_ignore_rule(t1, t2)?;
                                 return Ok(true)
                             }
@@ -59,8 +59,8 @@ macro_rules! define_node {
                 }
             }
 
-            fn is_of_kind(&self, pat_kind: Self::Kind) -> bool {
-                is_of_kind(self, pat_kind)
+            fn is_of_kind(&self, term_kind: Self::Kind) -> bool {
+                is_of_kind(self, term_kind)
             }
         }
 
@@ -183,9 +183,9 @@ macro_rules! define_kind {
             }
         }
 
-        fn is_of_kind(node: &Node, pat_kind: Kind) -> bool {
+        fn is_of_kind(node: &Node, term_kind: Kind) -> bool {
             $(
-                match_impl!(node, pat_kind, $variant_name, $parse_ty $(,$sub_ty)?);
+                match_impl!(node, term_kind, $variant_name, $parse_ty $(,$sub_ty)?);
             )*
             unreachable!()
         }
@@ -225,13 +225,13 @@ macro_rules! parse_impl {
 }
 
 macro_rules! match_impl {
-    ($node: ident, $pat_kind: ident, $variant_name: ident, $parse_ty: ty) => {
-        if let Kind::$variant_name = $pat_kind {
+    ($node: ident, $term_kind: ident, $variant_name: ident, $parse_ty: ty) => {
+        if let Kind::$variant_name = $term_kind {
             return matches!($node, Node::$variant_name(_));
         }
     };
-    ($node: ident, $pat_kind: ident, $variant_name: ident, $parse_ty: ty, $sub_ty: ty) => {
-        if let Kind::$variant_name = $pat_kind {
+    ($node: ident, $term_kind: ident, $variant_name: ident, $parse_ty: ty, $sub_ty: ty) => {
+        if let Kind::$variant_name = $term_kind {
             return <$sub_ty>::is_of_sub_kind($node);
         }
     };
@@ -271,15 +271,15 @@ define_kind! {
 }
 
 impl CmpSyn<Node> for Node {
-    fn cmp_syn(&self, ctx: &mut Matcher<Node>, pat: &Self) -> IsMatch {
-        if self.cmp_syn_diagonal(ctx, pat)? {
+    fn cmp_syn(&self, ctx: &mut Matcher<Node>, term: &Self) -> IsMatch {
+        if self.cmp_syn_diagonal(ctx, term)? {
             // Two nodes with equal variants have already
             // been compared. We're done.
             return IsMatch::Ok(());
         }
         // Explicitly keep this exhaustive to make sure
         // we don't miss this impl when we add a new variant.
-        match (self, pat) {
+        match (self, term) {
             (Node::Item(item), Node::ImplItem(impl_item))
             | (Node::ImplItem(impl_item), Node::Item(item)) => ctx.cmp_syn(impl_item, item),
             (Node::Arm(_), _)

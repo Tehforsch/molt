@@ -278,7 +278,7 @@ pub(crate) trait ParseTerm {
     /// parsing molt variables do the default implementation of
     /// `parse_pat`.  However, some types (recursive types like
     /// expressions and patterns) may need to override the
-    /// implementation of the `parse_pat` implementation and check
+    /// implementation of the `parse_term` implementation and check
     /// against molt variables manually.
     fn parse_item(input: ParseStream) -> Result<Self::Target>;
 
@@ -530,15 +530,15 @@ impl<'a> ParseBuffer<'a> {
     }
 
     pub(crate) fn parse_id<T: ParseTerm>(&self) -> Result<NodeId<T::Target>> {
-        let pat = self.parse_spanned_pat::<T>()?;
-        Ok(self.add_pat(pat))
+        let term = self.parse_spanned_term::<T>()?;
+        Ok(self.add_term(term))
     }
 
     pub(crate) fn parse_spanned<T: Parse>(&self) -> Result<Spanned<T>> {
         self.call_spanned(T::parse)
     }
 
-    pub(crate) fn parse_spanned_pat<T: ParseTerm + ?Sized>(
+    pub(crate) fn parse_spanned_term<T: ParseTerm + ?Sized>(
         &self,
     ) -> Result<SpannedTerm<T::Target>> {
         self.call_spanned(T::parse_term)
@@ -549,7 +549,7 @@ impl<'a> ParseBuffer<'a> {
         f: impl Fn(T) -> S,
     ) -> Result<Spanned<Term<S, RawNodeId>>> {
         let item: Spanned<T> = self.parse_spanned()?;
-        Ok(item.map(f).into_pattern())
+        Ok(item.map(f).into_term())
     }
 
     pub(crate) fn call_spanned<T>(
@@ -592,8 +592,8 @@ impl<'a> ParseBuffer<'a> {
         self.ctx.borrow_mut().add(t)
     }
 
-    pub(crate) fn add_pat<T: ToNode<Node>>(&self, item: SpannedTerm<T>) -> NodeId<T> {
-        self.ctx.borrow_mut().add_pat(item)
+    pub(crate) fn add_term<T: ToNode<Node>>(&self, item: SpannedTerm<T>) -> NodeId<T> {
+        self.ctx.borrow_mut().add_term(item)
     }
 
     pub(crate) fn peek_var<T: ToNode<Node>>(&self) -> bool {

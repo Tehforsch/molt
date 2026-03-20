@@ -171,7 +171,7 @@ impl<Node: NodeType> Ctx<Node> {
         id.typed()
     }
 
-    pub(crate) fn add_pat<T: ToNode<Node>>(&mut self, item: SpannedTerm<T>) -> NodeId<T> {
+    pub(crate) fn add_term<T: ToNode<Node>>(&mut self, item: SpannedTerm<T>) -> NodeId<T> {
         match item.item {
             Term::Item(_) => self.add(item.unwrap_item()),
             Term::Var(var) => var.typed(),

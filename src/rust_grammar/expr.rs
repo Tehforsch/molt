@@ -1144,11 +1144,11 @@ fn parse_expr(
             let span = lhs.join(&right);
             lhs = Expr::Binary(ExprBinary {
                 attrs: Vec::new(),
-                left: input.add_pat(lhs),
+                left: input.add_term(lhs),
                 op,
-                right: input.add_pat(right),
+                right: input.add_term(right),
             })
-            .pattern_with_span(span);
+            .term_with_span(span);
         } else if Precedence::Assign >= base
             && input.peek(Token![=])
             && !input.peek(Token![=>])
@@ -1159,22 +1159,22 @@ fn parse_expr(
             let span = lhs.join(&right);
             lhs = Expr::Assign(ExprAssign {
                 attrs: Vec::new(),
-                left: input.add_pat(lhs),
+                left: input.add_term(lhs),
                 eq_token,
-                right: input.add_pat(right),
+                right: input.add_term(right),
             })
-            .pattern_with_span(span);
+            .term_with_span(span);
         } else if Precedence::Range >= base && input.peek(Token![..]) {
             let limits: RangeLimits = input.parse()?;
             let end = parse_range_end(input, &limits, allow_struct)?;
             let span = end.as_ref().map(|end| lhs.join(end)).unwrap_or(lhs.span());
             lhs = Expr::Range(ExprRange {
                 attrs: Vec::new(),
-                start: Some(input.add_pat(lhs)),
+                start: Some(input.add_term(lhs)),
                 limits,
-                end: end.map(|end| input.add_pat(end)),
+                end: end.map(|end| input.add_term(end)),
             })
-            .pattern_with_span(span);
+            .term_with_span(span);
         } else if Precedence::Cast >= base && input.peek(Token![as]) {
             let as_token: Token![as] = input.parse()?;
             let ty = input.parse_id::<(Type, NoPlus)>()?;
@@ -1182,11 +1182,11 @@ fn parse_expr(
             let span = lhs.span().join(input.ctx().get_span(ty));
             lhs = Expr::Cast(ExprCast {
                 attrs: Vec::new(),
-                expr: input.add_pat(lhs),
+                expr: input.add_term(lhs),
                 as_token,
                 ty,
             })
-            .pattern_with_span(span);
+            .term_with_span(span);
         } else {
             break;
         }
@@ -1287,10 +1287,10 @@ fn unary_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedTe
                             Some(mut_token) => PointerMutability::Mut(mut_token),
                             None => PointerMutability::Const(const_token.unwrap()),
                         },
-                        expr: input.add_pat(expr),
+                        expr: input.add_term(expr),
                     }),
                 )
-                .into_pattern())
+                .into_term())
         } else {
             Ok(input
                 .make_spanned(
@@ -1299,10 +1299,10 @@ fn unary_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedTe
                         attrs,
                         and_token,
                         mutability,
-                        expr: input.add_pat(expr),
+                        expr: input.add_term(expr),
                     }),
                 )
-                .into_pattern())
+                .into_term())
         }
     } else if input.peek(Token![*]) || input.peek(Token![!]) || input.peek(Token![-]) {
         Ok(expr_unary(input, attrs, allow_struct)?.map_item(Expr::Unary))
@@ -1340,7 +1340,7 @@ fn trailer_expr(
         e.replace_attrs(attrs);
     }
 
-    Ok(e.into_pattern())
+    Ok(e.into_term())
 }
 
 fn trailer_helper(input: ParseStream, mut e: SpannedTerm<Expr>) -> Result<SpannedTerm<Expr>> {
@@ -1351,12 +1351,12 @@ fn trailer_helper(input: ParseStream, mut e: SpannedTerm<Expr>) -> Result<Spanne
             let content;
             let e2 = Expr::Call(ExprCall {
                 attrs: Vec::new(),
-                func: input.add_pat(e),
+                func: input.add_term(e),
                 paren_token: parenthesized!(content in input),
                 args: content.parse_list::<FnArgs>()?,
             });
             let span = input.span_from_marker(marker).join(orig_span);
-            e = e2.pattern_with_span(span);
+            e = e2.term_with_span(span);
         } else if input.peek(Token![.])
             && !input.peek(Token![..])
             && !matches!(e.get_item(), Some(Expr::Range(_)))
@@ -1374,12 +1374,12 @@ fn trailer_helper(input: ParseStream, mut e: SpannedTerm<Expr>) -> Result<Spanne
             if let Some(await_token) = await_token {
                 let e2 = Expr::Await(ExprAwait {
                     attrs: Vec::new(),
-                    base: input.add_pat(e),
+                    base: input.add_term(e),
                     dot_token,
                     await_token,
                 });
                 let span = input.span_from_marker(marker).join(orig_span);
-                e = e2.pattern_with_span(span);
+                e = e2.term_with_span(span);
                 continue;
             }
 
@@ -1396,7 +1396,7 @@ fn trailer_helper(input: ParseStream, mut e: SpannedTerm<Expr>) -> Result<Spanne
                 let content;
                 let e2 = Expr::MethodCall(ExprMethodCall {
                     attrs: Vec::new(),
-                    receiver: input.add_pat(e),
+                    receiver: input.add_term(e),
                     dot_token,
                     method,
                     turbofish,
@@ -1404,36 +1404,36 @@ fn trailer_helper(input: ParseStream, mut e: SpannedTerm<Expr>) -> Result<Spanne
                     args: content.parse_list::<FnArgs>()?,
                 });
                 let span = input.span_from_marker(marker).join(orig_span);
-                e = e2.pattern_with_span(span);
+                e = e2.term_with_span(span);
                 continue;
             }
 
             let e2 = Expr::Field(ExprField {
                 attrs: Vec::new(),
-                base: input.add_pat(e),
+                base: input.add_term(e),
                 dot_token,
                 member,
             });
             let span = input.span_from_marker(marker).join(orig_span);
-            e = e2.pattern_with_span(span);
+            e = e2.term_with_span(span);
         } else if input.peek(token::Bracket) {
             let content;
             let e2 = Expr::Index(ExprIndex {
                 attrs: Vec::new(),
-                expr: input.add_pat(e),
+                expr: input.add_term(e),
                 bracket_token: bracketed!(content in input),
                 index: content.parse()?,
             });
             let span = input.span_from_marker(marker).join(orig_span);
-            e = e2.pattern_with_span(span);
+            e = e2.term_with_span(span);
         } else if input.peek(Token![?]) && !matches!(e.get_item(), Some(Expr::Range(_))) {
             let e2 = Expr::Try(ExprTry {
                 attrs: Vec::new(),
-                expr: input.add_pat(e),
+                expr: input.add_term(e),
                 question_token: input.parse()?,
             });
             let span = input.span_from_marker(marker).join(orig_span);
-            e = e2.pattern_with_span(span);
+            e = e2.term_with_span(span);
         } else {
             break;
         }
@@ -1603,7 +1603,7 @@ fn paren_or_tuple(input: ParseStream) -> Result<Expr> {
         ListOrItem::Item(expr) => Expr::Paren(ExprParen {
             attrs: Vec::new(),
             paren_token,
-            expr: input.add_pat(expr),
+            expr: input.add_term(expr),
         }),
         ListOrItem::List(elems) => Expr::Tuple(ExprTuple {
             attrs: Vec::new(),
@@ -1623,12 +1623,12 @@ impl ParseListOrItem for ExprTuple {
             return Ok(ListOrItem::List(NodeList::empty_real()));
         }
 
-        let first = input.parse_spanned_pat::<Expr>()?;
+        let first = input.parse_spanned_term::<Expr>()?;
         if input.is_empty() {
             return Ok(ListOrItem::Item(first));
         }
 
-        let first = input.add_pat(first);
+        let first = input.add_term(first);
         let mut elems = Punctuated::<_, Token![,]>::new();
         elems.push_value(first);
         while !input.is_empty() {
@@ -1664,7 +1664,7 @@ fn array_or_repeat(input: ParseStream) -> Result<Expr> {
             Ok(Expr::Repeat(ExprRepeat {
                 attrs: Vec::new(),
                 bracket_token,
-                expr: content.add_pat(expr),
+                expr: content.add_term(expr),
                 semi_token,
                 len,
             }))
@@ -1681,7 +1681,7 @@ impl ParseListOrItem for ExprArray {
         if input.is_empty() {
             return Ok(ListOrItem::List(NodeList::empty_real()));
         }
-        let first = input.parse_spanned_pat::<Expr>()?;
+        let first = input.parse_spanned_term::<Expr>()?;
         // TODO make this prettier. This might be a pattern that
         // I just havent understood yet. If the input is empty,
         // and we continue the function without this early return,
@@ -1692,7 +1692,7 @@ impl ParseListOrItem for ExprArray {
         }
         if input.is_empty() || input.peek(Token![,]) {
             let mut elems = Punctuated::<_, Token![,]>::new();
-            elems.push_value(input.add_pat(first));
+            elems.push_value(input.add_term(first));
             while !input.is_empty() {
                 let punct = input.parse()?;
                 elems.push_punct(punct);
@@ -1765,13 +1765,13 @@ impl Parse for ExprLit {
 
 fn expr_group(input: ParseStream, allow_struct: AllowStruct) -> Result<Expr> {
     let group = crate::parser::group::parse_group(input)?;
-    let inner: SpannedTerm<Expr> = group.content.parse_spanned_pat::<Expr>()?;
+    let inner: SpannedTerm<Expr> = group.content.parse_spanned_term::<Expr>()?;
     let (span, inner) = inner.decompose();
     let make_group_expr = |inner: Term<Expr, RawNodeId>| {
         Ok(Expr::Group(ExprGroup {
             attrs: Vec::new(),
             group_token: group.token,
-            expr: input.add_pat(inner.with_span(span)),
+            expr: input.add_term(inner.with_span(span)),
         }))
     };
     match inner {
@@ -1817,7 +1817,7 @@ fn expr_let(input: ParseStream, allow_struct: AllowStruct) -> Result<ExprLet> {
         eq_token: input.parse()?,
         expr: {
             let lhs = unary_expr(input, allow_struct)?;
-            input.add_pat(parse_expr(input, lhs, allow_struct, Precedence::Compare)?)
+            input.add_term(parse_expr(input, lhs, allow_struct, Precedence::Compare)?)
         },
     })
 }
@@ -1971,10 +1971,10 @@ fn expr_unary(
             ExprUnary {
                 attrs,
                 op: input.parse()?,
-                expr: input.add_pat(unary_expr(input, allow_struct)?),
+                expr: input.add_term(unary_expr(input, allow_struct)?),
             },
         )
-        .into_pattern())
+        .into_term())
 }
 
 impl Parse for ExprRawAddr {
@@ -1985,7 +1985,7 @@ impl Parse for ExprRawAddr {
             and_token: input.parse()?,
             raw: input.parse()?,
             mutability: input.parse()?,
-            expr: input.add_pat(unary_expr(input, allow_struct)?),
+            expr: input.add_term(unary_expr(input, allow_struct)?),
         })
     }
 }
@@ -1997,7 +1997,7 @@ impl Parse for ExprReference {
             attrs: Vec::new(),
             and_token: input.parse()?,
             mutability: input.parse()?,
-            expr: input.add_pat(unary_expr(input, allow_struct)?),
+            expr: input.add_term(unary_expr(input, allow_struct)?),
         })
     }
 }
@@ -2071,12 +2071,12 @@ impl ParseTerm for ClosureInput {
         use crate::rust_grammar::pat::PatSingle;
 
         let attrs = input.call(Attribute::parse_outer)?;
-        let mut pat = input.parse_spanned_pat::<PatSingle>()?;
+        let mut pat = input.parse_spanned_term::<PatSingle>()?;
 
         if input.peek(Token![:]) {
             Ok(Term::Item(Pat::Type(PatType {
                 attrs,
-                pat: input.add_pat(pat),
+                pat: input.add_term(pat),
                 colon_token: input.parse()?,
                 ty: input.parse()?,
             })))
@@ -2414,7 +2414,7 @@ fn expr_range(input: ParseStream, allow_struct: AllowStruct) -> Result<ExprRange
         attrs: Vec::new(),
         start: None,
         limits,
-        end: end.map(|end| input.add_pat(end)),
+        end: end.map(|end| input.add_term(end)),
     })
 }
 
@@ -2546,9 +2546,9 @@ impl ParseTerm for Arm {
             },
             fat_arrow_token: input.parse()?,
             body: {
-                let body = input.parse_spanned_pat::<ExprEarlierBoundaryRule>()?;
+                let body = input.parse_spanned_term::<ExprEarlierBoundaryRule>()?;
                 requires_comma = body.get_property(RequiresCommaToBeMatchArm);
-                input.add_pat(body)
+                input.add_term(body)
             },
         });
         let _: Option<Token![,]> = {
@@ -2601,15 +2601,15 @@ fn multi_index(
         let part_end = offset + part.len();
         index.span = float_token.subspan(offset..part_end).unwrap_or(float_span);
 
-        let base = mem::replace(e, Expr::PLACEHOLDER.pattern_with_span(crate::Span::fake()));
+        let base = mem::replace(e, Expr::PLACEHOLDER.term_with_span(crate::Span::fake()));
         let span = base.span().join(index.span.byte_range());
         *e = Expr::Field(ExprField {
             attrs: Vec::new(),
-            base: input.add_pat(base),
+            base: input.add_term(base),
             dot_token: Token![.](dot_token.span),
             member: Member::Unnamed(index),
         })
-        .pattern_with_span(span);
+        .term_with_span(span);
 
         let dot_span = float_token
             .subspan(part_end..part_end + 1)

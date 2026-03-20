@@ -32,18 +32,18 @@ use crate::{NodeId, NodeType};
 /// forget to check for the correct rule in custom impls of this
 /// trait.
 pub trait CmpSyn<Node: NodeType, T = Self, Rule = DoesNotRequireRule> {
-    fn cmp_syn(&self, ctx: &mut Matcher<Node>, pat: &T) -> IsMatch;
+    fn cmp_syn(&self, ctx: &mut Matcher<Node>, rhs: &T) -> IsMatch;
 }
 
 impl<Node: NodeType, T: CmpSyn<Node, T, R>, R> CmpSyn<Node, NodeId<T>, R> for NodeId<T> {
-    fn cmp_syn(&self, ctx: &mut Matcher<Node>, pat: &Self) -> IsMatch {
-        ctx.cmp_nodes(*self, *pat)
+    fn cmp_syn(&self, ctx: &mut Matcher<Node>, rhs: &Self) -> IsMatch {
+        ctx.cmp_nodes(*self, *rhs)
     }
 }
 
 impl<Node: NodeType, T: CmpSyn<Node>> CmpSyn<Node> for Option<T> {
-    fn cmp_syn(&self, ctx: &mut Matcher<Node>, pat: &Self) -> IsMatch {
-        match (self, pat) {
+    fn cmp_syn(&self, ctx: &mut Matcher<Node>, rhs: &Self) -> IsMatch {
+        match (self, rhs) {
             (None, None) => Ok(()),
             (Some(s1), Some(s2)) => ctx.cmp_syn(s1, s2),
             _ => ctx.no_match(),
@@ -52,35 +52,35 @@ impl<Node: NodeType, T: CmpSyn<Node>> CmpSyn<Node> for Option<T> {
 }
 
 impl<Node: NodeType, T1: CmpSyn<Node>, T2: CmpSyn<Node>> CmpSyn<Node> for (T1, T2) {
-    fn cmp_syn(&self, ctx: &mut Matcher<Node>, pat: &Self) -> IsMatch {
-        ctx.cmp_syn(&self.0, &pat.0)?;
-        ctx.cmp_syn(&self.1, &pat.1)
+    fn cmp_syn(&self, ctx: &mut Matcher<Node>, rhs: &Self) -> IsMatch {
+        ctx.cmp_syn(&self.0, &rhs.0)?;
+        ctx.cmp_syn(&self.1, &rhs.1)
     }
 }
 
 impl<Node: NodeType, T1: CmpSyn<Node>, T2: CmpSyn<Node>, T3: CmpSyn<Node>> CmpSyn<Node>
     for (T1, T2, T3)
 {
-    fn cmp_syn(&self, ctx: &mut Matcher<Node>, pat: &Self) -> IsMatch {
-        ctx.cmp_syn(&self.0, &pat.0)?;
-        ctx.cmp_syn(&self.1, &pat.1)?;
-        ctx.cmp_syn(&self.2, &pat.2)
+    fn cmp_syn(&self, ctx: &mut Matcher<Node>, rhs: &Self) -> IsMatch {
+        ctx.cmp_syn(&self.0, &rhs.0)?;
+        ctx.cmp_syn(&self.1, &rhs.1)?;
+        ctx.cmp_syn(&self.2, &rhs.2)
     }
 }
 
 impl<Node: NodeType, T: CmpSyn<Node>> CmpSyn<Node> for Box<T> {
-    fn cmp_syn(&self, ctx: &mut Matcher<Node>, pat: &Self) -> IsMatch {
-        ctx.cmp_syn(self, pat)
+    fn cmp_syn(&self, ctx: &mut Matcher<Node>, rhs: &Self) -> IsMatch {
+        ctx.cmp_syn(self, rhs)
     }
 }
 
 impl<Node: NodeType, T: CmpSyn<Node>> CmpSyn<Node> for Vec<T> {
-    fn cmp_syn(&self, ctx: &mut Matcher<Node>, pat: &Self) -> IsMatch {
+    fn cmp_syn(&self, ctx: &mut Matcher<Node>, rhs: &Self) -> IsMatch {
         // These should be replaced by NodeList wherever possible
         // but we'll leave the ones that havent been exchanged yet
         // exact.
-        ctx.eq(self.len(), pat.len())?;
-        for (s1, s2) in self.iter().zip(pat.iter()) {
+        ctx.eq(self.len(), rhs.len())?;
+        for (s1, s2) in self.iter().zip(rhs.iter()) {
             ctx.cmp_syn(s1, s2)?;
         }
         IsMatch::Ok(())
@@ -91,15 +91,15 @@ impl<Node: NodeType, T: CmpSyn<Node>> CmpSyn<Node> for Vec<T> {
 macro_rules! impl_cmp_syn_with_partial_eq {
     ($ty: ty) => {
         impl<Node: NodeType> $crate::CmpSyn<Node> for $ty {
-            fn cmp_syn(&self, ctx: &mut $crate::Matcher<Node>, pat: &Self) -> IsMatch {
-                ctx.eq(self, pat)
+            fn cmp_syn(&self, ctx: &mut $crate::Matcher<Node>, rhs: &Self) -> IsMatch {
+                ctx.eq(self, rhs)
             }
         }
     };
     ($ty: ty, $closure: expr) => {
         impl<Node: NodeType> $crate::CmpSyn<Node> for $ty {
-            fn cmp_syn(&self, ctx: &mut $crate::Matcher, pat: &Self) -> IsMatch {
-                ctx.check($closure(self, pat))
+            fn cmp_syn(&self, ctx: &mut $crate::Matcher, rhs: &Self) -> IsMatch {
+                ctx.check($closure(self, rhs))
             }
         }
     };
@@ -116,8 +116,8 @@ impl_cmp_syn_with_partial_eq!(usize);
 // (TODO: remove this since the crate change made this
 // possible.)
 impl<Node: NodeType> CmpSyn<Node> for proc_macro2::Literal {
-    fn cmp_syn(&self, ctx: &mut Matcher<Node>, pat: &Self) -> IsMatch {
-        ctx.eq(&self.to_string(), &pat.to_string())
+    fn cmp_syn(&self, ctx: &mut Matcher<Node>, rhs: &Self) -> IsMatch {
+        ctx.eq(&self.to_string(), &rhs.to_string())
     }
 }
 
@@ -131,8 +131,8 @@ impl<Node: NodeType> CmpSyn<Node> for proc_macro2::TokenStream {
 }
 
 impl<Node: NodeType> CmpSyn<Node> for proc_macro2::Ident {
-    fn cmp_syn(&self, ctx: &mut Matcher<Node>, pat: &Self) -> IsMatch {
-        ctx.eq(self.to_string(), pat.to_string())
+    fn cmp_syn(&self, ctx: &mut Matcher<Node>, rhs: &Self) -> IsMatch {
+        ctx.eq(self.to_string(), rhs.to_string())
     }
 }
 

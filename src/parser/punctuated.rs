@@ -631,12 +631,12 @@ impl<T, P> IndexMut<usize> for Punctuated<T, P> {
 }
 
 impl<Node: NodeType, T: CmpSyn<Node>, P> CmpSyn<Node> for Punctuated<T, P> {
-    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, pat: &Self) -> IsMatch {
+    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, rhs: &Self) -> IsMatch {
         // These should be replaced by NodeList wherever possible
         // but we'll leave the ones that havent been exchanged yet
         // exact.
-        ctx.eq(self.len(), pat.len())?;
-        for (s1, s2) in self.iter().zip(pat.iter()) {
+        ctx.eq(self.len(), rhs.len())?;
+        for (s1, s2) in self.iter().zip(rhs.iter()) {
             ctx.cmp_syn(s1, s2)?;
         }
         IsMatch::Ok(())

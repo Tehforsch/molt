@@ -748,7 +748,7 @@ pub(crate) fn parse_rest_of_item(
     input: ParseStream,
 ) -> Result<Item> {
     let ahead = input.fork();
-    let vis: SpannedTerm<Vis> = ahead.parse_spanned_pat::<Vis>()?;
+    let vis: SpannedTerm<Vis> = ahead.parse_spanned_term::<Vis>()?;
 
     let lookahead = ahead.lookahead1();
     let allow_safe = false;
@@ -825,7 +825,7 @@ pub(crate) fn parse_rest_of_item(
         } else {
             return Err(lookahead.error());
         };
-        let generics = input.parse_spanned_pat::<Generics>()?;
+        let generics = input.parse_spanned_term::<Generics>()?;
         let colon_token = input.parse()?;
         let ty = input.parse()?;
         let value = if let Some(eq_token) = input.parse::<Option<Token![=]>>()? {
@@ -843,7 +843,7 @@ pub(crate) fn parse_rest_of_item(
                     vis,
                     const_token,
                     ident,
-                    generics: input.add_pat(generics),
+                    generics: input.add_term(generics),
                     where_clause,
                     colon_token,
                     ty,
@@ -1275,7 +1275,7 @@ impl Parse for ItemConst {
             vis,
             const_token,
             ident,
-            generics: input.add_pat(generics),
+            generics: input.add_term(generics),
             where_clause: None,
             colon_token,
             ty,
@@ -1601,7 +1601,7 @@ impl Parse for ForeignItem {
         let begin = input.fork();
         let mut attrs = input.call(Attribute::parse_outer)?;
         let ahead = input.fork();
-        let vis: SpannedTerm<Vis> = ahead.parse_spanned_pat::<Vis>()?;
+        let vis: SpannedTerm<Vis> = ahead.parse_spanned_term::<Vis>()?;
 
         let lookahead = ahead.lookahead1();
         let allow_safe = true;
@@ -2075,7 +2075,7 @@ impl Parse for TraitItem {
     fn parse(input: ParseStream) -> Result<Self> {
         let begin = input.fork();
         let mut attrs = input.call(Attribute::parse_outer)?;
-        let vis: SpannedTerm<Vis> = input.parse_spanned_pat::<Vis>()?;
+        let vis: SpannedTerm<Vis> = input.parse_spanned_term::<Vis>()?;
         let defaultness: Option<Token![default]> = input.parse()?;
         let ahead = input.fork();
 
@@ -2089,7 +2089,7 @@ impl Parse for TraitItem {
             if lookahead.peek_term::<Ident>() || lookahead.peek(Token![_]) {
                 input.advance_to(&ahead);
                 let ident = input.parse_id::<AnyIdent>()?;
-                let generics = input.parse_spanned_pat::<Generics>()?;
+                let generics = input.parse_spanned_term::<Generics>()?;
                 let colon_token: Token![:] = input.parse()?;
                 let ty: NodeId<Type> = input.parse()?;
                 let default = if let Some(eq_token) = input.parse::<Option<Token![=]>>()? {
@@ -2105,7 +2105,7 @@ impl Parse for TraitItem {
                         attrs: Vec::new(),
                         const_token,
                         ident,
-                        generics: input.add_pat(generics),
+                        generics: input.add_term(generics),
                         where_clause,
                         colon_token,
                         ty,
@@ -2185,7 +2185,7 @@ impl Parse for TraitItemConst {
             attrs,
             const_token,
             ident,
-            generics: input.add_pat(generics),
+            generics: input.add_term(generics),
             where_clause: None,
             colon_token,
             ty,
@@ -2310,7 +2310,7 @@ impl Parse for ItemImpl {
 fn parse_impl(input: ParseStream, allow_verbatim_impl: bool) -> Result<Option<ItemImpl>> {
     let mut attrs = input.call(Attribute::parse_outer)?;
     let has_visibility =
-        allow_verbatim_impl && input.parse_spanned_pat::<Vis>()?.get_property(IsSome);
+        allow_verbatim_impl && input.parse_spanned_term::<Vis>()?.get_property(IsSome);
     let defaultness: Option<Token![default]> = input.parse()?;
     let unsafety: Unsafety = input.parse()?;
     let impl_token: Token![impl] = input.parse()?;
@@ -2328,7 +2328,7 @@ fn parse_impl(input: ParseStream, allow_verbatim_impl: bool) -> Result<Option<It
     let generics: NodeId<Generics> = if has_generics {
         input.parse_id::<Generics>()?
     } else {
-        input.add_pat(input.make_at_point(Generics::default()))
+        input.add_term(input.make_at_point(Generics::default()))
     };
 
     let is_const_impl = allow_verbatim_impl
@@ -2346,7 +2346,7 @@ fn parse_impl(input: ParseStream, allow_verbatim_impl: bool) -> Result<Option<It
     };
 
     let first_ty_span = input.span();
-    let (span, first_ty) = input.parse_spanned_pat::<Type>()?.decompose();
+    let (span, first_ty) = input.parse_spanned_term::<Type>()?.decompose();
     let self_ty: NodeId<Type>;
     let trait_;
 
@@ -2381,7 +2381,7 @@ fn parse_impl(input: ParseStream, allow_verbatim_impl: bool) -> Result<Option<It
     } else {
         trait_ = None;
         self_ty = if polarity.is_none() {
-            input.add_pat(first_ty.with_span(span))
+            input.add_term(first_ty.with_span(span))
         } else {
             let marker = begin.marker();
             input.add(input.make_spanned(marker, Type::Verbatim(verbatim::between(&begin, input))))
@@ -2421,7 +2421,7 @@ impl ParseTerm for ImplItem {
         let begin = input.fork();
         let mut attrs = input.call(Attribute::parse_outer)?;
         let ahead = input.fork();
-        let vis: SpannedTerm<Vis> = ahead.parse_spanned_pat::<Vis>()?;
+        let vis: SpannedTerm<Vis> = ahead.parse_spanned_term::<Vis>()?;
 
         let mut lookahead = ahead.lookahead1();
         let defaultness = if lookahead.peek(Token![default]) && !ahead.peek2(Token![!]) {
@@ -2450,7 +2450,7 @@ impl ParseTerm for ImplItem {
             } else {
                 return Err(lookahead.error());
             };
-            let generics = input.parse_spanned_pat::<Generics>()?;
+            let generics = input.parse_spanned_term::<Generics>()?;
             let colon_token: Token![:] = input.parse()?;
             let ty: NodeId<Type> = input.parse()?;
             let value = if let Some(eq_token) = input.parse::<Option<Token![=]>>()? {
@@ -2471,7 +2471,7 @@ impl ParseTerm for ImplItem {
                         defaultness,
                         const_token,
                         ident,
-                        generics: input.add_pat(generics),
+                        generics: input.add_term(generics),
                         where_clause,
                         colon_token,
                         ty,
@@ -2540,7 +2540,7 @@ impl Parse for ImplItemConst {
             defaultness,
             const_token,
             ident,
-            generics: input.add_pat(generics),
+            generics: input.add_term(generics),
             where_clause: None,
             colon_token,
             ty,
@@ -2742,8 +2742,8 @@ impl ParseList for ImplItems {
 }
 
 impl CmpSyn<Node, Item> for ImplItem {
-    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, pat: &Item) -> IsMatch {
-        match (self, pat) {
+    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, rhs: &Item) -> IsMatch {
+        match (self, rhs) {
             (ImplItem::Const(t1), Item::Const(t2)) => ctx.cmp_syn(t1, t2),
             (ImplItem::Fn(t1), Item::Fn(t2)) => ctx.cmp_syn(t1, t2),
             (ImplItem::Type(t1), Item::Type(t2)) => ctx.cmp_syn(t1, t2),
@@ -2754,53 +2754,53 @@ impl CmpSyn<Node, Item> for ImplItem {
 }
 
 impl CmpSyn<Node, ItemConst> for ImplItemConst {
-    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, pat: &ItemConst) -> IsMatch {
-        ctx.cmp_syn(&self.attrs, &pat.attrs)?;
-        ctx.cmp_syn_with_rule(&self.vis, &pat.vis, rule::Vis::Const)?;
-        ctx.cmp_syn(&self.const_token, &pat.const_token)?;
-        ctx.cmp_syn(&self.ident, &pat.ident)?;
-        ctx.cmp_syn(&self.generics, &pat.generics)?;
-        ctx.cmp_syn(&self.colon_token, &pat.colon_token)?;
-        ctx.cmp_syn(&self.ty, &pat.ty)?;
-        ctx.cmp_syn(&self.eq_token, &pat.eq_token)?;
-        ctx.cmp_syn(&self.expr, &pat.expr)?;
-        ctx.cmp_syn(&self.semi_token, &pat.semi_token)?;
+    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, rhs: &ItemConst) -> IsMatch {
+        ctx.cmp_syn(&self.attrs, &rhs.attrs)?;
+        ctx.cmp_syn_with_rule(&self.vis, &rhs.vis, rule::Vis::Const)?;
+        ctx.cmp_syn(&self.const_token, &rhs.const_token)?;
+        ctx.cmp_syn(&self.ident, &rhs.ident)?;
+        ctx.cmp_syn(&self.generics, &rhs.generics)?;
+        ctx.cmp_syn(&self.colon_token, &rhs.colon_token)?;
+        ctx.cmp_syn(&self.ty, &rhs.ty)?;
+        ctx.cmp_syn(&self.eq_token, &rhs.eq_token)?;
+        ctx.cmp_syn(&self.expr, &rhs.expr)?;
+        ctx.cmp_syn(&self.semi_token, &rhs.semi_token)?;
         ctx.cmp_syn(&self.defaultness, &None)?;
         IsMatch::Ok(())
     }
 }
 
 impl CmpSyn<Node, ItemFn> for ImplItemFn {
-    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, pat: &ItemFn) -> IsMatch {
-        ctx.cmp_syn(&self.attrs, &pat.attrs)?;
-        ctx.cmp_syn_with_rule(&self.vis, &pat.vis, rule::Vis::Fn)?;
-        ctx.cmp_syn(&self.sig, &pat.sig)?;
-        ctx.cmp_syn(&self.block, &pat.block)?;
+    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, rhs: &ItemFn) -> IsMatch {
+        ctx.cmp_syn(&self.attrs, &rhs.attrs)?;
+        ctx.cmp_syn_with_rule(&self.vis, &rhs.vis, rule::Vis::Fn)?;
+        ctx.cmp_syn(&self.sig, &rhs.sig)?;
+        ctx.cmp_syn(&self.block, &rhs.block)?;
         ctx.cmp_syn(&self.defaultness, &None)?;
         IsMatch::Ok(())
     }
 }
 
 impl CmpSyn<Node, ItemType> for ImplItemType {
-    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, pat: &ItemType) -> IsMatch {
-        ctx.cmp_syn(&self.attrs, &pat.attrs)?;
-        ctx.cmp_syn_with_rule(&self.vis, &pat.vis, rule::Vis::Type)?;
-        ctx.cmp_syn(&self.type_token, &pat.type_token)?;
-        ctx.cmp_syn(&self.ident, &pat.ident)?;
-        ctx.cmp_syn(&self.generics, &pat.generics)?;
-        ctx.cmp_syn(&self.eq_token, &pat.eq_token)?;
-        ctx.cmp_syn(&self.ty, &pat.ty)?;
-        ctx.cmp_syn(&self.semi_token, &pat.semi_token)?;
+    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, rhs: &ItemType) -> IsMatch {
+        ctx.cmp_syn(&self.attrs, &rhs.attrs)?;
+        ctx.cmp_syn_with_rule(&self.vis, &rhs.vis, rule::Vis::Type)?;
+        ctx.cmp_syn(&self.type_token, &rhs.type_token)?;
+        ctx.cmp_syn(&self.ident, &rhs.ident)?;
+        ctx.cmp_syn(&self.generics, &rhs.generics)?;
+        ctx.cmp_syn(&self.eq_token, &rhs.eq_token)?;
+        ctx.cmp_syn(&self.ty, &rhs.ty)?;
+        ctx.cmp_syn(&self.semi_token, &rhs.semi_token)?;
         ctx.cmp_syn(&self.defaultness, &None)?;
         IsMatch::Ok(())
     }
 }
 
 impl CmpSyn<Node, ItemMacro> for ImplItemMacro {
-    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, pat: &ItemMacro) -> IsMatch {
-        ctx.cmp_syn(&None, &pat.ident)?;
-        ctx.cmp_syn(&self.mac, &pat.mac)?;
-        ctx.cmp_syn(&self.semi_token, &pat.semi_token)?;
+    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, rhs: &ItemMacro) -> IsMatch {
+        ctx.cmp_syn(&None, &rhs.ident)?;
+        ctx.cmp_syn(&self.mac, &rhs.mac)?;
+        ctx.cmp_syn(&self.semi_token, &rhs.semi_token)?;
         IsMatch::Ok(())
     }
 }

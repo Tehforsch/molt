@@ -41,7 +41,7 @@ impl Parse for Lifetime {
 }
 
 impl CmpSyn<Node> for Lifetime {
-    fn cmp_syn(&self, ctx: &mut Matcher<Node>, pat: &Self) -> IsMatch {
-        ctx.cmp_syn(&self.ident, &pat.ident)
+    fn cmp_syn(&self, ctx: &mut Matcher<Node>, rhs: &Self) -> IsMatch {
+        ctx.cmp_syn(&self.ident, &rhs.ident)
     }
 }

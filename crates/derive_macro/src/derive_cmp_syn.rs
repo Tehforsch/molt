@@ -27,7 +27,7 @@ pub fn impl_cmp_syn(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     let expanded = quote! {
         impl crate::CmpSyn<#node, #name, #rule_ty> for #name {
-            fn cmp_syn(&self, ctx: &mut crate::Matcher<#node>, pat: &Self) -> crate::match_pattern::IsMatch {
+            fn cmp_syn(&self, ctx: &mut crate::Matcher<#node>, term: &Self) -> crate::match_pattern::IsMatch {
                 #impl_
             }
         }
@@ -90,13 +90,13 @@ fn cmp_ty(field_name: &Ident, ty: &Type, rule: Option<Rule>) -> Option<TokenStre
         None => quote! {},
     };
     if is_node_list(ty) {
-        Some(quote! { ctx.cmp_lists(&self. #field_name, &pat. #field_name )?; })
+        Some(quote! { ctx.cmp_lists(&self. #field_name, &term. #field_name )?; })
     } else if is_vec_attribute(ty) || is_token(ty) {
         None
     } else if is_box(ty) {
-        Some(quote! { ctx.#cmp_fn(&*self. #field_name, &*pat. #field_name #rule_arg )?; })
+        Some(quote! { ctx.#cmp_fn(&*self. #field_name, &*term. #field_name #rule_arg )?; })
     } else {
-        Some(quote! { ctx.#cmp_fn(&self. #field_name, &pat. #field_name #rule_arg )?; })
+        Some(quote! { ctx.#cmp_fn(&self. #field_name, &term. #field_name #rule_arg )?; })
     }
 }
 
@@ -142,7 +142,7 @@ fn impl_enum(data_enum: syn::DataEnum) -> TokenStream {
         })
         .collect::<Vec<_>>();
     quote! {
-        match (self, pat) {
+        match (self, term) {
             #(#matches)*
             _ => ctx.no_match(),
         }

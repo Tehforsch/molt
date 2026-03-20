@@ -92,9 +92,9 @@ struct LitRepr {
 }
 
 impl CmpSyn<Node> for LitRepr {
-    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, pat: &Self) -> IsMatch {
+    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, rhs: &Self) -> IsMatch {
         // TODO, suffix?
-        ctx.cmp_syn(&self.token, &pat.token)
+        ctx.cmp_syn(&self.token, &rhs.token)
     }
 }
 
@@ -113,9 +113,9 @@ struct LitIntRepr {
 }
 
 impl CmpSyn<Node> for LitIntRepr {
-    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, pat: &Self) -> IsMatch {
+    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, rhs: &Self) -> IsMatch {
         // TODO, suffix/digits?
-        ctx.cmp_syn(&self.token, &pat.token)
+        ctx.cmp_syn(&self.token, &rhs.token)
     }
 }
 
@@ -136,9 +136,9 @@ struct LitFloatRepr {
 }
 
 impl CmpSyn<Node> for LitFloatRepr {
-    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, pat: &Self) -> IsMatch {
+    fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, rhs: &Self) -> IsMatch {
         // TODO, suffix/digits?
-        ctx.cmp_syn(&self.token, &pat.token)
+        ctx.cmp_syn(&self.token, &rhs.token)
     }
 }
 

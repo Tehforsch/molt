@@ -59,8 +59,8 @@ pub trait WithSpan: Sized {
         Spanned::new(self, span)
     }
 
-    fn pattern_with_span(self, span: Span) -> Spanned<Term<Self, RawNodeId>> {
-        Spanned::new(self, span).into_pattern()
+    fn term_with_span(self, span: Span) -> Spanned<Term<Self, RawNodeId>> {
+        Spanned::new(self, span).into_term()
     }
 }
 
@@ -96,7 +96,7 @@ impl<T> Spanned<T> {
         self.item
     }
 
-    pub fn into_pattern(self) -> SpannedTerm<T> {
+    pub fn into_term(self) -> SpannedTerm<T> {
         self.map(|item| Term::Item(item))
     }
 

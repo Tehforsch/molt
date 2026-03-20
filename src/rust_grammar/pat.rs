@@ -411,12 +411,12 @@ fn multi_pat_impl(
     input: ParseStream,
     leading_vert: Option<Token![|]>,
 ) -> Result<ListOrItem<Pat, Token![|]>> {
-    let pat = input.parse_spanned_pat::<PatSingle>()?;
+    let pat = input.parse_spanned_term::<PatSingle>()?;
     if leading_vert.is_some()
         || input.peek(Token![|]) && !input.peek(Token![||]) && !input.peek(Token![|=])
     {
         let mut cases = Punctuated::new();
-        cases.push_value(input.add_pat(pat));
+        cases.push_value(input.add_term(pat));
         while input.peek(Token![|]) && !input.peek(Token![||]) && !input.peek(Token![|=]) {
             let punct: Token![|] = input.parse()?;
             cases.push_punct(punct);
@@ -692,7 +692,7 @@ impl ParseListOrItem for PatParenOrTuple {
 
         let mut elems = Punctuated::new();
         while !content.is_empty() {
-            let value = content.parse_spanned_pat::<PatMultiLeadingVert>()?;
+            let value = content.parse_spanned_term::<PatMultiLeadingVert>()?;
             if content.is_empty() {
                 if elems.is_empty() && !matches!(&*value, Term::Item(Pat::Rest(_))) {
                     return Ok(ListOrItem::Item(value));
@@ -705,7 +705,7 @@ impl ParseListOrItem for PatParenOrTuple {
             elems.push_punct(punct);
         }
         Ok(ListOrItem::List(NodeList::Item(
-            elems.into_iter().map(|ty| input.add_pat(ty)).collect(),
+            elems.into_iter().map(|ty| input.add_term(ty)).collect(),
         )))
     }
 }
@@ -714,7 +714,7 @@ fn pat_paren_or_tuple(input: ParseStream) -> Result<Pat> {
     match input.parse_list_or_item::<PatParenOrTuple>()? {
         ListOrItem::Item(spanned) => Ok(Pat::Paren(PatParen {
             attrs: Vec::new(),
-            pat: input.add_pat(spanned),
+            pat: input.add_term(spanned),
         })),
         ListOrItem::List(elems) => Ok(Pat::Tuple(PatTuple {
             attrs: Vec::new(),
@@ -816,7 +816,7 @@ impl ParseList for PatSlice {
     fn parse_list_items(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
         let mut elems = Punctuated::new();
         while !input.is_empty() {
-            let value = input.parse_spanned_pat::<PatMultiLeadingVert>()?;
+            let value = input.parse_spanned_term::<PatMultiLeadingVert>()?;
             match &*value {
                 Term::Item(Pat::Range(pat)) if pat.start.is_none() || pat.end.is_none() => {
                     let (start, end) = match &pat.limits {
@@ -838,7 +838,7 @@ impl ParseList for PatSlice {
             elems.push_punct(punct);
         }
 
-        Ok(elems.into_iter().map(|pat| input.add_pat(pat)).collect())
+        Ok(elems.into_iter().map(|pat| input.add_term(pat)).collect())
     }
 }
 
