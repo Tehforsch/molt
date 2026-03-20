@@ -641,7 +641,7 @@ impl<'a> Typechecker<'a> {
                 self.substitutions.insert(t2, t1);
             }
             (Type::Kind(kind1), Type::Kind(kind2)) => {
-                if !kind1.is_comparable_to(kind2.into_node_kind()) {
+                if !kind1.is_comparable_to((*kind2).into()) {
                     return make_error();
                 }
             }

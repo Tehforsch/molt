@@ -97,11 +97,17 @@ impl Id {
 /// Contains its name and the kind of the variable.
 pub(crate) struct Var<K> {
     ident: Ident,
-    kind: K,
+    kind: VarKind<K>,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum VarKind<K> {
+    Single(K),
+    List(K),
 }
 
 impl<K: Copy> Var<K> {
-    pub(crate) fn new(ident: Ident, kind: K) -> Self {
+    pub(crate) fn new(ident: Ident, kind: VarKind<K>) -> Self {
         Self { ident, kind }
     }
 
@@ -133,17 +139,17 @@ impl<Node: NodeType> Ctx<Node> {
         Id(InternalId::Var(self.vars.len() - 1), self.mode)
     }
 
-    pub(crate) fn add_var<T: ToNode<Node>>(&mut self, var: Var<Node::Kind>) -> NodeId<T> {
-        let id = if let Some((id, _)) = self.get_var_by_name(var.ident()) {
+    fn add_var_untyped(&mut self, var: Var<Node::Kind>) -> Id {
+        if let Some((id, _)) = self.get_var_by_name(var.ident()) {
             id
         } else {
             self.add_var_internal(var)
-        };
-        id.typed()
+        }
     }
 
-    pub(crate) fn add_list_var<T: ToNode<Node>>(&mut self, kind: Var<Node::Kind>) -> NodeId<T> {
-        todo!()
+    pub(crate) fn add_var<T: ToNode<Node>>(&mut self, var: Var<Node::Kind>) -> NodeId<T> {
+        let id = self.add_var_untyped(var);
+        id.typed()
     }
 
     pub(crate) fn add_pat<T: ToNode<Node>>(&mut self, item: SpannedPat<T>) -> NodeId<T> {
@@ -195,7 +201,7 @@ impl<Node: NodeType> Ctx<Node> {
             .map(|(i, var)| (Id(InternalId::Var(i), self.mode), var))
     }
 
-    pub(crate) fn get_kind_by_name(&self, name: &Ident) -> Node::Kind {
+    pub(crate) fn get_kind_by_name(&self, name: &Ident) -> VarKind<Node::Kind> {
         self.get_var_by_name(name).unwrap().1.kind
     }
 

@@ -9,12 +9,11 @@ use std::panic::{RefUnwindSafe, UnwindSafe};
 use std::rc::Rc;
 use std::str::FromStr;
 
+use crate::ctx::VarKind;
 use crate::node_list::RealNodeList;
 use crate::{
-    Ctx, Id, KindType, Mode, NodeId, NodeList, NodeType, Pattern, Spanned, SpannedPat, ToNode, Var,
-    WithSpan,
+    Ctx, Id, Mode, NodeId, NodeList, NodeType, Pattern, Spanned, SpannedPat, ToNode, Var, WithSpan,
 };
-use discouraged::Speculative;
 use proc_macro2::{Delimiter, Group, Literal, Punct, Span, TokenStream, TokenTree};
 
 use crate::parser::buffer::{Cursor, TokenBuffer};
@@ -77,8 +76,8 @@ pub(crate) trait ParseNode {
     /// Parse a pattern (either a concrete syntax element or a
     /// molt variable).
     fn parse_pat(input: ParseStream) -> Result<Pattern<Self::Target, Id>> {
-        if let Some(var) = input.parse_var() {
-            return var;
+        if input.peek_var::<Self::Target>() {
+            return input.parse_single_var();
         }
         Ok(Pattern::Item(Self::parse_node(input)?))
     }
@@ -96,7 +95,7 @@ pub(crate) trait PeekPat {
 }
 
 pub(crate) fn peek_pat<T: PeekPat>(cursor: Cursor, ctx: &Ctx<Node>) -> bool {
-    T::peek(cursor) || peek_var(cursor, ctx, T::Target::node_kind())
+    T::peek(cursor) || peek_var(cursor, ctx, VarKind::Single(T::Target::node_kind()))
 }
 
 pub(crate) trait ParseList {
@@ -137,7 +136,7 @@ pub(crate) trait ParseListOrItem {
     fn parse_list_or_item(input: ParseStream) -> Result<ListOrItem<Self::Target, Self::Punct>>;
 }
 
-fn peek_var(cursor: Cursor, ctx: &Ctx<Node>, kind: NodeKind) -> bool {
+fn peek_var(cursor: Cursor, ctx: &Ctx<Node>, kind: VarKind<NodeKind>) -> bool {
     if let Some((punct, _)) = cursor.punct()
         && punct.as_char() == '$'
         && let Some((ident, _)) = cursor.skip().and_then(|cursor| cursor.ident())
@@ -364,7 +363,11 @@ fn span_of_unexpected_ignoring_nones(mut cursor: Cursor) -> Option<(Span, Delimi
     }
 }
 
-fn kind_matches(ctx: &Ctx<Node>, ident: &Ident, kind: NodeKind) -> bool {
+fn kind_matches(
+    ctx: &Ctx<Node>,
+    ident: &Ident,
+    kind: VarKind<<Node as NodeType>::NodeKind>,
+) -> bool {
     ctx.get_kind_by_name(ident).is_comparable_to(kind)
 }
 
@@ -581,53 +584,50 @@ impl<'a> ParseBuffer<'a> {
     }
 
     pub(crate) fn peek_var<T: ToNode<Node>>(&self) -> bool {
-        peek_var(self.cursor(), &self.ctx.borrow(), T::node_kind())
+        peek_var(
+            self.cursor(),
+            &self.ctx.borrow(),
+            VarKind::Single(T::node_kind()),
+        )
+    }
+
+    fn peek_list_var<T: ToNode<Node>>(&self) -> bool {
+        peek_var(
+            self.cursor(),
+            &self.ctx.borrow(),
+            VarKind::List(T::node_kind()),
+        )
     }
 
     pub(crate) fn peek_pat<T: PeekPat>(&self) -> bool {
         peek_pat::<T>(self.cursor(), &self.ctx.borrow())
     }
 
-    pub(crate) fn parse_var<T: ToNode<Node>>(&self) -> Option<Result<Pattern<T, Id>>> {
-        let transposed = || -> Result<Option<Pattern<T, Id>>> {
-            let ahead = self.fork();
-            if ahead.peek(Token![$]) {
-                let _: Token![$] = ahead.parse()?;
-                let ident: Ident = Ident::parse_any(&ahead)?;
-                if !kind_matches(&ahead.ctx.borrow(), &ident, T::node_kind()) {
-                    return Ok(None);
-                }
-                self.advance_to(&ahead);
-                let id = self
-                    .add_var::<T>(Var::new(ident, T::node_kind().into()))
-                    .into();
-                Ok(Some(Pattern::Var(id)))
-            } else {
-                Ok(None)
-            }
-        };
-        transposed().transpose()
+    fn parse_var_ident(&self) -> Result<Ident> {
+        let _: Token![$] = self.parse()?;
+        Ident::parse_any(self)
+    }
+
+    fn parse_var(
+        &self,
+        kind: VarKind<<Node as NodeType>::Kind>,
+    ) -> Result<Var<<Node as NodeType>::Kind>> {
+        let ident = self.parse_var_ident()?;
+        Ok(Var::new(ident, kind))
+    }
+
+    pub(crate) fn parse_single_var<T: ToNode<Node>>(&self) -> Result<Pattern<T, Id>> {
+        let var = self.parse_var(VarKind::Single(T::kind()))?;
+        Ok(Pattern::Var(self.add_var::<T>(var).into()))
     }
 
     fn parse_list_var<T: ToNode<Node>>(&self) -> Result<NodeId<T>> {
-        // Kind is checked by peek_list_var
-        Ok(self.parse_var::<T>().unwrap()?.unwrap_var().typed())
-    }
-
-    fn peek_list_var(&self, kind: NodeKind) -> bool {
-        self.peek(Token![$]) && {
-            let Ok(ident) = self.step(|cursor| match cursor.ident() {
-                Some((ident, rest)) => Ok((ident, rest)),
-                None => Err(cursor.error("expected ident")),
-            }) else {
-                return false;
-            };
-            kind_matches(&self.ctx.borrow(), &ident, kind)
-        }
+        let var = self.parse_var(VarKind::List(T::kind()))?;
+        Ok(self.add_var::<T>(var))
     }
 
     pub(crate) fn parse_list<T: ParseList>(&self) -> Result<NodeList<T::Item, T::Punct>> {
-        if self.peek_list_var(T::Item::node_kind()) {
+        if self.peek_list_var::<T::Item>() {
             Ok(NodeList::Var(self.parse_list_var::<T::Item>()?))
         } else {
             let list = T::parse_list_real(self)?;
@@ -638,7 +638,7 @@ impl<'a> ParseBuffer<'a> {
     pub(crate) fn parse_list_or_item<T: ParseListOrItem>(
         &self,
     ) -> Result<ListOrItem<T::Target, T::Punct>> {
-        if self.peek_list_var(<T as ParseListOrItem>::Target::node_kind()) {
+        if self.peek_list_var::<<T as ParseListOrItem>::Target>() {
             Ok(ListOrItem::List(NodeList::Var(
                 self.parse_list_var::<<T as ParseListOrItem>::Target>()?,
             )))

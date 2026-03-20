@@ -1445,8 +1445,8 @@ fn trailer_helper(input: ParseStream, mut e: SpannedPat<Expr>) -> Result<Spanned
 // Parse all atomic expressions which don't have to worry about precedence
 // interactions, as they are fully contained.
 fn atom_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<Pattern<Expr, Id>> {
-    if let Some(var) = input.parse_var() {
-        return var;
+    if input.peek_var::<Expr>() {
+        return input.parse_single_var();
     }
     atom_expr_inner(input, allow_struct).map(Pattern::Item)
 }

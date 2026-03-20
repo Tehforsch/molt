@@ -1,3 +1,4 @@
+use crate::ctx::VarKind;
 use crate::match_pattern::IsMatch;
 use crate::rust_grammar::generics::Generics;
 use crate::{CmpSyn, Id, KindType, Matcher, Pattern, ToNode};
@@ -131,9 +132,11 @@ macro_rules! define_kind {
                 )*
                 None
             }
+        }
 
-            pub(crate) fn into_node_kind(self) -> NodeKind {
-                match self {
+        impl From<Kind> for NodeKind {
+            fn from(val: Kind) -> Self {
+                match val {
                     $(
                         Kind::$variant_name => NodeKind::$kind_name,
                     )*
@@ -341,5 +344,15 @@ impl SubKind for Mod {
 
     fn expected_str() -> &'static str {
         "module"
+    }
+}
+
+impl VarKind<Kind> {
+    pub(crate) fn is_comparable_to(&self, kind: VarKind<NodeKind>) -> bool {
+        match (self, kind) {
+            (VarKind::Single(k1), VarKind::Single(k2)) => k1.is_comparable_to(k2),
+            (VarKind::List(k1), VarKind::List(k2)) => k1.is_comparable_to(k2),
+            (_, _) => false,
+        }
     }
 }

@@ -28,13 +28,6 @@ impl<Item, Var> Pattern<Item, Var> {
         }
     }
 
-    pub(crate) fn unwrap_var(self) -> Var {
-        match self {
-            Pattern::Item(_) => panic!("unwrap called on item variant."),
-            Pattern::Var(var) => var,
-        }
-    }
-
     pub fn get_item(&self) -> Option<&Item> {
         match &self {
             Pattern::Item(t) => Some(t),

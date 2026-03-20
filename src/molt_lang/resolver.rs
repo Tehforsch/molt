@@ -5,6 +5,7 @@ use super::*;
 use crate::Ctx;
 use crate::Mode;
 use crate::Var;
+use crate::ctx::VarKind;
 use crate::molt_lang::MoltFile;
 use crate::molt_lang::MoltFn;
 use crate::molt_lang::builtin_fn::BuiltinFn;
@@ -424,16 +425,17 @@ fn resolve_pat(
         .iter()
         .map(|(var_id, span)| {
             let name = &var_names[*var_id];
-            let ctx_id = match typeck.get_type(*var_id) {
-                ResolvedType::Kind(kind) => pat_ctx.add_var::<Node>(Var::new(name.clone(), kind)),
+            let kind = match typeck.get_type(*var_id) {
+                ResolvedType::Kind(kind) => VarKind::Single(kind),
                 ResolvedType::List(ty) => {
                     let ResolvedType::Kind(kind) = *ty else {
                         typechecker_bug!()
                     };
-                    pat_ctx.add_list_var::<Node>(Var::new(name.clone(), kind))
+                    VarKind::List(kind)
                 }
                 _ => typechecker_bug!(),
             };
+            let ctx_id = pat_ctx.add_var::<Node>(Var::new(name.clone(), kind));
             TokenVar {
                 ctx_id: ctx_id.into(),
                 var_id: *var_id,

@@ -29,6 +29,9 @@ pub trait ToNode<Node: NodeType>: Sized {
     fn from_node_ref(node: &Node) -> Option<&Self>;
     fn from_node_ref_mut(node: &mut Node) -> Option<&mut Self>;
     fn node_kind() -> Node::NodeKind;
+    fn kind() -> Node::Kind {
+        Self::node_kind().into()
+    }
 }
 
 impl<T: NodeType> ToNode<T> for T {
