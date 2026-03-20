@@ -258,10 +258,24 @@ impl<'a> Interpreter<'a> {
             .vars
             .iter()
             .map(|var| {
-                let Value::Node(val) = self.vars.get(var.var_id) else {
-                    unreachable!() // type checker 
-                };
-                val
+                if let Value::Node(val) = self.vars.get(var.var_id) {
+                    val
+                } else if let Value::List(inner) = self.vars.get(var.var_id) {
+                    NodeSpec::List(
+                        inner
+                            .into_iter()
+                            .map(|val| {
+                                if let Value::Node(val) = val {
+                                    val
+                                } else {
+                                    typechecker_bug!()
+                                }
+                            })
+                            .collect(),
+                    )
+                } else {
+                    typechecker_bug!();
+                }
             })
             .collect();
         Ok(Value::Node(NodeSpec::Molt {

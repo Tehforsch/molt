@@ -46,6 +46,16 @@ impl RuntimeCtx<'_> {
     pub(crate) fn get_span(&self, new: &NodeSpec) -> Span {
         match new {
             NodeSpec::Real(id) => self.real_ctx.get_span(*id),
+            NodeSpec::List(ids) => {
+                if ids.is_empty() {
+                    todo!()
+                }
+                let mut span = self.get_span(&ids[0]);
+                for id in &ids[1..] {
+                    span = span.join(self.get_span(id));
+                }
+                span
+            }
             NodeSpec::Molt {
                 id: _,
                 vars: _,
@@ -56,6 +66,11 @@ impl RuntimeCtx<'_> {
 
     pub(crate) fn print(&self, new: &NodeSpec) -> String {
         match new {
+            NodeSpec::List(ids) => ids
+                .iter()
+                .map(|id| self.print(id))
+                .collect::<Vec<String>>()
+                .join(" "),
             NodeSpec::Real(id) => self.real_ctx.print(*id, self.real_code()).into(),
             NodeSpec::Molt { pat, id, vars } => {
                 let ctx = &self.pats[*pat].ctx;

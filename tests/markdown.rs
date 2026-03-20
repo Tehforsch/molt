@@ -146,7 +146,10 @@ fn check_modifications(result: molt::RunResult, references: &[&CodeBlock]) {
     assert_eq!(result.modifications_by_file.len(), 1);
     let result = result.modifications_by_file.into_iter().next().unwrap().1;
     if references.is_empty() {
-        assert_eq!(result.num_modifications, 0);
+        assert_eq!(
+            result.num_modifications, 0,
+            "Modifications were performed, but none are specified in the test."
+        );
     } else {
         assert_eq!(references.len(), 1);
         assert_eq!(result.new_code.code(), references[0].content);

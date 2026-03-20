@@ -52,6 +52,7 @@ pub enum NodeSpec {
         pat: PatId,
         vars: Vec<NodeSpec>,
     }, // Refers to a node in the molt file
+    List(Vec<NodeSpec>), // A list of nodes
 }
 
 #[derive(Clone)]
