@@ -309,18 +309,29 @@ fn run_section(md_file: &Path, section: &Section) {
         )
     });
 
-    let expected = match output_blocks.first() {
-        Some(block) => block.content.trim_end(),
-        None => "",
-    };
     let output = output.trim_end();
-    if output != expected {
-        eprintln!("{}", colored_diff(expected, output));
-        panic!(
-            "{}: section {:?}: output mismatch",
-            md_file.display(),
-            section_name,
-        );
+    match output_blocks.first() {
+        Some(block) => {
+            let expected = block.content.trim_end();
+            if output != expected {
+                eprintln!("{}", colored_diff(expected, output));
+                panic!(
+                    "{}: section {:?}: output mismatch",
+                    md_file.display(),
+                    section_name,
+                );
+            }
+        }
+        None => {
+            if !output.is_empty() {
+                panic!(
+                    "{}: section {:?}: test produced output but no output block is specified:\n{}",
+                    md_file.display(),
+                    section_name,
+                    output,
+                );
+            }
+        }
     }
 }
 
