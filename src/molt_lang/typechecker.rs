@@ -23,41 +23,43 @@ pub(crate) struct ErrorLabel {
 
 pub(crate) enum ErrorKind {
     TypeMismatch {
-        expected: ResolvedType,
-        found: ResolvedType,
+        expected: QualifiedType,
+        found: QualifiedType,
     },
     UntypedVar(Ident),
-    NotIterable(ResolvedType),
+    NotIterable(QualifiedType),
 }
 
-fn as_resolved(types: &Storage<TypeId, Type>, type_: &Type) -> ResolvedType {
-    match type_ {
-        Type::Var => ResolvedType::Var,
-        Type::Kind(kind) => ResolvedType::Kind(*kind),
-        Type::Int => ResolvedType::Int,
-        Type::Bool => ResolvedType::Bool,
-        Type::Str => ResolvedType::Str,
-        Type::Unit => ResolvedType::Unit,
-        Type::List(ty) => ResolvedType::List(Box::new(as_resolved(types, &types[*ty]))),
-        Type::Fun(type_ids, type_id) => ResolvedType::Fun(
-            type_ids
-                .iter()
-                .map(|t| as_resolved(types, &types[*t]))
-                .collect(),
-            Box::new(as_resolved(types, &types[*type_id])),
-        ),
+impl Storage<TypeId, Type> {
+    fn get_qualified(&self, type_: &Type) -> QualifiedType {
+        match type_ {
+            Type::Var => QualifiedType::Var,
+            Type::Kind(kind) => QualifiedType::Kind(*kind),
+            Type::Int => QualifiedType::Int,
+            Type::Bool => QualifiedType::Bool,
+            Type::Str => QualifiedType::Str,
+            Type::Unit => QualifiedType::Unit,
+            Type::List(ty) => QualifiedType::List(Box::new(self.get_qualified(&self[*ty]))),
+            Type::Fun(type_ids, type_id) => QualifiedType::Fun(
+                type_ids
+                    .iter()
+                    .map(|t| self.get_qualified(&self[*t]))
+                    .collect(),
+                Box::new(self.get_qualified(&self[*type_id])),
+            ),
+        }
     }
 }
 
 impl Error {
-    fn type_mismatch(expected: ResolvedType, found: ResolvedType) -> Self {
+    fn type_mismatch(expected: QualifiedType, found: QualifiedType) -> Self {
         Self {
             kind: ErrorKind::TypeMismatch { expected, found },
             labels: Vec::new(),
         }
     }
 
-    fn type_not_iterable(ty: ResolvedType) -> Self {
+    fn type_not_iterable(ty: QualifiedType) -> Self {
         Self {
             kind: ErrorKind::NotIterable(ty),
             labels: Vec::new(),
@@ -144,28 +146,28 @@ pub struct Scheme {
 }
 
 #[derive(Debug, Clone)]
-pub enum ResolvedType {
+pub enum QualifiedType {
     Var,
     Kind(Kind),
     Int,
     Bool,
     Str,
     Unit,
-    List(Box<ResolvedType>),
-    Fun(Vec<ResolvedType>, Box<ResolvedType>),
+    List(Box<QualifiedType>),
+    Fun(Vec<QualifiedType>, Box<QualifiedType>),
 }
 
-impl std::fmt::Display for ResolvedType {
+impl std::fmt::Display for QualifiedType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ResolvedType::Kind(kind) => write!(f, "{}", kind),
-            ResolvedType::Var => write!(f, "var"),
-            ResolvedType::Int => write!(f, "int"),
-            ResolvedType::Bool => write!(f, "bool"),
-            ResolvedType::Str => write!(f, "str"),
-            ResolvedType::Unit => write!(f, "()"),
-            ResolvedType::List(ty) => write!(f, "List<{}>", ty),
-            ResolvedType::Fun(args, ret) => {
+            QualifiedType::Kind(kind) => write!(f, "{}", kind),
+            QualifiedType::Var => write!(f, "var"),
+            QualifiedType::Int => write!(f, "int"),
+            QualifiedType::Bool => write!(f, "bool"),
+            QualifiedType::Str => write!(f, "str"),
+            QualifiedType::Unit => write!(f, "()"),
+            QualifiedType::List(ty) => write!(f, "List<{}>", ty),
+            QualifiedType::Fun(args, ret) => {
                 write!(f, "fn(")?;
                 for (i, arg) in args.iter().enumerate() {
                     write!(f, "{arg}")?;
@@ -207,14 +209,15 @@ pub(super) struct TypecheckResult {
 
 impl TypecheckResult {
     // duplication :|
-    pub(super) fn get_type(&self, var: VarId) -> ResolvedType {
+    pub(super) fn get_type(&self, var: VarId) -> QualifiedType {
         let type_id = match &self.vars[&var] {
             VarType::Mono(type_id) => type_id,
             VarType::Scheme(_) => {
                 unreachable!()
             }
         };
-        as_resolved(&self.types, &self.types[self.resolve(*type_id)])
+        self.types
+            .get_qualified(&self.types[self.resolve(*type_id)])
     }
 
     pub(super) fn get_pat_type(&self, pat: PatId) -> Option<&Type> {
@@ -307,11 +310,11 @@ impl<'a> Typechecker<'a> {
         Some(&self.types[self.resolve(*type_id)])
     }
 
-    pub(crate) fn iter_vars(&self) -> impl Iterator<Item = (VarId, ResolvedType)> {
+    pub(crate) fn iter_vars(&self) -> impl Iterator<Item = (VarId, QualifiedType)> {
         let mut keys: Vec<_> = self.vars.keys().cloned().collect();
         keys.sort_by_key(|id| id.to_index());
         keys.into_iter()
-            .filter_map(|var| self.get_type(var).map(|ty| (var, self.as_resolved(ty))))
+            .filter_map(|var| self.get_type(var).map(|ty| (var, self.get_qualified(ty))))
     }
 
     fn var_span(&self, id: VarId) -> crate::Span {
@@ -414,7 +417,7 @@ impl<'a> Typechecker<'a> {
         if let Returns::NotAlways = returns {
             let unit = self.add_type(Type::Unit);
             let span = self.var_span(f.id);
-            let ret_type = self.as_resolved(&self.types[self.resolve(fn_return_type)].clone());
+            let ret_type = self.get_qualified(&self.types[self.resolve(fn_return_type)].clone());
             self.unify(unit, fn_return_type)
                 .map_err(|e| e.with_label(span, format!("expects return type `{ret_type}`")))?;
         }
@@ -469,7 +472,7 @@ impl<'a> Typechecker<'a> {
                 // we can unwrap.
                 let lookup = self.lookup(fn_call.id).unwrap();
                 let span = self.var_span(fn_call.id);
-                let fn_resolved = self.as_resolved(&self.types[self.resolve(lookup)].clone());
+                let fn_resolved = self.get_qualified(&self.types[self.resolve(lookup)].clone());
                 self.unify(fn_type, lookup)
                     .map_err(|e| e.with_label(span, format!("has type `{fn_resolved}`")))?;
                 Ok(output)
@@ -529,7 +532,7 @@ impl<'a> Typechecker<'a> {
                     return Ok(());
                 }
             };
-            let lhs_type = self.as_resolved(&self.types[self.resolve(type_id)].clone());
+            let lhs_type = self.get_qualified(&self.types[self.resolve(type_id)].clone());
             self.unify(type_id, rhs)
                 .map_err(|e| e.with_label(span, format!("expected `{lhs_type}`")))?;
         }
@@ -601,7 +604,7 @@ impl<'a> Typechecker<'a> {
             | Type::Bool
             | Type::Str
             | Type::Unit
-            | Type::Fun(_, _) => Err(Error::type_not_iterable(self.as_resolved(ty))),
+            | Type::Fun(_, _) => Err(Error::type_not_iterable(self.get_qualified(ty))),
             Type::List(inner) => Ok(*inner),
         }
     }
@@ -610,7 +613,7 @@ impl<'a> Typechecker<'a> {
         let lhs = self.lookup(a.lhs).unwrap(); // Resolver makes sure this exists
         let rhs = self.infer_expr(&a.rhs)?;
         let span = self.var_span(a.lhs);
-        let lhs_type = self.as_resolved(&self.types[self.resolve(lhs)].clone());
+        let lhs_type = self.get_qualified(&self.types[self.resolve(lhs)].clone());
         self.unify(lhs, rhs)
             .map_err(|e| e.with_label(span, format!("has type `{lhs_type}`")))
     }
@@ -625,8 +628,8 @@ impl<'a> Typechecker<'a> {
         let type2 = self.types[t2].clone();
         let make_error = || {
             Err(Error::type_mismatch(
-                self.as_resolved(&type1),
-                self.as_resolved(&type2),
+                self.get_qualified(&type1),
+                self.get_qualified(&type2),
             ))
         };
         match (&type1, &type2) {
@@ -725,7 +728,7 @@ impl<'a> Typechecker<'a> {
         self.add_type(new_type)
     }
 
-    fn as_resolved(&self, ty: &Type) -> ResolvedType {
-        as_resolved(&self.types, ty)
+    fn get_qualified(&self, ty: &Type) -> QualifiedType {
+        self.types.get_qualified(ty)
     }
 }

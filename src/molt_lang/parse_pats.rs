@@ -9,7 +9,7 @@ use crate::CtxVar;
 use crate::Mode;
 use crate::ctx::VarKind;
 use crate::molt_lang::MoltFile;
-use crate::molt_lang::typechecker::ResolvedType;
+use crate::molt_lang::typechecker::QualifiedType;
 use crate::molt_lang::typechecker::TypecheckResult;
 use crate::parser;
 use crate::rust_grammar::Node;
@@ -48,9 +48,9 @@ fn parse_pat(
         .map(|(var_id, span)| {
             let name = &var_names[*var_id];
             let kind = match typeck.get_type(*var_id) {
-                ResolvedType::Kind(kind) => VarKind::Single(kind),
-                ResolvedType::List(ty) => {
-                    let ResolvedType::Kind(kind) = *ty else {
+                QualifiedType::Kind(kind) => VarKind::Single(kind),
+                QualifiedType::List(ty) => {
+                    let QualifiedType::Kind(kind) = *ty else {
                         typechecker_bug!()
                     };
                     VarKind::List(kind)
