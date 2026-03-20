@@ -78,6 +78,29 @@ impl Default for Resolver {
 }
 
 impl Resolver {
+    pub fn resolve(file: grammar::MoltFile) -> Result<ResolvedMoltFile> {
+        let r = Resolver::default();
+        r.resolve_internal(file)
+    }
+
+    fn resolve_internal(mut self, file: grammar::MoltFile) -> Result<ResolvedMoltFile> {
+        let grammar::MoltFile { fns, stmts: _ } = file;
+        // Register all user defined functions
+        self.register_builtins();
+        self.register_user_fns(&fns);
+        let fns: Storage<_, _> = fns
+            .into_iter()
+            .map(|f| self.resolve_fn(f))
+            .collect::<Result<_>>()?;
+        check_names_unique(&fns)?;
+        Ok(ResolvedMoltFile {
+            var_names: self.var_names,
+            fns,
+            builtin_map: self.builtin_map,
+            pats: self.pats,
+        })
+    }
+
     fn active_scope(&self) -> &Scope {
         self.scopes.last().unwrap()
     }
@@ -117,24 +140,6 @@ impl Resolver {
 
     fn make_scope(&mut self) -> Scope {
         Scope::child_of(self.active_scope(), self.next_scope_index())
-    }
-
-    pub fn resolve_file(mut self, file: grammar::MoltFile) -> Result<ResolvedMoltFile> {
-        let grammar::MoltFile { fns, stmts: _ } = file;
-        // Register all user defined functions
-        self.register_builtins();
-        self.register_user_fns(&fns);
-        let fns: Storage<_, _> = fns
-            .into_iter()
-            .map(|f| self.resolve_fn(f))
-            .collect::<Result<_>>()?;
-        check_names_unique(&fns)?;
-        Ok(ResolvedMoltFile {
-            var_names: self.var_names,
-            fns,
-            builtin_map: self.builtin_map,
-            pats: self.pats,
-        })
     }
 
     fn register_builtins(&mut self) {

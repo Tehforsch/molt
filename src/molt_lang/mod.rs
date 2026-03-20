@@ -220,14 +220,8 @@ impl MoltFile {
             .map_err(|e| Error::parse(e, file_id))?
             .item;
         let file = file.add_implicit_main().map_err(Error::FileStructure)?;
-        let resolver = Resolver::default();
-        let resolved = resolver
-            .resolve_file(file)
-            .map_err(|e| Error::Resolver(e, file_id))?;
-        let typechecker = Typechecker::new(&resolved.var_names, &resolved.pats);
-        let typeck = typechecker
-            .check(&resolved)
-            .map_err(|e| Error::Typechecker(e, file_id))?;
+        let resolved = Resolver::resolve(file).map_err(|e| Error::Resolver(e, file_id))?;
+        let typeck = Typechecker::check(&resolved).map_err(|e| Error::Typechecker(e, file_id))?;
         resolved
             .parse_pats(&typeck)
             .map_err(|e| Error::ParsePats(e, file_id))

@@ -263,10 +263,7 @@ pub(super) struct Typechecker<'a> {
 }
 
 impl<'a> Typechecker<'a> {
-    pub(super) fn new(
-        var_names: &'a Storage<VarId, Ident>,
-        pats: &'a Storage<PatId, UnparsedPat>,
-    ) -> Self {
+    fn new(var_names: &'a Storage<VarId, Ident>, pats: &'a Storage<PatId, UnparsedPat>) -> Self {
         Self {
             types: Default::default(),
             substitutions: Default::default(),
@@ -275,6 +272,28 @@ impl<'a> Typechecker<'a> {
             pat_types: Default::default(),
             pats,
         }
+    }
+
+    pub(crate) fn check(file: &'a ResolvedMoltFile) -> Result<TypecheckResult> {
+        let t = Self::new(&file.var_names, &file.pats);
+        t.check_internal(file)
+    }
+
+    fn check_internal(mut self, file: &ResolvedMoltFile) -> Result<TypecheckResult> {
+        let fn_return_types: Vec<_> = file.fns.iter().map(|f| self.declare_fn(f)).collect();
+        for (id, f) in file.builtin_map.iter() {
+            self.declare_builtin(*id, *f);
+        }
+        for (f, type_id) in file.fns.iter().zip(fn_return_types) {
+            self.check_fn(f, type_id)?;
+        }
+        self.check_no_untyped_vars()?;
+        Ok(TypecheckResult {
+            types: self.types,
+            substitutions: self.substitutions,
+            vars: self.vars,
+            pat_types: self.pat_types,
+        })
     }
 
     pub(super) fn get_type(&self, var: VarId) -> Option<&Type> {
@@ -355,23 +374,6 @@ impl<'a> Typechecker<'a> {
             .get(&id)
             .map(|id| self.resolve(*id))
             .unwrap_or(id)
-    }
-
-    pub(crate) fn check(mut self, file: &ResolvedMoltFile) -> Result<TypecheckResult> {
-        let fn_return_types: Vec<_> = file.fns.iter().map(|f| self.declare_fn(f)).collect();
-        for (id, f) in file.builtin_map.iter() {
-            self.declare_builtin(*id, *f);
-        }
-        for (f, type_id) in file.fns.iter().zip(fn_return_types) {
-            self.check_fn(f, type_id)?;
-        }
-        self.check_no_untyped_vars()?;
-        Ok(TypecheckResult {
-            types: self.types,
-            substitutions: self.substitutions,
-            vars: self.vars,
-            pat_types: self.pat_types,
-        })
     }
 
     pub(crate) fn check_no_untyped_vars(&self) -> Result<()> {
