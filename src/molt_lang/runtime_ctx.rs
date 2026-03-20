@@ -11,7 +11,7 @@ use crate::{
 };
 
 #[derive(Clone)]
-pub struct Context<'a> {
+pub struct RuntimeCtx<'a> {
     pub real_id: FileId,
     pub molt_id: FileId,
     pub real_ctx: &'a Ctx<Node>,
@@ -22,7 +22,7 @@ pub struct Context<'a> {
     pub pats: &'a Storage<PatId, ResolvedPat>,
 }
 
-impl Context<'_> {
+impl RuntimeCtx<'_> {
     pub fn real_ctx(&self) -> &'_ Ctx<Node> {
         self.real_ctx
     }

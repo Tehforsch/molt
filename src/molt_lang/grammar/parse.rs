@@ -1,7 +1,7 @@
 use proc_macro2::{Span, TokenStream};
 
 use crate::molt_lang::grammar::{
-    Assignment, Atom, Block, ExprStmt, FnCall, List, Lit, ReturnStmt, PatVar, PatVars, Type,
+    Assignment, Atom, Block, ExprStmt, FnCall, List, Lit, PatVar, PatVars, ReturnStmt, Type,
 };
 use crate::molt_lang::{INPUT_VAR_NAME, MAIN_FN_NAME};
 use crate::parser::parse::{self, Parse, ParseStream};

@@ -7,7 +7,7 @@ use std::path::Path;
 
 use crate::change_buffer::ChangeBuffer;
 use crate::input::FilePath;
-use crate::molt_lang::{Context, PatId, PatVar};
+use crate::molt_lang::{PatId, PatVar, RuntimeCtx};
 use crate::rust_grammar::Node;
 use crate::{Config, Id, Match, Span, Var};
 use codespan_reporting::files::Files;
@@ -64,12 +64,12 @@ pub struct Modify<'a> {
     code: ChangeBuffer,
     rust_file_path: FilePath<'a>,
     cargo_root: Option<&'a Path>,
-    ctx: Context<'a>,
+    ctx: RuntimeCtx<'a>,
 }
 
 impl<'a> Modify<'a> {
     pub fn run(
-        ctx: Context<'a>,
+        ctx: RuntimeCtx<'a>,
         rust_file_id: FileId,
         cargo_root: Option<&'a Path>,
         modifications: ModMap,

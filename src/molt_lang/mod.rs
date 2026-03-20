@@ -1,21 +1,21 @@
 mod builtin_fn;
-mod context;
 mod grammar;
 mod index_types;
 mod interpreter;
 mod resolver;
+mod runtime_ctx;
 mod typechecker;
 
 use std::collections::HashMap;
 
 pub(crate) use builtin_fn::BuiltinFn;
-pub(crate) use context::Context;
 pub(crate) use grammar::FileStructureError;
 pub(crate) use index_types::PatId;
 pub(crate) use interpreter::Error as InterpreterError;
 pub(crate) use interpreter::Interpreter;
 use proc_macro2::TokenStream;
 pub(crate) use resolver::Error as ResolverError;
+pub(crate) use runtime_ctx::RuntimeCtx;
 pub(crate) use typechecker::Error as TypeError;
 
 use codespan_reporting::files::Files;

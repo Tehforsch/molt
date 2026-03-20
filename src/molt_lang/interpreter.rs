@@ -9,11 +9,11 @@ use crate::{
     modify::{Modification, NodeSpec},
     molt_lang::{
         Assignment, Expr, FnId, List, MoltFile, MoltFn, Stmt, Type, VarId,
-        context::Context,
         interpreter::{
             value::StmtValue,
             var_stack::{VarHandle, VarStack, Vars},
         },
+        runtime_ctx::RuntimeCtx,
     },
     node::NodeType,
     storage::Storage,
@@ -48,7 +48,7 @@ pub(crate) use error::Error;
 pub(crate) struct Interpreter<'a> {
     vars: Vars,
     fns: Storage<FnId, &'a MoltFn>,
-    context: &'a Context<'a>,
+    context: &'a RuntimeCtx<'a>,
     modifications: Vec<Modification>,
 }
 
@@ -59,7 +59,7 @@ impl<'a> Interpreter<'a> {
         }
     }
 
-    fn new(file: &'a MoltFile, context: &'a Context<'a>) -> Interpreter<'a> {
+    fn new(file: &'a MoltFile, context: &'a RuntimeCtx<'a>) -> Interpreter<'a> {
         let mut interpreter = Self {
             vars: Vars::new(file.var_names.iter().map(|_| VarStack::default()).collect()),
             fns: file.fns.iter().collect(),
@@ -78,7 +78,7 @@ impl<'a> Interpreter<'a> {
         interpreter
     }
 
-    pub(crate) fn run(file: &'a MoltFile, context: Context<'a>) -> Result<ModMap> {
+    pub(crate) fn run(file: &'a MoltFile, context: RuntimeCtx<'a>) -> Result<ModMap> {
         let mut modifications = ModMap::default();
         for node in context.real_ctx.iter() {
             let mut interpreter = Interpreter::new(file, &context);
@@ -89,7 +89,7 @@ impl<'a> Interpreter<'a> {
         Ok(modifications)
     }
 
-    pub(crate) fn run_dry(file: &MoltFile, context: &'a Context<'a>) -> Result<()> {
+    pub(crate) fn run_dry(file: &MoltFile, context: &'a RuntimeCtx<'a>) -> Result<()> {
         let mut interpreter = Interpreter::new(file, context);
         interpreter.eval_main_fn_dry(file.main_fn_id())?;
         Ok(())

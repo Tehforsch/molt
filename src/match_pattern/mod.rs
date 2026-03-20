@@ -4,7 +4,9 @@ use std::collections::HashMap;
 
 use crate::cmp_syn::CmpSyn;
 use crate::match_pattern::match_ctx::MatchCtx;
+use crate::molt_lang::RuntimeCtx;
 use crate::rule::{DoesNotRequireRule, RequiresRule};
+use crate::rust_grammar::Node;
 use crate::{
     Id, NodeId, NodeList, NodeType, Pattern,
     rule::{Rule, RuleKey, Rules},
@@ -51,12 +53,12 @@ pub(crate) struct Matcher<'a, Node: NodeType> {
     bindings: HashMap<Id, Binding>,
 }
 
-impl<'a> Matcher<'a, crate::rust_grammar::Node> {
+impl<'a> Matcher<'a, Node> {
     pub(crate) fn from_interpreter_ctx(
-        context: &'a crate::molt_lang::Context<'a>,
-        ctx: &'a crate::Ctx<crate::rust_grammar::Node>,
+        context: &'a RuntimeCtx<'a>,
+        ctx: &'a crate::Ctx<Node>,
         rules: &'a Rules,
-    ) -> MatcherBuilder<'a, crate::rust_grammar::Node> {
+    ) -> MatcherBuilder<'a, Node> {
         let ctx = MatchCtx::from_interpreter_ctx(context, ctx);
         MatcherBuilder {
             rules,

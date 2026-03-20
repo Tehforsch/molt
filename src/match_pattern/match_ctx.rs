@@ -1,7 +1,7 @@
 use codespan_reporting::files::Files;
 
 use crate::config::Config;
-use crate::molt_lang::Context;
+use crate::molt_lang::RuntimeCtx;
 use crate::{Ctx, FileId, Id, Input, Mode, NodeType, Pattern, ToNode, Var, rust_grammar};
 
 pub(super) struct MatchCtx<'a, Node: NodeType> {
@@ -15,7 +15,7 @@ pub(super) struct MatchCtx<'a, Node: NodeType> {
 
 impl<'a> MatchCtx<'a, rust_grammar::Node> {
     pub(crate) fn from_interpreter_ctx(
-        context: &'a Context,
+        context: &'a RuntimeCtx,
         ctx: &'a Ctx<crate::rust_grammar::Node>,
     ) -> MatchCtx<'a, rust_grammar::Node> {
         Self {

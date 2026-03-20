@@ -30,7 +30,7 @@ use std::{
 use crate::{
     input::FilePath,
     modify::{FileModificationResult, Modify},
-    molt_lang::Context,
+    molt_lang::RuntimeCtx,
     parser::parse::ParseResult,
     rust_grammar::Node,
 };
@@ -97,7 +97,7 @@ pub fn run_internal(
         // but language tests feel hard otherwise
         let rust_file_id = FileId::Rust(usize::MAX);
         let real_ctx = Ctx::new(Mode::Real);
-        let context = Context {
+        let context = RuntimeCtx {
             real_id: rust_file_id,
             molt_id: input.molt_file_id(),
             real_ctx: &real_ctx,
@@ -111,7 +111,7 @@ pub fn run_internal(
         molt_file.check_has_main_fn_with_input()?;
         for rust_file_id in input.iter_rust_src() {
             let parse_result = RustFile::new(input, rust_file_id)?;
-            let context = Context {
+            let context = RuntimeCtx {
                 real_id: rust_file_id,
                 molt_id: input.molt_file_id(),
                 real_ctx: &parse_result.ctx,
