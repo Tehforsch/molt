@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 
 use crate::{
     ItemOrVar, Mode, NodeType, Span, Spanned, ToNode, rust_grammar::Ident, span::SpannedPat,
+    storage::Storage,
 };
 
 type InternalId = ItemOrVar<usize, usize>;
@@ -117,17 +118,18 @@ impl<K: Copy> CtxVar<K> {
 }
 
 pub(crate) struct Ctx<Node: NodeType> {
-    nodes: Vec<Node>,
-    vars: Vec<CtxVar<Node::Kind>>,
-    spans: Vec<Span>,
+    nodes: Storage<usize, Node>,
+    vars: Storage<usize, CtxVar<Node::Kind>>,
+    spans: Storage<usize, Span>,
     mode: Mode,
 }
 
 impl<Node: NodeType> Ctx<Node> {
     fn add_node(&mut self, node: Spanned<Node>) -> RawNodeId {
-        self.spans.push(node.span());
-        self.nodes.push(node.item());
-        RawNodeId(InternalId::Item(self.nodes.len() - 1), self.mode)
+        let span_id = self.spans.add(node.span());
+        let id = self.nodes.add(node.item());
+        debug_assert_eq!(span_id, id);
+        RawNodeId(InternalId::Item(id), self.mode)
     }
 
     pub(crate) fn add<T: ToNode<Node>>(&mut self, t: Spanned<T>) -> NodeId<T> {
@@ -135,8 +137,8 @@ impl<Node: NodeType> Ctx<Node> {
     }
 
     fn add_var_internal(&mut self, var: CtxVar<Node::Kind>) -> RawNodeId {
-        self.vars.push(var);
-        RawNodeId(InternalId::Var(self.vars.len() - 1), self.mode)
+        let id = self.vars.add(var);
+        RawNodeId(InternalId::Var(id), self.mode)
     }
 
     fn add_var_untyped(&mut self, var: CtxVar<Node::Kind>) -> RawNodeId {
@@ -237,9 +239,9 @@ impl<Node: NodeType> Ctx<Node> {
 impl<Node: NodeType> Ctx<Node> {
     pub(crate) fn new(mode: Mode) -> Self {
         Self {
-            nodes: vec![],
-            vars: vec![],
-            spans: vec![],
+            nodes: Storage::default(),
+            vars: Storage::default(),
+            spans: Storage::default(),
             mode,
         }
     }

@@ -87,3 +87,13 @@ impl<I: StorageIndex, T> std::ops::Deref for Storage<I, T> {
         &self.items
     }
 }
+
+impl StorageIndex for usize {
+    fn to_index(self) -> usize {
+        self
+    }
+
+    fn from_index(index: usize) -> Self {
+        index
+    }
+}
