@@ -41,7 +41,7 @@ fn parse_pat(
     p: UnparsedPat,
     id: PatId,
 ) -> Result<ParsedPat, Error> {
-    let mut pat_ctx = Ctx::<Node>::new(Mode::Molt);
+    let mut pat_ctx = Ctx::<Node>::new(Mode::MoltPat);
     let vars = p
         .vars
         .iter()
@@ -72,7 +72,7 @@ fn parse_pat(
         pat_ctx,
         |stream| parse_node_with_kind(stream, *kind),
         p.tokens,
-        Mode::Molt,
+        Mode::MoltPat,
     )?;
     Ok(ParsedPat {
         vars,

@@ -9,14 +9,21 @@ use crate::{
 type InternalId = ItemOrVar<usize, usize>;
 
 /// Used in the parsing logic and the AST context
-/// to remember whether an item or variable belongs
-/// to real source code or code within molt patterns.
+/// to remember whether we are currently parsing
+/// 1. real source code that we are running on
+/// 2. the molt file and its basic grammar
+/// 3. a pattern within a molt file.
+///
+/// Note that molt variables (like $expr) can
+/// only occur in the `MoltPat` mode.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub(crate) enum Mode {
-    /// Represents something within the real source code.
+    /// We are within the real source code.
     Real,
-    /// Represents something within a pattern in the molt code.
+    /// We are in the molt code.
     Molt,
+    /// We are within a pattern in the molt code.
+    MoltPat,
 }
 
 /// The main ID type. An `Id` uniquely identifies

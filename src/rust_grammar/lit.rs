@@ -677,7 +677,7 @@ fn peek_impl(cursor: Cursor, peek: fn(ParseStream) -> bool) -> bool {
         cursor,
         unexpected,
         Rc::new(RefCell::new(Ctx::new(Mode::Real))),
-        Mode::Molt,
+        Mode::Molt, // fake
     );
     peek(&buffer)
 }

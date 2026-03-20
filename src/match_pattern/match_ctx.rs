@@ -86,14 +86,20 @@ impl<'a, Node: NodeType> MatchCtx<'a, Node> {
     pub fn print(&self, id: RawNodeId) -> String {
         match id.mode() {
             Mode::Real => self.print_real(id),
-            Mode::Molt => self.print_molt(id),
+            Mode::MoltPat => self.print_molt(id),
+            Mode::Molt => unreachable!(),
         }
     }
 
     pub fn get<T: ToNode<Node>>(&self, id: RawNodeId) -> ItemOrVar<&T, RawNodeId> {
         match id.mode() {
-            Mode::Real => self.real_ctx.get(id),
-            Mode::Molt => self.molt_ctx.get(id),
+            Mode::Real => {
+                let iv = self.real_ctx.get(id);
+                debug_assert!(matches!(iv, ItemOrVar::Item(_)));
+                iv
+            }
+            Mode::MoltPat => self.molt_ctx.get(id),
+            Mode::Molt => unreachable!(),
         }
     }
 
