@@ -357,6 +357,10 @@ pub(crate) trait ParseListOrItem {
     /// The punctuation separating the items in the list (if there is one).
     type Punct;
 
+    /// Parse a single item or a list of items of type `Item`. Note
+    /// that implementors do not need to check for molt variables of
+    /// `List<...>` kind, since this is taken care of by the
+    /// `ParseStream::parse_list_or_item` function.
     fn parse_list_or_item(input: ParseStream) -> Result<ListOrItem<Self::Target, Self::Punct>>;
 }
 
