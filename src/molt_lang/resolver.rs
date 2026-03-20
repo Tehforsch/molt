@@ -1,23 +1,16 @@
+//! Performs name resolution on a molt file,
+//! so that each variable is assigned a unique
+//! id.
 use std::collections::HashMap;
 use std::collections::HashSet;
 
 use super::*;
-use crate::Ctx;
-use crate::CtxVar;
-use crate::Mode;
-use crate::ctx::VarKind;
-use crate::molt_lang::MoltFile;
 use crate::molt_lang::MoltFn;
 use crate::molt_lang::builtin_fn::BuiltinFn;
 use crate::molt_lang::builtin_fn::builtins_def;
 use crate::molt_lang::grammar;
-use crate::molt_lang::typechecker::ResolvedType;
-use crate::molt_lang::typechecker::TypecheckResult;
 use crate::parser;
-use crate::rust_grammar::Node;
-use crate::rust_grammar::parse_node_with_kind;
 use crate::storage::Storage;
-use crate::typechecker_bug;
 
 #[derive(Debug)]
 pub(crate) enum Error {
@@ -397,65 +390,4 @@ fn check_names_unique(fns: &[MoltFn]) -> Result<()> {
 
 fn default_function_type() -> Type {
     Type::Unit
-}
-
-pub(crate) fn parse_pats(file: ResolvedMoltFile, typeck: &TypecheckResult) -> Result<MoltFile> {
-    let pats = file
-        .pats
-        .into_iter_enumerate()
-        .map(|(i, pat)| parse_pat(&file.var_names, typeck, pat, i))
-        .collect::<Result<_>>()?;
-    Ok(MoltFile {
-        fns: file.fns,
-        var_names: file.var_names,
-        builtin_map: file.builtin_map,
-        pats,
-    })
-}
-
-fn parse_pat(
-    var_names: &Storage<VarId, Ident>,
-    typeck: &TypecheckResult,
-    p: UnparsedPat,
-    id: PatId,
-) -> Result<ParsedPat> {
-    let mut pat_ctx = Ctx::<Node>::new(Mode::Molt);
-    let vars = p
-        .vars
-        .iter()
-        .map(|(var_id, span)| {
-            let name = &var_names[*var_id];
-            let kind = match typeck.get_type(*var_id) {
-                ResolvedType::Kind(kind) => VarKind::Single(kind),
-                ResolvedType::List(ty) => {
-                    let ResolvedType::Kind(kind) = *ty else {
-                        typechecker_bug!()
-                    };
-                    VarKind::List(kind)
-                }
-                _ => typechecker_bug!(),
-            };
-            let ctx_id = pat_ctx.add_var::<Node>(CtxVar::new(name.clone(), kind));
-            PatVar {
-                ctx_id: ctx_id.into(),
-                var_id: *var_id,
-                span: *span,
-            }
-        })
-        .collect();
-    let typechecker::Type::Kind(kind) = typeck.get_pat_type(id).unwrap() else {
-        unreachable!()
-    };
-    let result = crate::parser::parse_with_ctx(
-        pat_ctx,
-        |stream| parse_node_with_kind(stream, *kind),
-        p.tokens,
-        Mode::Molt,
-    )
-    .map_err(Error::Parse)?;
-    Ok(ParsedPat {
-        vars,
-        ctx: result.ctx,
-        node: result.item,
-    })
 }

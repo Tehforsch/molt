@@ -2,6 +2,7 @@ mod builtin_fn;
 mod grammar;
 mod index_types;
 mod interpreter;
+mod parse_pats;
 mod resolver;
 mod runtime_ctx;
 mod typechecker;
@@ -24,7 +25,6 @@ use crate::Ctx;
 use crate::RawNodeId;
 use crate::Span;
 use crate::molt_lang::resolver::Resolver;
-use crate::molt_lang::resolver::parse_pats;
 use crate::molt_lang::typechecker::Typechecker;
 use crate::rust_grammar::Ident;
 use crate::rust_grammar::Kind;
@@ -221,14 +221,16 @@ impl MoltFile {
             .item;
         let file = file.add_implicit_main().map_err(Error::FileStructure)?;
         let resolver = Resolver::default();
-        let partial = resolver
+        let resolved = resolver
             .resolve_file(file)
             .map_err(|e| Error::Resolver(e, file_id))?;
-        let typechecker = Typechecker::new(&partial.var_names, &partial.pats);
+        let typechecker = Typechecker::new(&resolved.var_names, &resolved.pats);
         let typeck = typechecker
-            .check(&partial)
+            .check(&resolved)
             .map_err(|e| Error::Typechecker(e, file_id))?;
-        parse_pats(partial, &typeck).map_err(|e| Error::Resolver(e, file_id))
+        resolved
+            .parse_pats(&typeck)
+            .map_err(|e| Error::ParsePats(e, file_id))
     }
 
     pub(crate) fn check_has_main_fn_with_input(&self) -> Result<(), Error> {

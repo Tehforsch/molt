@@ -12,6 +12,7 @@ use crate::molt_lang::{FileStructureError, InterpreterError, ResolverError, Type
 pub enum Error {
     Parse(crate::parser::Error, FileId),
     Resolver(ResolverError, FileId),
+    ParsePats(crate::parser::Error, FileId),
     FileStructure(FileStructureError),
     Misc(String),
     Modify(ModifyError),
@@ -35,6 +36,7 @@ impl Error {
         match self {
             Error::Parse(error, file_id) => Some((error, *file_id)),
             Error::Resolver(ResolverError::Parse(error), file_id) => Some((error, *file_id)),
+            Error::ParsePats(error, file_id) => Some((error, *file_id)),
             Error::Resolver(_, _) => None,
             Error::FileStructure(_) => None,
             Error::Misc(_) => None,
@@ -113,6 +115,7 @@ impl std::fmt::Display for Error {
         match self {
             Error::Parse(error, _) => write!(f, "{error}"),
             Error::Resolver(error, _) => write!(f, "{error}"),
+            Error::ParsePats(error, _) => write!(f, "{error}"),
             Error::FileStructure(error) => write!(f, "{error}"),
             Error::Misc(s) => write!(f, "{s}"),
             Error::Modify(s) => write!(f, "{s}"),
