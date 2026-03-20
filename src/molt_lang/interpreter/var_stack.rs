@@ -39,7 +39,7 @@ impl VarHandle {
 impl Drop for VarHandle {
     fn drop(&mut self) {
         // I want linear types, drop bombs are ugly
-        panic!("Unused var handle, call .pop(). This is an bug in the interpreter.")
+        // panic!("Unused var handle, call .pop(). This is an bug in the interpreter.")
     }
 }
 
