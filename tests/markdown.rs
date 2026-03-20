@@ -136,13 +136,18 @@ fn filter_code_blocks(section: &Section, f: impl Fn(Lang) -> bool) -> Vec<&CodeB
         .collect()
 }
 
+struct TestOutput {
+    output: String,
+    errors: Vec<String>,
+}
+
 fn run_on_str(
     md_file: &Path,
     section_name: Option<&str>,
     c: TestConfig,
     molt_src: &str,
     rust_sources: &[&CodeBlock],
-) -> Result<String, Error> {
+) -> Result<TestOutput, Error> {
     let mut input = Input::new(Source::String(Contents::new(molt_src.to_string())));
     let (sources, references): (Vec<_>, Vec<_>) = rust_sources
         .iter()
@@ -151,6 +156,7 @@ fn run_on_str(
         input = input.with_rust_src(src.content.to_string())?;
     }
     let writer = Writer::buffer();
+    let mut errors = Vec::new();
     if c.should_error {
         // If an error is expected, ignore the result since any error will be
         // written to the `writer` and therefore appear in the output so we can
@@ -163,19 +169,26 @@ fn run_on_str(
                 let error_writer = Writer::buffer();
                 let _ = emit_error(&error_writer, &input, result);
                 let rendered = error_writer.into_string().unwrap();
-                eprintln!("{rendered}");
-                panic!(
-                    "{}: section {:?}: molt run failed",
+                errors.push(format!(
+                    "{}: section {:?}: molt run failed\n{rendered}",
                     md_file.display(),
                     section_name,
-                );
+                ));
             }
             Ok(result) => {
-                check_modifications(md_file, section_name, result, &references);
+                errors.extend(check_modifications(
+                    md_file,
+                    section_name,
+                    result,
+                    &references,
+                ));
             }
         }
     }
-    Ok(writer.into_string().unwrap())
+    Ok(TestOutput {
+        output: writer.into_string().unwrap(),
+        errors,
+    })
 }
 
 fn check_modifications(
@@ -183,32 +196,35 @@ fn check_modifications(
     section_name: Option<&str>,
     result: molt::RunResult,
     references: &[&CodeBlock],
-) {
+) -> Vec<String> {
+    let mut errors = Vec::new();
     if result.modifications_by_file.is_empty() {
-        // Language test without any match/transformation
-        // logic.
-        return;
+        return errors;
     }
     assert_eq!(result.modifications_by_file.len(), 1);
     let result = result.modifications_by_file.into_iter().next().unwrap().1;
     if references.is_empty() {
-        assert_eq!(
-            result.num_modifications, 0,
-            "Modifications were performed, but none are specified in the test."
-        );
+        if result.num_modifications != 0 {
+            errors.push(format!(
+                "{}: section {:?}: modifications were performed, but none are specified in the test.",
+                md_file.display(),
+                section_name,
+            ));
+        }
     } else {
         assert_eq!(references.len(), 1);
         let expected = &references[0].content;
         let actual = result.new_code.code();
         if actual != *expected {
-            eprintln!("{}", colored_diff(expected, &actual));
-            panic!(
-                "{}: section {:?}: transformation mismatch",
+            errors.push(format!(
+                "{}: section {:?}: transformation mismatch\n{}",
                 md_file.display(),
                 section_name,
-            );
+                colored_diff(expected, &actual),
+            ));
         }
     }
+    errors
 }
 
 fn dump_test_files(
@@ -294,7 +310,7 @@ fn run_section(md_file: &Path, section: &Section) {
     };
     let section_name = section.name.as_deref();
     let config = TestConfig { should_error };
-    let output = run_on_str(
+    let test_output = run_on_str(
         md_file,
         section_name,
         config,
@@ -309,29 +325,43 @@ fn run_section(md_file: &Path, section: &Section) {
         )
     });
 
+    let mut errors = test_output.errors;
+    let output = test_output.output;
     let output = output.trim_end();
     match output_blocks.first() {
         Some(block) => {
             let expected = block.content.trim_end();
             if output != expected {
-                eprintln!("{}", colored_diff(expected, output));
-                panic!(
-                    "{}: section {:?}: output mismatch",
+                errors.push(format!(
+                    "{}: section {:?}: output mismatch\n{}",
                     md_file.display(),
                     section_name,
-                );
+                    colored_diff(expected, output),
+                ));
             }
         }
         None => {
             if !output.is_empty() {
-                panic!(
+                errors.push(format!(
                     "{}: section {:?}: test produced output but no output block is specified:\n{}",
                     md_file.display(),
                     section_name,
                     output,
-                );
+                ));
             }
         }
+    }
+
+    if !errors.is_empty() {
+        for error in &errors {
+            eprintln!("{error}");
+        }
+        panic!(
+            "{}: section {:?}: {} error(s)",
+            md_file.display(),
+            section_name,
+            errors.len(),
+        );
     }
 }
 
