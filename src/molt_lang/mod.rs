@@ -94,12 +94,19 @@ pub enum Stmt {
     Return(ReturnStmt),
     Assignment(Assignment),
     If(If),
+    IfLet(IfLet),
     For(For),
 }
 
 #[derive(Debug)]
 pub struct If {
     pub if_branches: Vec<(Expr, Vec<Stmt>)>,
+    pub else_branch: Option<Vec<Stmt>>,
+}
+
+#[derive(Debug)]
+pub struct IfLet {
+    pub if_branches: Vec<(LetLhs, Expr, Vec<Stmt>)>,
     pub else_branch: Option<Vec<Stmt>>,
 }
 

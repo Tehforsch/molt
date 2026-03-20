@@ -3,7 +3,7 @@ mod error;
 mod value;
 mod var_stack;
 
-use super::{For, If, LetLhs, LetStmt, Lit};
+use super::{For, If, IfLet, LetLhs, LetStmt, Lit};
 use crate::{
     Matcher, ModMap, Node, RawNodeId,
     modify::{Modification, NodeSpec},
@@ -150,6 +150,7 @@ impl<'a> Interpreter<'a> {
             }
             Stmt::Assignment(assignment) => self.eval_assignment(assignment),
             Stmt::If(if_) => self.eval_if(if_),
+            Stmt::IfLet(if_let) => self.eval_if_let(scope, if_let),
             Stmt::For(for_) => self.eval_for(scope, for_),
         }
     }
@@ -188,15 +189,23 @@ impl<'a> Interpreter<'a> {
 
     fn eval_block(&mut self, stmts: &[Stmt]) -> Result<StmtValue, Error> {
         let mut scope = Scope::default();
-        for stmt in stmts.iter() {
+        let mut value = StmtValue::Value(Value::Unit);
+        for (i, stmt) in stmts.iter().enumerate() {
             match self.eval_stmt(&mut scope, stmt)? {
                 StmtValue::NoMatch => return Ok(StmtValue::NoMatch),
-                StmtValue::Return(val) => return Ok(StmtValue::Return(val)),
-                StmtValue::Value(_) => {}
+                StmtValue::Return(val) => {
+                    value = StmtValue::Return(val);
+                    break;
+                }
+                StmtValue::Value(val) => {
+                    if i == stmts.len() - 1 {
+                        value = StmtValue::Value(val);
+                    }
+                }
             }
         }
         self.clear_scope(scope);
-        Ok(StmtValue::Value(Value::Unit))
+        Ok(value)
     }
 
     fn make_fn_args(&mut self, args: &[Expr]) -> Result<Vec<Value>> {
@@ -276,7 +285,7 @@ impl<'a> Interpreter<'a> {
             | Value::BuiltinFn(_) => self.eval_expr(&assignment.rhs)?,
             Value::Node(id) => {
                 let Value::Node(new_val) = self.eval_expr(&assignment.rhs)? else {
-                    unreachable!() // type checker ensures
+                    typechecker_bug!();
                 };
                 self.modifications.push(Modification {
                     old: id,
@@ -404,6 +413,23 @@ impl<'a> Interpreter<'a> {
             };
             bound_to
         })
+    }
+
+    fn eval_if_let(&mut self, scope: &mut Scope, if_let: &IfLet) -> Result<StmtValue> {
+        for (lhs, expr, block) in &if_let.if_branches {
+            let val = self.eval_expr(expr)?;
+            match self.eval_variable_init(scope, lhs, val)? {
+                StmtValue::NoMatch => continue,
+                StmtValue::Value(_) => {
+                    return self.eval_block(block);
+                }
+                StmtValue::Return(v) => return Ok(StmtValue::Return(v)),
+            }
+        }
+        if let Some(ref else_branch) = if_let.else_branch {
+            return self.eval_block(else_branch);
+        }
+        Ok(StmtValue::Value(Value::Unit))
     }
 
     fn eval_if(&mut self, if_: &If) -> Result<StmtValue> {

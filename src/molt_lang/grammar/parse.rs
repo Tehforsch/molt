@@ -12,7 +12,7 @@ use crate::rust_grammar::ext::IdentExt;
 use crate::rust_grammar::{Ident, Kind, LitBool, LitInt, LitStr};
 use crate::storage::Storage;
 
-use super::{Expr, FnArg, For, If, LetLhs, LetStmt, MoltFile, MoltFn, Pat, Stmt};
+use super::{Expr, FnArg, For, If, IfLet, LetLhs, LetStmt, MoltFile, MoltFn, Pat, Stmt};
 
 impl Parse for MoltFile {
     fn parse(input: ParseStream) -> Result<Self> {
@@ -149,7 +149,9 @@ impl Parse for Type {
 impl Parse for Stmt {
     fn parse(input: ParseStream) -> Result<Self> {
         let lookahead = input.lookahead1();
-        if lookahead.peek(Token![if]) {
+        if lookahead.peek(Token![if]) && input.peek2(Token![let]) {
+            Ok(Stmt::IfLet(input.parse()?))
+        } else if lookahead.peek(Token![if]) {
             Ok(Stmt::If(input.parse()?))
         } else if lookahead.peek(Token![for]) {
             Ok(Stmt::For(input.parse()?))
@@ -220,6 +222,44 @@ impl Parse for If {
         }
 
         Ok(If {
+            if_branches,
+            else_branch: None,
+        })
+    }
+}
+
+impl Parse for IfLet {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let mut if_branches = vec![];
+
+        let _: Token![if] = input.parse()?;
+        let _: Token![let] = input.parse()?;
+        let lhs: LetLhs = input.parse()?;
+        let _: Token![=] = input.parse()?;
+        let expr: Expr = input.parse()?;
+        let body = Block::parse(input)?;
+        if_branches.push((lhs, expr, body));
+
+        while input.peek(Token![else]) {
+            let _: Token![else] = input.parse()?;
+            if input.peek(Token![if]) {
+                let _: Token![if] = input.parse()?;
+                let _: Token![let] = input.parse()?;
+                let lhs: LetLhs = input.parse()?;
+                let _: Token![=] = input.parse()?;
+                let expr: Expr = input.parse()?;
+                let body = Block::parse(input)?;
+                if_branches.push((lhs, expr, body));
+            } else {
+                let body = input.parse()?;
+                return Ok(IfLet {
+                    if_branches,
+                    else_branch: Some(body),
+                });
+            }
+        }
+
+        Ok(IfLet {
             if_branches,
             else_branch: None,
         })

@@ -451,6 +451,13 @@ impl<'a> Typechecker<'a> {
                     return Ok(Returns::Always);
                 }
             }
+            Stmt::IfLet(if_let_stmt) => {
+                if let Returns::Always =
+                    self.check_if_let(if_let_stmt, surrounding_fn_return_type)?
+                {
+                    return Ok(Returns::Always);
+                }
+            }
             Stmt::For(for_stmt) => {
                 self.check_for(for_stmt, surrounding_fn_return_type)?;
             }
@@ -579,6 +586,26 @@ impl<'a> Typechecker<'a> {
             returns.add_branch(self.check_block(&branch.1, surrounding_fn_return_type)?);
         }
         if let Some(else_branch) = &if_stmt.else_branch {
+            returns.add_branch(self.check_block(else_branch, surrounding_fn_return_type)?);
+        } else {
+            returns = Returns::NotAlways;
+        }
+        Ok(returns)
+    }
+
+    fn check_if_let(
+        &mut self,
+        if_let: &super::IfLet,
+        surrounding_fn_return_type: TypeId,
+    ) -> Result<Returns> {
+        let mut returns = Returns::Always;
+        for (lhs, expr, block) in if_let.if_branches.iter() {
+            let rhs_type = self.infer_expr(expr)?;
+            let lhs_type = self.infer_let_lhs(lhs, self.types[rhs_type].clone())?;
+            self.unify(lhs_type, rhs_type)?;
+            returns.add_branch(self.check_block(block, surrounding_fn_return_type)?);
+        }
+        if let Some(else_branch) = &if_let.else_branch {
             returns.add_branch(self.check_block(else_branch, surrounding_fn_return_type)?);
         } else {
             returns = Returns::NotAlways;

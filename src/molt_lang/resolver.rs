@@ -218,6 +218,7 @@ impl Resolver {
             grammar::Stmt::Return(s) => Ok(Stmt::Return(self.resolve_return_stmt(s)?)),
             grammar::Stmt::Assignment(a) => Ok(Stmt::Assignment(self.resolve_assignment(a)?)),
             grammar::Stmt::If(i) => Ok(Stmt::If(self.resolve_if(i)?)),
+            grammar::Stmt::IfLet(i) => Ok(Stmt::IfLet(self.resolve_if_let(i)?)),
             grammar::Stmt::For(f) => Ok(Stmt::For(self.resolve_for(f)?)),
         }
     }
@@ -249,6 +250,39 @@ impl Resolver {
             })
             .transpose()?;
         Ok(If {
+            if_branches,
+            else_branch,
+        })
+    }
+
+    fn resolve_if_let(&mut self, i: grammar::IfLet) -> Result<IfLet> {
+        let if_branches = i
+            .if_branches
+            .into_iter()
+            .map(|(lhs, expr, block)| {
+                let expr = self.resolve_expr(expr)?;
+                let scope = self.make_scope();
+                self.scopes.push(scope);
+                let lhs = self.resolve_let_lhs(lhs)?;
+                let num_stmts = block.stmts.len();
+                let stmts = block
+                    .stmts
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, s)| self.resolve_stmt(s, i == num_stmts - 1))
+                    .collect::<Result<_>>()?;
+                self.scopes.pop();
+                Ok((lhs, expr, stmts))
+            })
+            .collect::<Result<_>>()?;
+        let else_branch = i
+            .else_branch
+            .map(|stmts| {
+                let scope = self.make_scope();
+                self.resolve_block(stmts, scope)
+            })
+            .transpose()?;
+        Ok(IfLet {
             if_branches,
             else_branch,
         })
