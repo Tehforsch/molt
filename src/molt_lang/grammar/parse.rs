@@ -93,17 +93,12 @@ impl Parse for MoltFn {
         } else {
             None
         };
-        let body;
-        braced!(body in input);
-        let mut stmts = vec![];
-        while !body.is_empty() {
-            stmts.push(body.parse()?);
-        }
+        let stmts = input.parse::<Block>()?;
 
         Ok(MoltFn {
             name,
             args,
-            stmts: stmts.into_iter().collect(),
+            stmts: stmts.stmts.into_iter().collect(),
             return_type,
         })
     }
@@ -186,7 +181,14 @@ impl Parse for Block {
         braced!(body in input);
         let mut stmts = vec![];
         while !body.is_empty() {
-            stmts.push(body.parse()?);
+            let stmt = body.parse()?;
+            if !body.is_empty()
+                && let Stmt::Expr(ref expr_stmt) = stmt
+                && !expr_stmt.has_trailing_semi
+            {
+                return Err(body.error("expected semicolon"));
+            }
+            stmts.push(stmt);
         }
         Ok(stmts.into_iter().collect())
     }
