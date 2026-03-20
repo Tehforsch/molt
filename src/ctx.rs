@@ -11,9 +11,9 @@ type InternalId = ItemOrVar<usize, usize>;
 /// either a concrete syntax node or a pattern variable
 /// for a given `Ctx`.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub(crate) struct Id(InternalId, Mode);
+pub(crate) struct RawNodeId(InternalId, Mode);
 
-impl Id {
+impl RawNodeId {
     pub(crate) fn is_var(&self) -> bool {
         match self.0 {
             ItemOrVar::Item(_) => false,
@@ -30,14 +30,14 @@ impl Id {
 /// `Id` type. Used in the AST to retain type information.
 pub(crate) struct NodeId<T> {
     _marker: PhantomData<T>,
-    id: Id,
+    id: RawNodeId,
 }
 
 impl<T> NodeId<T> {
     // used instead of Expr::PLACEHOLDER in parsing.
     pub(crate) fn placeholder() -> Self {
         Self {
-            id: Id(InternalId::Item(usize::MAX), Mode::Real),
+            id: RawNodeId(InternalId::Item(usize::MAX), Mode::Real),
             _marker: PhantomData,
         }
     }
@@ -71,13 +71,13 @@ impl<T> std::hash::Hash for NodeId<T> {
 
 impl<T> Eq for NodeId<T> {}
 
-impl<T> From<NodeId<T>> for Id {
+impl<T> From<NodeId<T>> for RawNodeId {
     fn from(value: NodeId<T>) -> Self {
         value.id
     }
 }
 
-impl Id {
+impl RawNodeId {
     pub(crate) fn typed<T>(self) -> NodeId<T> {
         NodeId {
             id: self,
@@ -124,22 +124,22 @@ pub(crate) struct Ctx<Node: NodeType> {
 }
 
 impl<Node: NodeType> Ctx<Node> {
-    fn add_node(&mut self, node: Spanned<Node>) -> Id {
+    fn add_node(&mut self, node: Spanned<Node>) -> RawNodeId {
         self.spans.push(node.span());
         self.nodes.push(node.item());
-        Id(InternalId::Item(self.nodes.len() - 1), self.mode)
+        RawNodeId(InternalId::Item(self.nodes.len() - 1), self.mode)
     }
 
     pub(crate) fn add<T: ToNode<Node>>(&mut self, t: Spanned<T>) -> NodeId<T> {
         self.add_node(t.map(|item| item.to_node())).typed()
     }
 
-    fn add_var_internal(&mut self, var: Var<Node::Kind>) -> Id {
+    fn add_var_internal(&mut self, var: Var<Node::Kind>) -> RawNodeId {
         self.vars.push(var);
-        Id(InternalId::Var(self.vars.len() - 1), self.mode)
+        RawNodeId(InternalId::Var(self.vars.len() - 1), self.mode)
     }
 
-    fn add_var_untyped(&mut self, var: Var<Node::Kind>) -> Id {
+    fn add_var_untyped(&mut self, var: Var<Node::Kind>) -> RawNodeId {
         if let Some((id, _)) = self.get_var_by_name(var.ident()) {
             id
         } else {
@@ -159,7 +159,10 @@ impl<Node: NodeType> Ctx<Node> {
         }
     }
 
-    pub(crate) fn get<T: ToNode<Node>>(&self, id: impl Into<Id>) -> ItemOrVar<&T, Id> {
+    pub(crate) fn get<T: ToNode<Node>>(
+        &self,
+        id: impl Into<RawNodeId>,
+    ) -> ItemOrVar<&T, RawNodeId> {
         let id = id.into();
         debug_assert_eq!(id.mode(), self.mode);
         match id.0 {
@@ -168,8 +171,11 @@ impl<Node: NodeType> Ctx<Node> {
         }
     }
 
-    pub(crate) fn get_mut<T: ToNode<Node>>(&mut self, id: NodeId<T>) -> ItemOrVar<&mut T, Id> {
-        let id: Id = id.into();
+    pub(crate) fn get_mut<T: ToNode<Node>>(
+        &mut self,
+        id: NodeId<T>,
+    ) -> ItemOrVar<&mut T, RawNodeId> {
+        let id: RawNodeId = id.into();
         debug_assert_eq!(id.mode(), self.mode);
         match id.0 {
             InternalId::Item(idx) => {
@@ -179,42 +185,42 @@ impl<Node: NodeType> Ctx<Node> {
         }
     }
 
-    pub(crate) fn get_real<T: ToNode<Node>>(&self, id: impl Into<Id>) -> Option<&T> {
+    pub(crate) fn get_real<T: ToNode<Node>>(&self, id: impl Into<RawNodeId>) -> Option<&T> {
         match self.get(id) {
             ItemOrVar::Item(t) => Some(t),
             ItemOrVar::Var(_) => None,
         }
     }
 
-    pub(crate) fn get_var(&self, id: Id) -> &Var<Node::Kind> {
+    pub(crate) fn get_var(&self, id: RawNodeId) -> &Var<Node::Kind> {
         match id.0 {
             InternalId::Item(_) => panic!(),
             InternalId::Var(idx) => &self.vars[idx],
         }
     }
 
-    fn get_var_by_name(&self, ident: &Ident) -> Option<(Id, &Var<Node::Kind>)> {
+    fn get_var_by_name(&self, ident: &Ident) -> Option<(RawNodeId, &Var<Node::Kind>)> {
         self.vars
             .iter()
             .enumerate()
             .find(|(_, var)| var.ident() == ident)
-            .map(|(i, var)| (Id(InternalId::Var(i), self.mode), var))
+            .map(|(i, var)| (RawNodeId(InternalId::Var(i), self.mode), var))
     }
 
     pub(crate) fn get_kind_by_name(&self, name: &Ident) -> VarKind<Node::Kind> {
         self.get_var_by_name(name).unwrap().1.kind
     }
 
-    pub(crate) fn iter(&self) -> impl Iterator<Item = Id> {
-        (0..self.nodes.len()).map(|id| Id(InternalId::Item(id), self.mode))
+    pub(crate) fn iter(&self) -> impl Iterator<Item = RawNodeId> {
+        (0..self.nodes.len()).map(|id| RawNodeId(InternalId::Item(id), self.mode))
     }
 
     pub(crate) fn iter_vars(&self) -> impl Iterator<Item = &Var<Node::Kind>> {
         self.vars.iter()
     }
 
-    pub(crate) fn get_span(&self, id: impl Into<Id>) -> Span {
-        let id: Id = id.into();
+    pub(crate) fn get_span(&self, id: impl Into<RawNodeId>) -> Span {
+        let id: RawNodeId = id.into();
         debug_assert_eq!(id.mode(), self.mode);
         match id.0 {
             ItemOrVar::Item(idx) => self.spans[idx],
@@ -222,7 +228,7 @@ impl<Node: NodeType> Ctx<Node> {
         }
     }
 
-    pub(crate) fn print<'a>(&'a self, id: Id, src: &'a str) -> &'a str {
+    pub(crate) fn print<'a>(&'a self, id: RawNodeId, src: &'a str) -> &'a str {
         let span = self.get_span(id);
         &src[span.byte_range()]
     }

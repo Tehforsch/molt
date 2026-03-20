@@ -5,7 +5,7 @@ mod var_stack;
 
 use super::{For, If, LetLhs, LetStmt, Lit};
 use crate::{
-    Id, Matcher, ModMap, Node,
+    Matcher, ModMap, Node, RawNodeId,
     modify::{Modification, NodeSpec},
     molt_lang::{
         Assignment, Expr, FnId, List, MoltFile, MoltFn, Stmt, Type, VarId,
@@ -104,7 +104,7 @@ impl<'a> Interpreter<'a> {
         Ok(())
     }
 
-    fn eval_main_fn_on_node(&mut self, node: Id, main_fn_id: FnId) -> Result<()> {
+    fn eval_main_fn_on_node(&mut self, node: RawNodeId, main_fn_id: FnId) -> Result<()> {
         let value = Value::Node(NodeSpec::Real(node));
         // Special handling to filter out non-matching node types
         // in the main function

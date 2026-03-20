@@ -8,7 +8,7 @@ use crate::molt_lang::RuntimeCtx;
 use crate::rule::{DoesNotRequireRule, RequiresRule};
 use crate::rust_grammar::Node;
 use crate::{
-    Id, ItemOrVar, NodeId, NodeList, NodeType,
+    ItemOrVar, NodeId, NodeList, NodeType, RawNodeId,
     rule::{Rule, RuleKey, Rules},
 };
 
@@ -17,20 +17,20 @@ pub(crate) type IsMatch<T = ()> = Result<T, NoMatch>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Binding {
-    pub(crate) id: Option<Id>,
+    pub(crate) id: Option<RawNodeId>,
 }
 
 #[derive(Debug)]
 pub(crate) struct Match {
-    bindings: HashMap<Id, Binding>,
+    bindings: HashMap<RawNodeId, Binding>,
 }
 
 impl Match {
-    pub(crate) fn get_binding(&self, var: Id) -> &Binding {
+    pub(crate) fn get_binding(&self, var: RawNodeId) -> &Binding {
         &self.bindings[&var]
     }
 
-    pub(crate) fn iter_vars(&self) -> impl Iterator<Item = Id> {
+    pub(crate) fn iter_vars(&self) -> impl Iterator<Item = RawNodeId> {
         self.bindings.keys().copied()
     }
 }
@@ -44,13 +44,13 @@ impl Match {
 pub(crate) struct MatcherBuilder<'a, Node: NodeType> {
     rules: &'a Rules,
     ctx: MatchCtx<'a, Node>,
-    bindings: HashMap<Id, Binding>,
+    bindings: HashMap<RawNodeId, Binding>,
 }
 
 pub(crate) struct Matcher<'a, Node: NodeType> {
     rules: &'a Rules,
     ctx: &'a MatchCtx<'a, Node>,
-    bindings: HashMap<Id, Binding>,
+    bindings: HashMap<RawNodeId, Binding>,
 }
 
 impl<'a> Matcher<'a, Node> {
@@ -70,12 +70,12 @@ impl<'a> Matcher<'a, Node> {
 
 impl<'a, Node: NodeType> MatcherBuilder<'a, Node> {
     /// Add the variable to the matching context.
-    pub fn add_var(&mut self, var: Id, bound_to: Option<Id>) {
+    pub fn add_var(&mut self, var: RawNodeId, bound_to: Option<RawNodeId>) {
         let _previous_entry = self.bindings.insert(var, Binding { id: bound_to });
         debug_assert!(_previous_entry.is_none());
     }
 
-    pub fn get_matches(self, molt: Id, real: Id) -> Option<Match> {
+    pub fn get_matches(self, molt: RawNodeId, real: RawNodeId) -> Option<Match> {
         let mut matcher = Matcher {
             rules: self.rules,
             ctx: &self.ctx,
@@ -88,7 +88,7 @@ impl<'a, Node: NodeType> MatcherBuilder<'a, Node> {
 }
 
 impl<'a, Node: NodeType> Matcher<'a, Node> {
-    fn bind(&mut self, key: Id, id: Id) -> IsMatch {
+    fn bind(&mut self, key: RawNodeId, id: RawNodeId) -> IsMatch {
         if self.ctx.config().debug_print {
             println!(
                 "\tBind ${} to {}",
@@ -107,7 +107,7 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
         }
     }
 
-    fn cmp_ids(&mut self, real_id: Id, id: Id) -> IsMatch {
+    fn cmp_ids(&mut self, real_id: RawNodeId, id: RawNodeId) -> IsMatch {
         if self.ctx.config().debug_print {
             println!(
                 "Compare \n\t{}\n\t{}",

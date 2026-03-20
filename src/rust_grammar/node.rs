@@ -1,7 +1,7 @@
 use crate::ctx::VarKind;
 use crate::match_pattern::IsMatch;
 use crate::rust_grammar::generics::Generics;
-use crate::{CmpSyn, Id, ItemOrVar, KindType, Matcher, ToNode};
+use crate::{CmpSyn, ItemOrVar, KindType, Matcher, RawNodeId, ToNode};
 
 use crate::parser::parse::discouraged::Speculative;
 use crate::parser::parse::{ParseNode, ParseStream};
@@ -190,7 +190,7 @@ macro_rules! define_kind {
             unreachable!()
         }
 
-        pub fn parse_node_with_kind(input: crate::parser::parse::ParseStream, kind: Kind) -> crate::parser::Result<Id> {
+        pub fn parse_node_with_kind(input: crate::parser::parse::ParseStream, kind: Kind) -> crate::parser::Result<RawNodeId> {
             $(
                 parse_impl!(input, kind, $variant_name, $parse_ty $(,$sub_ty)?);
             )*

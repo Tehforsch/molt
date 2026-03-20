@@ -1,7 +1,7 @@
 use codespan_reporting::diagnostic::Label;
 
 use crate::{
-    Diagnostic, FileId, Id,
+    Diagnostic, FileId, RawNodeId,
     modify::NodeSpec,
     molt_lang::{Interpreter, InterpreterError, builtin_fn::BuiltinFn, interpreter::value::Value},
 };
@@ -96,7 +96,7 @@ impl<'src> Interpreter<'src> {
         self.context.writer().write_line(content);
     }
 
-    fn emit_diagnostic(&self, file_id: FileId, real_node_to_print: Id) {
+    fn emit_diagnostic(&self, file_id: FileId, real_node_to_print: RawNodeId) {
         let ctx = self.context.real_ctx();
         let span = ctx.get_span(real_node_to_print);
         let diagnostic =

@@ -1,7 +1,7 @@
 use std::hash::{Hash, Hasher};
 use std::mem;
 
-use crate::{Id, ItemOrVar, NodeId, NodeList, Spanned, SpannedPat, WithSpan};
+use crate::{ItemOrVar, NodeId, NodeList, RawNodeId, Spanned, SpannedPat, WithSpan};
 use derive_macro::CmpSyn;
 use proc_macro2::{Span, TokenStream};
 
@@ -996,7 +996,7 @@ impl ParseNode for Expr {
         unreachable!()
     }
 
-    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, Id>> {
+    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, RawNodeId>> {
         Ok(ambiguous_expr(input, AllowStruct(true))?.item())
     }
 }
@@ -1008,7 +1008,7 @@ impl ParseNode for ExprNoEagerBrace {
         unreachable!()
     }
 
-    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, Id>> {
+    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, RawNodeId>> {
         Ok(ambiguous_expr(input, AllowStruct(false))?.item())
     }
 }
@@ -1020,7 +1020,7 @@ impl ParseNode for ExprEarlierBoundaryRule {
         unreachable!()
     }
 
-    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, Id>> {
+    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, RawNodeId>> {
         Ok(parse_with_earlier_boundary_rule(input)?.item())
     }
 }
@@ -1444,7 +1444,7 @@ fn trailer_helper(input: ParseStream, mut e: SpannedPat<Expr>) -> Result<Spanned
 
 // Parse all atomic expressions which don't have to worry about precedence
 // interactions, as they are fully contained.
-fn atom_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<ItemOrVar<Expr, Id>> {
+fn atom_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<ItemOrVar<Expr, RawNodeId>> {
     if input.peek_var::<Expr>() {
         return input.parse_single_var();
     }
@@ -1768,7 +1768,7 @@ fn expr_group(input: ParseStream, allow_struct: AllowStruct) -> Result<Expr> {
     let group = crate::parser::group::parse_group(input)?;
     let inner: SpannedPat<Expr> = group.content.parse_spanned_pat::<Expr>()?;
     let (span, inner) = inner.decompose();
-    let make_group_expr = |inner: ItemOrVar<Expr, Id>| {
+    let make_group_expr = |inner: ItemOrVar<Expr, RawNodeId>| {
         Ok(Expr::Group(ExprGroup {
             attrs: Vec::new(),
             group_token: group.token,
@@ -2068,7 +2068,7 @@ impl ParseNode for ClosureInput {
         unreachable!()
     }
 
-    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, Id>> {
+    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, RawNodeId>> {
         use crate::rust_grammar::pat::PatSingle;
 
         let attrs = input.call(Attribute::parse_outer)?;

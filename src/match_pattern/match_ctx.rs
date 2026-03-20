@@ -2,7 +2,7 @@ use codespan_reporting::files::Files;
 
 use crate::config::Config;
 use crate::molt_lang::RuntimeCtx;
-use crate::{Ctx, FileId, Id, Input, ItemOrVar, Mode, NodeType, ToNode, Var, rust_grammar};
+use crate::{Ctx, FileId, Input, ItemOrVar, Mode, NodeType, RawNodeId, ToNode, Var, rust_grammar};
 
 pub(super) struct MatchCtx<'a, Node: NodeType> {
     pub input: &'a Input,
@@ -69,11 +69,11 @@ impl<'a, Node: NodeType> MatchCtx<'a, Node> {
         }
     }
 
-    fn print_real(&self, id: Id) -> String {
+    fn print_real(&self, id: RawNodeId) -> String {
         self.real_ctx.print(id, self.real_src()).into()
     }
 
-    fn print_molt(&self, id: Id) -> String {
+    fn print_molt(&self, id: RawNodeId) -> String {
         if id.is_var() {
             self.molt_ctx.get_var(id).ident().to_string()
         } else {
@@ -81,21 +81,21 @@ impl<'a, Node: NodeType> MatchCtx<'a, Node> {
         }
     }
 
-    pub fn print(&self, id: Id) -> String {
+    pub fn print(&self, id: RawNodeId) -> String {
         match id.mode() {
             Mode::Real => self.print_real(id),
             Mode::Molt => self.print_molt(id),
         }
     }
 
-    pub fn get<T: ToNode<Node>>(&self, id: Id) -> ItemOrVar<&T, Id> {
+    pub fn get<T: ToNode<Node>>(&self, id: RawNodeId) -> ItemOrVar<&T, RawNodeId> {
         match id.mode() {
             Mode::Real => self.real_ctx.get(id),
             Mode::Molt => self.molt_ctx.get(id),
         }
     }
 
-    pub fn get_var(&self, var: Id) -> &Var<Node::Kind> {
+    pub fn get_var(&self, var: RawNodeId) -> &Var<Node::Kind> {
         self.molt_ctx.get_var(var)
     }
 

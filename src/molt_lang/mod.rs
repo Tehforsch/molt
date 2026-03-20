@@ -21,7 +21,7 @@ pub(crate) use typechecker::Error as TypeError;
 use codespan_reporting::files::Files;
 
 use crate::Ctx;
-use crate::Id;
+use crate::RawNodeId;
 use crate::Span;
 use crate::molt_lang::resolver::Resolver;
 use crate::molt_lang::resolver::resolve_pats;
@@ -180,11 +180,11 @@ pub struct UnresolvedPat {
 pub struct ResolvedPat {
     pub vars: Vec<PatVar>,
     pub ctx: Ctx<Node>,
-    pub node: Id,
+    pub node: RawNodeId,
 }
 
 impl ResolvedPat {
-    fn get_var_id(&self, id: Id) -> VarId {
+    fn get_var_id(&self, id: RawNodeId) -> VarId {
         // TODO this is O(n^2) given the surrounding context.
         self.vars
             .iter()
@@ -202,7 +202,7 @@ impl std::fmt::Debug for ResolvedPat {
 
 #[derive(Debug, Clone)]
 pub struct PatVar {
-    pub ctx_id: Id,
+    pub ctx_id: RawNodeId,
     pub var_id: VarId,
     pub span: Span,
 }

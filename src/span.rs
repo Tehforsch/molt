@@ -1,4 +1,4 @@
-use crate::{Id, ItemOrVar};
+use crate::{ItemOrVar, RawNodeId};
 
 #[derive(Copy, Clone, Debug)]
 pub struct Span {
@@ -59,7 +59,7 @@ pub trait WithSpan: Sized {
         Spanned::new(self, span)
     }
 
-    fn pattern_with_span(self, span: Span) -> Spanned<ItemOrVar<Self, Id>> {
+    fn pattern_with_span(self, span: Span) -> Spanned<ItemOrVar<Self, RawNodeId>> {
         Spanned::new(self, span).into_pattern()
     }
 }
@@ -105,7 +105,7 @@ impl<T> Spanned<T> {
     }
 }
 
-pub type SpannedPat<T> = Spanned<ItemOrVar<T, Id>>;
+pub type SpannedPat<T> = Spanned<ItemOrVar<T, RawNodeId>>;
 
 impl<T> SpannedPat<T> {
     pub fn is_var(&self) -> bool {

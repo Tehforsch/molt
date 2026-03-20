@@ -44,7 +44,7 @@ pub use error::{Error, emit_error};
 pub use input::{Contents, Input, Source};
 pub use writer::Writer;
 
-pub(crate) use ctx::{Ctx, Id, NodeId, Var};
+pub(crate) use ctx::{Ctx, NodeId, RawNodeId, Var};
 pub(crate) use input::{Diagnostic, FileId};
 pub(crate) use item_or_var::ItemOrVar;
 pub(crate) use match_pattern::{Match, Matcher};

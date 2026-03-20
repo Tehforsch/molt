@@ -1,4 +1,4 @@
-use crate::{Id, ItemOrVar, NodeId, NodeList, WithSpan};
+use crate::{ItemOrVar, NodeId, NodeList, RawNodeId, WithSpan};
 use derive_macro::CmpSyn;
 use proc_macro2::TokenStream;
 
@@ -333,7 +333,7 @@ impl ParseNode for PatSingle {
 
 fn parse_pat_multi<T: ParseListOrItem<Target = Pat, Punct = token::Or>>(
     input: ParseStream,
-) -> Result<ItemOrVar<Pat, Id>> {
+) -> Result<ItemOrVar<Pat, RawNodeId>> {
     let pat = input.parse_list_or_item::<T>()?;
     Ok(match pat {
         ListOrItem::Item(item) => item.item(),
@@ -358,7 +358,7 @@ impl ParseNode for PatMulti {
         unreachable!()
     }
 
-    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, Id>> {
+    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, RawNodeId>> {
         parse_pat_multi::<Self>(input)
     }
 }
@@ -370,7 +370,7 @@ impl ParseNode for PatMultiLeadingVert {
         unreachable!()
     }
 
-    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, Id>> {
+    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, RawNodeId>> {
         parse_pat_multi::<Self>(input)
     }
 }

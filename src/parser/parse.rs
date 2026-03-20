@@ -12,7 +12,7 @@ use std::str::FromStr;
 use crate::ctx::VarKind;
 use crate::node_list::RealNodeList;
 use crate::{
-    Ctx, Id, ItemOrVar, Mode, NodeId, NodeList, NodeType, Spanned, SpannedPat, ToNode, Var,
+    Ctx, ItemOrVar, Mode, NodeId, NodeList, NodeType, RawNodeId, Spanned, SpannedPat, ToNode, Var,
     WithSpan,
 };
 use proc_macro2::{Delimiter, Group, Literal, Punct, Span, TokenStream, TokenTree};
@@ -68,7 +68,7 @@ pub(crate) trait ParseNode {
 
     /// Parse a pattern (either a concrete syntax element or a
     /// molt variable).
-    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, Id>> {
+    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, RawNodeId>> {
         if input.peek_var::<Self::Target>() {
             return input.parse_single_var();
         }
@@ -527,7 +527,7 @@ impl<'a> ParseBuffer<'a> {
     pub(crate) fn parse_span_with<T: Parse, S: ToNode<Node>>(
         &self,
         f: impl Fn(T) -> S,
-    ) -> Result<Spanned<ItemOrVar<S, Id>>> {
+    ) -> Result<Spanned<ItemOrVar<S, RawNodeId>>> {
         let item: Spanned<T> = self.parse_spanned()?;
         Ok(item.map(f).into_pattern())
     }
@@ -609,7 +609,7 @@ impl<'a> ParseBuffer<'a> {
         Ok(Var::new(ident, kind))
     }
 
-    pub(crate) fn parse_single_var<T: ToNode<Node>>(&self) -> Result<ItemOrVar<T, Id>> {
+    pub(crate) fn parse_single_var<T: ToNode<Node>>(&self) -> Result<ItemOrVar<T, RawNodeId>> {
         let var = self.parse_var(VarKind::Single(T::kind()))?;
         Ok(ItemOrVar::Var(self.add_var::<T>(var).into()))
     }

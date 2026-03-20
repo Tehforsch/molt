@@ -9,7 +9,7 @@ use crate::change_buffer::ChangeBuffer;
 use crate::input::FilePath;
 use crate::molt_lang::{PatId, PatVar, RuntimeCtx};
 use crate::rust_grammar::Node;
-use crate::{Config, Id, Match, Span, Var};
+use crate::{Config, Match, RawNodeId, Span, Var};
 use codespan_reporting::files::Files;
 
 use crate::ctrl_c::FileRestorer;
@@ -46,9 +46,9 @@ pub struct Modification {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum NodeSpec {
-    Real(Id), // Refers to a node in the real file
+    Real(RawNodeId), // Refers to a node in the real file
     Molt {
-        id: Id,
+        id: RawNodeId,
         pat: PatId,
         vars: Vec<NodeSpec>,
     }, // Refers to a node in the molt file
