@@ -7,7 +7,7 @@ use std::path::Path;
 
 use crate::change_buffer::ChangeBuffer;
 use crate::input::FilePath;
-use crate::molt_lang::{Context, PatId, TokenVar};
+use crate::molt_lang::{Context, PatId, PatVar};
 use crate::rust_grammar::Node;
 use crate::{Config, Id, Match, Span, Var};
 use codespan_reporting::files::Files;

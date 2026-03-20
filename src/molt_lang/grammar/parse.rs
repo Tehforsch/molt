@@ -1,7 +1,7 @@
 use proc_macro2::{Span, TokenStream};
 
 use crate::molt_lang::grammar::{
-    Assignment, Atom, Block, ExprStmt, FnCall, List, Lit, ReturnStmt, TokenVar, TokenVars, Type,
+    Assignment, Atom, Block, ExprStmt, FnCall, List, Lit, ReturnStmt, PatVar, PatVars, Type,
 };
 use crate::molt_lang::{INPUT_VAR_NAME, MAIN_FN_NAME};
 use crate::parser::parse::{self, Parse, ParseStream};
@@ -343,7 +343,7 @@ impl Parse for Pat {
             let content;
             braced!(content in input);
             let fork = content.fork();
-            let vars = fork.parse::<TokenVars>().unwrap().0;
+            let vars = fork.parse::<PatVars>().unwrap().0;
             (vars, content.parse::<TokenStream>()?)
         } else {
             return Err(lookahead.error());
@@ -352,9 +352,9 @@ impl Parse for Pat {
     }
 }
 
-impl Parse for TokenVars {
+impl Parse for PatVars {
     fn parse(input: ParseStream) -> crate::parser::Result<Self> {
-        let mut vars = TokenVars(vec![]);
+        let mut vars = PatVars(vec![]);
         loop {
             let marker = input.marker();
             if input.cursor().eof() {
@@ -362,9 +362,9 @@ impl Parse for TokenVars {
             } else if input.parse::<Token![$]>().is_ok() {
                 let name = input.parse()?;
                 let span = input.span_from_marker(marker);
-                vars.0.push(TokenVar { name, span });
+                vars.0.push(PatVar { name, span });
             } else if input.cursor().any_group().is_some() {
-                let inner_vars: TokenVars = input.step(|cursor| {
+                let inner_vars: PatVars = input.step(|cursor| {
                     let (inner, _delim, _span, rest) = cursor.any_group().unwrap();
                     let scope = _span.close();
                     let ctx = cursor.ctx.clone();
@@ -372,7 +372,7 @@ impl Parse for TokenVars {
                     let unexpected = parse::get_unexpected(input);
                     let content =
                         parse::new_parse_buffer(scope, nested, unexpected, ctx, input.mode());
-                    let inner_vars: TokenVars = content.parse().unwrap();
+                    let inner_vars: PatVars = content.parse().unwrap();
                     Ok((inner_vars, rest))
                 })?;
                 vars.0.extend(inner_vars.0);

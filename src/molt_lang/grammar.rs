@@ -141,13 +141,13 @@ pub struct List {
 #[derive(Debug)]
 pub struct Pat {
     pub tokens: TokenStream,
-    pub vars: Vec<TokenVar>,
+    pub vars: Vec<PatVar>,
 }
 
 #[derive(Debug, Clone)]
-pub struct TokenVar {
+pub struct PatVar {
     pub name: Ident,
     pub span: Span,
 }
 
-pub struct TokenVars(pub Vec<TokenVar>);
+pub struct PatVars(pub Vec<PatVar>);

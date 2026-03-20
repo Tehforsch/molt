@@ -178,7 +178,7 @@ pub struct UnresolvedPat {
 }
 
 pub struct ResolvedPat {
-    pub vars: Vec<TokenVar>,
+    pub vars: Vec<PatVar>,
     pub ctx: Ctx<Node>,
     pub node: Id,
 }
@@ -201,7 +201,7 @@ impl std::fmt::Debug for ResolvedPat {
 }
 
 #[derive(Debug, Clone)]
-pub struct TokenVar {
+pub struct PatVar {
     pub ctx_id: Id,
     pub var_id: VarId,
     pub span: Span,

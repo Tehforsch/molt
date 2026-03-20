@@ -436,7 +436,7 @@ fn resolve_pat(
                 _ => typechecker_bug!(),
             };
             let ctx_id = pat_ctx.add_var::<Node>(Var::new(name.clone(), kind));
-            TokenVar {
+            PatVar {
                 ctx_id: ctx_id.into(),
                 var_id: *var_id,
                 span: *span,
