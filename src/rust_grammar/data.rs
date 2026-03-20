@@ -2,7 +2,7 @@ use crate::{NodeId, NodeList, WithSpan};
 use derive_macro::CmpSyn;
 
 use crate::parser::error::Result;
-use crate::parser::parse::{Parse, ParseList, ParseStream, ParseTerm, parse_punctuated_list_real};
+use crate::parser::parse::{Parse, ParseList, ParseStream, ParseTerm, parse_list_items_default};
 use crate::parser::token;
 use crate::rust_grammar::Node;
 use crate::rust_grammar::attr::Attribute;
@@ -136,21 +136,19 @@ impl Parse for FieldsUnnamed {
 
 impl ParseList for FieldsNamed {
     type Item = Field;
-    type ParseItem = FieldNamed;
     type Punct = Token![,];
 
-    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
-        parse_punctuated_list_real::<FieldNamed, Self::Punct>(input)
+    fn parse_list_items(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
+        parse_list_items_default::<FieldNamed, Self::Punct>(input)
     }
 }
 
 impl ParseList for FieldsUnnamed {
     type Item = Field;
-    type ParseItem = FieldUnnamed;
     type Punct = Token![,];
 
-    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
-        parse_punctuated_list_real::<FieldUnnamed, Self::Punct>(input)
+    fn parse_list_items(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
+        parse_list_items_default::<FieldUnnamed, Self::Punct>(input)
     }
 }
 

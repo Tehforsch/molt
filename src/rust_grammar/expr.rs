@@ -10,7 +10,7 @@ use crate::parser::error::{Error, Result};
 use crate::parser::parse::discouraged::Speculative as _;
 use crate::parser::parse::{
     ListOrItem, Parse, ParseBuffer, ParseList, ParseListOrItem, ParseStream, ParseTerm,
-    parse_punctuated_list_real,
+    parse_list_items_default,
 };
 use crate::parser::punctuated::Punctuated;
 use crate::parser::token;
@@ -1029,11 +1029,10 @@ struct FnArgs;
 
 impl ParseList for FnArgs {
     type Item = Expr;
-    type ParseItem = Expr;
     type Punct = Token![,];
 
-    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
-        parse_punctuated_list_real::<Expr, Self::Punct>(input)
+    fn parse_list_items(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
+        parse_list_items_default::<Expr, Self::Punct>(input)
     }
 }
 
@@ -2109,10 +2108,9 @@ impl ParseTerm for ClosureInput {
 
 impl ParseList for ClosureInput {
     type Punct = Token![,];
-    type ParseItem = ClosureInput;
     type Item = Pat;
 
-    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<<Self as ParseTerm>::Target>>> {
+    fn parse_list_items(input: ParseStream) -> Result<Vec<NodeId<<Self as ParseTerm>::Target>>> {
         let mut inputs = Punctuated::new();
         loop {
             if input.peek(Token![|]) {
@@ -2518,10 +2516,9 @@ struct Arms;
 
 impl ParseList for Arms {
     type Punct = Token![,];
-    type ParseItem = Arm;
     type Item = Arm;
 
-    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Arm>>> {
+    fn parse_list_items(input: ParseStream) -> Result<Vec<NodeId<Arm>>> {
         let mut arms = Vec::new();
         while !input.is_empty() {
             arms.push(input.parse_id::<Arm>()?);

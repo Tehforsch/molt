@@ -2714,11 +2714,9 @@ pub struct Items;
 impl ParseList for Items {
     type Item = Item;
 
-    type ParseItem = Item;
-
     type Punct = Token![;];
 
-    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
+    fn parse_list_items(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
         let mut items = vec![];
         while !input.is_empty() {
             items.push(input.parse()?);
@@ -2732,11 +2730,9 @@ struct ImplItems;
 impl ParseList for ImplItems {
     type Item = ImplItem;
 
-    type ParseItem = ImplItem;
-
     type Punct = Token![;];
 
-    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
+    fn parse_list_items(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
         let mut items = vec![];
         while !input.is_empty() {
             items.push(input.parse()?);

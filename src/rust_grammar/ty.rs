@@ -4,8 +4,7 @@ use proc_macro2::{Span, TokenStream};
 
 use crate::parser::error::{self, Result};
 use crate::parser::parse::{
-    ListOrItem, Parse, ParseList, ParseListOrItem, ParseStream, ParseTerm,
-    parse_punctuated_list_real,
+    ListOrItem, Parse, ParseList, ParseListOrItem, ParseStream, ParseTerm, parse_list_items_default,
 };
 use crate::parser::punctuated::Punctuated;
 use crate::parser::token;
@@ -253,11 +252,10 @@ impl ParseTerm for Type {
 
 impl ParseList for ParenthesizedGenericArguments {
     type Item = Type;
-    type ParseItem = Type;
     type Punct = Token![,];
 
-    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
-        parse_punctuated_list_real::<Type, Self::Punct>(input)
+    fn parse_list_items(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
+        parse_list_items_default::<Type, Self::Punct>(input)
     }
 }
 

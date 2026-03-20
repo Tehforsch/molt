@@ -302,15 +302,23 @@ pub(crate) trait PeekTerm {
     }
 }
 
+/// Trait for parsing lists of items. `ParseList` is to `ParseTerm`
+/// as `NodeId` is to `NodeList`.
 pub(crate) trait ParseList {
+    /// The items of the list
     type Item: ToNode<Node>;
-    type ParseItem: ParseTerm<Target = Self::Item>;
+
+    /// The punctuation separating the items. Currently unused but
+    /// might be useful type information in the future.
     type Punct: Parse;
 
-    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>>;
+    /// Parse a list of items of type `Item`. Note that implementors do not
+    /// need to check for molt variables of `List<...>` kind, since
+    /// this is taken care of by the `ParseStream::parse_list` function.
+    fn parse_list_items(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>>;
 }
 
-pub(crate) fn parse_punctuated_list_real<T: ParseTerm, P: Parse>(
+pub(crate) fn parse_list_items_default<T: ParseTerm, P: Parse>(
     input: ParseStream,
 ) -> Result<Vec<NodeId<T::Target>>> {
     Ok(
@@ -623,7 +631,7 @@ impl<'a> ParseBuffer<'a> {
         if self.peek_list_var::<T::Item>() {
             Ok(NodeList::Var(self.parse_list_var::<T::Item>()?))
         } else {
-            let list = T::parse_list_real(self)?;
+            let list = T::parse_list_items(self)?;
             Ok(NodeList::Item(RealNodeList::new(list)))
         }
     }

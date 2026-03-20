@@ -504,10 +504,9 @@ fn pat_ident(input: ParseStream) -> Result<PatIdent> {
 
 impl ParseList for PatTupleStruct {
     type Item = Pat;
-    type ParseItem = PatMultiLeadingVert;
     type Punct = Token![,];
 
-    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Pat>>> {
+    fn parse_list_items(input: ParseStream) -> Result<Vec<NodeId<Pat>>> {
         let mut elems = Punctuated::new();
         while !input.is_empty() {
             let value = input.parse_id::<PatMultiLeadingVert>()?;
@@ -812,10 +811,9 @@ fn pat_range_bound(input: ParseStream) -> Result<Option<PatRangeBound>> {
 
 impl ParseList for PatSlice {
     type Item = Pat;
-    type ParseItem = PatMultiLeadingVert;
     type Punct = Token![,];
 
-    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
+    fn parse_list_items(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
         let mut elems = Punctuated::new();
         while !input.is_empty() {
             let value = input.parse_spanned_pat::<PatMultiLeadingVert>()?;
