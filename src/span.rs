@@ -31,6 +31,14 @@ impl Span {
         }
     }
 
+    pub fn contains(&self, other: &Span) -> bool {
+        !self.fake && !other.fake && self.start <= other.start && other.end <= self.end
+    }
+
+    pub fn size(&self) -> usize {
+        self.end - self.start
+    }
+
     pub fn join(&self, span: impl Into<Span>) -> Span {
         let span = span.into();
         if self.fake || span.fake {

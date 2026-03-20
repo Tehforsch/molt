@@ -1,6 +1,6 @@
 use crate::{
     ModMap,
-    modify::{RealNodeRef, NodeRef},
+    modify::{NodeRef, RealNodeRef},
     molt_lang::{index_types::VarId, interpreter::value::Value},
     storage::Storage,
 };

@@ -6,6 +6,7 @@ fn main(input: Expr) {
     let { match $var.named($name) { $arms } } = input;
     let k: Pat;
     let result: Expr;
+    input = { match $var.named($name) { $arms } };
     for arm in arms {
         if let { Some(Foo::Value($k)) => $result } = arm {
             arm = { Some($k) => $result, };
@@ -26,9 +27,6 @@ fn main() {
 
 ```rust reference
 fn main() {
-    match foo.named("name") {
-        Some(val) => 1,
-        None => 2,
-    }
+    match foo.named("name") { Some(val) => 1, None => 2, }
 }
 ```

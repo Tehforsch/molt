@@ -391,10 +391,7 @@ impl<'a> Interpreter<'a> {
                 for var in match_.iter_vars() {
                     let bound_to = match_.get_binding(var).id.unwrap();
                     let var_id = pat.get_var_id(var);
-                    scope.add(
-                        self.vars
-                            .set(var_id, Value::Node(NodeRef::Real(bound_to))),
-                    );
+                    scope.add(self.vars.set(var_id, Value::Node(NodeRef::Real(bound_to))));
                 }
                 for var in match_.iter_list_vars() {
                     let ids = match_.get_list_binding(var).ids.as_ref().unwrap();
