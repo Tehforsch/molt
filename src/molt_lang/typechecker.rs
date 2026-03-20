@@ -14,6 +14,8 @@ pub(crate) struct Error {
     pub(crate) labels: Vec<ErrorLabel>,
 }
 
+type Result<T, E = Error> = std::result::Result<T, E>;
+
 pub(crate) struct ErrorLabel {
     pub(crate) span: crate::Span,
     pub(crate) message: String,
@@ -323,7 +325,7 @@ impl<'a> Typechecker<'a> {
         self.types.add(t)
     }
 
-    fn add_var_type(&mut self, id: VarId, type_: VarType) -> Result<TypeId, Error> {
+    fn add_var_type(&mut self, id: VarId, type_: VarType) -> Result<TypeId> {
         let type_id = match &type_ {
             VarType::Mono(type_id) => *type_id,
             VarType::Scheme(scheme) => scheme.type_id,
@@ -336,12 +338,12 @@ impl<'a> Typechecker<'a> {
         Ok(type_id)
     }
 
-    fn add_var(&mut self, id: VarId, type_: Type) -> Result<TypeId, Error> {
+    fn add_var(&mut self, id: VarId, type_: Type) -> Result<TypeId> {
         let type_id = self.add_type(type_);
         self.add_var_type(id, VarType::Mono(type_id))
     }
 
-    fn add_pat(&mut self, pat: PatId, type_: Type) -> Result<TypeId, Error> {
+    fn add_pat(&mut self, pat: PatId, type_: Type) -> Result<TypeId> {
         let type_id = self.add_type(type_);
         let entry_before = self.pat_types.insert(pat, type_id);
         assert!(entry_before.is_none());
@@ -355,7 +357,7 @@ impl<'a> Typechecker<'a> {
             .unwrap_or(id)
     }
 
-    pub(crate) fn check(mut self, file: &PartialMoltFile) -> Result<TypecheckResult, Error> {
+    pub(crate) fn check(mut self, file: &PartialMoltFile) -> Result<TypecheckResult> {
         let fn_return_types: Vec<_> = file.fns.iter().map(|f| self.declare_fn(f)).collect();
         for (id, f) in file.builtin_map.iter() {
             self.declare_builtin(*id, *f);
@@ -372,7 +374,7 @@ impl<'a> Typechecker<'a> {
         })
     }
 
-    pub(crate) fn check_no_untyped_vars(&self) -> Result<(), Error> {
+    pub(crate) fn check_no_untyped_vars(&self) -> Result<()> {
         for id in self.vars.keys() {
             if let Some(Type::Var) = self.get_type(*id) {
                 let name = self.var_names[*id].clone();
@@ -405,7 +407,7 @@ impl<'a> Typechecker<'a> {
         self.add_var_type(id, builtin_type).unwrap();
     }
 
-    fn check_fn(&mut self, f: &MoltFn, fn_return_type: TypeId) -> Result<(), Error> {
+    fn check_fn(&mut self, f: &MoltFn, fn_return_type: TypeId) -> Result<()> {
         let returns = self.check_block(&f.stmts, fn_return_type)?;
         if let Returns::NotAlways = returns {
             let unit = self.add_type(Type::Unit);
@@ -417,7 +419,7 @@ impl<'a> Typechecker<'a> {
         Ok(())
     }
 
-    fn check_block(&mut self, block: &[Stmt], fn_return_type: TypeId) -> Result<Returns, Error> {
+    fn check_block(&mut self, block: &[Stmt], fn_return_type: TypeId) -> Result<Returns> {
         for stmt in block.iter() {
             if let Returns::Always = self.check_stmt(stmt, fn_return_type)? {
                 return Ok(Returns::Always);
@@ -426,11 +428,7 @@ impl<'a> Typechecker<'a> {
         Ok(Returns::NotAlways)
     }
 
-    fn check_stmt(
-        &mut self,
-        stmt: &Stmt,
-        surrounding_fn_return_type: TypeId,
-    ) -> Result<Returns, Error> {
+    fn check_stmt(&mut self, stmt: &Stmt, surrounding_fn_return_type: TypeId) -> Result<Returns> {
         match stmt {
             Stmt::Expr(expr) => {
                 self.infer_expr(expr)?;
@@ -455,14 +453,14 @@ impl<'a> Typechecker<'a> {
         Ok(Returns::NotAlways)
     }
 
-    fn infer_expr(&mut self, expr: &super::Expr) -> Result<TypeId, Error> {
+    fn infer_expr(&mut self, expr: &super::Expr) -> Result<TypeId> {
         match expr {
             super::Expr::FnCall(fn_call) => {
                 let input = fn_call
                     .args
                     .iter()
                     .map(|arg| self.infer_expr(arg))
-                    .collect::<Result<_, Error>>()?;
+                    .collect::<Result<_>>()?;
                 let output = self.add_type(Type::Var);
                 let fn_type = self.add_type(Type::Fun(input, output));
                 // We know the function exists, so
@@ -479,11 +477,11 @@ impl<'a> Typechecker<'a> {
         }
     }
 
-    fn infer_pat(&mut self, id: &PatId) -> Result<TypeId, Error> {
+    fn infer_pat(&mut self, id: &PatId) -> Result<TypeId> {
         self.add_pat(*id, Type::Var)
     }
 
-    fn infer_atom(&mut self, atom: &super::Atom) -> Result<TypeId, Error> {
+    fn infer_atom(&mut self, atom: &super::Atom) -> Result<TypeId> {
         match atom {
             super::Atom::Var(var_id) => Ok(self.add_var(*var_id, Type::Var)?),
             super::Atom::Lit(lit) => Ok(self.add_type(lit.type_())),
@@ -491,7 +489,7 @@ impl<'a> Typechecker<'a> {
         }
     }
 
-    fn infer_list(&mut self, list: &super::List) -> Result<TypeId, Error> {
+    fn infer_list(&mut self, list: &super::List) -> Result<TypeId> {
         let inner_ty: Option<TypeId> = list
             .items
             .first()
@@ -507,7 +505,7 @@ impl<'a> Typechecker<'a> {
         Ok(self.add_type(Type::List(inner_ty)))
     }
 
-    fn check_let(&mut self, let_stmt: &super::LetStmt) -> Result<(), Error> {
+    fn check_let(&mut self, let_stmt: &super::LetStmt) -> Result<()> {
         let rhs = let_stmt
             .rhs
             .as_ref()
@@ -536,7 +534,7 @@ impl<'a> Typechecker<'a> {
         Ok(())
     }
 
-    fn infer_let_lhs(&mut self, lhs: &super::LetLhs, type_: Type) -> Result<TypeId, Error> {
+    fn infer_let_lhs(&mut self, lhs: &super::LetLhs, type_: Type) -> Result<TypeId> {
         match lhs {
             super::LetLhs::Var(var_id) => self.add_var(*var_id, type_),
             super::LetLhs::Pat(pat_id) => {
@@ -553,7 +551,7 @@ impl<'a> Typechecker<'a> {
         &mut self,
         ret_stmt: &super::ReturnStmt,
         fn_return_type: TypeId,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         let expr_type = ret_stmt
             .expr
             .as_ref()
@@ -566,7 +564,7 @@ impl<'a> Typechecker<'a> {
         &mut self,
         if_stmt: &super::If,
         surrounding_fn_return_type: TypeId,
-    ) -> Result<Returns, Error> {
+    ) -> Result<Returns> {
         let mut returns = Returns::Always;
         for branch in if_stmt.if_branches.iter() {
             let ty = self.infer_expr(&branch.0)?;
@@ -583,11 +581,7 @@ impl<'a> Typechecker<'a> {
         Ok(returns)
     }
 
-    fn check_for(
-        &mut self,
-        for_: &super::For,
-        surrounding_fn_return_type: TypeId,
-    ) -> Result<(), Error> {
+    fn check_for(&mut self, for_: &super::For, surrounding_fn_return_type: TypeId) -> Result<()> {
         let iterable_type = self.infer_expr(&for_.iterable)?;
         let item_type_id = self.get_item_type(iterable_type)?;
         let var_type = self.infer_let_lhs(&for_.lhs, self.types[item_type_id].clone())?;
@@ -596,7 +590,7 @@ impl<'a> Typechecker<'a> {
         Ok(())
     }
 
-    fn get_item_type(&self, id: TypeId) -> Result<TypeId, Error> {
+    fn get_item_type(&self, id: TypeId) -> Result<TypeId> {
         let ty = &self.types[id];
         match ty {
             Type::Var
@@ -610,7 +604,7 @@ impl<'a> Typechecker<'a> {
         }
     }
 
-    fn check_assignment(&mut self, a: &super::Assignment) -> Result<(), Error> {
+    fn check_assignment(&mut self, a: &super::Assignment) -> Result<()> {
         let lhs = self.lookup(a.lhs).unwrap(); // Resolver makes sure this exists
         let rhs = self.infer_expr(&a.rhs)?;
         let span = self.var_span(a.lhs);
@@ -619,7 +613,7 @@ impl<'a> Typechecker<'a> {
             .map_err(|e| e.with_label(span, format!("has type `{lhs_type}`")))
     }
 
-    fn unify(&mut self, t1: TypeId, t2: TypeId) -> Result<(), Error> {
+    fn unify(&mut self, t1: TypeId, t2: TypeId) -> Result<()> {
         let t1 = self.resolve(t1);
         let t2 = self.resolve(t2);
         if t1 == t2 {
