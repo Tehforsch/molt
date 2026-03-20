@@ -3,6 +3,7 @@ use std::path::Path;
 use molt::{Config, Contents, Error, Input, Source, Writer, emit_error};
 use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag, TagEnd};
 use similar::{ChangeTag, TextDiff};
+use std::fmt::Write;
 
 struct Section {
     name: Option<String>,
@@ -100,6 +101,33 @@ fn parse_markdown(content: &str) -> Vec<Section> {
     sections
 }
 
+fn colored_diff(expected: &str, actual: &str) -> String {
+    let diff = TextDiff::from_lines(expected, actual);
+    let mut out = String::new();
+    writeln!(out, "\x1b[1m--- expected\x1b[0m").unwrap();
+    writeln!(out, "\x1b[1m+++ actual\x1b[0m").unwrap();
+    for group in diff.grouped_ops(3) {
+        for op in &group {
+            for change in diff.iter_changes(op) {
+                let (sign, color) = match change.tag() {
+                    ChangeTag::Delete => ('-', "\x1b[31m"),
+                    ChangeTag::Insert => ('+', "\x1b[32m"),
+                    ChangeTag::Equal => (' ', ""),
+                };
+                if color.is_empty() {
+                    write!(out, " {change}").unwrap();
+                } else {
+                    write!(out, "{color}{sign}{change}\x1b[0m").unwrap();
+                }
+                if change.missing_newline() {
+                    writeln!(out).unwrap();
+                }
+            }
+        }
+    }
+    out
+}
+
 fn filter_code_blocks(section: &Section, f: impl Fn(Lang) -> bool) -> Vec<&CodeBlock> {
     section
         .code_blocks
@@ -108,7 +136,13 @@ fn filter_code_blocks(section: &Section, f: impl Fn(Lang) -> bool) -> Vec<&CodeB
         .collect()
 }
 
-fn run_on_str(c: TestConfig, molt_src: &str, rust_sources: &[&CodeBlock]) -> Result<String, Error> {
+fn run_on_str(
+    md_file: &Path,
+    section_name: Option<&str>,
+    c: TestConfig,
+    molt_src: &str,
+    rust_sources: &[&CodeBlock],
+) -> Result<String, Error> {
     let mut input = Input::new(Source::String(Contents::new(molt_src.to_string())));
     let (sources, references): (Vec<_>, Vec<_>) = rust_sources
         .iter()
@@ -124,20 +158,32 @@ fn run_on_str(c: TestConfig, molt_src: &str, rust_sources: &[&CodeBlock]) -> Res
         let _ = molt::run(&input, &writer, Config::default(), None);
     } else {
         let result = molt::run(&input, &writer, Config::default(), None);
-        // Otherwise, emit the error to stderr
         match result {
             Err(_) => {
-                emit_error(&Writer::default(), &input, result).unwrap();
+                let error_writer = Writer::buffer();
+                let _ = emit_error(&error_writer, &input, result);
+                let rendered = error_writer.into_string().unwrap();
+                eprintln!("{rendered}");
+                panic!(
+                    "{}: section {:?}: molt run failed",
+                    md_file.display(),
+                    section_name,
+                );
             }
             Ok(result) => {
-                check_modifications(result, &references);
+                check_modifications(md_file, section_name, result, &references);
             }
         }
     }
     Ok(writer.into_string().unwrap())
 }
 
-fn check_modifications(result: molt::RunResult, references: &[&CodeBlock]) {
+fn check_modifications(
+    md_file: &Path,
+    section_name: Option<&str>,
+    result: molt::RunResult,
+    references: &[&CodeBlock],
+) {
     if result.modifications_by_file.is_empty() {
         // Language test without any match/transformation
         // logic.
@@ -152,7 +198,16 @@ fn check_modifications(result: molt::RunResult, references: &[&CodeBlock]) {
         );
     } else {
         assert_eq!(references.len(), 1);
-        assert_eq!(result.new_code.code(), references[0].content);
+        let expected = &references[0].content;
+        let actual = result.new_code.code();
+        if actual != *expected {
+            eprintln!("{}", colored_diff(expected, &actual));
+            panic!(
+                "{}: section {:?}: transformation mismatch",
+                md_file.display(),
+                section_name,
+            );
+        }
     }
 }
 
@@ -186,12 +241,20 @@ fn run_section(md_file: &Path, section: &Section) {
         Lang::MoltError => true,
         Lang::Rust | Lang::RustReference | Lang::Output => unreachable!(),
     };
+    let section_name = section.name.as_deref();
     let config = TestConfig { should_error };
-    let output = run_on_str(config, &molt_blocks[0].content, &rust_blocks).unwrap_or_else(|e| {
+    let output = run_on_str(
+        md_file,
+        section_name,
+        config,
+        &molt_blocks[0].content,
+        &rust_blocks,
+    )
+    .unwrap_or_else(|e| {
         panic!(
-            "{}: section {:?}: molt run failed: {e:?}",
+            "{}: section {:?}: failed to set up test: {e:?}",
             md_file.display(),
-            section.name
+            section_name
         )
     });
 
@@ -201,21 +264,11 @@ fn run_section(md_file: &Path, section: &Section) {
     };
     let output = output.trim_end();
     if output != expected {
-        let diff = TextDiff::from_lines(expected, output);
-        let mut diff_output = String::new();
-        for change in diff.iter_all_changes() {
-            let sign = match change.tag() {
-                ChangeTag::Delete => "-",
-                ChangeTag::Insert => "+",
-                ChangeTag::Equal => " ",
-            };
-            diff_output.push_str(&format!("{sign}{change}"));
-        }
+        eprintln!("{}", colored_diff(expected, output));
         panic!(
-            "{}: section {:?}: output mismatch\n{}",
+            "{}: section {:?}: output mismatch",
             md_file.display(),
-            section.name,
-            diff_output
+            section_name,
         );
     }
 }
