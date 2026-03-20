@@ -374,12 +374,6 @@ fn peek_var(cursor: Cursor, ctx: &Ctx<Node>, kind: VarKind<NodeKind>) -> bool {
     false
 }
 
-impl<T: ToNode<Node> + ParseTerm<Target = T>> Parse for NodeId<T> {
-    fn parse(input: ParseStream) -> Result<NodeId<T>> {
-        input.parse_id::<T>()
-    }
-}
-
 fn kind_matches(
     ctx: &Ctx<Node>,
     ident: &Ident,
@@ -663,6 +657,12 @@ impl<'a> ParseBuffer<'a> {
 #[derive(Clone, Copy)]
 pub(crate) struct PosMarker {
     start: usize,
+}
+
+impl<T: ToNode<Node> + ParseTerm<Target = T>> Parse for NodeId<T> {
+    fn parse(input: ParseStream) -> Result<NodeId<T>> {
+        input.parse_id::<T>()
+    }
 }
 
 impl<T: Parse> Parse for Box<T> {
