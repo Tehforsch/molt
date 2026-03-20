@@ -1,4 +1,4 @@
-use crate::{NodeId, NodeList, Pattern, WithSpan};
+use crate::{ItemOrVar, NodeId, NodeList, WithSpan};
 use derive_macro::CmpSyn;
 
 use crate::parser::error::Result;
@@ -216,7 +216,7 @@ impl Parse for GenericArgument {
         let (span, mut argument) = input.parse_spanned_pat::<Type>()?.decompose();
 
         match argument {
-            Pattern::Item(Type::Path(mut ty))
+            ItemOrVar::Item(Type::Path(mut ty))
                 if ty.qself.is_none()
                     && ty.path.leading_colon.is_none()
                     && ty.path.segments.len() == 1
@@ -286,7 +286,7 @@ impl Parse for GenericArgument {
                     }));
                 }
 
-                argument = Pattern::Item(Type::Path(ty));
+                argument = ItemOrVar::Item(Type::Path(ty));
             }
             _ => {}
         }

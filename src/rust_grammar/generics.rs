@@ -1,5 +1,5 @@
 use crate::NodeId;
-use crate::pattern::Property;
+use crate::item_or_var::Property;
 use derive_macro::CmpSyn;
 use proc_macro2::TokenStream;
 

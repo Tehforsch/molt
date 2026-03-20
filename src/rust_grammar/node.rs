@@ -1,7 +1,7 @@
 use crate::ctx::VarKind;
 use crate::match_pattern::IsMatch;
 use crate::rust_grammar::generics::Generics;
-use crate::{CmpSyn, Id, KindType, Matcher, Pattern, ToNode};
+use crate::{CmpSyn, Id, ItemOrVar, KindType, Matcher, ToNode};
 
 use crate::parser::parse::discouraged::Speculative;
 use crate::parser::parse::{ParseNode, ParseStream};
@@ -210,12 +210,12 @@ macro_rules! parse_impl {
         if let Kind::$variant_name = $kind {
             let id = $input.parse_id::<$parse_ty>()?;
             match $input.ctx().get(id) {
-                Pattern::Item(node) => {
+                ItemOrVar::Item(node) => {
                     if !<$sub_ty>::is_of_sub_kind(&node) {
                         return Err($input.error(format!("Expected {}", <$sub_ty>::expected_str())));
                     }
                 }
-                Pattern::Var(_) => {
+                ItemOrVar::Var(_) => {
                     // TODO: Do we need to do anything here?
                 }
             }

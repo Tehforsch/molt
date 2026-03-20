@@ -1,4 +1,4 @@
-use crate::{NodeId, NodeList, Pattern, Spanned, WithSpan};
+use crate::{ItemOrVar, NodeId, NodeList, Spanned, WithSpan};
 use derive_macro::CmpSyn;
 use proc_macro2::TokenStream;
 
@@ -322,7 +322,7 @@ fn stmt_expr(
             Some(id) => ctx.get(id),
             None => e.as_ref(),
         };
-        let Pattern::Item(e) = e else {
+        let ItemOrVar::Item(e) = e else {
             break;
         };
         attr_target = match e {
@@ -376,11 +376,11 @@ fn stmt_expr(
             None => e.as_mut(),
         };
         match attr_target {
-            Pattern::Item(attr_target) => {
+            ItemOrVar::Item(attr_target) => {
                 attrs.extend(attr_target.replace_attrs(Vec::new()));
                 attr_target.replace_attrs(attrs);
             }
-            Pattern::Var(_) => {
+            ItemOrVar::Var(_) => {
                 if !attrs.is_empty() {
                     panic!("Attr on var")
                 }
@@ -392,7 +392,7 @@ fn stmt_expr(
     let semi_token: Option<Token![;]> = input.parse()?;
 
     match e {
-        Pattern::Item(Expr::Macro(ExprMacro { attrs, mac }))
+        ItemOrVar::Item(Expr::Macro(ExprMacro { attrs, mac }))
             if semi_token.is_some() || mac.delimiter.is_brace() =>
         {
             Ok(Stmt::Macro(StmtMacro {

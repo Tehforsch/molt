@@ -1,4 +1,4 @@
-use crate::{NodeId, NodeList, Pattern, WithSpan};
+use crate::{ItemOrVar, NodeId, NodeList, WithSpan};
 use derive_macro::CmpSyn;
 use proc_macro2::{Span, TokenStream};
 
@@ -356,7 +356,7 @@ fn ambig_ty(input: ParseStream, allow_plus: bool) -> Result<Type> {
             #[allow(clippy::never_loop)]
             loop {
                 let first = match first {
-                    Pattern::Item(Type::Path(TypePath { qself: None, path })) => {
+                    ItemOrVar::Item(Type::Path(TypePath { qself: None, path })) => {
                         TypeParamBound::Trait(TraitBound {
                             paren_token: Some(paren_token),
                             modifier: TraitBoundModifier::None,
@@ -364,12 +364,12 @@ fn ambig_ty(input: ParseStream, allow_plus: bool) -> Result<Type> {
                             path,
                         })
                     }
-                    Pattern::Item(Type::TraitObject(TypeTraitObject {
+                    ItemOrVar::Item(Type::TraitObject(TypeTraitObject {
                         dyn_token: None,
                         bounds,
                     })) => {
                         if bounds.len() > 1 || bounds.trailing_punct() {
-                            first = Pattern::Item(Type::TraitObject(TypeTraitObject {
+                            first = ItemOrVar::Item(Type::TraitObject(TypeTraitObject {
                                 dyn_token: None,
                                 bounds,
                             }));

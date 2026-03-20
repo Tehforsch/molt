@@ -1,10 +1,10 @@
 use derive_macro::CmpSyn;
 
+use crate::item_or_var::Property;
 use crate::parser::error::Result;
 use crate::parser::parse::discouraged::Speculative as _;
 use crate::parser::parse::{ParseNode, ParseStream};
 use crate::parser::token;
-use crate::pattern::Property;
 use crate::rust_grammar::Node;
 use crate::rust_grammar::ident::AnyIdent;
 use crate::rust_grammar::path::Path;

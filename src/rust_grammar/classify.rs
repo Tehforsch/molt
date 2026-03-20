@@ -1,7 +1,7 @@
 use std::ops::ControlFlow;
 
-use crate::pattern::Property;
-use crate::{NodeId, Pattern};
+use crate::item_or_var::Property;
+use crate::{ItemOrVar, NodeId};
 use proc_macro2::{Delimiter, TokenStream, TokenTree};
 
 use crate::parser::parse::ParseStream;
@@ -85,8 +85,8 @@ pub(crate) fn expr_trailing_brace(input: ParseStream, mut expr: NodeId<Expr>) ->
         match input.ctx().get(expr) {
             // We count a variable as an atomic expression,
             // so it doesn't have trailing braces.
-            Pattern::Var(_) => return false,
-            Pattern::Item(e) => match e {
+            ItemOrVar::Var(_) => return false,
+            ItemOrVar::Item(e) => match e {
                 Expr::Async(_)
                 | Expr::Block(_)
                 | Expr::Const(_)
@@ -152,8 +152,8 @@ pub(crate) fn expr_trailing_brace(input: ParseStream, mut expr: NodeId<Expr>) ->
     fn type_trailing_brace(input: ParseStream, mut ty: NodeId<Type>) -> bool {
         loop {
             match input.ctx().get(ty) {
-                Pattern::Var(_) => return false,
-                Pattern::Item(t) => match t {
+                ItemOrVar::Var(_) => return false,
+                ItemOrVar::Item(t) => match t {
                     Type::BareFn(t) => match &t.output {
                         ReturnType::Default => return false,
                         ReturnType::Type(_, ret) => ty = *ret,

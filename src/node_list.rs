@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
-use crate::{NodeId, Pattern};
+use crate::{ItemOrVar, NodeId};
 
-pub type NodeList<T, P> = Pattern<RealNodeList<T, P>, NodeId<T>>;
+pub type NodeList<T, P> = ItemOrVar<RealNodeList<T, P>, NodeId<T>>;
 
 #[derive(Debug)]
 pub struct RealNodeList<T, P> {

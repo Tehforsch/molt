@@ -1,4 +1,4 @@
-use crate::{Id, Pattern};
+use crate::{Id, ItemOrVar};
 
 #[derive(Copy, Clone, Debug)]
 pub struct Span {
@@ -59,7 +59,7 @@ pub trait WithSpan: Sized {
         Spanned::new(self, span)
     }
 
-    fn pattern_with_span(self, span: Span) -> Spanned<Pattern<Self, Id>> {
+    fn pattern_with_span(self, span: Span) -> Spanned<ItemOrVar<Self, Id>> {
         Spanned::new(self, span).into_pattern()
     }
 }
@@ -97,7 +97,7 @@ impl<T> Spanned<T> {
     }
 
     pub fn into_pattern(self) -> SpannedPat<T> {
-        self.map(|item| Pattern::Item(item))
+        self.map(|item| ItemOrVar::Item(item))
     }
 
     pub fn decompose(self) -> (Span, T) {
@@ -105,11 +105,11 @@ impl<T> Spanned<T> {
     }
 }
 
-pub type SpannedPat<T> = Spanned<Pattern<T, Id>>;
+pub type SpannedPat<T> = Spanned<ItemOrVar<T, Id>>;
 
 impl<T> SpannedPat<T> {
     pub fn is_var(&self) -> bool {
-        matches!(self.item, Pattern::Var(_))
+        matches!(self.item, ItemOrVar::Var(_))
     }
 
     pub fn unwrap_real(self) -> Spanned<T> {
@@ -118,8 +118,8 @@ impl<T> SpannedPat<T> {
 
     pub fn map_real<S>(self, f: impl Fn(T) -> S) -> SpannedPat<S> {
         self.map(|item| match item {
-            Pattern::Item(t) => Pattern::Item(f(t)),
-            Pattern::Var(id) => Pattern::Var(id),
+            ItemOrVar::Item(t) => ItemOrVar::Item(f(t)),
+            ItemOrVar::Var(id) => ItemOrVar::Var(id),
         })
     }
 }

@@ -1,4 +1,4 @@
-use crate::{Id, NodeId, NodeList, Pattern, WithSpan};
+use crate::{Id, ItemOrVar, NodeId, NodeList, WithSpan};
 use derive_macro::CmpSyn;
 use proc_macro2::TokenStream;
 
@@ -333,11 +333,11 @@ impl ParseNode for PatSingle {
 
 fn parse_pat_multi<T: ParseListOrItem<Target = Pat, Punct = token::Or>>(
     input: ParseStream,
-) -> Result<Pattern<Pat, Id>> {
+) -> Result<ItemOrVar<Pat, Id>> {
     let pat = input.parse_list_or_item::<T>()?;
     Ok(match pat {
         ListOrItem::Item(item) => item.item(),
-        ListOrItem::List(cases) => Pattern::Item(Pat::Or(PatOr {
+        ListOrItem::List(cases) => ItemOrVar::Item(Pat::Or(PatOr {
             attrs: Vec::new(),
             leading_vert: None,
             cases,
@@ -358,7 +358,7 @@ impl ParseNode for PatMulti {
         unreachable!()
     }
 
-    fn parse_pat(input: ParseStream) -> Result<Pattern<Self::Target, Id>> {
+    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, Id>> {
         parse_pat_multi::<Self>(input)
     }
 }
@@ -370,7 +370,7 @@ impl ParseNode for PatMultiLeadingVert {
         unreachable!()
     }
 
-    fn parse_pat(input: ParseStream) -> Result<Pattern<Self::Target, Id>> {
+    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, Id>> {
         parse_pat_multi::<Self>(input)
     }
 }
@@ -695,7 +695,7 @@ impl ParseListOrItem for PatParenOrTuple {
         while !content.is_empty() {
             let value = content.parse_spanned_pat::<PatMultiLeadingVert>()?;
             if content.is_empty() {
-                if elems.is_empty() && !matches!(&*value, Pattern::Item(Pat::Rest(_))) {
+                if elems.is_empty() && !matches!(&*value, ItemOrVar::Item(Pat::Rest(_))) {
                     return Ok(ListOrItem::Item(value));
                 }
                 elems.push_value(value);
@@ -820,7 +820,7 @@ impl ParseList for PatSlice {
         while !input.is_empty() {
             let value = input.parse_spanned_pat::<PatMultiLeadingVert>()?;
             match &*value {
-                Pattern::Item(Pat::Range(pat)) if pat.start.is_none() || pat.end.is_none() => {
+                ItemOrVar::Item(Pat::Range(pat)) if pat.start.is_none() || pat.end.is_none() => {
                     let (start, end) = match &pat.limits {
                         RangeLimits::HalfOpen(dot_dot) => (dot_dot.spans[0], dot_dot.spans[1]),
                         RangeLimits::Closed(dot_dot_eq) => {

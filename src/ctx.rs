@@ -2,10 +2,10 @@
 use std::marker::PhantomData;
 
 use crate::{
-    Mode, NodeType, Pattern, Span, Spanned, ToNode, rust_grammar::Ident, span::SpannedPat,
+    ItemOrVar, Mode, NodeType, Span, Spanned, ToNode, rust_grammar::Ident, span::SpannedPat,
 };
 
-type InternalId = Pattern<usize, usize>;
+type InternalId = ItemOrVar<usize, usize>;
 
 /// The main ID type. An `Id` uniquely identifies
 /// either a concrete syntax node or a pattern variable
@@ -16,8 +16,8 @@ pub(crate) struct Id(InternalId, Mode);
 impl Id {
     pub(crate) fn is_var(&self) -> bool {
         match self.0 {
-            Pattern::Item(_) => false,
-            Pattern::Var(_) => true,
+            ItemOrVar::Item(_) => false,
+            ItemOrVar::Var(_) => true,
         }
     }
 
@@ -87,8 +87,8 @@ impl Id {
 
     pub(crate) fn unwrap_idx(self) -> usize {
         match self.0 {
-            Pattern::Item(idx) => idx,
-            Pattern::Var(idx) => idx,
+            ItemOrVar::Item(idx) => idx,
+            ItemOrVar::Var(idx) => idx,
         }
     }
 }
@@ -154,35 +154,35 @@ impl<Node: NodeType> Ctx<Node> {
 
     pub(crate) fn add_pat<T: ToNode<Node>>(&mut self, item: SpannedPat<T>) -> NodeId<T> {
         match item.item {
-            Pattern::Item(_) => self.add(item.unwrap_real()),
-            Pattern::Var(var) => var.typed(),
+            ItemOrVar::Item(_) => self.add(item.unwrap_real()),
+            ItemOrVar::Var(var) => var.typed(),
         }
     }
 
-    pub(crate) fn get<T: ToNode<Node>>(&self, id: impl Into<Id>) -> Pattern<&T, Id> {
+    pub(crate) fn get<T: ToNode<Node>>(&self, id: impl Into<Id>) -> ItemOrVar<&T, Id> {
         let id = id.into();
         debug_assert_eq!(id.mode(), self.mode);
         match id.0 {
-            InternalId::Item(idx) => Pattern::Item(T::from_node_ref(&self.nodes[idx]).unwrap()),
-            InternalId::Var(_) => Pattern::Var(id),
+            InternalId::Item(idx) => ItemOrVar::Item(T::from_node_ref(&self.nodes[idx]).unwrap()),
+            InternalId::Var(_) => ItemOrVar::Var(id),
         }
     }
 
-    pub(crate) fn get_mut<T: ToNode<Node>>(&mut self, id: NodeId<T>) -> Pattern<&mut T, Id> {
+    pub(crate) fn get_mut<T: ToNode<Node>>(&mut self, id: NodeId<T>) -> ItemOrVar<&mut T, Id> {
         let id: Id = id.into();
         debug_assert_eq!(id.mode(), self.mode);
         match id.0 {
             InternalId::Item(idx) => {
-                Pattern::Item(T::from_node_ref_mut(&mut self.nodes[idx]).unwrap())
+                ItemOrVar::Item(T::from_node_ref_mut(&mut self.nodes[idx]).unwrap())
             }
-            InternalId::Var(_) => Pattern::Var(id),
+            InternalId::Var(_) => ItemOrVar::Var(id),
         }
     }
 
     pub(crate) fn get_real<T: ToNode<Node>>(&self, id: impl Into<Id>) -> Option<&T> {
         match self.get(id) {
-            Pattern::Item(t) => Some(t),
-            Pattern::Var(_) => None,
+            ItemOrVar::Item(t) => Some(t),
+            ItemOrVar::Var(_) => None,
         }
     }
 
@@ -217,8 +217,8 @@ impl<Node: NodeType> Ctx<Node> {
         let id: Id = id.into();
         debug_assert_eq!(id.mode(), self.mode);
         match id.0 {
-            Pattern::Item(idx) => self.spans[idx],
-            Pattern::Var(_) => panic!(),
+            ItemOrVar::Item(idx) => self.spans[idx],
+            ItemOrVar::Var(_) => panic!(),
         }
     }
 

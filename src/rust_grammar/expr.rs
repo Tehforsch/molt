@@ -1,7 +1,7 @@
 use std::hash::{Hash, Hasher};
 use std::mem;
 
-use crate::{Id, NodeId, NodeList, Pattern, Spanned, SpannedPat, WithSpan};
+use crate::{Id, ItemOrVar, NodeId, NodeList, Spanned, SpannedPat, WithSpan};
 use derive_macro::CmpSyn;
 use proc_macro2::{Span, TokenStream};
 
@@ -996,7 +996,7 @@ impl ParseNode for Expr {
         unreachable!()
     }
 
-    fn parse_pat(input: ParseStream) -> Result<Pattern<Self::Target, Id>> {
+    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, Id>> {
         Ok(ambiguous_expr(input, AllowStruct(true))?.item())
     }
 }
@@ -1008,7 +1008,7 @@ impl ParseNode for ExprNoEagerBrace {
         unreachable!()
     }
 
-    fn parse_pat(input: ParseStream) -> Result<Pattern<Self::Target, Id>> {
+    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, Id>> {
         Ok(ambiguous_expr(input, AllowStruct(false))?.item())
     }
 }
@@ -1020,7 +1020,7 @@ impl ParseNode for ExprEarlierBoundaryRule {
         unreachable!()
     }
 
-    fn parse_pat(input: ParseStream) -> Result<Pattern<Self::Target, Id>> {
+    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, Id>> {
         Ok(parse_with_earlier_boundary_rule(input)?.item())
     }
 }
@@ -1043,7 +1043,7 @@ pub(super) fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<Spa
         let allow_struct = AllowStruct(true);
         let atom = input
             .call_spanned(|input| expr_group(input, allow_struct))?
-            .map(Pattern::Item);
+            .map(ItemOrVar::Item);
         if continue_parsing_early(input, &atom) {
             trailer_helper(input, atom)?
         } else {
@@ -1070,14 +1070,14 @@ pub(super) fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<Spa
     } else if input.peek(token::Brace) {
         input.parse_span_with(Expr::Block)?
     } else if input.peek(Lifetime) {
-        input.call_spanned(atom_labeled)?.map(Pattern::Item)
+        input.call_spanned(atom_labeled)?.map(ItemOrVar::Item)
     } else {
         let allow_struct = AllowStruct(true);
         unary_expr(input, allow_struct)?
     };
 
     if continue_parsing_early(input, &expr) {
-        if let Pattern::Item(expr) = &mut *expr {
+        if let ItemOrVar::Item(expr) = &mut *expr {
             attrs.extend(expr.replace_attrs(Vec::new()));
             expr.replace_attrs(attrs);
         }
@@ -1089,7 +1089,7 @@ pub(super) fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<Spa
     if input.peek(Token![.]) && !input.peek(Token![..]) || input.peek(Token![?]) {
         expr = trailer_helper(input, expr)?;
 
-        if let Pattern::Item(expr) = &mut *expr {
+        if let ItemOrVar::Item(expr) = &mut *expr {
             attrs.extend(expr.replace_attrs(Vec::new()));
             expr.replace_attrs(attrs);
         }
@@ -1098,7 +1098,7 @@ pub(super) fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<Spa
         return parse_expr(input, expr, allow_struct, Precedence::MIN);
     }
 
-    if let Pattern::Item(expr) = &mut *expr {
+    if let ItemOrVar::Item(expr) = &mut *expr {
         attrs.extend(expr.replace_attrs(Vec::new()));
         expr.replace_attrs(attrs);
     }
@@ -1444,11 +1444,11 @@ fn trailer_helper(input: ParseStream, mut e: SpannedPat<Expr>) -> Result<Spanned
 
 // Parse all atomic expressions which don't have to worry about precedence
 // interactions, as they are fully contained.
-fn atom_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<Pattern<Expr, Id>> {
+fn atom_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<ItemOrVar<Expr, Id>> {
     if input.peek_var::<Expr>() {
         return input.parse_single_var();
     }
-    atom_expr_inner(input, allow_struct).map(Pattern::Item)
+    atom_expr_inner(input, allow_struct).map(ItemOrVar::Item)
 }
 
 fn atom_expr_inner(input: ParseStream, allow_struct: AllowStruct) -> Result<Expr> {
@@ -1768,7 +1768,7 @@ fn expr_group(input: ParseStream, allow_struct: AllowStruct) -> Result<Expr> {
     let group = crate::parser::group::parse_group(input)?;
     let inner: SpannedPat<Expr> = group.content.parse_spanned_pat::<Expr>()?;
     let (span, inner) = inner.decompose();
-    let make_group_expr = |inner: Pattern<Expr, Id>| {
+    let make_group_expr = |inner: ItemOrVar<Expr, Id>| {
         Ok(Expr::Group(ExprGroup {
             attrs: Vec::new(),
             group_token: group.token,
@@ -1776,12 +1776,12 @@ fn expr_group(input: ParseStream, allow_struct: AllowStruct) -> Result<Expr> {
         }))
     };
     match inner {
-        Pattern::Item(Expr::Path(mut expr)) if expr.attrs.is_empty() => {
+        ItemOrVar::Item(Expr::Path(mut expr)) if expr.attrs.is_empty() => {
             let grouped_len = expr.path.segments.len();
             Path::parse_rest(input, &mut expr.path, true)?;
             match rest_of_path_or_macro_or_struct(expr.qself, expr.path, input, allow_struct)? {
                 Expr::Path(expr) if expr.path.segments.len() == grouped_len => {
-                    make_group_expr(Pattern::Item(Expr::Path(expr)))
+                    make_group_expr(ItemOrVar::Item(Expr::Path(expr)))
                 }
                 extended => Ok(extended),
             }
@@ -2068,14 +2068,14 @@ impl ParseNode for ClosureInput {
         unreachable!()
     }
 
-    fn parse_pat(input: ParseStream) -> Result<Pattern<Self::Target, Id>> {
+    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, Id>> {
         use crate::rust_grammar::pat::PatSingle;
 
         let attrs = input.call(Attribute::parse_outer)?;
         let mut pat = input.parse_spanned_pat::<PatSingle>()?;
 
         if input.peek(Token![:]) {
-            Ok(Pattern::Item(Pat::Type(PatType {
+            Ok(ItemOrVar::Item(Pat::Type(PatType {
                 attrs,
                 pat: input.add_pat(pat),
                 colon_token: input.parse()?,
@@ -2083,24 +2083,24 @@ impl ParseNode for ClosureInput {
             })))
         } else {
             match &mut *pat {
-                Pattern::Var(_) => {}
-                Pattern::Item(Pat::Const(pat)) => pat.attrs = attrs,
-                Pattern::Item(Pat::Ident(pat)) => pat.attrs = attrs,
-                Pattern::Item(Pat::Lit(pat)) => pat.attrs = attrs,
-                Pattern::Item(Pat::Macro(pat)) => pat.attrs = attrs,
-                Pattern::Item(Pat::Or(pat)) => pat.attrs = attrs,
-                Pattern::Item(Pat::Paren(pat)) => pat.attrs = attrs,
-                Pattern::Item(Pat::Path(pat)) => pat.attrs = attrs,
-                Pattern::Item(Pat::Range(pat)) => pat.attrs = attrs,
-                Pattern::Item(Pat::Reference(pat)) => pat.attrs = attrs,
-                Pattern::Item(Pat::Rest(pat)) => pat.attrs = attrs,
-                Pattern::Item(Pat::Slice(pat)) => pat.attrs = attrs,
-                Pattern::Item(Pat::Struct(pat)) => pat.attrs = attrs,
-                Pattern::Item(Pat::Tuple(pat)) => pat.attrs = attrs,
-                Pattern::Item(Pat::TupleStruct(pat)) => pat.attrs = attrs,
-                Pattern::Item(Pat::Type(_)) => unreachable!(),
-                Pattern::Item(Pat::Verbatim(_)) => {}
-                Pattern::Item(Pat::Wild(pat)) => pat.attrs = attrs,
+                ItemOrVar::Var(_) => {}
+                ItemOrVar::Item(Pat::Const(pat)) => pat.attrs = attrs,
+                ItemOrVar::Item(Pat::Ident(pat)) => pat.attrs = attrs,
+                ItemOrVar::Item(Pat::Lit(pat)) => pat.attrs = attrs,
+                ItemOrVar::Item(Pat::Macro(pat)) => pat.attrs = attrs,
+                ItemOrVar::Item(Pat::Or(pat)) => pat.attrs = attrs,
+                ItemOrVar::Item(Pat::Paren(pat)) => pat.attrs = attrs,
+                ItemOrVar::Item(Pat::Path(pat)) => pat.attrs = attrs,
+                ItemOrVar::Item(Pat::Range(pat)) => pat.attrs = attrs,
+                ItemOrVar::Item(Pat::Reference(pat)) => pat.attrs = attrs,
+                ItemOrVar::Item(Pat::Rest(pat)) => pat.attrs = attrs,
+                ItemOrVar::Item(Pat::Slice(pat)) => pat.attrs = attrs,
+                ItemOrVar::Item(Pat::Struct(pat)) => pat.attrs = attrs,
+                ItemOrVar::Item(Pat::Tuple(pat)) => pat.attrs = attrs,
+                ItemOrVar::Item(Pat::TupleStruct(pat)) => pat.attrs = attrs,
+                ItemOrVar::Item(Pat::Type(_)) => unreachable!(),
+                ItemOrVar::Item(Pat::Verbatim(_)) => {}
+                ItemOrVar::Item(Pat::Wild(pat)) => pat.attrs = attrs,
             }
             Ok(pat.item())
         }

@@ -8,12 +8,12 @@ mod ctrl_c;
 mod ctx;
 mod error;
 mod input;
+mod item_or_var;
 mod match_pattern;
 mod modify;
 mod molt_lang;
 mod node;
 mod node_list;
-mod pattern;
 pub(crate) mod rule;
 mod rust_grammar;
 mod span;
@@ -46,11 +46,11 @@ pub use writer::Writer;
 
 pub(crate) use ctx::{Ctx, Id, NodeId, Var};
 pub(crate) use input::{Diagnostic, FileId};
+pub(crate) use item_or_var::ItemOrVar;
 pub(crate) use match_pattern::{Match, Matcher};
 pub(crate) use modify::ModMap;
 pub(crate) use node::{KindType, NodeType, ToNode};
 pub(crate) use node_list::NodeList;
-pub(crate) use pattern::Pattern;
 pub(crate) use span::{Span, Spanned, SpannedPat, WithSpan};
 
 struct RustFile;
