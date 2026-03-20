@@ -266,6 +266,11 @@ pub(crate) trait Parse: Sized {
 /// way from a token stream. This trait is for types that are represented
 /// as nodes.
 pub(crate) trait ParseTerm {
+    /// The target type that is the result of parsing.
+    /// Note that this is often, but not always the same as
+    /// `Self`. Cases where `Self` is different from `Target`
+    /// are used to distinguish various ways of parsing the same item
+    /// (e.g. used for expressions and patterns in Rust).
     type Target: ToNode<Node>;
 
     /// Parse a Self::Target given the input. Most types implementing
@@ -278,7 +283,10 @@ pub(crate) trait ParseTerm {
     fn parse_item(input: ParseStream) -> Result<Self::Target>;
 
     /// Parse a term (either a concrete syntax element or a
-    /// molt variable).
+    /// molt variable). The default implementation checks whether
+    /// a variable of correct kind is ahead (returning `Term::Var`
+    /// if this is the case) and defaults to parsing via `parse_item`
+    /// otherwise.
     fn parse_term(input: ParseStream) -> Result<Term<Self::Target, RawNodeId>> {
         if input.peek_var::<Self::Target>() {
             return Ok(Term::Var(input.parse_single_var::<Self::Target>()?));
@@ -344,7 +352,11 @@ pub(crate) enum ListOrItem<T, P> {
 /// proper handling of molt variables while parsing these types of
 /// structures.
 pub(crate) trait ParseListOrItem {
+    /// The `Target` type, of which we will return either a single item
+    /// or a list.
     type Target: ToNode<Node>;
+    /// The punctuation separating the items in the list (if there is one).
+    /// Currently unused but might be useful type information in the future.
     type Punct;
 
     fn parse_list_or_item(input: ParseStream) -> Result<ListOrItem<Self::Target, Self::Punct>>;
@@ -520,10 +532,6 @@ impl<'a> ParseBuffer<'a> {
     pub(crate) fn parse_id<T: ParseTerm>(&self) -> Result<NodeId<T::Target>> {
         let pat = self.parse_spanned_pat::<T>()?;
         Ok(self.add_pat(pat))
-    }
-
-    pub(crate) fn parse_node<T: ParseTerm>(&self) -> Result<T::Target> {
-        T::parse_item(self)
     }
 
     pub(crate) fn parse_spanned<T: Parse>(&self) -> Result<Spanned<T>> {

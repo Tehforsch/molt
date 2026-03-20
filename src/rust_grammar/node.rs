@@ -306,11 +306,11 @@ impl ParseTerm for Field {
         // We speculatively parse a named field and
         // if it doesn't work out, we parse an unnamed field.
         let fork = input.fork();
-        if let Ok(field) = fork.parse_node::<FieldNamed>() {
+        if let Ok(field) = FieldNamed::parse_item(input) {
             input.advance_to(&fork);
             Ok(field)
         } else {
-            Ok(input.parse_node::<FieldUnnamed>()?)
+            Ok(FieldUnnamed::parse_item(input)?)
         }
     }
 }
