@@ -47,6 +47,6 @@ pub fn parse_file(mut content: &str, mode: Mode) -> Result<ParseResult<File>> {
     }
 
     let mut result = parse_str::<File>(content, mode)?;
-    result.item_mut().shebang = shebang;
+    result.item.shebang = shebang;
     Ok(result)
 }

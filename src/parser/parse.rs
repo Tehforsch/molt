@@ -35,14 +35,6 @@ pub struct ParseResult<T> {
 }
 
 impl<T> ParseResult<T> {
-    pub(crate) fn item_mut(&mut self) -> &mut T {
-        &mut self.item
-    }
-
-    pub(crate) fn into_item(self) -> T {
-        self.item
-    }
-
     pub(crate) fn map<S>(self, f: impl Fn(T) -> S) -> ParseResult<S> {
         ParseResult {
             ctx: self.ctx,
