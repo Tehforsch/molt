@@ -316,8 +316,7 @@ pub(crate) trait ParseList {
     /// The items of the list
     type Item: ToNode<Node>;
 
-    /// The punctuation separating the items. Currently unused but
-    /// might be useful type information in the future.
+    /// The punctuation separating the items.
     type Punct: Parse;
 
     /// Parse a list of items of type `Item`. Note that implementors do not
@@ -356,7 +355,6 @@ pub(crate) trait ParseListOrItem {
     /// or a list.
     type Target: ToNode<Node>;
     /// The punctuation separating the items in the list (if there is one).
-    /// Currently unused but might be useful type information in the future.
     type Punct;
 
     fn parse_list_or_item(input: ParseStream) -> Result<ListOrItem<Self::Target, Self::Punct>>;
@@ -542,14 +540,6 @@ impl<'a> ParseBuffer<'a> {
         &self,
     ) -> Result<SpannedTerm<T::Target>> {
         self.call_spanned(T::parse_term)
-    }
-
-    pub(crate) fn parse_span_with<T: Parse, S: ToNode<Node>>(
-        &self,
-        f: impl Fn(T) -> S,
-    ) -> Result<Spanned<Term<S, RawNodeId>>> {
-        let item: Spanned<T> = self.parse_spanned()?;
-        Ok(item.map(f).into_term())
     }
 
     pub(crate) fn call_spanned<T>(

@@ -1,7 +1,7 @@
 use std::hash::{Hash, Hasher};
 use std::mem;
 
-use crate::{NodeId, NodeList, RawNodeId, Spanned, SpannedTerm, Term, WithSpan};
+use crate::{NodeId, NodeList, RawNodeId, Spanned, SpannedTerm, Term, ToNode, WithSpan};
 use derive_macro::CmpSyn;
 use proc_macro2::{Span, TokenStream};
 
@@ -1036,6 +1036,14 @@ impl ParseList for FnArgs {
     }
 }
 
+fn parse_spanned_with<T: Parse, S: ToNode<Node>>(
+    input: ParseStream,
+    f: impl Fn(T) -> S,
+) -> Result<Spanned<Term<S, RawNodeId>>> {
+    let item: Spanned<T> = input.parse_spanned()?;
+    Ok(item.map(f).into_term())
+}
+
 pub(super) fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<SpannedTerm<Expr>> {
     let mut attrs = input.call(expr_attrs)?;
     let mut expr: SpannedTerm<Expr> = if input.peek(token::Group) {
@@ -1049,25 +1057,25 @@ pub(super) fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<Spa
             atom
         }
     } else if input.peek(Token![if]) {
-        input.parse_span_with(Expr::If)?
+        parse_spanned_with(input, Expr::If)?
     } else if input.peek(Token![while]) {
-        input.parse_span_with(Expr::While)?
+        parse_spanned_with(input, Expr::While)?
     } else if input.peek(Token![for])
         && !(input.peek2(Token![<]) && (input.peek3(Lifetime) || input.peek3(Token![>])))
     {
-        input.parse_span_with(Expr::ForLoop)?
+        parse_spanned_with(input, Expr::ForLoop)?
     } else if input.peek(Token![loop]) {
-        input.parse_span_with(Expr::Loop)?
+        parse_spanned_with(input, Expr::Loop)?
     } else if input.peek(Token![match]) {
-        input.parse_span_with(Expr::Match)?
+        parse_spanned_with(input, Expr::Match)?
     } else if input.peek(Token![try]) && input.peek2(token::Brace) {
-        input.parse_span_with(Expr::TryBlock)?
+        parse_spanned_with(input, Expr::TryBlock)?
     } else if input.peek(Token![unsafe]) {
-        input.parse_span_with(Expr::Unsafe)?
+        parse_spanned_with(input, Expr::Unsafe)?
     } else if input.peek(Token![const]) && input.peek2(token::Brace) {
-        input.parse_span_with(Expr::Const)?
+        parse_spanned_with(input, Expr::Const)?
     } else if input.peek(token::Brace) {
-        input.parse_span_with(Expr::Block)?
+        parse_spanned_with(input, Expr::Block)?
     } else if input.peek(Lifetime) {
         input.call_spanned(atom_labeled)?.map(Term::Item)
     } else {
