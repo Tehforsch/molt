@@ -2,11 +2,22 @@
 use std::marker::PhantomData;
 
 use crate::{
-    ItemOrVar, Mode, NodeType, Span, Spanned, ToNode, rust_grammar::Ident, span::SpannedPat,
+    ItemOrVar, NodeType, Span, Spanned, ToNode, rust_grammar::Ident, span::SpannedPat,
     storage::Storage,
 };
 
 type InternalId = ItemOrVar<usize, usize>;
+
+/// Used in the parsing logic and the AST context
+/// to remember whether an item or variable belongs
+/// to real source code or code within molt patterns.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub(crate) enum Mode {
+    /// Represents something within the real source code.
+    Real,
+    /// Represents something within a pattern in the molt code.
+    Molt,
+}
 
 /// The main ID type. An `Id` uniquely identifies
 /// either a concrete syntax node or a pattern variable

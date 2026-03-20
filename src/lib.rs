@@ -28,6 +28,7 @@ use std::{
 };
 
 use crate::{
+    ctx::Mode,
     input::FilePath,
     modify::{FileModificationResult, Modify},
     molt_lang::RuntimeCtx,
@@ -54,17 +55,6 @@ pub(crate) use node_list::NodeList;
 pub(crate) use span::{Span, Spanned, SpannedPat, WithSpan};
 
 struct RustFile;
-
-/// Used in the parsing logic and the AST context
-/// to remember whether an item or variable belongs
-/// to real source code or code within molt patterns.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub(crate) enum Mode {
-    /// Represents something within the real source code.
-    Real,
-    /// Represents something within a pattern in the molt code.
-    Molt,
-}
 
 impl RustFile {
     fn new(input: &Input, file_id: FileId) -> Result<ParseResult<Self>, Error> {
