@@ -20,9 +20,15 @@ pub(crate) struct Binding {
     pub(crate) id: Option<RawNodeId>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct ListBinding {
+    pub(crate) ids: Option<Vec<RawNodeId>>,
+}
+
 #[derive(Debug)]
 pub(crate) struct Match {
     bindings: HashMap<RawNodeId, Binding>,
+    list_bindings: HashMap<RawNodeId, ListBinding>,
 }
 
 impl Match {
@@ -30,8 +36,16 @@ impl Match {
         &self.bindings[&var]
     }
 
+    pub(crate) fn get_list_binding(&self, var: RawNodeId) -> &ListBinding {
+        &self.list_bindings[&var]
+    }
+
     pub(crate) fn iter_vars(&self) -> impl Iterator<Item = RawNodeId> {
         self.bindings.keys().copied()
+    }
+
+    pub(crate) fn iter_list_vars(&self) -> impl Iterator<Item = RawNodeId> {
+        self.list_bindings.keys().copied()
     }
 }
 
@@ -45,12 +59,14 @@ pub(crate) struct MatcherBuilder<'a, Node: NodeType> {
     rules: &'a Rules,
     ctx: MatchCtx<'a, Node>,
     bindings: HashMap<RawNodeId, Binding>,
+    list_bindings: HashMap<RawNodeId, ListBinding>,
 }
 
 pub(crate) struct Matcher<'a, Node: NodeType> {
     rules: &'a Rules,
     ctx: &'a MatchCtx<'a, Node>,
     bindings: HashMap<RawNodeId, Binding>,
+    list_bindings: HashMap<RawNodeId, ListBinding>,
 }
 
 impl<'a> Matcher<'a, Node> {
@@ -63,15 +79,24 @@ impl<'a> Matcher<'a, Node> {
         MatcherBuilder {
             rules,
             bindings: HashMap::default(),
+            list_bindings: HashMap::default(),
             ctx,
         }
     }
 }
 
 impl<'a, Node: NodeType> MatcherBuilder<'a, Node> {
-    /// Add the variable to the matching context.
+    /// Add a single variable to the matching context.
     pub fn add_var(&mut self, var: RawNodeId, bound_to: Option<RawNodeId>) {
         let _previous_entry = self.bindings.insert(var, Binding { id: bound_to });
+        debug_assert!(_previous_entry.is_none());
+    }
+
+    /// Add a list variable to the matching context.
+    pub fn add_list_var(&mut self, var: RawNodeId, bound_to: Option<Vec<RawNodeId>>) {
+        let _previous_entry = self
+            .list_bindings
+            .insert(var, ListBinding { ids: bound_to });
         debug_assert!(_previous_entry.is_none());
     }
 
@@ -80,9 +105,11 @@ impl<'a, Node: NodeType> MatcherBuilder<'a, Node> {
             rules: self.rules,
             ctx: &self.ctx,
             bindings: self.bindings,
+            list_bindings: self.list_bindings,
         };
         matcher.cmp_ids(real, molt).ok().map(|_| Match {
             bindings: matcher.bindings,
+            list_bindings: matcher.list_bindings,
         })
     }
 }
@@ -103,6 +130,20 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
             self.cmp_ids(id, previous_match)
         } else {
             binding.id = Some(id);
+            IsMatch::Ok(())
+        }
+    }
+
+    fn bind_list<T: CmpSyn<Node>>(&mut self, key: RawNodeId, ids: &[NodeId<T>]) -> IsMatch {
+        let binding = self.list_bindings.get_mut(&key).unwrap();
+        if let Some(previous_ids) = binding.ids.clone() {
+            self.eq(ids.len(), previous_ids.len())?;
+            for (new, prev) in ids.iter().zip(previous_ids.iter()) {
+                self.cmp_ids((*new).into(), *prev)?;
+            }
+            IsMatch::Ok(())
+        } else {
+            binding.ids = Some(ids.iter().map(|id| (*id).into()).collect());
             IsMatch::Ok(())
         }
     }
@@ -155,8 +196,8 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
     ) -> IsMatch {
         match (ts1, ts2) {
             (Term::Item(ts1), Term::Item(ts2)) => self.cmp_lists_real(ts1.as_ref(), ts2.as_ref()),
-            (Term::Item(_), Term::Var(_)) => {
-                todo!()
+            (Term::Item(real_list), Term::Var(var)) => {
+                self.bind_list((*var).into(), real_list.as_ref())
             }
             (Term::Var(_), _) => unreachable!(),
         }

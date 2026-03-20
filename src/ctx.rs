@@ -124,6 +124,12 @@ pub enum VarKind<K> {
     List(K),
 }
 
+impl<K> VarKind<K> {
+    pub fn is_list(&self) -> bool {
+        matches!(self, VarKind::List(_))
+    }
+}
+
 impl<K: Copy> CtxVar<K> {
     pub(crate) fn new(ident: Ident, kind: VarKind<K>) -> Self {
         Self { ident, kind }
@@ -131,6 +137,10 @@ impl<K: Copy> CtxVar<K> {
 
     pub(crate) fn ident(&self) -> &Ident {
         &self.ident
+    }
+
+    pub(crate) fn kind(&self) -> &VarKind<K> {
+        &self.kind
     }
 }
 

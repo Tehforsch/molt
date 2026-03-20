@@ -345,40 +345,65 @@ impl<'a> Interpreter<'a> {
         let rules = crate::rule::Rules::default();
         let mut matcher = Matcher::from_interpreter_ctx(self.context, &pat.ctx, &rules);
         for var in pat.vars.iter() {
-            // Look up if this variable was previously bound to
-            // something.
-            let bound_to = self.vars.try_get(var.var_id).map(|val| {
-                let Value::Node(NodeSpec::Real(bound_to)) = val else {
-                    typechecker_bug!()
-                };
-                bound_to
-            });
-            matcher.add_var(var.ctx_id, bound_to);
+            let is_list = pat.ctx.get_var(var.ctx_id).kind().is_list();
+            if is_list {
+                let previous_binding = self.get_list_binding(var);
+                matcher.add_list_var(var.ctx_id, previous_binding);
+            } else {
+                let previous_binding = self.get_single_binding(var);
+                matcher.add_var(var.ctx_id, previous_binding);
+            }
         }
-        let new_bindings: Vec<_> = if let Value::Node(NodeSpec::Real(real)) = real_id {
+        if let Value::Node(NodeSpec::Real(real)) = real_id {
             let match_ = matcher.get_matches(pat.node, real);
             if let Some(match_) = match_ {
-                match_
-                    .iter_vars()
-                    .map(|var| {
-                        let bound_to = match_.get_binding(var).id.unwrap();
-                        let var_id = pat.get_var_id(var);
-                        (var_id, Value::Node(NodeSpec::Real(bound_to)))
-                    })
-                    .collect()
+                for var in match_.iter_vars() {
+                    let bound_to = match_.get_binding(var).id.unwrap();
+                    let var_id = pat.get_var_id(var);
+                    scope.add(self.vars.set(var_id, Value::Node(NodeSpec::Real(bound_to))));
+                }
+                for var in match_.iter_list_vars() {
+                    let ids = match_.get_list_binding(var).ids.as_ref().unwrap();
+                    let var_id = pat.get_var_id(var);
+                    let list = ids
+                        .iter()
+                        .map(|id| Value::Node(NodeSpec::Real(*id)))
+                        .collect();
+                    scope.add(self.vars.set(var_id, Value::List(list)));
+                }
             } else {
                 return Ok(Some(StmtValue::NoMatch));
             }
         } else {
             typechecker_bug!()
         };
-        // TODO: Think about what it means if NodeSpec::Molt* is encountered
-        // in any of the following if lets
-
-        for (id, val) in new_bindings {
-            scope.add(self.vars.set(id, val));
-        }
         Ok(None)
+    }
+
+    fn get_list_binding(&mut self, var: &super::PatVar) -> Option<Vec<RawNodeId>> {
+        self.vars.try_get(var.var_id).map(|val| {
+            let Value::List(items) = val else {
+                typechecker_bug!()
+            };
+            items
+                .iter()
+                .map(|v| {
+                    let Value::Node(NodeSpec::Real(id)) = v else {
+                        typechecker_bug!()
+                    };
+                    *id
+                })
+                .collect()
+        })
+    }
+
+    fn get_single_binding(&mut self, var: &super::PatVar) -> Option<RawNodeId> {
+        self.vars.try_get(var.var_id).map(|val| {
+            let Value::Node(NodeSpec::Real(bound_to)) = val else {
+                typechecker_bug!()
+            };
+            bound_to
+        })
     }
 
     fn eval_if(&mut self, if_: &If) -> Result<StmtValue> {
