@@ -211,6 +211,53 @@ fn check_modifications(
     }
 }
 
+fn dump_test_files(
+    md_file: &Path,
+    section: &Section,
+    molt_block: &CodeBlock,
+    rust_blocks: &[&CodeBlock],
+) {
+    let section_name = section
+        .name
+        .as_deref()
+        .unwrap_or("unnamed")
+        .replace(' ', "_")
+        .to_lowercase();
+    let md_stem = md_file.file_stem().unwrap().to_string_lossy();
+    let dir = Path::new("/tmp").join(format!("molt-test-{md_stem}-{section_name}"));
+    std::fs::create_dir_all(&dir).unwrap();
+
+    let molt_path = dir.join("rule.molt");
+    std::fs::write(&molt_path, &molt_block.content).unwrap();
+
+    let rust_sources: Vec<_> = rust_blocks
+        .iter()
+        .filter(|b| matches!(b.lang, Lang::Rust))
+        .collect();
+
+    let mut rust_args = Vec::new();
+    if rust_sources.len() == 1 {
+        let rust_path = dir.join("input.rs");
+        std::fs::write(&rust_path, &rust_sources[0].content).unwrap();
+        rust_args.push(rust_path.display().to_string());
+    } else {
+        for (i, src) in rust_sources.iter().enumerate() {
+            let rust_path = dir.join(format!("input_{i}.rs"));
+            std::fs::write(&rust_path, &src.content).unwrap();
+            rust_args.push(rust_path.display().to_string());
+        }
+    }
+
+    let rust_args_str = rust_args.join(" ");
+    eprintln!(
+        "\n\x1b[1;36m[MOLT_DUMP]\x1b[0m Files written to {}\n\
+         \x1b[1mRe-run:\x1b[0m\ncargo run -- {} {}\n",
+        dir.display(),
+        molt_path.display(),
+        rust_args_str,
+    );
+}
+
 fn run_section(md_file: &Path, section: &Section) {
     let molt_blocks =
         filter_code_blocks(section, |lang| matches!(lang, Lang::Molt | Lang::MoltError));
@@ -235,6 +282,10 @@ fn run_section(md_file: &Path, section: &Section) {
         section.name,
         output_blocks.len()
     );
+
+    if std::env::var("MOLT_DUMP").is_ok() {
+        dump_test_files(md_file, section, molt_blocks[0], &rust_blocks);
+    }
 
     let should_error = match &molt_blocks[0].lang {
         Lang::Molt => false,
