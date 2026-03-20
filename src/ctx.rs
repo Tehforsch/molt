@@ -2,11 +2,10 @@
 use std::marker::PhantomData;
 
 use crate::{
-    ItemOrVar, NodeType, Span, Spanned, ToNode, rust_grammar::Ident, span::SpannedPat,
-    storage::Storage,
+    NodeType, Span, Spanned, Term, ToNode, rust_grammar::Ident, span::SpannedTerm, storage::Storage,
 };
 
-type InternalId = ItemOrVar<usize, usize>;
+type InternalId = Term<usize, usize>;
 
 /// Used in the parsing logic and the AST context
 /// to remember whether we are currently parsing
@@ -35,8 +34,8 @@ pub(crate) struct RawNodeId(InternalId, Mode);
 impl RawNodeId {
     pub(crate) fn is_var(&self) -> bool {
         match self.0 {
-            ItemOrVar::Item(_) => false,
-            ItemOrVar::Var(_) => true,
+            Term::Item(_) => false,
+            Term::Var(_) => true,
         }
     }
 
@@ -106,8 +105,8 @@ impl RawNodeId {
 
     pub(crate) fn unwrap_idx(self) -> usize {
         match self.0 {
-            ItemOrVar::Item(idx) => idx,
-            ItemOrVar::Var(idx) => idx,
+            Term::Item(idx) => idx,
+            Term::Var(idx) => idx,
         }
     }
 }
@@ -172,43 +171,37 @@ impl<Node: NodeType> Ctx<Node> {
         id.typed()
     }
 
-    pub(crate) fn add_pat<T: ToNode<Node>>(&mut self, item: SpannedPat<T>) -> NodeId<T> {
+    pub(crate) fn add_pat<T: ToNode<Node>>(&mut self, item: SpannedTerm<T>) -> NodeId<T> {
         match item.item {
-            ItemOrVar::Item(_) => self.add(item.unwrap_real()),
-            ItemOrVar::Var(var) => var.typed(),
+            Term::Item(_) => self.add(item.unwrap_item()),
+            Term::Var(var) => var.typed(),
         }
     }
 
-    pub(crate) fn get<T: ToNode<Node>>(
-        &self,
-        id: impl Into<RawNodeId>,
-    ) -> ItemOrVar<&T, RawNodeId> {
+    pub(crate) fn get<T: ToNode<Node>>(&self, id: impl Into<RawNodeId>) -> Term<&T, RawNodeId> {
         let id = id.into();
         debug_assert_eq!(id.mode(), self.mode);
         match id.0 {
-            InternalId::Item(idx) => ItemOrVar::Item(T::from_node_ref(&self.nodes[idx]).unwrap()),
-            InternalId::Var(_) => ItemOrVar::Var(id),
+            InternalId::Item(idx) => Term::Item(T::from_node_ref(&self.nodes[idx]).unwrap()),
+            InternalId::Var(_) => Term::Var(id),
         }
     }
 
-    pub(crate) fn get_mut<T: ToNode<Node>>(
-        &mut self,
-        id: NodeId<T>,
-    ) -> ItemOrVar<&mut T, RawNodeId> {
+    pub(crate) fn get_mut<T: ToNode<Node>>(&mut self, id: NodeId<T>) -> Term<&mut T, RawNodeId> {
         let id: RawNodeId = id.into();
         debug_assert_eq!(id.mode(), self.mode);
         match id.0 {
             InternalId::Item(idx) => {
-                ItemOrVar::Item(T::from_node_ref_mut(&mut self.nodes[idx]).unwrap())
+                Term::Item(T::from_node_ref_mut(&mut self.nodes[idx]).unwrap())
             }
-            InternalId::Var(_) => ItemOrVar::Var(id),
+            InternalId::Var(_) => Term::Var(id),
         }
     }
 
     pub(crate) fn get_real<T: ToNode<Node>>(&self, id: impl Into<RawNodeId>) -> Option<&T> {
         match self.get(id) {
-            ItemOrVar::Item(t) => Some(t),
-            ItemOrVar::Var(_) => None,
+            Term::Item(t) => Some(t),
+            Term::Var(_) => None,
         }
     }
 
@@ -243,8 +236,8 @@ impl<Node: NodeType> Ctx<Node> {
         let id: RawNodeId = id.into();
         debug_assert_eq!(id.mode(), self.mode);
         match id.0 {
-            ItemOrVar::Item(idx) => self.spans[idx],
-            ItemOrVar::Var(_) => panic!(),
+            Term::Item(idx) => self.spans[idx],
+            Term::Var(_) => panic!(),
         }
     }
 

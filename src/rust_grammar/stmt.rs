@@ -1,10 +1,10 @@
-use crate::{ItemOrVar, NodeId, NodeList, Spanned, WithSpan};
+use crate::{NodeId, NodeList, Spanned, Term, WithSpan};
 use derive_macro::CmpSyn;
 use proc_macro2::TokenStream;
 
 use crate::parser::error::Result;
 use crate::parser::parse::discouraged::Speculative as _;
-use crate::parser::parse::{Parse, ParseList, ParseNode, ParseStream};
+use crate::parser::parse::{Parse, ParseList, ParseStream, ParseTerm};
 use crate::parser::token;
 use crate::rust_grammar::Node;
 use crate::rust_grammar::attr::Attribute;
@@ -149,18 +149,18 @@ impl Parse for Block {
     }
 }
 
-impl ParseNode for Stmt {
+impl ParseTerm for Stmt {
     type Target = Stmt;
 
-    fn parse_node(input: ParseStream) -> Result<Self::Target> {
+    fn parse_item(input: ParseStream) -> Result<Self::Target> {
         parse_stmt(input, AllowNoSemi(false))
     }
 }
 
-impl ParseNode for StmtAllowNoSemi {
+impl ParseTerm for StmtAllowNoSemi {
     type Target = Stmt;
 
-    fn parse_node(input: ParseStream) -> Result<Self::Target> {
+    fn parse_item(input: ParseStream) -> Result<Self::Target> {
         parse_stmt(input, AllowNoSemi(true))
     }
 }
@@ -322,7 +322,7 @@ fn stmt_expr(
             Some(id) => ctx.get(id),
             None => e.as_ref(),
         };
-        let ItemOrVar::Item(e) = e else {
+        let Term::Item(e) = e else {
             break;
         };
         attr_target = match e {
@@ -376,11 +376,11 @@ fn stmt_expr(
             None => e.as_mut(),
         };
         match attr_target {
-            ItemOrVar::Item(attr_target) => {
+            Term::Item(attr_target) => {
                 attrs.extend(attr_target.replace_attrs(Vec::new()));
                 attr_target.replace_attrs(attrs);
             }
-            ItemOrVar::Var(_) => {
+            Term::Var(_) => {
                 if !attrs.is_empty() {
                     panic!("Attr on var")
                 }
@@ -392,7 +392,7 @@ fn stmt_expr(
     let semi_token: Option<Token![;]> = input.parse()?;
 
     match e {
-        ItemOrVar::Item(Expr::Macro(ExprMacro { attrs, mac }))
+        Term::Item(Expr::Macro(ExprMacro { attrs, mac }))
             if semi_token.is_some() || mac.delimiter.is_brace() =>
         {
             Ok(Stmt::Macro(StmtMacro {

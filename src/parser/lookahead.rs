@@ -5,7 +5,7 @@ use proc_macro2::{Delimiter, Span};
 use crate::parser::ParseCtx;
 use crate::parser::buffer::Cursor;
 use crate::parser::error::{self, Error};
-use crate::parser::parse::{PeekPat, peek_pat};
+use crate::parser::parse::PeekTerm;
 use crate::parser::span::IntoSpans;
 use crate::parser::token::Token;
 
@@ -51,8 +51,8 @@ impl<'a> Lookahead1<'a> {
         peek_impl(self, T::Token::peek, T::Token::display)
     }
 
-    pub fn peek_pat<T: PeekPat>(&self) -> bool {
-        peek_pat::<T>(self.cursor, &self.ctx.borrow())
+    pub fn peek_term<T: PeekTerm>(&self) -> bool {
+        T::peek_term(self.cursor, &self.ctx.borrow())
     }
 
     /// Triggers an error at the current position of the parse stream.

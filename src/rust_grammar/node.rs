@@ -1,10 +1,10 @@
 use crate::ctx::VarKind;
 use crate::match_pattern::IsMatch;
 use crate::rust_grammar::generics::Generics;
-use crate::{CmpSyn, ItemOrVar, KindType, Matcher, RawNodeId, ToNode};
+use crate::{CmpSyn, KindType, Matcher, RawNodeId, Term, ToNode};
 
 use crate::parser::parse::discouraged::Speculative;
-use crate::parser::parse::{ParseNode, ParseStream};
+use crate::parser::parse::{ParseStream, ParseTerm};
 use crate::rust_grammar::expr::Arm;
 use crate::rust_grammar::item::ImplItem;
 use crate::rust_grammar::pat::Pat;
@@ -210,12 +210,12 @@ macro_rules! parse_impl {
         if let Kind::$variant_name = $kind {
             let id = $input.parse_id::<$parse_ty>()?;
             match $input.ctx().get(id) {
-                ItemOrVar::Item(node) => {
+                Term::Item(node) => {
                     if !<$sub_ty>::is_of_sub_kind(&node) {
                         return Err($input.error(format!("Expected {}", <$sub_ty>::expected_str())));
                     }
                 }
-                ItemOrVar::Var(_) => {
+                Term::Var(_) => {
                     // TODO: Do we need to do anything here?
                 }
             }
@@ -298,10 +298,10 @@ impl CmpSyn<Node> for Node {
     }
 }
 
-impl ParseNode for Field {
+impl ParseTerm for Field {
     type Target = Field;
 
-    fn parse_node(input: ParseStream) -> crate::parser::Result<Self::Target> {
+    fn parse_item(input: ParseStream) -> crate::parser::Result<Self::Target> {
         // Let's see how this works out in practice.
         // We speculatively parse a named field and
         // if it doesn't work out, we parse an unnamed field.

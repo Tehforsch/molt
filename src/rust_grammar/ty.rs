@@ -1,10 +1,10 @@
-use crate::{ItemOrVar, NodeId, NodeList, WithSpan};
+use crate::{NodeId, NodeList, Term, WithSpan};
 use derive_macro::CmpSyn;
 use proc_macro2::{Span, TokenStream};
 
 use crate::parser::error::{self, Result};
 use crate::parser::parse::{
-    ListOrItem, Parse, ParseList, ParseListOrItem, ParseNode, ParseStream,
+    ListOrItem, Parse, ParseList, ParseListOrItem, ParseStream, ParseTerm,
     parse_punctuated_list_real,
 };
 use crate::parser::punctuated::Punctuated;
@@ -242,10 +242,10 @@ pub enum ReturnType {
     Type(Token![->], NodeId<Type>),
 }
 
-impl ParseNode for Type {
+impl ParseTerm for Type {
     type Target = Self;
 
-    fn parse_node(input: ParseStream) -> Result<Self::Target> {
+    fn parse_item(input: ParseStream) -> Result<Self::Target> {
         let allow_plus = true;
         ambig_ty(input, allow_plus)
     }
@@ -263,10 +263,10 @@ impl ParseList for ParenthesizedGenericArguments {
 
 pub struct NoPlus;
 
-impl ParseNode for (Type, NoPlus) {
+impl ParseTerm for (Type, NoPlus) {
     type Target = Type;
 
-    fn parse_node(input: ParseStream) -> Result<Self::Target> {
+    fn parse_item(input: ParseStream) -> Result<Self::Target> {
         let allow_plus = false;
         ambig_ty(input, allow_plus)
     }
@@ -287,7 +287,7 @@ fn ambig_ty(input: ParseStream, allow_plus: bool) -> Result<Type> {
     if lookahead.peek(Token![for]) {
         lifetimes = input.parse()?;
         lookahead = input.lookahead1();
-        if !lookahead.peek_pat::<Ident>()
+        if !lookahead.peek_term::<Ident>()
             && !lookahead.peek(Token![fn])
             && !lookahead.peek(Token![unsafe])
             && !lookahead.peek(Token![extern])
@@ -356,7 +356,7 @@ fn ambig_ty(input: ParseStream, allow_plus: bool) -> Result<Type> {
             #[allow(clippy::never_loop)]
             loop {
                 let first = match first {
-                    ItemOrVar::Item(Type::Path(TypePath { qself: None, path })) => {
+                    Term::Item(Type::Path(TypePath { qself: None, path })) => {
                         TypeParamBound::Trait(TraitBound {
                             paren_token: Some(paren_token),
                             modifier: TraitBoundModifier::None,
@@ -364,12 +364,12 @@ fn ambig_ty(input: ParseStream, allow_plus: bool) -> Result<Type> {
                             path,
                         })
                     }
-                    ItemOrVar::Item(Type::TraitObject(TypeTraitObject {
+                    Term::Item(Type::TraitObject(TypeTraitObject {
                         dyn_token: None,
                         bounds,
                     })) => {
                         if bounds.len() > 1 || bounds.trailing_punct() {
-                            first = ItemOrVar::Item(Type::TraitObject(TypeTraitObject {
+                            first = Term::Item(Type::TraitObject(TypeTraitObject {
                                 dyn_token: None,
                                 bounds,
                             }));
@@ -422,7 +422,7 @@ fn ambig_ty(input: ParseStream, allow_plus: bool) -> Result<Type> {
         let mut bare_fn: TypeBareFn = input.parse()?;
         bare_fn.lifetimes = lifetimes;
         Ok(Type::BareFn(bare_fn))
-    } else if lookahead.peek_pat::<Ident>()
+    } else if lookahead.peek_term::<Ident>()
         || input.peek(Token![super])
         || input.peek(Token![self])
         || input.peek(Token![Self])
@@ -459,7 +459,7 @@ fn ambig_ty(input: ParseStream, allow_plus: bool) -> Result<Type> {
             if allow_plus {
                 while input.peek(Token![+]) {
                     bounds.push_punct(input.parse()?);
-                    if !(input.peek_pat::<AnyIdent>()
+                    if !(input.peek_term::<AnyIdent>()
                         || input.peek(Token![::])
                         || input.peek(Token![?])
                         || input.peek(Lifetime)
@@ -612,7 +612,7 @@ impl Parse for TypeBareFn {
 
                     if inputs.empty_or_trailing()
                         && (args.peek(Token![...])
-                            || (args.peek_pat::<Ident>() || args.peek(Token![_]))
+                            || (args.peek_term::<Ident>() || args.peek(Token![_]))
                                 && args.peek2(Token![:])
                                 && args.peek3(Token![...]))
                     {
@@ -804,7 +804,7 @@ fn parse_bare_fn_arg(input: ParseStream, allow_self: bool) -> Result<BareFnArg> 
     }
 
     let mut has_self = false;
-    let mut name = if (input.peek_pat::<Ident>() || input.peek(Token![_]) || {
+    let mut name = if (input.peek_term::<Ident>() || input.peek(Token![_]) || {
         has_self = allow_self && input.peek(Token![self]);
         has_self
     }) && input.peek2(Token![:])
@@ -846,7 +846,7 @@ fn parse_bare_fn_arg(input: ParseStream, allow_self: bool) -> Result<BareFnArg> 
 fn parse_bare_variadic(input: ParseStream, attrs: Vec<Attribute>) -> Result<BareVariadic> {
     Ok(BareVariadic {
         attrs,
-        name: if input.peek_pat::<Ident>() || input.peek(Token![_]) {
+        name: if input.peek_term::<Ident>() || input.peek(Token![_]) {
             let name = input.parse_id::<AnyIdent>()?;
             let colon: Token![:] = input.parse()?;
             Some((name, colon))

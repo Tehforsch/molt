@@ -8,7 +8,6 @@ mod ctrl_c;
 mod ctx;
 mod error;
 mod input;
-mod item_or_var;
 mod match_pattern;
 mod modify;
 mod molt_lang;
@@ -18,6 +17,7 @@ pub(crate) mod rule;
 mod rust_grammar;
 mod span;
 mod storage;
+mod term;
 #[cfg(test)]
 mod tests;
 mod writer;
@@ -47,12 +47,12 @@ pub use writer::Writer;
 
 pub(crate) use ctx::{Ctx, CtxVar, NodeId, RawNodeId};
 pub(crate) use input::{Diagnostic, FileId};
-pub(crate) use item_or_var::ItemOrVar;
 pub(crate) use match_pattern::{Match, Matcher};
 pub(crate) use modify::ModMap;
 pub(crate) use node::{KindType, NodeType, ToNode};
 pub(crate) use node_list::NodeList;
-pub(crate) use span::{Span, Spanned, SpannedPat, WithSpan};
+pub(crate) use span::{Span, Spanned, SpannedTerm, WithSpan};
+pub(crate) use term::Term;
 
 struct RustFile;
 

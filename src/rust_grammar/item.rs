@@ -1,14 +1,14 @@
 use std::mem;
 
 use crate::match_pattern::IsMatch;
-use crate::{CmpSyn, ItemOrVar, NodeId, NodeList, SpannedPat, WithSpan, rule};
+use crate::{CmpSyn, NodeId, NodeList, SpannedTerm, Term, WithSpan, rule};
 use derive_macro::CmpSyn;
 use proc_macro2::TokenStream;
 
 use crate::parser::error::{Error, Result};
 use crate::parser::parse::ParseList;
 use crate::parser::parse::discouraged::Speculative as _;
-use crate::parser::parse::{Parse, ParseBuffer, ParseNode, ParseStream};
+use crate::parser::parse::{Parse, ParseBuffer, ParseStream, ParseTerm};
 use crate::parser::punctuated::Punctuated;
 use crate::parser::token;
 use crate::rust_grammar::Node;
@@ -734,10 +734,10 @@ impl Parse for Item {
     }
 }
 
-impl ParseNode for Item {
+impl ParseTerm for Item {
     type Target = Item;
 
-    fn parse_node(input: ParseStream) -> Result<Item> {
+    fn parse_item(input: ParseStream) -> Result<Item> {
         Item::parse(input)
     }
 }
@@ -748,7 +748,7 @@ pub(crate) fn parse_rest_of_item(
     input: ParseStream,
 ) -> Result<Item> {
     let ahead = input.fork();
-    let vis: SpannedPat<Vis> = ahead.parse_spanned_pat::<Vis>()?;
+    let vis: SpannedTerm<Vis> = ahead.parse_spanned_pat::<Vis>()?;
 
     let lookahead = ahead.lookahead1();
     let allow_safe = false;
@@ -820,7 +820,7 @@ pub(crate) fn parse_rest_of_item(
         let vis = input.parse_id::<Vis>()?;
         let const_token: Token![const] = input.parse()?;
         let lookahead = input.lookahead1();
-        let ident = if lookahead.peek_pat::<Ident>() || lookahead.peek(Token![_]) {
+        let ident = if lookahead.peek_term::<Ident>() || lookahead.peek(Token![_]) {
             input.parse_id::<AnyIdent>()?
         } else {
             return Err(lookahead.error());
@@ -903,7 +903,7 @@ pub(crate) fn parse_rest_of_item(
         let vis = input.parse_id::<Vis>()?;
         parse_macro2(begin, vis, input)
     } else if vis.get_property(IsInherited)
-        && (lookahead.peek_pat::<Ident>()
+        && (lookahead.peek_term::<Ident>()
             || lookahead.peek(Token![self])
             || lookahead.peek(Token![super])
             || lookahead.peek(Token![crate])
@@ -1162,7 +1162,7 @@ impl Parse for UseTree {
 
 fn parse_use_tree(input: ParseStream, allow_crate_root_in_path: bool) -> Result<Option<UseTree>> {
     let lookahead = input.lookahead1();
-    if lookahead.peek_pat::<Ident>()
+    if lookahead.peek_term::<Ident>()
         || lookahead.peek(Token![self])
         || lookahead.peek(Token![super])
         || lookahead.peek(Token![crate])
@@ -1180,7 +1180,7 @@ fn parse_use_tree(input: ParseStream, allow_crate_root_in_path: bool) -> Result<
                 ident,
                 as_token: input.parse()?,
                 rename: {
-                    if input.peek_pat::<Ident>() {
+                    if input.peek_term::<Ident>() {
                         input.parse()?
                     } else if input.peek(Token![_]) {
                         Ident::from(input.parse::<Token![_]>()?)
@@ -1257,7 +1257,7 @@ impl Parse for ItemConst {
         let const_token: Token![const] = input.parse()?;
 
         let lookahead = input.lookahead1();
-        let ident = if lookahead.peek_pat::<Ident>() || lookahead.peek(Token![_]) {
+        let ident = if lookahead.peek_term::<Ident>() || lookahead.peek(Token![_]) {
             input.parse_id::<AnyIdent>()?
         } else {
             return Err(lookahead.error());
@@ -1601,7 +1601,7 @@ impl Parse for ForeignItem {
         let begin = input.fork();
         let mut attrs = input.call(Attribute::parse_outer)?;
         let ahead = input.fork();
-        let vis: SpannedPat<Vis> = ahead.parse_spanned_pat::<Vis>()?;
+        let vis: SpannedTerm<Vis> = ahead.parse_spanned_pat::<Vis>()?;
 
         let lookahead = ahead.lookahead1();
         let allow_safe = true;
@@ -1667,7 +1667,7 @@ impl Parse for ForeignItem {
         } else if lookahead.peek(Token![type]) {
             parse_foreign_item_type(begin, input)
         } else if vis.get_property(IsInherited)
-            && (lookahead.peek_pat::<Ident>()
+            && (lookahead.peek_term::<Ident>()
                 || lookahead.peek(Token![self])
                 || lookahead.peek(Token![super])
                 || lookahead.peek(Token![crate])
@@ -2075,7 +2075,7 @@ impl Parse for TraitItem {
     fn parse(input: ParseStream) -> Result<Self> {
         let begin = input.fork();
         let mut attrs = input.call(Attribute::parse_outer)?;
-        let vis: SpannedPat<Vis> = input.parse_spanned_pat::<Vis>()?;
+        let vis: SpannedTerm<Vis> = input.parse_spanned_pat::<Vis>()?;
         let defaultness: Option<Token![default]> = input.parse()?;
         let ahead = input.fork();
 
@@ -2086,7 +2086,7 @@ impl Parse for TraitItem {
         } else if lookahead.peek(Token![const]) {
             let const_token: Token![const] = ahead.parse()?;
             let lookahead = ahead.lookahead1();
-            if lookahead.peek_pat::<Ident>() || lookahead.peek(Token![_]) {
+            if lookahead.peek_term::<Ident>() || lookahead.peek(Token![_]) {
                 input.advance_to(&ahead);
                 let ident = input.parse_id::<AnyIdent>()?;
                 let generics = input.parse_spanned_pat::<Generics>()?;
@@ -2128,7 +2128,7 @@ impl Parse for TraitItem {
             parse_trait_item_type(begin.fork(), input)
         } else if vis.get_property(IsInherited)
             && defaultness.is_none()
-            && (lookahead.peek_pat::<Ident>()
+            && (lookahead.peek_term::<Ident>()
                 || lookahead.peek(Token![self])
                 || lookahead.peek(Token![super])
                 || lookahead.peek(Token![crate])
@@ -2140,7 +2140,7 @@ impl Parse for TraitItem {
         }?;
 
         match (&*vis, defaultness) {
-            (ItemOrVar::Item(Vis::Inherited), None) => {}
+            (Term::Item(Vis::Inherited), None) => {}
             _ => return Ok(TraitItem::Verbatim(verbatim::between(&begin, input))),
         }
 
@@ -2163,7 +2163,7 @@ impl Parse for TraitItemConst {
         let const_token: Token![const] = input.parse()?;
 
         let lookahead = input.lookahead1();
-        let ident = if lookahead.peek_pat::<Ident>() || lookahead.peek(Token![_]) {
+        let ident = if lookahead.peek_term::<Ident>() || lookahead.peek(Token![_]) {
             input.parse_id::<AnyIdent>()?
         } else {
             return Err(lookahead.error());
@@ -2356,17 +2356,17 @@ fn parse_impl(input: ParseStream, allow_verbatim_impl: bool) -> Result<Option<It
             let ctx = input.ctx();
             let for_token: Token![for] = input.parse()?;
             let mut first_ty_ref = first_ty.as_ref();
-            while let ItemOrVar::Item(Type::Group(ty)) = first_ty_ref {
+            while let Term::Item(Type::Group(ty)) = first_ty_ref {
                 first_ty_ref = ctx.get(ty.elem);
             }
-            if let ItemOrVar::Item(Type::Path(TypePath { qself: None, .. })) = first_ty_ref {
-                if let ItemOrVar::Item(Type::Group(_)) = first_ty {
+            if let Term::Item(Type::Path(TypePath { qself: None, .. })) = first_ty_ref {
+                if let Term::Item(Type::Group(_)) = first_ty {
                     // This is related to none-delimited types.
                     // These may occur in the result from macro expansion,
                     // which we currently do not treat anyways.
                     unimplemented!("Parsing macro output not supported")
                 }
-                if let ItemOrVar::Item(Type::Path(TypePath { qself: None, path })) = first_ty {
+                if let Term::Item(Type::Path(TypePath { qself: None, path })) = first_ty {
                     trait_ = Some((polarity, path, for_token));
                 } else {
                     unreachable!();
@@ -2414,14 +2414,14 @@ fn parse_impl(input: ParseStream, allow_verbatim_impl: bool) -> Result<Option<It
     }
 }
 
-impl ParseNode for ImplItem {
+impl ParseTerm for ImplItem {
     type Target = ImplItem;
 
-    fn parse_node(input: ParseStream) -> Result<Self> {
+    fn parse_item(input: ParseStream) -> Result<Self> {
         let begin = input.fork();
         let mut attrs = input.call(Attribute::parse_outer)?;
         let ahead = input.fork();
-        let vis: SpannedPat<Vis> = ahead.parse_spanned_pat::<Vis>()?;
+        let vis: SpannedTerm<Vis> = ahead.parse_spanned_pat::<Vis>()?;
 
         let mut lookahead = ahead.lookahead1();
         let defaultness = if lookahead.peek(Token![default]) && !ahead.peek2(Token![!]) {
@@ -2445,7 +2445,7 @@ impl ParseNode for ImplItem {
             let defaultness: Option<Token![default]> = input.parse()?;
             let const_token: Token![const] = input.parse()?;
             let lookahead = input.lookahead1();
-            let ident = if lookahead.peek_pat::<Ident>() || lookahead.peek(Token![_]) {
+            let ident = if lookahead.peek_term::<Ident>() || lookahead.peek(Token![_]) {
                 input.parse_id::<AnyIdent>()?
             } else {
                 return Err(lookahead.error());
@@ -2486,7 +2486,7 @@ impl ParseNode for ImplItem {
             parse_impl_item_type(begin, input)
         } else if vis.get_property(IsInherited)
             && defaultness.is_none()
-            && (lookahead.peek_pat::<Ident>()
+            && (lookahead.peek_term::<Ident>()
                 || lookahead.peek(Token![self])
                 || lookahead.peek(Token![super])
                 || lookahead.peek(Token![crate])
@@ -2521,7 +2521,7 @@ impl Parse for ImplItemConst {
         let const_token: Token![const] = input.parse()?;
 
         let lookahead = input.lookahead1();
-        let ident = if lookahead.peek_pat::<Ident>() || lookahead.peek(Token![_]) {
+        let ident = if lookahead.peek_term::<Ident>() || lookahead.peek(Token![_]) {
             input.parse_id::<AnyIdent>()?
         } else {
             return Err(lookahead.error());

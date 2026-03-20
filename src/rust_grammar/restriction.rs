@@ -1,13 +1,13 @@
 use derive_macro::CmpSyn;
 
-use crate::item_or_var::Property;
 use crate::parser::error::Result;
 use crate::parser::parse::discouraged::Speculative as _;
-use crate::parser::parse::{ParseNode, ParseStream};
+use crate::parser::parse::{ParseStream, ParseTerm};
 use crate::parser::token;
 use crate::rust_grammar::Node;
 use crate::rust_grammar::ident::AnyIdent;
 use crate::rust_grammar::path::Path;
+use crate::term::Property;
 
 #[derive(Debug, CmpSyn)]
 #[node(Node)]
@@ -76,10 +76,10 @@ impl Property<Vis> for IsSome {
     }
 }
 
-impl ParseNode for Vis {
+impl ParseTerm for Vis {
     type Target = Self;
 
-    fn parse_node(input: ParseStream) -> Result<Self::Target> {
+    fn parse_item(input: ParseStream) -> Result<Self::Target> {
         // Recognize an empty None-delimited group, as produced by a $:vis
         // matcher that matched no tokens.
         if input.peek(token::Group) {

@@ -1,10 +1,10 @@
 use crate::NodeId;
-use crate::item_or_var::Property;
+use crate::term::Property;
 use derive_macro::CmpSyn;
 use proc_macro2::TokenStream;
 
 use crate::parser::error::{self, Result};
-use crate::parser::parse::{Parse, ParseNode, ParseStream};
+use crate::parser::parse::{Parse, ParseStream, ParseTerm};
 use crate::parser::punctuated::Punctuated;
 use crate::parser::token;
 use crate::rust_grammar::Node;
@@ -201,10 +201,10 @@ impl Property<Generics> for IsSome {
     }
 }
 
-impl ParseNode for Generics {
+impl ParseTerm for Generics {
     type Target = Generics;
 
-    fn parse_node(input: ParseStream) -> Result<Self> {
+    fn parse_item(input: ParseStream) -> Result<Self> {
         if !input.peek(Token![<]) {
             return Ok(Generics::default());
         }
@@ -224,7 +224,7 @@ impl ParseNode for Generics {
                     attrs,
                     ..input.parse()?
                 }));
-            } else if lookahead.peek_pat::<Ident>() {
+            } else if lookahead.peek_term::<Ident>() {
                 params.push_value(GenericParam::Type(TypeParam {
                     attrs,
                     ..input.parse()?
@@ -269,7 +269,7 @@ impl Parse for GenericParam {
         let attrs = input.call(Attribute::parse_outer)?;
 
         let lookahead = input.lookahead1();
-        if lookahead.peek_pat::<Ident>() {
+        if lookahead.peek_term::<Ident>() {
             Ok(GenericParam::Type(TypeParam {
                 attrs,
                 ..input.parse()?
@@ -485,7 +485,7 @@ impl TypeParamBound {
                 break;
             }
             bounds.push_punct(input.parse()?);
-            if !(input.peek_pat::<AnyIdent>()
+            if !(input.peek_term::<AnyIdent>()
                 || input.peek(Token![::])
                 || input.peek(Token![?])
                 || input.peek(Lifetime)
@@ -673,7 +673,7 @@ impl Parse for PreciseCapture {
             let lookahead = input.lookahead1();
             params.push_value(
                 if lookahead.peek(Lifetime)
-                    || lookahead.peek_pat::<Ident>()
+                    || lookahead.peek_term::<Ident>()
                     || input.peek(Token![Self])
                 {
                     input.parse::<CapturedParam>()?
@@ -707,7 +707,7 @@ impl Parse for CapturedParam {
         let lookahead = input.lookahead1();
         if lookahead.peek(Lifetime) {
             input.parse().map(CapturedParam::Lifetime)
-        } else if lookahead.peek_pat::<Ident>() || input.peek(Token![Self]) {
+        } else if lookahead.peek_term::<Ident>() || input.peek(Token![Self]) {
             input.parse_id::<AnyIdent>().map(CapturedParam::Ident)
         } else {
             Err(lookahead.error())

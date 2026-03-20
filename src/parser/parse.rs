@@ -12,8 +12,8 @@ use std::str::FromStr;
 use crate::ctx::VarKind;
 use crate::node_list::RealNodeList;
 use crate::{
-    Ctx, CtxVar, ItemOrVar, Mode, NodeId, NodeList, NodeType, RawNodeId, Spanned, SpannedPat,
-    ToNode, WithSpan,
+    Ctx, CtxVar, Mode, NodeId, NodeList, NodeType, RawNodeId, Spanned, SpannedTerm, Term, ToNode,
+    WithSpan,
 };
 use proc_macro2::{Delimiter, Group, Literal, Punct, Span, TokenStream, TokenTree};
 
@@ -29,121 +29,6 @@ pub(crate) type ParseCtx = Rc<RefCell<Ctx<Node>>>;
 
 pub(crate) use crate::parser::error::{Error, Result};
 pub(crate) use crate::parser::lookahead::{Lookahead1, Peek};
-
-pub struct ParseResult<T> {
-    pub item: T,
-    pub ctx: Ctx<Node>,
-}
-
-impl<T> ParseResult<T> {
-    pub(crate) fn map<S>(self, f: impl Fn(T) -> S) -> ParseResult<S> {
-        ParseResult {
-            ctx: self.ctx,
-            item: f(self.item),
-        }
-    }
-}
-
-/// Parsing interface implemented by types that can be parsed in a default
-/// way from a token stream. This trait is for types that aren't represented
-/// as nodes but stored within the AST structs directly.
-pub(crate) trait Parse: Sized {
-    fn parse(input: ParseStream) -> Result<Self>;
-}
-
-/// Parsing interface implemented by types that can be parsed in a default
-/// way from a token stream. This trait is for types that are represented
-/// as nodes.
-pub(crate) trait ParseNode {
-    type Target: ToNode<Node>;
-
-    /// Parse a Self::Target given the input. Most types implementing
-    /// this trait only need to implement this method and can defer
-    /// parsing molt variables do the default implementation of
-    /// `parse_pat`.  However, some types (recursive types like
-    /// expressions and patterns) may need to override the
-    /// implementation of the `parse_pat` implementation and check
-    /// against molt variables manually.
-    fn parse_node(input: ParseStream) -> Result<Self::Target>;
-
-    /// Parse a pattern (either a concrete syntax element or a
-    /// molt variable).
-    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, RawNodeId>> {
-        if input.peek_var::<Self::Target>() {
-            return input.parse_single_var();
-        }
-        Ok(ItemOrVar::Item(Self::parse_node(input)?))
-    }
-}
-
-/// Similar to `Peek`, this trait allows peeking at a token of
-/// a given type. The difference between the trait is that this
-/// trait and the corresponding `ParseStream::peek_pat` method
-/// also check for molt variables of the `Kind` corresponding to the
-/// associated `Target` type.
-pub(crate) trait PeekPat {
-    type Target: ToNode<Node>;
-
-    fn peek(cursor: Cursor) -> bool;
-}
-
-pub(crate) fn peek_pat<T: PeekPat>(cursor: Cursor, ctx: &Ctx<Node>) -> bool {
-    T::peek(cursor) || peek_var(cursor, ctx, VarKind::Single(T::Target::node_kind()))
-}
-
-pub(crate) trait ParseList {
-    type Item: ToNode<Node>;
-    type ParseItem: ParseNode<Target = Self::Item>;
-    type Punct: Parse;
-
-    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>>;
-}
-
-pub(crate) fn parse_punctuated_list_real<T: ParseNode, P: Parse>(
-    input: ParseStream,
-) -> Result<Vec<NodeId<T::Target>>> {
-    Ok(
-        Punctuated::<NodeId<T::Target>, P>::parse_terminated_with(input, |input| {
-            input.parse_id::<T>()
-        })?
-        .into_iter()
-        .collect(),
-    )
-}
-
-pub(crate) enum ListOrItem<T, P> {
-    Item(SpannedPat<T>),
-    List(NodeList<T, P>),
-}
-
-/// Parsing trait to parse something that may be either a single item
-/// or a list of items. (Example: parsing parenthesized expressions
-/// (1) and tuples (1, 2, 3)).  Along with the corresponding
-/// `ParseStream::parse_list_or_item` method, this trait takes care of
-/// proper handling of molt variables while parsing these types of
-/// structures.
-pub(crate) trait ParseListOrItem {
-    type Target: ToNode<Node>;
-    type Punct;
-
-    fn parse_list_or_item(input: ParseStream) -> Result<ListOrItem<Self::Target, Self::Punct>>;
-}
-
-fn peek_var(cursor: Cursor, ctx: &Ctx<Node>, kind: VarKind<NodeKind>) -> bool {
-    if let Some((punct, _)) = cursor.punct()
-        && punct.as_char() == '$'
-        && let Some((ident, _)) = cursor.skip().and_then(|cursor| cursor.ident())
-    {
-        return kind_matches(ctx, &ident, kind);
-    }
-    false
-}
-
-impl<T: ToNode<Node> + ParseNode<Target = T>> Parse for NodeId<T> {
-    fn parse(input: ParseStream) -> Result<NodeId<T>> {
-        input.parse_id::<T>()
-    }
-}
 
 /// Input to a Syn parser function.
 ///
@@ -356,6 +241,123 @@ fn span_of_unexpected_ignoring_nones(mut cursor: Cursor) -> Option<(Span, Delimi
     }
 }
 
+pub struct ParseResult<T> {
+    pub item: T,
+    pub ctx: Ctx<Node>,
+}
+
+impl<T> ParseResult<T> {
+    pub(crate) fn map<S>(self, f: impl Fn(T) -> S) -> ParseResult<S> {
+        ParseResult {
+            ctx: self.ctx,
+            item: f(self.item),
+        }
+    }
+}
+
+/// Parsing interface implemented by types that can be parsed in a default
+/// way from a token stream. This trait is for types that aren't represented
+/// as nodes but stored within the AST structs directly.
+pub(crate) trait Parse: Sized {
+    fn parse(input: ParseStream) -> Result<Self>;
+}
+
+/// Parsing interface implemented by types that can be parsed in a default
+/// way from a token stream. This trait is for types that are represented
+/// as nodes.
+pub(crate) trait ParseTerm {
+    type Target: ToNode<Node>;
+
+    /// Parse a Self::Target given the input. Most types implementing
+    /// this trait only need to implement this method and can defer
+    /// parsing molt variables do the default implementation of
+    /// `parse_pat`.  However, some types (recursive types like
+    /// expressions and patterns) may need to override the
+    /// implementation of the `parse_pat` implementation and check
+    /// against molt variables manually.
+    fn parse_item(input: ParseStream) -> Result<Self::Target>;
+
+    /// Parse a term (either a concrete syntax element or a
+    /// molt variable).
+    fn parse_term(input: ParseStream) -> Result<Term<Self::Target, RawNodeId>> {
+        if input.peek_var::<Self::Target>() {
+            return Ok(Term::Var(input.parse_single_var::<Self::Target>()?));
+        }
+        Ok(Term::Item(Self::parse_item(input)?))
+    }
+}
+
+/// Similar to `Peek`, this trait allows peeking at a token of
+/// a given type. The difference between the trait is that this
+/// trait and the corresponding `ParseStream::peek_term` method
+/// also check for molt variables of the `Kind` corresponding to the
+/// associated `Target` type.
+pub(crate) trait PeekTerm {
+    type Target: ToNode<Node>;
+
+    fn peek_item(cursor: Cursor) -> bool;
+
+    fn peek_term(cursor: Cursor, ctx: &Ctx<Node>) -> bool {
+        Self::peek_item(cursor) || peek_var(cursor, ctx, VarKind::Single(Self::Target::node_kind()))
+    }
+}
+
+pub(crate) trait ParseList {
+    type Item: ToNode<Node>;
+    type ParseItem: ParseTerm<Target = Self::Item>;
+    type Punct: Parse;
+
+    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>>;
+}
+
+pub(crate) fn parse_punctuated_list_real<T: ParseTerm, P: Parse>(
+    input: ParseStream,
+) -> Result<Vec<NodeId<T::Target>>> {
+    Ok(
+        Punctuated::<NodeId<T::Target>, P>::parse_terminated_with(input, |input| {
+            input.parse_id::<T>()
+        })?
+        .into_iter()
+        .collect(),
+    )
+}
+
+/// Represents something that might be a single item or a list of items.
+/// See the `ParseListOrItem` trait.
+pub(crate) enum ListOrItem<T, P> {
+    Item(SpannedTerm<T>),
+    List(NodeList<T, P>),
+}
+
+/// Parsing trait to parse something that may be either a single item
+/// or a list of items. (Example: parsing parenthesized expressions
+/// (1) and tuples (1, 2, 3)).  Along with the corresponding
+/// `ParseStream::parse_list_or_item` method, this trait takes care of
+/// proper handling of molt variables while parsing these types of
+/// structures.
+pub(crate) trait ParseListOrItem {
+    type Target: ToNode<Node>;
+    type Punct;
+
+    fn parse_list_or_item(input: ParseStream) -> Result<ListOrItem<Self::Target, Self::Punct>>;
+}
+
+fn peek_var(cursor: Cursor, ctx: &Ctx<Node>, kind: VarKind<NodeKind>) -> bool {
+    if let Some((punct, _)) = cursor.punct()
+        && punct.as_char() == '$'
+        && let Some((ident, _)) = cursor.skip().and_then(|cursor| cursor.ident())
+    {
+        return kind_matches(ctx, &ident, kind);
+    }
+    false
+}
+
+impl<T: ToNode<Node> + ParseTerm<Target = T>> Parse for NodeId<T> {
+    fn parse(input: ParseStream) -> Result<NodeId<T>> {
+        input.parse_id::<T>()
+    }
+}
+
 fn kind_matches(
     ctx: &Ctx<Node>,
     ident: &Ident,
@@ -507,27 +509,29 @@ impl<'a> ParseBuffer<'a> {
         self.ctx.borrow_mut()
     }
 
-    pub(crate) fn parse_id<T: ParseNode>(&self) -> Result<NodeId<T::Target>> {
+    pub(crate) fn parse_id<T: ParseTerm>(&self) -> Result<NodeId<T::Target>> {
         let pat = self.parse_spanned_pat::<T>()?;
         Ok(self.add_pat(pat))
     }
 
-    pub(crate) fn parse_node<T: ParseNode>(&self) -> Result<T::Target> {
-        T::parse_node(self)
+    pub(crate) fn parse_node<T: ParseTerm>(&self) -> Result<T::Target> {
+        T::parse_item(self)
     }
 
     pub(crate) fn parse_spanned<T: Parse>(&self) -> Result<Spanned<T>> {
         self.call_spanned(T::parse)
     }
 
-    pub(crate) fn parse_spanned_pat<T: ParseNode + ?Sized>(&self) -> Result<SpannedPat<T::Target>> {
-        self.call_spanned(T::parse_pat)
+    pub(crate) fn parse_spanned_pat<T: ParseTerm + ?Sized>(
+        &self,
+    ) -> Result<SpannedTerm<T::Target>> {
+        self.call_spanned(T::parse_term)
     }
 
     pub(crate) fn parse_span_with<T: Parse, S: ToNode<Node>>(
         &self,
         f: impl Fn(T) -> S,
-    ) -> Result<Spanned<ItemOrVar<S, RawNodeId>>> {
+    ) -> Result<Spanned<Term<S, RawNodeId>>> {
         let item: Spanned<T> = self.parse_spanned()?;
         Ok(item.map(f).into_pattern())
     }
@@ -572,7 +576,7 @@ impl<'a> ParseBuffer<'a> {
         self.ctx.borrow_mut().add(t)
     }
 
-    pub(crate) fn add_pat<T: ToNode<Node>>(&self, item: SpannedPat<T>) -> NodeId<T> {
+    pub(crate) fn add_pat<T: ToNode<Node>>(&self, item: SpannedTerm<T>) -> NodeId<T> {
         self.ctx.borrow_mut().add_pat(item)
     }
 
@@ -592,31 +596,27 @@ impl<'a> ParseBuffer<'a> {
         )
     }
 
-    pub(crate) fn peek_pat<T: PeekPat>(&self) -> bool {
-        peek_pat::<T>(self.cursor(), &self.ctx.borrow())
-    }
-
-    fn parse_var_ident(&self) -> Result<Ident> {
-        let _: Token![$] = self.parse()?;
-        Ident::parse_any(self)
+    pub(crate) fn peek_term<T: PeekTerm>(&self) -> bool {
+        T::peek_term(self.cursor(), &self.ctx.borrow())
     }
 
     fn parse_var(
         &self,
         kind: VarKind<<Node as NodeType>::Kind>,
     ) -> Result<CtxVar<<Node as NodeType>::Kind>> {
-        let ident = self.parse_var_ident()?;
+        let _: Token![$] = self.parse()?;
+        let ident = Ident::parse_any(self)?;
         Ok(CtxVar::new(ident, kind))
-    }
-
-    pub(crate) fn parse_single_var<T: ToNode<Node>>(&self) -> Result<ItemOrVar<T, RawNodeId>> {
-        let var = self.parse_var(VarKind::Single(T::kind()))?;
-        Ok(ItemOrVar::Var(self.add_var::<T>(var).into()))
     }
 
     fn parse_list_var<T: ToNode<Node>>(&self) -> Result<NodeId<T>> {
         let var = self.parse_var(VarKind::List(T::kind()))?;
         Ok(self.add_var::<T>(var))
+    }
+
+    pub(crate) fn parse_single_var<T: ToNode<Node>>(&self) -> Result<RawNodeId> {
+        let var = self.parse_var(VarKind::Single(T::kind()))?;
+        Ok(self.add_var::<T>(var).into())
     }
 
     pub(crate) fn parse_list<T: ParseList>(&self) -> Result<NodeList<T::Item, T::Punct>> {
@@ -644,9 +644,9 @@ impl<'a> ParseBuffer<'a> {
         self.mode
     }
 
-    pub(crate) fn make_at_point<T>(&self, default: T) -> SpannedPat<T> {
+    pub(crate) fn make_at_point<T>(&self, default: T) -> SpannedTerm<T> {
         let marker = self.marker();
-        self.make_spanned(marker, ItemOrVar::Item(default))
+        self.make_spanned(marker, Term::Item(default))
     }
 }
 

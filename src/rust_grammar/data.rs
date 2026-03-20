@@ -2,7 +2,7 @@ use crate::{NodeId, NodeList, WithSpan};
 use derive_macro::CmpSyn;
 
 use crate::parser::error::Result;
-use crate::parser::parse::{Parse, ParseList, ParseNode, ParseStream, parse_punctuated_list_real};
+use crate::parser::parse::{Parse, ParseList, ParseStream, ParseTerm, parse_punctuated_list_real};
 use crate::parser::token;
 use crate::rust_grammar::Node;
 use crate::rust_grammar::attr::Attribute;
@@ -154,10 +154,10 @@ impl ParseList for FieldsUnnamed {
     }
 }
 
-impl ParseNode for FieldNamed {
+impl ParseTerm for FieldNamed {
     type Target = Field;
 
-    fn parse_node(input: ParseStream) -> Result<Field> {
+    fn parse_item(input: ParseStream) -> Result<Field> {
         let attrs = input.call(Attribute::parse_outer)?;
         let vis = input.parse_id::<Vis>()?;
 
@@ -195,11 +195,11 @@ impl ParseNode for FieldNamed {
     }
 }
 
-impl ParseNode for FieldUnnamed {
+impl ParseTerm for FieldUnnamed {
     type Target = Field;
 
     /// Parses an unnamed (tuple struct) field.
-    fn parse_node(input: ParseStream) -> Result<Field> {
+    fn parse_item(input: ParseStream) -> Result<Field> {
         Ok(Field {
             attrs: input.call(Attribute::parse_outer)?,
             vis: input.parse()?,

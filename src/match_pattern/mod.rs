@@ -8,7 +8,7 @@ use crate::molt_lang::RuntimeCtx;
 use crate::rule::{DoesNotRequireRule, RequiresRule};
 use crate::rust_grammar::Node;
 use crate::{
-    ItemOrVar, NodeId, NodeList, NodeType, RawNodeId,
+    NodeId, NodeList, NodeType, RawNodeId, Term,
     rule::{Rule, RuleKey, Rules},
 };
 
@@ -117,8 +117,8 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
         }
 
         match self.ctx.get::<Node>(id) {
-            ItemOrVar::Var(var) => self.bind(var, real_id),
-            ItemOrVar::Item(node) => {
+            Term::Var(var) => self.bind(var, real_id),
+            Term::Item(node) => {
                 let item = self.ctx.real_ctx.get(real_id).unwrap_item();
                 self.cmp_syn::<Node, Node>(item, node)
             }
@@ -154,13 +154,11 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
         ts2: &NodeList<T, P>,
     ) -> IsMatch {
         match (ts1, ts2) {
-            (ItemOrVar::Item(ts1), ItemOrVar::Item(ts2)) => {
-                self.cmp_lists_real(ts1.as_ref(), ts2.as_ref())
-            }
-            (ItemOrVar::Item(_), ItemOrVar::Var(_)) => {
+            (Term::Item(ts1), Term::Item(ts2)) => self.cmp_lists_real(ts1.as_ref(), ts2.as_ref()),
+            (Term::Item(_), Term::Var(_)) => {
                 todo!()
             }
-            (ItemOrVar::Var(_), _) => unreachable!(),
+            (Term::Var(_), _) => unreachable!(),
         }
     }
 

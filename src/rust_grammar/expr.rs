@@ -1,7 +1,7 @@
 use std::hash::{Hash, Hasher};
 use std::mem;
 
-use crate::{ItemOrVar, NodeId, NodeList, RawNodeId, Spanned, SpannedPat, WithSpan};
+use crate::{NodeId, NodeList, RawNodeId, Spanned, SpannedTerm, Term, WithSpan};
 use derive_macro::CmpSyn;
 use proc_macro2::{Span, TokenStream};
 
@@ -9,7 +9,7 @@ use crate::Node;
 use crate::parser::error::{Error, Result};
 use crate::parser::parse::discouraged::Speculative as _;
 use crate::parser::parse::{
-    ListOrItem, Parse, ParseBuffer, ParseList, ParseListOrItem, ParseNode, ParseStream,
+    ListOrItem, Parse, ParseBuffer, ParseList, ParseListOrItem, ParseStream, ParseTerm,
     parse_punctuated_list_real,
 };
 use crate::parser::punctuated::Punctuated;
@@ -749,11 +749,11 @@ impl Expr {
     /// operator because it cannot be a starting token for any Rust expression.
     fn peek(input: ParseStream) -> bool {
         input.peek_var::<Expr> ()
-            || input.peek_pat::<AnyIdent>() && !input.peek(Token![as]) // value name or keyword
+            || input.peek_term::<AnyIdent>() && !input.peek(Token![as]) // value name or keyword
             || input.peek(token::Paren) // tuple
             || input.peek(token::Bracket) // array
             || input.peek(token::Brace) // block
-            || input.peek_pat::<Lit>() // literal
+            || input.peek_term::<Lit>() // literal
             || input.peek(Token![!]) && !input.peek(Token![!=]) // operator not
             || input.peek(Token![-]) && !input.peek(Token![-=]) && !input.peek(Token![->]) // unary minus
             || input.peek(Token![*]) && !input.peek(Token![*=]) // dereference
@@ -989,38 +989,38 @@ pub(super) struct AllowStruct(bool);
 // This is why the following trait impls do not impl parse_spanned but
 // overwrites parse_pat instead.
 
-impl ParseNode for Expr {
+impl ParseTerm for Expr {
     type Target = Expr;
 
-    fn parse_node(_: ParseStream) -> Result<Self::Target> {
+    fn parse_item(_: ParseStream) -> Result<Self::Target> {
         unreachable!()
     }
 
-    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, RawNodeId>> {
+    fn parse_term(input: ParseStream) -> Result<Term<Self::Target, RawNodeId>> {
         Ok(ambiguous_expr(input, AllowStruct(true))?.item())
     }
 }
 
-impl ParseNode for ExprNoEagerBrace {
+impl ParseTerm for ExprNoEagerBrace {
     type Target = Expr;
 
-    fn parse_node(_: ParseStream) -> Result<Self::Target> {
+    fn parse_item(_: ParseStream) -> Result<Self::Target> {
         unreachable!()
     }
 
-    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, RawNodeId>> {
+    fn parse_term(input: ParseStream) -> Result<Term<Self::Target, RawNodeId>> {
         Ok(ambiguous_expr(input, AllowStruct(false))?.item())
     }
 }
 
-impl ParseNode for ExprEarlierBoundaryRule {
+impl ParseTerm for ExprEarlierBoundaryRule {
     type Target = Expr;
 
-    fn parse_node(_: ParseStream) -> Result<Self::Target> {
+    fn parse_item(_: ParseStream) -> Result<Self::Target> {
         unreachable!()
     }
 
-    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, RawNodeId>> {
+    fn parse_term(input: ParseStream) -> Result<Term<Self::Target, RawNodeId>> {
         Ok(parse_with_earlier_boundary_rule(input)?.item())
     }
 }
@@ -1037,13 +1037,13 @@ impl ParseList for FnArgs {
     }
 }
 
-pub(super) fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<SpannedPat<Expr>> {
+pub(super) fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<SpannedTerm<Expr>> {
     let mut attrs = input.call(expr_attrs)?;
-    let mut expr: SpannedPat<Expr> = if input.peek(token::Group) {
+    let mut expr: SpannedTerm<Expr> = if input.peek(token::Group) {
         let allow_struct = AllowStruct(true);
         let atom = input
             .call_spanned(|input| expr_group(input, allow_struct))?
-            .map(ItemOrVar::Item);
+            .map(Term::Item);
         if continue_parsing_early(input, &atom) {
             trailer_helper(input, atom)?
         } else {
@@ -1070,14 +1070,14 @@ pub(super) fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<Spa
     } else if input.peek(token::Brace) {
         input.parse_span_with(Expr::Block)?
     } else if input.peek(Lifetime) {
-        input.call_spanned(atom_labeled)?.map(ItemOrVar::Item)
+        input.call_spanned(atom_labeled)?.map(Term::Item)
     } else {
         let allow_struct = AllowStruct(true);
         unary_expr(input, allow_struct)?
     };
 
     if continue_parsing_early(input, &expr) {
-        if let ItemOrVar::Item(expr) = &mut *expr {
+        if let Term::Item(expr) = &mut *expr {
             attrs.extend(expr.replace_attrs(Vec::new()));
             expr.replace_attrs(attrs);
         }
@@ -1089,7 +1089,7 @@ pub(super) fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<Spa
     if input.peek(Token![.]) && !input.peek(Token![..]) || input.peek(Token![?]) {
         expr = trailer_helper(input, expr)?;
 
-        if let ItemOrVar::Item(expr) = &mut *expr {
+        if let Term::Item(expr) = &mut *expr {
             attrs.extend(expr.replace_attrs(Vec::new()));
             expr.replace_attrs(attrs);
         }
@@ -1098,7 +1098,7 @@ pub(super) fn parse_with_earlier_boundary_rule(input: ParseStream) -> Result<Spa
         return parse_expr(input, expr, allow_struct, Precedence::MIN);
     }
 
-    if let ItemOrVar::Item(expr) = &mut *expr {
+    if let Term::Item(expr) = &mut *expr {
         attrs.extend(expr.replace_attrs(Vec::new()));
         expr.replace_attrs(attrs);
     }
@@ -1115,10 +1115,10 @@ impl Clone for AllowStruct {
 
 fn parse_expr(
     input: ParseStream,
-    mut lhs: SpannedPat<Expr>,
+    mut lhs: SpannedTerm<Expr>,
     allow_struct: AllowStruct,
     base: Precedence,
-) -> Result<SpannedPat<Expr>> {
+) -> Result<SpannedTerm<Expr>> {
     loop {
         let ahead = input.fork();
         if let Some(Expr::Range(_)) = lhs.get_item() {
@@ -1199,7 +1199,7 @@ fn parse_binop_rhs(
     input: ParseStream,
     allow_struct: AllowStruct,
     precedence: Precedence,
-) -> Result<SpannedPat<Expr>> {
+) -> Result<SpannedTerm<Expr>> {
     let mut rhs = unary_expr(input, allow_struct)?;
     loop {
         let next = peek_precedence(input);
@@ -1234,7 +1234,7 @@ fn peek_precedence(input: ParseStream) -> Precedence {
     }
 }
 
-fn ambiguous_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedPat<Expr>> {
+fn ambiguous_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedTerm<Expr>> {
     let lhs = unary_expr(input, allow_struct)?;
     parse_expr(input, lhs, allow_struct, Precedence::MIN)
 }
@@ -1252,7 +1252,7 @@ fn expr_attrs(input: ParseStream) -> Result<Vec<Attribute>> {
 // &mut <trailer>
 // box <trailer>
 
-fn unary_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedPat<Expr>> {
+fn unary_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedTerm<Expr>> {
     let begin = input.fork();
     let marker = input.marker();
     let attrs = input.call(expr_attrs)?;
@@ -1306,7 +1306,7 @@ fn unary_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<SpannedPa
                 .into_pattern())
         }
     } else if input.peek(Token![*]) || input.peek(Token![!]) || input.peek(Token![-]) {
-        Ok(expr_unary(input, attrs, allow_struct)?.map_real(Expr::Unary))
+        Ok(expr_unary(input, attrs, allow_struct)?.map_item(Expr::Unary))
     } else {
         trailer_expr(begin, attrs, input, allow_struct)
     }
@@ -1324,14 +1324,14 @@ fn trailer_expr(
     mut attrs: Vec<Attribute>,
     input: ParseStream,
     allow_struct: AllowStruct,
-) -> Result<SpannedPat<Expr>> {
+) -> Result<SpannedTerm<Expr>> {
     let atom = input.call_spanned(|input| atom_expr(input, allow_struct))?;
     let e = trailer_helper(input, atom)?;
 
     if e.is_var() {
         return Ok(e);
     }
-    let mut e = e.unwrap_real();
+    let mut e = e.unwrap_item();
 
     if let Expr::Verbatim(tokens) = &mut *e {
         *tokens = verbatim::between(&begin, input);
@@ -1344,7 +1344,7 @@ fn trailer_expr(
     Ok(e.into_pattern())
 }
 
-fn trailer_helper(input: ParseStream, mut e: SpannedPat<Expr>) -> Result<SpannedPat<Expr>> {
+fn trailer_helper(input: ParseStream, mut e: SpannedTerm<Expr>) -> Result<SpannedTerm<Expr>> {
     loop {
         let marker = input.marker();
         let orig_span = e.span();
@@ -1444,17 +1444,17 @@ fn trailer_helper(input: ParseStream, mut e: SpannedPat<Expr>) -> Result<Spanned
 
 // Parse all atomic expressions which don't have to worry about precedence
 // interactions, as they are fully contained.
-fn atom_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<ItemOrVar<Expr, RawNodeId>> {
+fn atom_expr(input: ParseStream, allow_struct: AllowStruct) -> Result<Term<Expr, RawNodeId>> {
     if input.peek_var::<Expr>() {
-        return input.parse_single_var();
+        return Ok(Term::Var(input.parse_single_var::<Expr>()?));
     }
-    atom_expr_inner(input, allow_struct).map(ItemOrVar::Item)
+    atom_expr_inner(input, allow_struct).map(Term::Item)
 }
 
 fn atom_expr_inner(input: ParseStream, allow_struct: AllowStruct) -> Result<Expr> {
     let real: Expr = if input.peek(token::Group) {
         expr_group(input, allow_struct)?
-    } else if input.peek_pat::<Lit>() {
+    } else if input.peek_term::<Lit>() {
         input.parse::<ExprLit>().map(Expr::Lit)?
     } else if input.peek(Token![async])
         && (input.peek2(token::Brace) || input.peek2(Token![move]) && input.peek3(token::Brace))
@@ -1474,7 +1474,7 @@ fn atom_expr_inner(input: ParseStream, allow_struct: AllowStruct) -> Result<Expr
         expr_closure(input, allow_struct).map(Expr::Closure)?
     } else if token::peek_keyword(input.cursor(), "builtin") && input.peek2(Token![#]) {
         unimplemented!()
-    } else if input.peek_pat::<Ident>()
+    } else if input.peek_term::<Ident>()
         || input.peek(Token![::])
         || input.peek(Token![<])
         || input.peek(Token![self])
@@ -1727,7 +1727,7 @@ impl Parse for ExprRepeat {
     }
 }
 
-fn continue_parsing_early(input: ParseStream, expr: &SpannedPat<Expr>) -> bool {
+fn continue_parsing_early(input: ParseStream, expr: &SpannedTerm<Expr>) -> bool {
     let ctx = input.ctx();
     let mut expr: Option<&Expr> = expr.get_item();
     while let Some(Expr::Group(group)) = expr {
@@ -1766,9 +1766,9 @@ impl Parse for ExprLit {
 
 fn expr_group(input: ParseStream, allow_struct: AllowStruct) -> Result<Expr> {
     let group = crate::parser::group::parse_group(input)?;
-    let inner: SpannedPat<Expr> = group.content.parse_spanned_pat::<Expr>()?;
+    let inner: SpannedTerm<Expr> = group.content.parse_spanned_pat::<Expr>()?;
     let (span, inner) = inner.decompose();
-    let make_group_expr = |inner: ItemOrVar<Expr, RawNodeId>| {
+    let make_group_expr = |inner: Term<Expr, RawNodeId>| {
         Ok(Expr::Group(ExprGroup {
             attrs: Vec::new(),
             group_token: group.token,
@@ -1776,12 +1776,12 @@ fn expr_group(input: ParseStream, allow_struct: AllowStruct) -> Result<Expr> {
         }))
     };
     match inner {
-        ItemOrVar::Item(Expr::Path(mut expr)) if expr.attrs.is_empty() => {
+        Term::Item(Expr::Path(mut expr)) if expr.attrs.is_empty() => {
             let grouped_len = expr.path.segments.len();
             Path::parse_rest(input, &mut expr.path, true)?;
             match rest_of_path_or_macro_or_struct(expr.qself, expr.path, input, allow_struct)? {
                 Expr::Path(expr) if expr.path.segments.len() == grouped_len => {
-                    make_group_expr(ItemOrVar::Item(Expr::Path(expr)))
+                    make_group_expr(Term::Item(Expr::Path(expr)))
                 }
                 extended => Ok(extended),
             }
@@ -1964,7 +1964,7 @@ fn expr_unary(
     input: ParseStream,
     attrs: Vec<Attribute>,
     allow_struct: AllowStruct,
-) -> Result<SpannedPat<ExprUnary>> {
+) -> Result<SpannedTerm<ExprUnary>> {
     let marker = input.marker();
     Ok(input
         .make_spanned(
@@ -2061,21 +2061,21 @@ impl Parse for ExprYield {
 
 struct ClosureInput;
 
-impl ParseNode for ClosureInput {
+impl ParseTerm for ClosureInput {
     type Target = Pat;
 
-    fn parse_node(_: ParseStream) -> Result<Self::Target> {
+    fn parse_item(_: ParseStream) -> Result<Self::Target> {
         unreachable!()
     }
 
-    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, RawNodeId>> {
+    fn parse_term(input: ParseStream) -> Result<Term<Self::Target, RawNodeId>> {
         use crate::rust_grammar::pat::PatSingle;
 
         let attrs = input.call(Attribute::parse_outer)?;
         let mut pat = input.parse_spanned_pat::<PatSingle>()?;
 
         if input.peek(Token![:]) {
-            Ok(ItemOrVar::Item(Pat::Type(PatType {
+            Ok(Term::Item(Pat::Type(PatType {
                 attrs,
                 pat: input.add_pat(pat),
                 colon_token: input.parse()?,
@@ -2083,24 +2083,24 @@ impl ParseNode for ClosureInput {
             })))
         } else {
             match &mut *pat {
-                ItemOrVar::Var(_) => {}
-                ItemOrVar::Item(Pat::Const(pat)) => pat.attrs = attrs,
-                ItemOrVar::Item(Pat::Ident(pat)) => pat.attrs = attrs,
-                ItemOrVar::Item(Pat::Lit(pat)) => pat.attrs = attrs,
-                ItemOrVar::Item(Pat::Macro(pat)) => pat.attrs = attrs,
-                ItemOrVar::Item(Pat::Or(pat)) => pat.attrs = attrs,
-                ItemOrVar::Item(Pat::Paren(pat)) => pat.attrs = attrs,
-                ItemOrVar::Item(Pat::Path(pat)) => pat.attrs = attrs,
-                ItemOrVar::Item(Pat::Range(pat)) => pat.attrs = attrs,
-                ItemOrVar::Item(Pat::Reference(pat)) => pat.attrs = attrs,
-                ItemOrVar::Item(Pat::Rest(pat)) => pat.attrs = attrs,
-                ItemOrVar::Item(Pat::Slice(pat)) => pat.attrs = attrs,
-                ItemOrVar::Item(Pat::Struct(pat)) => pat.attrs = attrs,
-                ItemOrVar::Item(Pat::Tuple(pat)) => pat.attrs = attrs,
-                ItemOrVar::Item(Pat::TupleStruct(pat)) => pat.attrs = attrs,
-                ItemOrVar::Item(Pat::Type(_)) => unreachable!(),
-                ItemOrVar::Item(Pat::Verbatim(_)) => {}
-                ItemOrVar::Item(Pat::Wild(pat)) => pat.attrs = attrs,
+                Term::Var(_) => {}
+                Term::Item(Pat::Const(pat)) => pat.attrs = attrs,
+                Term::Item(Pat::Ident(pat)) => pat.attrs = attrs,
+                Term::Item(Pat::Lit(pat)) => pat.attrs = attrs,
+                Term::Item(Pat::Macro(pat)) => pat.attrs = attrs,
+                Term::Item(Pat::Or(pat)) => pat.attrs = attrs,
+                Term::Item(Pat::Paren(pat)) => pat.attrs = attrs,
+                Term::Item(Pat::Path(pat)) => pat.attrs = attrs,
+                Term::Item(Pat::Range(pat)) => pat.attrs = attrs,
+                Term::Item(Pat::Reference(pat)) => pat.attrs = attrs,
+                Term::Item(Pat::Rest(pat)) => pat.attrs = attrs,
+                Term::Item(Pat::Slice(pat)) => pat.attrs = attrs,
+                Term::Item(Pat::Struct(pat)) => pat.attrs = attrs,
+                Term::Item(Pat::Tuple(pat)) => pat.attrs = attrs,
+                Term::Item(Pat::TupleStruct(pat)) => pat.attrs = attrs,
+                Term::Item(Pat::Type(_)) => unreachable!(),
+                Term::Item(Pat::Verbatim(_)) => {}
+                Term::Item(Pat::Wild(pat)) => pat.attrs = attrs,
             }
             Ok(pat.item())
         }
@@ -2112,7 +2112,7 @@ impl ParseList for ClosureInput {
     type ParseItem = ClosureInput;
     type Item = Pat;
 
-    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<<Self as ParseNode>::Target>>> {
+    fn parse_list_real(input: ParseStream) -> Result<Vec<NodeId<<Self as ParseTerm>::Target>>> {
         let mut inputs = Punctuated::new();
         loop {
             if input.peek(Token![|]) {
@@ -2424,7 +2424,7 @@ fn parse_range_end(
     input: ParseStream,
     limits: &RangeLimits,
     allow_struct: AllowStruct,
-) -> Result<Option<SpannedPat<Expr>>> {
+) -> Result<Option<SpannedTerm<Expr>>> {
     if matches!(limits, RangeLimits::HalfOpen(_))
         && (input.is_empty()
             || input.peek(Token![,])
@@ -2504,7 +2504,7 @@ impl Parse for ExprPath {
 
 impl Parse for Member {
     fn parse(input: ParseStream) -> Result<Self> {
-        if input.peek_pat::<Ident>() {
+        if input.peek_term::<Ident>() {
             input.parse().map(Member::Named)
         } else if input.peek(LitInt) {
             input.parse().map(Member::Unnamed)
@@ -2530,10 +2530,10 @@ impl ParseList for Arms {
     }
 }
 
-impl ParseNode for Arm {
+impl ParseTerm for Arm {
     type Target = Arm;
 
-    fn parse_node(input: ParseStream) -> Result<Arm> {
+    fn parse_item(input: ParseStream) -> Result<Arm> {
         let requires_comma;
         let res = Ok(Arm {
             attrs: input.call(Attribute::parse_outer)?,
@@ -2584,7 +2584,7 @@ impl Parse for Index {
 
 fn multi_index(
     input: ParseStream,
-    e: &mut SpannedPat<Expr>,
+    e: &mut SpannedTerm<Expr>,
     dot_token: &mut Token![.],
     float: LitFloat,
 ) -> Result<bool> {

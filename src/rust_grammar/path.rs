@@ -1,4 +1,4 @@
-use crate::{ItemOrVar, NodeId, NodeList, WithSpan};
+use crate::{NodeId, NodeList, Term, WithSpan};
 use derive_macro::CmpSyn;
 
 use crate::parser::error::Result;
@@ -209,14 +209,14 @@ impl Parse for GenericArgument {
             return Ok(GenericArgument::Lifetime(input.parse()?));
         }
 
-        if input.peek_pat::<Lit>() || input.peek(token::Brace) {
+        if input.peek_term::<Lit>() || input.peek(token::Brace) {
             return const_argument(input).map(GenericArgument::Const);
         }
 
         let (span, mut argument) = input.parse_spanned_pat::<Type>()?.decompose();
 
         match argument {
-            ItemOrVar::Item(Type::Path(mut ty))
+            Term::Item(Type::Path(mut ty))
                 if ty.qself.is_none()
                     && ty.path.leading_colon.is_none()
                     && ty.path.segments.len() == 1
@@ -233,7 +233,7 @@ impl Parse for GenericArgument {
                         PathArguments::AngleBracketed(arguments) => Some(arguments),
                         PathArguments::Parenthesized(_) => unreachable!(),
                     };
-                    return if input.peek_pat::<Lit>() || input.peek(token::Brace) {
+                    return if input.peek_term::<Lit>() || input.peek(token::Brace) {
                         Ok(GenericArgument::AssocConst(AssocConst {
                             ident,
                             generics,
@@ -286,7 +286,7 @@ impl Parse for GenericArgument {
                     }));
                 }
 
-                argument = ItemOrVar::Item(Type::Path(ty));
+                argument = Term::Item(Type::Path(ty));
             }
             _ => {}
         }
@@ -300,12 +300,12 @@ impl Parse for GenericArgument {
 pub(crate) fn const_argument(input: ParseStream) -> Result<Expr> {
     let lookahead = input.lookahead1();
 
-    if input.peek_pat::<Lit>() {
+    if input.peek_term::<Lit>() {
         let lit = input.parse()?;
         return Ok(Expr::Lit(lit));
     }
 
-    if input.peek_pat::<Ident>() {
+    if input.peek_term::<Ident>() {
         let ident: NodeId<Ident> = input.parse()?;
         return Ok(Expr::Path(ExprPath {
             attrs: Vec::new(),
@@ -424,7 +424,7 @@ impl Path {
             segments: {
                 let mut segments = Punctuated::new();
                 loop {
-                    if !input.peek_pat::<Ident>()
+                    if !input.peek_term::<Ident>()
                         && !input.peek(Token![super])
                         && !input.peek(Token![self])
                         && !input.peek(Token![Self])

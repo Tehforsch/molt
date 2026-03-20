@@ -10,7 +10,7 @@ use derive_macro::CmpSyn;
 use proc_macro2::{Literal, Punct, Span};
 
 use crate::parser::buffer::Cursor;
-use crate::parser::parse::{Parse, ParseNode, ParseStream, PeekPat, Unexpected};
+use crate::parser::parse::{Parse, ParseStream, ParseTerm, PeekTerm, Unexpected};
 use crate::parser::token::Token;
 use crate::parser::{Error, Result, lookahead};
 use crate::rust_grammar::Ident;
@@ -530,10 +530,10 @@ impl Parse for Lit {
     }
 }
 
-impl PeekPat for Lit {
+impl PeekTerm for Lit {
     type Target = Lit;
 
-    fn peek(cursor: Cursor) -> bool {
+    fn peek_item(cursor: Cursor) -> bool {
         fn peek(input: ParseStream) -> bool {
             <Lit as Parse>::parse(input).is_ok()
         }
@@ -541,10 +541,10 @@ impl PeekPat for Lit {
     }
 }
 
-impl ParseNode for Lit {
+impl ParseTerm for Lit {
     type Target = Lit;
 
-    fn parse_node(input: ParseStream) -> Result<Lit> {
+    fn parse_item(input: ParseStream) -> Result<Lit> {
         Lit::parse(input)
     }
 }

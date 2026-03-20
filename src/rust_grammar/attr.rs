@@ -4,7 +4,7 @@ use proc_macro2::TokenStream;
 
 use crate::parser::error::Result;
 use crate::parser::parse::discouraged::Speculative as _;
-use crate::parser::parse::{Parse, ParseNode, ParseStream};
+use crate::parser::parse::{Parse, ParseStream, ParseTerm};
 use crate::parser::token;
 use crate::rust_grammar::Node;
 use crate::rust_grammar::expr::{Expr, ExprLit};
@@ -295,7 +295,7 @@ fn parse_meta_name_value_after_path(path: Path, input: ParseStream) -> Result<Me
     } else if input.peek(Token![#]) && input.peek2(token::Bracket) {
         return Err(input.error("unexpected attribute inside of attribute"));
     } else {
-        Expr::parse_pat(input)?.unwrap_item()
+        Expr::parse_term(input)?.unwrap_item()
     };
     Ok(MetaNameValue {
         path,

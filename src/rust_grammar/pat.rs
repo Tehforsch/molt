@@ -1,10 +1,10 @@
-use crate::{ItemOrVar, NodeId, NodeList, RawNodeId, WithSpan};
+use crate::{NodeId, NodeList, RawNodeId, Term, WithSpan};
 use derive_macro::CmpSyn;
 use proc_macro2::TokenStream;
 
 use crate::parser::error::{self, Result};
 use crate::parser::parse::{
-    ListOrItem, Parse, ParseBuffer, ParseList, ParseListOrItem, ParseNode, ParseStream, PosMarker,
+    ListOrItem, Parse, ParseBuffer, ParseList, ParseListOrItem, ParseStream, ParseTerm, PosMarker,
 };
 use crate::parser::punctuated::Punctuated;
 use crate::parser::token;
@@ -280,13 +280,13 @@ pub struct FieldPat {
     pub pat: NodeId<Pat>,
 }
 
-impl ParseNode for PatSingle {
+impl ParseTerm for PatSingle {
     type Target = Pat;
 
-    fn parse_node(input: ParseStream) -> Result<Self::Target> {
+    fn parse_item(input: ParseStream) -> Result<Self::Target> {
         let begin = input.fork();
         let lookahead = input.lookahead1();
-        if lookahead.peek_pat::<Ident>()
+        if lookahead.peek_term::<Ident>()
             && (input.peek2(Token![::])
                 || input.peek2(Token![!])
                 || input.peek2(token::Brace)
@@ -305,14 +305,14 @@ impl ParseNode for PatSingle {
         } else if input.peek(Token![box]) {
             pat_box(begin, input)
         } else if input.peek(Token![-])
-            || lookahead.peek_pat::<Lit>()
+            || lookahead.peek_term::<Lit>()
             || lookahead.peek(Token![const])
         {
             pat_lit_or_range(input)
         } else if lookahead.peek(Token![ref])
             || lookahead.peek(Token![mut])
             || input.peek(Token![self])
-            || input.peek_pat::<Ident>()
+            || input.peek_term::<Ident>()
         {
             input.call(pat_ident).map(Pat::Ident)
         } else if lookahead.peek(Token![&]) {
@@ -333,11 +333,11 @@ impl ParseNode for PatSingle {
 
 fn parse_pat_multi<T: ParseListOrItem<Target = Pat, Punct = token::Or>>(
     input: ParseStream,
-) -> Result<ItemOrVar<Pat, RawNodeId>> {
+) -> Result<Term<Pat, RawNodeId>> {
     let pat = input.parse_list_or_item::<T>()?;
     Ok(match pat {
         ListOrItem::Item(item) => item.item(),
-        ListOrItem::List(cases) => ItemOrVar::Item(Pat::Or(PatOr {
+        ListOrItem::List(cases) => Term::Item(Pat::Or(PatOr {
             attrs: Vec::new(),
             leading_vert: None,
             cases,
@@ -352,25 +352,25 @@ fn parse_pat_multi<T: ParseListOrItem<Target = Pat, Punct = token::Or>>(
 // `Pat`. Because of this, we don't implement `parse_node`,
 // but implement `parse_pat` manually in the following impls.
 
-impl ParseNode for PatMulti {
+impl ParseTerm for PatMulti {
     type Target = Pat;
-    fn parse_node(_: ParseStream) -> Result<Self::Target> {
+    fn parse_item(_: ParseStream) -> Result<Self::Target> {
         unreachable!()
     }
 
-    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, RawNodeId>> {
+    fn parse_term(input: ParseStream) -> Result<Term<Self::Target, RawNodeId>> {
         parse_pat_multi::<Self>(input)
     }
 }
 
-impl ParseNode for PatMultiLeadingVert {
+impl ParseTerm for PatMultiLeadingVert {
     type Target = Pat;
 
-    fn parse_node(_: ParseStream) -> Result<Self::Target> {
+    fn parse_item(_: ParseStream) -> Result<Self::Target> {
         unreachable!()
     }
 
-    fn parse_pat(input: ParseStream) -> Result<ItemOrVar<Self::Target, RawNodeId>> {
+    fn parse_term(input: ParseStream) -> Result<Term<Self::Target, RawNodeId>> {
         parse_pat_multi::<Self>(input)
     }
 }
@@ -695,7 +695,7 @@ impl ParseListOrItem for PatParenOrTuple {
         while !content.is_empty() {
             let value = content.parse_spanned_pat::<PatMultiLeadingVert>()?;
             if content.is_empty() {
-                if elems.is_empty() && !matches!(&*value, ItemOrVar::Item(Pat::Rest(_))) {
+                if elems.is_empty() && !matches!(&*value, Term::Item(Pat::Rest(_))) {
                     return Ok(ListOrItem::Item(value));
                 }
                 elems.push_value(value);
@@ -790,9 +790,9 @@ fn pat_range_bound(input: ParseStream) -> Result<Option<PatRangeBound>> {
     }
 
     let lookahead = input.lookahead1();
-    let expr = if lookahead.peek_pat::<Lit>() {
+    let expr = if lookahead.peek_term::<Lit>() {
         PatRangeBound::Lit(input.parse()?)
-    } else if lookahead.peek_pat::<Ident>()
+    } else if lookahead.peek_term::<Ident>()
         || lookahead.peek(Token![::])
         || lookahead.peek(Token![<])
         || lookahead.peek(Token![self])
@@ -820,7 +820,7 @@ impl ParseList for PatSlice {
         while !input.is_empty() {
             let value = input.parse_spanned_pat::<PatMultiLeadingVert>()?;
             match &*value {
-                ItemOrVar::Item(Pat::Range(pat)) if pat.start.is_none() || pat.end.is_none() => {
+                Term::Item(Pat::Range(pat)) if pat.start.is_none() || pat.end.is_none() => {
                     let (start, end) = match &pat.limits {
                         RangeLimits::HalfOpen(dot_dot) => (dot_dot.spans[0], dot_dot.spans[1]),
                         RangeLimits::Closed(dot_dot_eq) => {

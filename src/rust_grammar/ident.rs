@@ -3,7 +3,7 @@ pub use proc_macro2::Ident;
 use crate::parser::buffer::Cursor;
 use crate::parser::error::Result;
 use crate::parser::lookahead;
-use crate::parser::parse::{Parse, ParseNode, ParseStream, PeekPat};
+use crate::parser::parse::{Parse, ParseStream, ParseTerm, PeekTerm};
 use crate::parser::token::Token;
 
 pub struct AnyIdent;
@@ -88,18 +88,18 @@ impl Parse for Ident {
     }
 }
 
-impl ParseNode for Ident {
+impl ParseTerm for Ident {
     type Target = Ident;
 
-    fn parse_node(input: ParseStream) -> Result<Ident> {
+    fn parse_item(input: ParseStream) -> Result<Ident> {
         parse_ident(input)
     }
 }
 
-impl PeekPat for Ident {
+impl PeekTerm for Ident {
     type Target = Ident;
 
-    fn peek(cursor: Cursor) -> bool {
+    fn peek_item(cursor: Cursor) -> bool {
         if let Some((ident, _rest)) = cursor.ident() {
             accept_as_ident(&ident)
         } else {
@@ -108,10 +108,10 @@ impl PeekPat for Ident {
     }
 }
 
-impl ParseNode for AnyIdent {
+impl ParseTerm for AnyIdent {
     type Target = Ident;
 
-    fn parse_node(input: ParseStream) -> Result<Ident> {
+    fn parse_item(input: ParseStream) -> Result<Ident> {
         input.step(|cursor| match cursor.ident() {
             Some((ident, rest)) => Ok((ident, rest)),
             None => Err(cursor.error("expected ident")),
@@ -119,21 +119,21 @@ impl ParseNode for AnyIdent {
     }
 }
 
-impl PeekPat for AnyIdent {
+impl PeekTerm for AnyIdent {
     type Target = Ident;
 
-    fn peek(cursor: Cursor) -> bool {
+    fn peek_item(cursor: Cursor) -> bool {
         cursor.ident().is_some()
     }
 }
 
-impl<T: Token + Parse> ParseNode for TokenIdent<T>
+impl<T: Token + Parse> ParseTerm for TokenIdent<T>
 where
     Ident: From<T>,
 {
     type Target = Ident;
 
-    fn parse_node(input: ParseStream) -> Result<Ident> {
+    fn parse_item(input: ParseStream) -> Result<Ident> {
         // We only enter this function if we already
         // peeked at this token, so there is no need to
         // check for variables.
