@@ -95,7 +95,7 @@ impl RawNodeId {
 
 /// The real representation of a pattern variable.
 /// Contains its name and the kind of the variable.
-pub(crate) struct Var<K> {
+pub(crate) struct CtxVar<K> {
     ident: Ident,
     kind: VarKind<K>,
 }
@@ -106,7 +106,7 @@ pub enum VarKind<K> {
     List(K),
 }
 
-impl<K: Copy> Var<K> {
+impl<K: Copy> CtxVar<K> {
     pub(crate) fn new(ident: Ident, kind: VarKind<K>) -> Self {
         Self { ident, kind }
     }
@@ -118,7 +118,7 @@ impl<K: Copy> Var<K> {
 
 pub(crate) struct Ctx<Node: NodeType> {
     nodes: Vec<Node>,
-    vars: Vec<Var<Node::Kind>>,
+    vars: Vec<CtxVar<Node::Kind>>,
     spans: Vec<Span>,
     mode: Mode,
 }
@@ -134,12 +134,12 @@ impl<Node: NodeType> Ctx<Node> {
         self.add_node(t.map(|item| item.to_node())).typed()
     }
 
-    fn add_var_internal(&mut self, var: Var<Node::Kind>) -> RawNodeId {
+    fn add_var_internal(&mut self, var: CtxVar<Node::Kind>) -> RawNodeId {
         self.vars.push(var);
         RawNodeId(InternalId::Var(self.vars.len() - 1), self.mode)
     }
 
-    fn add_var_untyped(&mut self, var: Var<Node::Kind>) -> RawNodeId {
+    fn add_var_untyped(&mut self, var: CtxVar<Node::Kind>) -> RawNodeId {
         if let Some((id, _)) = self.get_var_by_name(var.ident()) {
             id
         } else {
@@ -147,7 +147,7 @@ impl<Node: NodeType> Ctx<Node> {
         }
     }
 
-    pub(crate) fn add_var<T: ToNode<Node>>(&mut self, var: Var<Node::Kind>) -> NodeId<T> {
+    pub(crate) fn add_var<T: ToNode<Node>>(&mut self, var: CtxVar<Node::Kind>) -> NodeId<T> {
         let id = self.add_var_untyped(var);
         id.typed()
     }
@@ -192,14 +192,14 @@ impl<Node: NodeType> Ctx<Node> {
         }
     }
 
-    pub(crate) fn get_var(&self, id: RawNodeId) -> &Var<Node::Kind> {
+    pub(crate) fn get_var(&self, id: RawNodeId) -> &CtxVar<Node::Kind> {
         match id.0 {
             InternalId::Item(_) => panic!(),
             InternalId::Var(idx) => &self.vars[idx],
         }
     }
 
-    fn get_var_by_name(&self, ident: &Ident) -> Option<(RawNodeId, &Var<Node::Kind>)> {
+    fn get_var_by_name(&self, ident: &Ident) -> Option<(RawNodeId, &CtxVar<Node::Kind>)> {
         self.vars
             .iter()
             .enumerate()
@@ -215,7 +215,7 @@ impl<Node: NodeType> Ctx<Node> {
         (0..self.nodes.len()).map(|id| RawNodeId(InternalId::Item(id), self.mode))
     }
 
-    pub(crate) fn iter_vars(&self) -> impl Iterator<Item = &Var<Node::Kind>> {
+    pub(crate) fn iter_vars(&self) -> impl Iterator<Item = &CtxVar<Node::Kind>> {
         self.vars.iter()
     }
 

@@ -3,8 +3,8 @@ use std::collections::HashSet;
 
 use super::*;
 use crate::Ctx;
+use crate::CtxVar;
 use crate::Mode;
-use crate::Var;
 use crate::ctx::VarKind;
 use crate::molt_lang::MoltFile;
 use crate::molt_lang::MoltFn;
@@ -435,7 +435,7 @@ fn resolve_pat(
                 }
                 _ => typechecker_bug!(),
             };
-            let ctx_id = pat_ctx.add_var::<Node>(Var::new(name.clone(), kind));
+            let ctx_id = pat_ctx.add_var::<Node>(CtxVar::new(name.clone(), kind));
             PatVar {
                 ctx_id: ctx_id.into(),
                 var_id: *var_id,

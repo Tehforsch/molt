@@ -9,7 +9,7 @@ use crate::change_buffer::ChangeBuffer;
 use crate::input::FilePath;
 use crate::molt_lang::{PatId, PatVar, RuntimeCtx};
 use crate::rust_grammar::Node;
-use crate::{Config, Match, RawNodeId, Span, Var};
+use crate::{Config, CtxVar, Match, RawNodeId, Span};
 use codespan_reporting::files::Files;
 
 use crate::ctrl_c::FileRestorer;

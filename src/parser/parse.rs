@@ -12,8 +12,8 @@ use std::str::FromStr;
 use crate::ctx::VarKind;
 use crate::node_list::RealNodeList;
 use crate::{
-    Ctx, ItemOrVar, Mode, NodeId, NodeList, NodeType, RawNodeId, Spanned, SpannedPat, ToNode, Var,
-    WithSpan,
+    Ctx, CtxVar, ItemOrVar, Mode, NodeId, NodeList, NodeType, RawNodeId, Spanned, SpannedPat,
+    ToNode, WithSpan,
 };
 use proc_macro2::{Delimiter, Group, Literal, Punct, Span, TokenStream, TokenTree};
 
@@ -541,7 +541,7 @@ impl<'a> ParseBuffer<'a> {
         Ok(self.make_spanned(marker, t))
     }
 
-    fn add_var<T: ToNode<Node>>(&self, var: Var<<Node as NodeType>::Kind>) -> NodeId<T> {
+    fn add_var<T: ToNode<Node>>(&self, var: CtxVar<<Node as NodeType>::Kind>) -> NodeId<T> {
         self.ctx.borrow_mut().add_var(var)
     }
 
@@ -604,9 +604,9 @@ impl<'a> ParseBuffer<'a> {
     fn parse_var(
         &self,
         kind: VarKind<<Node as NodeType>::Kind>,
-    ) -> Result<Var<<Node as NodeType>::Kind>> {
+    ) -> Result<CtxVar<<Node as NodeType>::Kind>> {
         let ident = self.parse_var_ident()?;
-        Ok(Var::new(ident, kind))
+        Ok(CtxVar::new(ident, kind))
     }
 
     pub(crate) fn parse_single_var<T: ToNode<Node>>(&self) -> Result<ItemOrVar<T, RawNodeId>> {

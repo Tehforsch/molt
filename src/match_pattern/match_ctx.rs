@@ -2,7 +2,9 @@ use codespan_reporting::files::Files;
 
 use crate::config::Config;
 use crate::molt_lang::RuntimeCtx;
-use crate::{Ctx, FileId, Input, ItemOrVar, Mode, NodeType, RawNodeId, ToNode, Var, rust_grammar};
+use crate::{
+    Ctx, CtxVar, FileId, Input, ItemOrVar, Mode, NodeType, RawNodeId, ToNode, rust_grammar,
+};
 
 pub(super) struct MatchCtx<'a, Node: NodeType> {
     pub input: &'a Input,
@@ -95,7 +97,7 @@ impl<'a, Node: NodeType> MatchCtx<'a, Node> {
         }
     }
 
-    pub fn get_var(&self, var: RawNodeId) -> &Var<Node::Kind> {
+    pub fn get_var(&self, var: RawNodeId) -> &CtxVar<Node::Kind> {
         self.molt_ctx.get_var(var)
     }
 
