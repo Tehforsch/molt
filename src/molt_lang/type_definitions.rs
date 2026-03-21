@@ -3,15 +3,17 @@ use std::collections::HashMap;
 use crate::{
     modify::NodeSpec,
     molt_lang::{RuntimeCtx, interpreter::Value, typechecker::QualifiedType},
-    rust_grammar::{Kind, Node},
+    rust_grammar::Kind,
     typechecker_bug,
 };
 
 use super::{FieldAccess, typechecker::Type};
 
+type FieldAccessFn = dyn Fn(&RuntimeCtx, Value) -> Value;
+
 pub struct FieldDef {
     ty: Type,
-    field_access_fn: Box<dyn Fn(&RuntimeCtx, Value) -> Value>,
+    field_access_fn: Box<FieldAccessFn>,
 }
 
 pub struct TypeDef {
@@ -39,7 +41,7 @@ impl TypeDefinitions {
         lhs: Value,
         fa: &FieldAccess,
     ) -> Value {
-        let lhs_ty = lhs.get_type();
+        let lhs_ty = lhs.get_type(ctx);
         let Some(def) = self.get(&lhs_ty) else {
             typechecker_bug!()
         };

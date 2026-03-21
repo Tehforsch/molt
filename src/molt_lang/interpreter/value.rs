@@ -1,7 +1,8 @@
 use crate::{
+    NodeType,
     modify::NodeSpec,
-    molt_lang::{BuiltinFn, FnId, typechecker::QualifiedType},
-    rust_grammar::Kind,
+    molt_lang::{BuiltinFn, FnId, RuntimeCtx, typechecker::QualifiedType},
+    rust_grammar::Node,
 };
 
 #[derive(Clone, Debug, PartialEq)]
@@ -29,16 +30,20 @@ impl Value {
     // This method shouldnt really exist, once we store
     // type information about expressions and move it
     // into the interpreter, we can simply query for this.
-    pub fn get_type(&self) -> QualifiedType {
+    pub fn get_type(&self, ctx: &RuntimeCtx) -> QualifiedType {
         match self {
             Value::String(_) => QualifiedType::Str,
             Value::Int(_) => QualifiedType::Int,
             Value::Bool(_) => QualifiedType::Bool,
-            Value::Node(node) => {
-                QualifiedType::Kind(Kind::Fn) // SUPER TODO
+            Value::Node(NodeSpec::Real(node)) => {
+                let kind = ctx.real_ctx.get::<Node>(*node).unwrap_item().node_kind();
+                QualifiedType::Kind(kind.into())
+            }
+            Value::Node(_) => {
+                todo!()
             }
             Value::Unit => QualifiedType::Unit,
-            Value::List(values) => QualifiedType::List(Box::new(values[0].get_type())),
+            Value::List(values) => QualifiedType::List(Box::new(values[0].get_type(ctx))),
             Value::UserFn(_) => todo!(),
             Value::BuiltinFn(_) => todo!(),
         }
