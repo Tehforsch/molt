@@ -124,6 +124,13 @@ pub enum Expr {
     FnCall(FnCall),
     Atom(Atom),
     Pat(Pat),
+    FieldAccess(FieldAccess),
+}
+
+#[derive(Debug)]
+pub struct FieldAccess {
+    pub lhs: Box<Expr>,
+    pub field: Ident,
 }
 
 #[derive(Debug)]

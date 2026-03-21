@@ -3,7 +3,7 @@ mod error;
 mod value;
 mod var_stack;
 
-use super::{For, If, IfLet, LetLhs, LetStmt, Lit};
+use super::{FieldAccess, For, If, IfLet, LetLhs, LetStmt, Lit};
 use crate::{
     Matcher, ModMap, Node, RawNodeId,
     modify::{Modification, NodeSpec},
@@ -14,12 +14,13 @@ use crate::{
             var_stack::{VarHandle, VarStack, Vars},
         },
         runtime_ctx::RuntimeCtx,
+        type_definitions::TypeDefinitions,
     },
     node::NodeType,
     storage::Storage,
 };
 
-use value::Value;
+pub(super) use value::Value;
 
 use error::Result;
 
@@ -48,6 +49,7 @@ pub(crate) use error::Error;
 pub(crate) struct Interpreter<'a> {
     vars: Vars,
     fns: Storage<FnId, &'a MoltFn>,
+    defs: TypeDefinitions,
     context: &'a RuntimeCtx<'a>,
     modifications: Vec<Modification>,
 }
@@ -60,9 +62,11 @@ impl<'a> Interpreter<'a> {
     }
 
     fn new(file: &'a MoltFile, context: &'a RuntimeCtx<'a>) -> Interpreter<'a> {
+        let defs = TypeDefinitions::default();
         let mut interpreter = Self {
             vars: Vars::new(file.var_names.iter().map(|_| VarStack::default()).collect()),
             fns: file.fns.iter().collect(),
+            defs,
             context,
             modifications: vec![],
         };
@@ -224,7 +228,14 @@ impl<'a> Interpreter<'a> {
             }
             Expr::Atom(atom) => self.eval_atom(atom),
             Expr::Pat(pat) => self.eval_pat(pat),
+            Expr::FieldAccess(fa) => self.eval_field_access(fa),
         }
+    }
+
+    fn eval_field_access(&mut self, fa: &FieldAccess) -> Result<Value> {
+        let lhs = self.eval_expr(&fa.lhs)?;
+        let f = self.defs.get_field_access_fn(self.context, lhs, fa);
+        Ok(f)
     }
 
     fn eval_atom(&mut self, atom: &super::Atom) -> Result<Value> {

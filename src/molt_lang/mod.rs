@@ -5,6 +5,7 @@ mod interpreter;
 mod parse_pats;
 mod resolver;
 mod runtime_ctx;
+mod type_definitions;
 mod typechecker;
 
 use std::collections::HashMap;
@@ -25,6 +26,7 @@ use crate::Ctx;
 use crate::RawNodeId;
 use crate::Span;
 use crate::molt_lang::resolver::Resolver;
+use crate::molt_lang::type_definitions::TypeDefinitions;
 use crate::molt_lang::typechecker::Typechecker;
 use crate::rust_grammar::Ident;
 use crate::rust_grammar::Kind;
@@ -148,10 +150,17 @@ pub struct FnCall {
 }
 
 #[derive(Debug)]
+pub struct FieldAccess {
+    pub lhs: Box<Expr>,
+    pub field: Ident,
+}
+
+#[derive(Debug)]
 pub enum Expr {
     FnCall(FnCall),
     Atom(Atom),
     Pat(PatId),
+    FieldAccess(FieldAccess),
 }
 
 #[derive(Debug)]
@@ -228,7 +237,8 @@ impl MoltFile {
             .item;
         let file = file.add_implicit_main().map_err(Error::FileStructure)?;
         let resolved = Resolver::resolve(file).map_err(|e| Error::Resolver(e, file_id))?;
-        let typeck = Typechecker::check(&resolved).map_err(|e| Error::Typechecker(e, file_id))?;
+        let typeck = Typechecker::check(&TypeDefinitions::default(), &resolved)
+            .map_err(|e| Error::Typechecker(e, file_id))?;
         resolved
             .parse_pats(&typeck)
             .map_err(|e| Error::ParsePats(e, file_id))

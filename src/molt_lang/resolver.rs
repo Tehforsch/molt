@@ -369,6 +369,10 @@ impl Resolver {
             grammar::Expr::FnCall(f) => Ok(Expr::FnCall(self.resolve_fn_call(f)?)),
             grammar::Expr::Atom(atom) => Ok(Expr::Atom(self.resolve_atom(atom)?)),
             grammar::Expr::Pat(pat) => Ok(Expr::Pat(self.resolve_pat(pat)?)),
+            grammar::Expr::FieldAccess(fa) => Ok(Expr::FieldAccess(FieldAccess {
+                lhs: Box::new(self.resolve_expr(*fa.lhs)?),
+                field: fa.field,
+            })),
         }
     }
 

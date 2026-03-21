@@ -4,10 +4,13 @@ use crate::{
     KindType,
     molt_lang::{
         BuiltinFn, LetLhs, MoltFile, MoltFn, PatId, ResolvedMoltFile, Stmt, UnparsedPat, VarId,
+        type_definitions::TypeDefinitions,
     },
     rust_grammar::{Ident, Kind},
     storage::{Storage, StorageIndex},
 };
+
+use super::FieldAccess;
 
 pub(crate) struct Error {
     pub(crate) kind: ErrorKind,
@@ -28,6 +31,8 @@ pub(crate) enum ErrorKind {
     },
     UntypedVar(Ident),
     NotIterable(QualifiedType),
+    NeedTypeAnnotation,
+    NoSuchField(QualifiedType, Ident),
 }
 
 impl Storage<TypeId, Type> {
@@ -73,6 +78,20 @@ impl Error {
         }
     }
 
+    fn need_type_annotation() -> Self {
+        Self {
+            kind: ErrorKind::NeedTypeAnnotation, // TODO: point to expr
+            labels: Vec::new(),
+        }
+    }
+
+    fn no_such_field(lhs: QualifiedType, field: &Ident) -> Self {
+        Self {
+            kind: ErrorKind::NoSuchField(lhs, field.clone()), // TODO: point to expr
+            labels: Vec::new(),
+        }
+    }
+
     fn with_label(mut self, span: crate::Span, message: impl Into<String>) -> Self {
         self.labels.push(ErrorLabel {
             span,
@@ -94,6 +113,12 @@ impl std::fmt::Display for Error {
             ErrorKind::NotIterable(ty) => {
                 write!(f, "cannot iterate over type `{ty}`")
             }
+            ErrorKind::NoSuchField(ty, ident) => {
+                write!(f, "No field `{ident}` for type `{ty}`")
+            }
+            ErrorKind::NeedTypeAnnotation => {
+                write!(f, "Type annotation required")
+            }
         }
     }
 }
@@ -104,7 +129,7 @@ impl std::fmt::Debug for Error {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
     Var,
     Kind(Kind),
@@ -145,7 +170,7 @@ pub struct Scheme {
     type_id: TypeId,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum QualifiedType {
     Var,
     Kind(Kind),
@@ -263,10 +288,15 @@ pub(super) struct Typechecker<'a> {
     var_names: &'a Storage<VarId, Ident>,
     pats: &'a Storage<PatId, UnparsedPat>,
     pat_types: HashMap<PatId, TypeId>,
+    definitions: &'a TypeDefinitions,
 }
 
 impl<'a> Typechecker<'a> {
-    fn new(var_names: &'a Storage<VarId, Ident>, pats: &'a Storage<PatId, UnparsedPat>) -> Self {
+    fn new(
+        definitions: &'a TypeDefinitions,
+        var_names: &'a Storage<VarId, Ident>,
+        pats: &'a Storage<PatId, UnparsedPat>,
+    ) -> Self {
         Self {
             types: Default::default(),
             substitutions: Default::default(),
@@ -274,11 +304,15 @@ impl<'a> Typechecker<'a> {
             var_names,
             pat_types: Default::default(),
             pats,
+            definitions,
         }
     }
 
-    pub(crate) fn check(file: &'a ResolvedMoltFile) -> Result<TypecheckResult> {
-        let t = Self::new(&file.var_names, &file.pats);
+    pub(crate) fn check(
+        definitions: &'a TypeDefinitions,
+        file: &'a ResolvedMoltFile,
+    ) -> Result<TypecheckResult> {
+        let t = Self::new(definitions, &file.var_names, &file.pats);
         t.check_internal(file)
     }
 
@@ -486,11 +520,18 @@ impl<'a> Typechecker<'a> {
             }
             super::Expr::Atom(atom) => self.infer_atom(atom),
             super::Expr::Pat(pat) => self.infer_pat(pat),
+            super::Expr::FieldAccess(fa) => self.infer_field_access(fa),
         }
     }
 
     fn infer_pat(&mut self, id: &PatId) -> Result<TypeId> {
         self.add_pat(*id, Type::Var)
+    }
+
+    fn infer_field_access(&mut self, fa: &FieldAccess) -> Result<TypeId> {
+        let lhs_ty = self.infer_expr(&fa.lhs)?;
+        let ty = self.get_field_type(lhs_ty, &fa.field)?;
+        Ok(self.add_type(ty))
     }
 
     fn infer_atom(&mut self, atom: &super::Atom) -> Result<TypeId> {
@@ -760,5 +801,22 @@ impl<'a> Typechecker<'a> {
 
     fn get_qualified(&self, ty: &Type) -> QualifiedType {
         self.types.get_qualified(ty)
+    }
+
+    fn get_field_type(&self, lhs: TypeId, field: &Ident) -> Result<Type> {
+        let lhs = &self.types[self.resolve(lhs)];
+        let lhs = self.get_qualified(lhs);
+        match &lhs {
+            QualifiedType::Var => Err(Error::need_type_annotation()),
+            ty => {
+                if let Some(def) = self.definitions.get(ty)
+                    && let Some(field_type) = def.get_field_type(&field.to_string())
+                {
+                    Ok(field_type.clone())
+                } else {
+                    Err(Error::no_such_field(lhs, field))
+                }
+            }
+        }
     }
 }

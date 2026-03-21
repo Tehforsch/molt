@@ -12,7 +12,9 @@ use crate::rust_grammar::ext::IdentExt;
 use crate::rust_grammar::{Ident, Kind, LitBool, LitInt, LitStr};
 use crate::storage::Storage;
 
-use super::{Expr, FnArg, For, If, IfLet, LetLhs, LetStmt, MoltFile, MoltFn, Pat, Stmt};
+use super::{
+    Expr, FieldAccess, FnArg, For, If, IfLet, LetLhs, LetStmt, MoltFile, MoltFn, Pat, Stmt,
+};
 
 impl Parse for MoltFile {
     fn parse(input: ParseStream) -> Result<Self> {
@@ -347,7 +349,7 @@ impl Parse for FnCall {
 impl Parse for Expr {
     fn parse(input: ParseStream) -> Result<Self> {
         let lookahead = input.lookahead1();
-        if lookahead.peek(LitInt) {
+        let mut expr = if lookahead.peek(LitInt) {
             Ok(Expr::Atom(Atom::Lit(Lit::Int(input.parse()?))))
         } else if lookahead.peek(LitStr) {
             Ok(Expr::Atom(Atom::Lit(Lit::Str(input.parse()?))))
@@ -365,7 +367,16 @@ impl Parse for Expr {
             }
         } else {
             Err(lookahead.error())
+        }?;
+        while input.peek(Token![.]) {
+            let _: Token![.] = input.parse()?;
+            let field: Ident = input.parse()?;
+            expr = Expr::FieldAccess(FieldAccess {
+                lhs: Box::new(expr),
+                field,
+            });
         }
+        Ok(expr)
     }
 }
 

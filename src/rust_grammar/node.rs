@@ -108,7 +108,7 @@ macro_rules! define_node {
 
 macro_rules! define_kind {
     ($(($variant_name: ident, $kind_name: ident, $parse_ty: ty $(,$sub_ty: ty)?)),* $(,)?) => {
-        #[derive(Copy, Clone, Debug)]
+        #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
         pub enum Kind {
             $( $variant_name, )*
         }
