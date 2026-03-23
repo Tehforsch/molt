@@ -9,7 +9,7 @@ use crate::parser::punctuated::Punctuated;
 use crate::parser::token::{Brace, Bracket};
 use crate::parser::{Result, token};
 use crate::rust_grammar::ext::IdentExt;
-use crate::rust_grammar::{Ident, Kind, LitBool, LitInt, LitStr};
+use crate::rust_grammar::{Ident, LitBool, LitInt, LitStr, NodeKind};
 use crate::storage::Storage;
 
 use super::{
@@ -118,7 +118,7 @@ impl Parse for FnArg {
 impl Parse for Type {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut lh = input.lookahead1();
-        if Kind::peek(&mut lh) {
+        if NodeKind::peek(&mut lh) {
             let kind = input.parse().unwrap();
             Ok(Type::Kind(kind))
         } else if lh.peek(Ident::peek_any) {

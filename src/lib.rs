@@ -49,7 +49,7 @@ pub(crate) use ctx::{Ctx, CtxVar, NodeId, RawNodeId};
 pub(crate) use input::{Diagnostic, FileId};
 pub(crate) use match_pattern::{Match, Matcher};
 pub(crate) use modify::ModMap;
-pub(crate) use node::{KindType, NodeType, ToNode};
+pub(crate) use node::{NodeType, ToNode};
 pub(crate) use node_list::NodeList;
 pub(crate) use span::{Span, Spanned, SpannedTerm, WithSpan};
 pub(crate) use term::Term;

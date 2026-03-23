@@ -6,7 +6,7 @@ use crate::Span;
 use crate::molt_lang::index_types::FnId;
 use crate::parser::punctuated::Punctuated;
 use crate::parser::token::Comma;
-use crate::rust_grammar::{Ident, Kind, LitBool, LitInt, LitStr};
+use crate::rust_grammar::{Ident, LitBool, LitInt, LitStr, NodeKind};
 use crate::storage::Storage;
 pub use parse::FileStructureError;
 
@@ -45,7 +45,7 @@ pub struct FnArg {
 
 #[derive(Debug, Clone)]
 pub enum Type {
-    Kind(Kind),
+    Kind(NodeKind),
     Int,
     Bool,
     Str,

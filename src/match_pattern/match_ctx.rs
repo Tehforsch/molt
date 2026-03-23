@@ -101,7 +101,7 @@ impl<'a, Node: NodeType> MatchCtx<'a, Node> {
         }
     }
 
-    pub fn get_var(&self, var: RawNodeId) -> &CtxVar<Node::Kind> {
+    pub fn get_var(&self, var: RawNodeId) -> &CtxVar<Node::NodeKind> {
         self.molt_ctx.get_var(var)
     }
 

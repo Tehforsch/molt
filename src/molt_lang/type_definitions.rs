@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     modify::NodeSpec,
     molt_lang::{RuntimeCtx, interpreter::Value, typechecker::QualifiedType},
-    rust_grammar::Kind,
+    rust_grammar::NodeKind,
     typechecker_bug,
 };
 
@@ -69,12 +69,12 @@ fn get_fn_name(i: &RuntimeCtx, val: Value) -> Value {
 impl Default for TypeDefinitions {
     fn default() -> Self {
         let mut defs = HashMap::default();
-        defs.insert(QualifiedType::Kind(Kind::Fn), {
+        defs.insert(QualifiedType::Kind(NodeKind::Item), {
             let mut fields = HashMap::default();
             fields.insert(
                 "name".into(),
                 FieldDef {
-                    ty: Type::Kind(Kind::Ident),
+                    ty: Type::Kind(NodeKind::Ident),
                     field_access_fn: Box::new(get_fn_name),
                 },
             );

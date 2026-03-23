@@ -1,7 +1,7 @@
 use crate::ctx::VarKind;
 use crate::match_pattern::IsMatch;
 use crate::rust_grammar::generics::Generics;
-use crate::{CmpSyn, KindType, Matcher, RawNodeId, Term, ToNode};
+use crate::{CmpSyn, Matcher, RawNodeId, ToNode};
 
 use crate::parser::parse::discouraged::Speculative;
 use crate::parser::parse::{ParseStream, ParseTerm};
@@ -13,7 +13,7 @@ use crate::rust_grammar::{
 };
 
 macro_rules! define_node {
-    ($(($variant_name: ident, $ty: ty)),*$(,)?) => {
+    ($(($variant_name: ident, $ty: ty, $parse_ty: ty)),* $(,)?) => {
         pub enum Node {
             $(
                 $variant_name($ty),
@@ -40,15 +40,24 @@ macro_rules! define_node {
             }
         }
 
-        #[derive(Clone, Copy, Debug)]
+        #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
         pub enum NodeKind {
             $(
                 $variant_name,
             )*
         }
 
+        impl std::fmt::Display for NodeKind {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                match self {
+                    $(
+                        Self::$variant_name => write!(f, stringify!($variant_name)),
+                    )*
+                }
+            }
+        }
+
         impl crate::NodeType for Node {
-            type Kind = Kind;
             type NodeKind = NodeKind;
 
             fn node_kind(&self) -> NodeKind {
@@ -58,19 +67,11 @@ macro_rules! define_node {
                     )*
                 }
             }
-
-            fn is_of_kind(&self, term_kind: Self::Kind) -> bool {
-                is_of_kind(self, term_kind)
-            }
         }
 
-        impl From<NodeKind> for Kind {
-            fn from(val: NodeKind) -> Kind {
-                match val {
-                    $(
-                        NodeKind::$variant_name => Kind::$variant_name,
-                    )*
-                }
+        impl NodeKind {
+            pub fn is_comparable_to(self, other: NodeKind) -> bool {
+                self == other
             }
         }
 
@@ -103,56 +104,6 @@ macro_rules! define_node {
                 }
             }
         )*
-    }
-}
-
-macro_rules! define_kind {
-    ($(($variant_name: ident, $kind_name: ident, $parse_ty: ty $(,$sub_ty: ty)?)),* $(,)?) => {
-        #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-        pub enum Kind {
-            $( $variant_name, )*
-        }
-
-        impl std::fmt::Display for Kind {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                match self {
-                    $(
-                        Self::$variant_name => write!(f, stringify!($variant_name)),
-                    )*
-                }
-            }
-        }
-
-        impl Kind {
-            pub fn infer_from_name(name: &str) -> Option<Self> {
-                $(
-                    if name.starts_with(&stringify!($variant_name).to_lowercase()) {
-                        return Some(Self::$variant_name);
-                    }
-                )*
-                None
-            }
-        }
-
-        impl From<Kind> for NodeKind {
-            fn from(val: Kind) -> Self {
-                match val {
-                    $(
-                        Kind::$variant_name => NodeKind::$kind_name,
-                    )*
-                }
-            }
-        }
-
-        impl KindType<NodeKind> for Kind {
-            fn is_comparable_to(&self, node_kind: NodeKind) -> bool {
-                match self {
-                    $(
-                        Kind::$variant_name => matches!(node_kind, NodeKind::$kind_name),
-                    )*
-                }
-            }
-        }
 
         mod kind_kws {
             $(
@@ -160,19 +111,20 @@ macro_rules! define_kind {
             )*
         }
 
-        impl crate::parser::parse::Parse for Kind {
+        // TODO: Introduce proper kws here.
+        impl crate::parser::parse::Parse for NodeKind {
             fn parse(input:crate::parser::parse:: ParseStream) -> crate::parser::Result<Self> {
                 $(
                     if input.peek(kind_kws::$variant_name) {
                         let _: kind_kws::$variant_name = input.parse()?;
-                        return Ok(Kind::$variant_name);
+                        return Ok(NodeKind::$variant_name);
                     }
                 )*
                 Err(input.error("Invalid kind."))
             }
         }
 
-        impl Kind {
+        impl NodeKind {
             pub(crate) fn peek(lookahead: &mut crate::parser::lookahead::Lookahead1) -> bool {
                 $(
                     if lookahead.peek(kind_kws::$variant_name) {
@@ -183,16 +135,16 @@ macro_rules! define_kind {
             }
         }
 
-        fn is_of_kind(node: &Node, term_kind: Kind) -> bool {
+        fn is_of_kind(node: &Node, term_kind: NodeKind) -> bool {
             $(
-                match_impl!(node, term_kind, $variant_name, $parse_ty $(,$sub_ty)?);
+                match_impl!(node, term_kind, $variant_name, $parse_ty);
             )*
             unreachable!()
         }
 
-        pub fn parse_node_with_kind(input: crate::parser::parse::ParseStream, kind: Kind) -> crate::parser::Result<RawNodeId> {
+        pub fn parse_node_with_kind(input: crate::parser::parse::ParseStream, kind: NodeKind) -> crate::parser::Result<RawNodeId> {
             $(
-                parse_impl!(input, kind, $variant_name, $parse_ty $(,$sub_ty)?);
+                parse_impl!(input, kind, $variant_name, $parse_ty);
             )*
             unreachable!()
         }
@@ -201,58 +153,22 @@ macro_rules! define_kind {
 
 macro_rules! parse_impl {
     ($input: ident, $kind: ident, $variant_name: ident, $parse_ty: ty) => {
-        if let Kind::$variant_name = $kind {
+        if let NodeKind::$variant_name = $kind {
             let parsed = $input.parse_id::<$parse_ty>()?;
             return Ok(parsed.into());
-        }
-    };
-    ($input: ident, $kind: ident, $variant_name: ident, $parse_ty: ty, $sub_ty: ty) => {
-        if let Kind::$variant_name = $kind {
-            let id = $input.parse_id::<$parse_ty>()?;
-            match $input.ctx().get(id) {
-                Term::Item(node) => {
-                    if !<$sub_ty>::is_of_sub_kind(&node) {
-                        return Err($input.error(format!("Expected {}", <$sub_ty>::expected_str())));
-                    }
-                }
-                Term::Var(_) => {
-                    // TODO: Do we need to do anything here?
-                }
-            }
-            return Ok(id.into());
         }
     };
 }
 
 macro_rules! match_impl {
     ($node: ident, $term_kind: ident, $variant_name: ident, $parse_ty: ty) => {
-        if let Kind::$variant_name = $term_kind {
+        if let NodeKind::$variant_name = $term_kind {
             return matches!($node, Node::$variant_name(_));
-        }
-    };
-    ($node: ident, $term_kind: ident, $variant_name: ident, $parse_ty: ty, $sub_ty: ty) => {
-        if let Kind::$variant_name = $term_kind {
-            return <$sub_ty>::is_of_sub_kind($node);
         }
     };
 }
 
 define_node! {
-    (Arm, Arm),
-    (Expr, Expr),
-    (Field, Field),
-    (Ident, Ident),
-    (Item, Item),
-    (ImplItem, ImplItem),
-    (Lit, Lit),
-    (Pat, Pat),
-    (Stmt, Stmt),
-    (Type, Type),
-    (Vis, Vis),
-    (Generics, Generics),
-}
-
-define_kind! {
     (Arm, Arm, Arm),
     (Expr, Expr, Expr),
     (Field, Field, Field),
@@ -265,9 +181,6 @@ define_kind! {
     (Type, Type, Type),
     (Vis, Vis, Vis),
     (Generics, Generics, Generics),
-    // Subtypes
-    (Fn, Item, Item, Fn),
-    (Mod, Item, Item, Mod),
 }
 
 impl CmpSyn<Node> for Node {
@@ -315,39 +228,7 @@ impl ParseTerm for Field {
     }
 }
 
-trait SubKind {
-    fn is_of_sub_kind(node: &Node) -> bool;
-    fn expected_str() -> &'static str;
-}
-
-struct Fn;
-
-impl SubKind for Fn {
-    fn is_of_sub_kind(node: &Node) -> bool {
-        matches!(
-            node,
-            Node::Item(Item::Fn(_)) | Node::ImplItem(ImplItem::Fn(_))
-        )
-    }
-
-    fn expected_str() -> &'static str {
-        "function"
-    }
-}
-
-struct Mod;
-
-impl SubKind for Mod {
-    fn is_of_sub_kind(node: &Node) -> bool {
-        matches!(node, Node::Item(Item::Mod(_)))
-    }
-
-    fn expected_str() -> &'static str {
-        "module"
-    }
-}
-
-impl VarKind<Kind> {
+impl VarKind<NodeKind> {
     pub(crate) fn is_comparable_to(&self, kind: VarKind<NodeKind>) -> bool {
         match (self, kind) {
             (VarKind::Single(k1), VarKind::Single(k2)) => k1.is_comparable_to(k2),

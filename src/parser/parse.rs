@@ -549,7 +549,7 @@ impl<'a> ParseBuffer<'a> {
         Ok(self.make_spanned(marker, t))
     }
 
-    fn add_var<T: ToNode<Node>>(&self, var: CtxVar<<Node as NodeType>::Kind>) -> NodeId<T> {
+    fn add_var<T: ToNode<Node>>(&self, var: CtxVar<<Node as NodeType>::NodeKind>) -> NodeId<T> {
         self.ctx.borrow_mut().add_var(var)
     }
 
@@ -607,20 +607,20 @@ impl<'a> ParseBuffer<'a> {
 
     fn parse_var(
         &self,
-        kind: VarKind<<Node as NodeType>::Kind>,
-    ) -> Result<CtxVar<<Node as NodeType>::Kind>> {
+        kind: VarKind<<Node as NodeType>::NodeKind>,
+    ) -> Result<CtxVar<<Node as NodeType>::NodeKind>> {
         let _: Token![$] = self.parse()?;
         let ident = Ident::parse_any(self)?;
         Ok(CtxVar::new(ident, kind))
     }
 
     fn parse_list_var<T: ToNode<Node>>(&self) -> Result<NodeId<T>> {
-        let var = self.parse_var(VarKind::List(T::kind()))?;
+        let var = self.parse_var(VarKind::List(T::node_kind()))?;
         Ok(self.add_var::<T>(var))
     }
 
     pub(crate) fn parse_single_var<T: ToNode<Node>>(&self) -> Result<RawNodeId> {
-        let var = self.parse_var(VarKind::Single(T::kind()))?;
+        let var = self.parse_var(VarKind::Single(T::node_kind()))?;
         Ok(self.add_var::<T>(var).into())
     }
 

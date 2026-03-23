@@ -1,12 +1,11 @@
 use std::collections::HashMap;
 
 use crate::{
-    KindType,
     molt_lang::{
         BuiltinFn, LetLhs, MoltFile, MoltFn, PatId, ResolvedMoltFile, Stmt, UnparsedPat, VarId,
         type_definitions::TypeDefinitions,
     },
-    rust_grammar::{Ident, Kind},
+    rust_grammar::{Ident, NodeKind},
     storage::{Storage, StorageIndex},
 };
 
@@ -132,7 +131,7 @@ impl std::fmt::Debug for Error {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
     Var,
-    Kind(Kind),
+    Kind(NodeKind),
     Int,
     Bool,
     Str,
@@ -173,7 +172,7 @@ pub struct Scheme {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum QualifiedType {
     Var,
-    Kind(Kind),
+    Kind(NodeKind),
     Int,
     Bool,
     Str,
@@ -711,7 +710,7 @@ impl<'a> Typechecker<'a> {
                 self.substitutions.insert(t2, t1);
             }
             (Type::Kind(kind1), Type::Kind(kind2)) => {
-                if !kind1.is_comparable_to((*kind2).into()) {
+                if !kind1.is_comparable_to(*kind2) {
                     return make_error();
                 }
             }

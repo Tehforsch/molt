@@ -29,8 +29,8 @@ use crate::molt_lang::resolver::Resolver;
 use crate::molt_lang::type_definitions::TypeDefinitions;
 use crate::molt_lang::typechecker::Typechecker;
 use crate::rust_grammar::Ident;
-use crate::rust_grammar::Kind;
 use crate::rust_grammar::Node;
+use crate::rust_grammar::NodeKind;
 use crate::storage::Storage;
 use crate::{Error, Input, Mode};
 use index_types::{FnId, VarId};
@@ -81,7 +81,7 @@ pub struct FnArg {
 
 #[derive(Debug, Clone)]
 pub enum Type {
-    Kind(Kind),
+    Kind(NodeKind),
     Int,
     Bool,
     Str,
