@@ -204,8 +204,11 @@ impl std::fmt::Display for QualifiedType {
         match self {
             QualifiedType::Kind(kinds) => {
                 write!(f, "[")?;
-                for k in kinds.iter() {
+                for (i, k) in kinds.iter().enumerate() {
                     write!(f, "{}", k)?;
+                    if i != kinds.len() - 1 {
+                        write!(f, ", ")?;
+                    }
                 }
                 write!(f, "]")?;
                 Ok(())

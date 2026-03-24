@@ -181,10 +181,10 @@ impl<'a, Node: NodeType> Matcher<'a, Node> {
         IsMatch::Err(NoMatch)
     }
 
-    pub(super) fn cmp_nodes<T: CmpSyn<Node, T, R>, R>(
+    pub(super) fn cmp_nodes<T, S: CmpSyn<Node, T, R>, R>(
         &mut self,
         real: NodeId<T>,
-        molt: NodeId<T>,
+        molt: NodeId<S>,
     ) -> IsMatch {
         self.cmp_ids(real.into(), molt.into())
     }

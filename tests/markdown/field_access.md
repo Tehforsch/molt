@@ -9,7 +9,9 @@ fn main() {
     println!("hello");
 }
 
-fn foo() {
+impl Foo {
+    fn foo(input: Fn) {
+    }
 }
 ```
 

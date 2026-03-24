@@ -7,7 +7,7 @@ use crate::{CmpSyn, Matcher, RawNodeId, ToNode};
 use crate::parser::parse::discouraged::Speculative;
 use crate::parser::parse::{ParseStream, ParseTerm};
 use crate::rust_grammar::expr::Arm;
-use crate::rust_grammar::item::ImplItem;
+use crate::rust_grammar::item::{ImplItem, ImplItemFn, ItemFn};
 use crate::rust_grammar::pat::Pat;
 use crate::rust_grammar::{
     Expr, Field, FieldNamed, FieldUnnamed, Ident, Item, Lit, PatMulti, Stmt, Type, Vis,
@@ -172,6 +172,8 @@ define_node! {
     (Type, Type, Type),
     (Vis, Vis, Vis),
     (Generics, Generics, Generics),
+    (ItemFn, ItemFn, ItemFn),
+    (ImplItemFn, ImplItemFn, ImplItemFn),
 }
 
 define_kind_kws! {
@@ -187,7 +189,7 @@ define_kind_kws! {
     (Type, [Type]),
     (Vis, [Vis]),
     (Generics, [Generics]),
-    (Fn, [Item, ImplItem]),
+    (Fn, [ItemFn, ImplItemFn]),
 }
 
 impl CmpSyn<Node> for Node {
@@ -200,8 +202,11 @@ impl CmpSyn<Node> for Node {
         // Explicitly keep this exhaustive to make sure
         // we don't miss this impl when we add a new variant.
         match (self, term) {
-            (Node::Item(item), Node::ImplItem(impl_item))
-            | (Node::ImplItem(impl_item), Node::Item(item)) => ctx.cmp_syn(impl_item, item),
+            (Node::Item(item), Node::ImplItem(impl_item)) => ctx.cmp_syn(impl_item, item),
+            (Node::ImplItem(impl_item), Node::Item(item)) => ctx.cmp_syn(impl_item, item),
+            // TODO: Check: Does flipping the args here cause errors with bindings?
+            (Node::ItemFn(f1), Node::ImplItemFn(f2)) => ctx.cmp_syn(f2, f1),
+            (Node::ImplItemFn(f1), Node::ItemFn(f2)) => ctx.cmp_syn(f1, f2),
             (Node::Arm(_), _)
             | (Node::Expr(_), _)
             | (Node::Field(_), _)
@@ -213,6 +218,8 @@ impl CmpSyn<Node> for Node {
             | (Node::Item(_), _)
             | (Node::ImplItem(_), _)
             | (Node::Generics(_), _)
+            | (Node::ItemFn(_), _)
+            | (Node::ImplItemFn(_), _)
             | (Node::Vis(_), _) => ctx.no_match(),
         }
     }

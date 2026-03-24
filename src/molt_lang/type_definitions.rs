@@ -63,21 +63,19 @@ fn get_fn_name(i: &RuntimeCtx, val: Value) -> Value {
     let Value::Node(NodeSpec::Real(val)) = val else {
         typechecker_bug!();
     };
-    let f: &crate::rust_grammar::Item = i
-        .real_ctx
-        .get::<crate::rust_grammar::Item>(val)
-        .unwrap_item();
-    let crate::rust_grammar::Item::Fn(f) = f else {
-        typechecker_bug!()
-    };
-    Value::Node(NodeSpec::Real(f.sig.ident.into()))
+    let f: &crate::rust_grammar::Node = i.real_ctx.get(val).unwrap_item();
+    match f {
+        crate::rust_grammar::Node::ItemFn(f) => Value::Node(NodeSpec::Real(f.sig.ident.into())),
+        crate::rust_grammar::Node::ImplItemFn(f) => Value::Node(NodeSpec::Real(f.sig.ident.into())),
+        _ => typechecker_bug!(),
+    }
 }
 
 impl Default for TypeDefinitions {
     fn default() -> Self {
         let mut defs = vec![];
         defs.push((
-            QualifiedType::Kind(Kinds::new(vec![NodeKind::Item, NodeKind::ImplItem])),
+            QualifiedType::Kind(Kinds::new(vec![NodeKind::ItemFn, NodeKind::ImplItemFn])),
             {
                 let mut fields = HashMap::default();
                 fields.insert(

@@ -91,5 +91,8 @@ impl<NodeKind: PartialOrd + Ord + Clone + Copy + PartialEq + Eq> Kinds<NodeKind>
     pub(crate) fn is_superset_of(&self, k2: &Kinds<NodeKind>) -> bool {
         k2.iter().all(|k2| self.kinds.iter().any(|kind| kind == k2))
     }
-}
 
+    pub(crate) fn len(&self) -> usize {
+        self.kinds.len()
+    }
+}

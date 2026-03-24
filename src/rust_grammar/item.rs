@@ -81,7 +81,7 @@ pub enum Item {
 
     /// A free-standing function: `fn process(n: usize) -> Result<()> { ...
     /// }`.
-    Fn(ItemFn),
+    Fn(NodeId<ItemFn>),
 
     /// A block of foreign items: `extern "C" { ... }`.
     ForeignMod(ItemForeignMod),
@@ -349,12 +349,11 @@ pub struct ItemUse {
 }
 
 impl Item {
-    fn replace_attrs(&mut self, new: Vec<Attribute>) -> Vec<Attribute> {
+    fn replace_attrs(&mut self, input: ParseStream, new: Vec<Attribute>) -> Vec<Attribute> {
         match self {
             Item::Const(ItemConst { attrs, .. })
             | Item::Enum(ItemEnum { attrs, .. })
             | Item::ExternCrate(ItemExternCrate { attrs, .. })
-            | Item::Fn(ItemFn { attrs, .. })
             | Item::ForeignMod(ItemForeignMod { attrs, .. })
             | Item::Impl(ItemImpl { attrs, .. })
             | Item::Macro(ItemMacro { attrs, .. })
@@ -367,6 +366,15 @@ impl Item {
             | Item::Union(ItemUnion { attrs, .. })
             | Item::Use(ItemUse { attrs, .. }) => mem::replace(attrs, new),
             Item::Verbatim(_) => Vec::new(),
+            Item::Fn(node) => {
+                let mut ctx = input.ctx_mut();
+                let f: Term<&mut ItemFn, _> = ctx.get_mut(*node);
+                if let Term::Item(f) = f {
+                    mem::replace(&mut f.attrs, new)
+                } else {
+                    Vec::new()
+                }
+            }
         }
     }
 }
@@ -577,7 +585,7 @@ pub enum ImplItem {
     Const(ImplItemConst),
 
     /// An associated function within an impl block.
-    Fn(ImplItemFn),
+    Fn(NodeId<ImplItemFn>),
 
     /// An associated type within an impl block.
     Type(ImplItemType),
@@ -759,7 +767,10 @@ pub(crate) fn parse_rest_of_item(
             input.parse::<Token![;]>()?;
             Ok(Item::Verbatim(verbatim::between(&begin, input)))
         } else {
-            parse_rest_of_fn(input, Vec::new(), vis, sig).map(Item::Fn)
+            let marker = input.marker();
+            let f = parse_rest_of_fn(input, Vec::new(), vis, sig)?;
+            let id = input.add(input.make_spanned(marker, f));
+            Ok(Item::Fn(id))
         }
     } else if lookahead.peek(Token![extern]) {
         ahead.parse::<Token![extern]>()?;
@@ -914,8 +925,8 @@ pub(crate) fn parse_rest_of_item(
         Err(lookahead.error())
     }?;
 
-    attrs.extend(item.replace_attrs(Vec::new()));
-    item.replace_attrs(attrs);
+    attrs.extend(item.replace_attrs(input, Vec::new()));
+    item.replace_attrs(input, attrs);
     Ok(item)
 }
 
@@ -1345,8 +1356,10 @@ fn parse_signature(input: ParseStream, allow_safe: bool) -> Result<Option<Signat
     })
 }
 
-impl Parse for ItemFn {
-    fn parse(input: ParseStream) -> Result<Self> {
+impl ParseTerm for ItemFn {
+    type Target = Self;
+
+    fn parse_item(input: ParseStream) -> Result<Self> {
         let outer_attrs = input.call(Attribute::parse_outer)?;
         let vis = input.parse_id::<Vis>()?;
         let sig: Signature = input.parse()?;
@@ -2435,7 +2448,9 @@ impl ParseTerm for ImplItem {
         let allow_safe = false;
         let mut item = if lookahead.peek(Token![fn]) || peek_signature(&ahead, allow_safe) {
             let allow_omitted_body = true;
+            let marker = input.marker();
             if let Some(item) = parse_impl_item_fn(input, allow_omitted_body)? {
+                let item = input.add(input.make_spanned(marker, item));
                 Ok(ImplItem::Fn(item))
             } else {
                 Ok(ImplItem::Verbatim(verbatim::between(&begin, input)))
@@ -2497,10 +2512,18 @@ impl ParseTerm for ImplItem {
             Err(lookahead.error())
         }?;
 
+        let mut ctx = input.ctx_mut();
         {
             let item_attrs = match &mut item {
                 ImplItem::Const(item) => &mut item.attrs,
-                ImplItem::Fn(item) => &mut item.attrs,
+                ImplItem::Fn(item) => {
+                    let f: Term<&mut ImplItemFn, _> = ctx.get_mut(*item);
+                    if let Term::Item(f) = f {
+                        &mut f.attrs
+                    } else {
+                        &mut vec![]
+                    }
+                }
                 ImplItem::Type(item) => &mut item.attrs,
                 ImplItem::Macro(item) => &mut item.attrs,
                 ImplItem::Verbatim(_) => return Ok(item),
@@ -2551,8 +2574,10 @@ impl Parse for ImplItemConst {
     }
 }
 
-impl Parse for ImplItemFn {
-    fn parse(input: ParseStream) -> Result<Self> {
+impl ParseTerm for ImplItemFn {
+    type Target = Self;
+
+    fn parse_item(input: ParseStream) -> Result<Self> {
         let allow_omitted_body = false;
         parse_impl_item_fn(input, allow_omitted_body).map(Option::unwrap)
     }
@@ -2745,7 +2770,8 @@ impl CmpSyn<Node, Item> for ImplItem {
     fn cmp_syn(&self, ctx: &mut crate::Matcher<Node>, rhs: &Item) -> IsMatch {
         match (self, rhs) {
             (ImplItem::Const(t1), Item::Const(t2)) => ctx.cmp_syn(t1, t2),
-            (ImplItem::Fn(t1), Item::Fn(t2)) => ctx.cmp_syn(t1, t2),
+            (ImplItem::Fn(t1), Item::Fn(t2)) => ctx.cmp_nodes(*t2, *t1), // TODO: Check if flipping
+            // args causes issues.
             (ImplItem::Type(t1), Item::Type(t2)) => ctx.cmp_syn(t1, t2),
             (ImplItem::Macro(t1), Item::Macro(t2)) => ctx.cmp_syn(t1, t2),
             _ => ctx.no_match(),
