@@ -2,7 +2,8 @@
 use std::marker::PhantomData;
 
 use crate::{
-    NodeType, Span, Spanned, Term, ToNode, rust_grammar::Ident, span::SpannedTerm, storage::Storage,
+    NodeType, Span, Spanned, Term, ToNode, node::Kinds, rust_grammar::Ident, span::SpannedTerm,
+    storage::Storage,
 };
 
 type InternalId = Term<usize, usize>;
@@ -115,7 +116,7 @@ impl RawNodeId {
 /// Contains its name and the kind of the variable.
 pub(crate) struct CtxVar<K> {
     ident: Ident,
-    kind: VarKind<K>,
+    kind: VarKind<Kinds<K>>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -130,8 +131,8 @@ impl<K> VarKind<K> {
     }
 }
 
-impl<K: Copy> CtxVar<K> {
-    pub(crate) fn new(ident: Ident, kind: VarKind<K>) -> Self {
+impl<K> CtxVar<K> {
+    pub(crate) fn new(ident: Ident, kind: VarKind<Kinds<K>>) -> Self {
         Self { ident, kind }
     }
 
@@ -139,7 +140,7 @@ impl<K: Copy> CtxVar<K> {
         &self.ident
     }
 
-    pub(crate) fn kind(&self) -> &VarKind<K> {
+    pub(crate) fn kind(&self) -> &VarKind<Kinds<K>> {
         &self.kind
     }
 }
@@ -230,8 +231,8 @@ impl<Node: NodeType> Ctx<Node> {
             .map(|(i, var)| (RawNodeId(InternalId::Var(i), self.mode), var))
     }
 
-    pub(crate) fn get_kind_by_name(&self, name: &Ident) -> VarKind<Node::NodeKind> {
-        self.get_var_by_name(name).unwrap().1.kind
+    pub(crate) fn get_kind_by_name(&self, name: &Ident) -> &VarKind<Kinds<Node::NodeKind>> {
+        &self.get_var_by_name(name).unwrap().1.kind
     }
 
     pub(crate) fn iter(&self) -> impl Iterator<Item = RawNodeId> {

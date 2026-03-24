@@ -202,7 +202,7 @@ impl Resolver {
 
     fn resolve_type(&mut self, arg: grammar::Type) -> Result<Type> {
         Ok(match arg {
-            grammar::Type::Kind(ident) => Type::Kind(ident),
+            grammar::Type::Kind(k) => Type::Kind(k),
             grammar::Type::Unit => Type::Unit,
             grammar::Type::Int => Type::Int,
             grammar::Type::Bool => Type::Bool,

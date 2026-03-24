@@ -28,6 +28,7 @@ use crate::Span;
 use crate::molt_lang::resolver::Resolver;
 use crate::molt_lang::type_definitions::TypeDefinitions;
 use crate::molt_lang::typechecker::Typechecker;
+use crate::node::Kinds;
 use crate::rust_grammar::Ident;
 use crate::rust_grammar::Node;
 use crate::rust_grammar::NodeKind;
@@ -81,7 +82,7 @@ pub struct FnArg {
 
 #[derive(Debug, Clone)]
 pub enum Type {
-    Kind(NodeKind),
+    Kind(Kinds<NodeKind>),
     Int,
     Bool,
     Str,

@@ -13,7 +13,7 @@ use crate::molt_lang::typechecker::QualifiedType;
 use crate::molt_lang::typechecker::TypecheckResult;
 use crate::parser;
 use crate::rust_grammar::Node;
-use crate::rust_grammar::parse_node_with_kind;
+use crate::rust_grammar::parse_node_with_kinds;
 use crate::storage::Storage;
 use crate::typechecker_bug;
 
@@ -70,7 +70,7 @@ fn parse_pat(
     };
     let result = crate::parser::parse_with_ctx(
         pat_ctx,
-        |stream| parse_node_with_kind(stream, *kind),
+        |stream| parse_node_with_kinds(stream, kind),
         p.tokens,
         Mode::MoltPat,
     )?;

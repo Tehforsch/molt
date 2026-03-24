@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::{
     modify::NodeSpec,
     molt_lang::{RuntimeCtx, interpreter::Value, typechecker::QualifiedType},
+    node::Kinds,
     rust_grammar::NodeKind,
     typechecker_bug,
 };
@@ -27,12 +28,18 @@ impl TypeDef {
 }
 
 pub struct TypeDefinitions {
-    defs: HashMap<QualifiedType, TypeDef>,
+    defs: Vec<(QualifiedType, TypeDef)>,
 }
 
 impl TypeDefinitions {
     pub(crate) fn get(&self, ty: &QualifiedType) -> Option<&TypeDef> {
-        self.defs.get(ty)
+        for (def_ty, ty_def) in self.defs.iter() {
+            if def_ty.is_super_type(ty) {
+                return Some(ty_def);
+            }
+        }
+        #[allow(clippy::needless_return)]
+        return None;
     }
 
     pub(crate) fn get_field_access_fn(
@@ -68,18 +75,21 @@ fn get_fn_name(i: &RuntimeCtx, val: Value) -> Value {
 
 impl Default for TypeDefinitions {
     fn default() -> Self {
-        let mut defs = HashMap::default();
-        defs.insert(QualifiedType::Kind(NodeKind::Item), {
-            let mut fields = HashMap::default();
-            fields.insert(
-                "name".into(),
-                FieldDef {
-                    ty: Type::Kind(NodeKind::Ident),
-                    field_access_fn: Box::new(get_fn_name),
-                },
-            );
-            TypeDef { fields }
-        });
+        let mut defs = vec![];
+        defs.push((
+            QualifiedType::Kind(Kinds::new(vec![NodeKind::Item, NodeKind::ImplItem])),
+            {
+                let mut fields = HashMap::default();
+                fields.insert(
+                    "name".into(),
+                    FieldDef {
+                        ty: Type::Kind(Kinds::single(NodeKind::Ident)),
+                        field_access_fn: Box::new(get_fn_name),
+                    },
+                );
+                TypeDef { fields }
+            },
+        ));
         Self { defs }
     }
 }

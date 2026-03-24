@@ -10,6 +10,7 @@ use std::rc::Rc;
 use std::str::FromStr;
 
 use crate::ctx::VarKind;
+use crate::node::Kinds;
 use crate::node_list::RealNodeList;
 use crate::{
     Ctx, CtxVar, Mode, NodeId, NodeList, NodeType, RawNodeId, Spanned, SpannedTerm, Term, ToNode,
@@ -306,7 +307,12 @@ pub(crate) trait PeekTerm {
     fn peek_item(cursor: Cursor) -> bool;
 
     fn peek_term(cursor: Cursor, ctx: &Ctx<Node>) -> bool {
-        Self::peek_item(cursor) || peek_var(cursor, ctx, VarKind::Single(Self::Target::node_kind()))
+        Self::peek_item(cursor)
+            || peek_var(
+                cursor,
+                ctx,
+                VarKind::Single(Kinds::single(Self::Target::node_kind())),
+            )
     }
 }
 
@@ -364,7 +370,7 @@ pub(crate) trait ParseListOrItem {
     fn parse_list_or_item(input: ParseStream) -> Result<ListOrItem<Self::Target, Self::Punct>>;
 }
 
-fn peek_var(cursor: Cursor, ctx: &Ctx<Node>, kind: VarKind<NodeKind>) -> bool {
+fn peek_var(cursor: Cursor, ctx: &Ctx<Node>, kind: VarKind<Kinds<NodeKind>>) -> bool {
     if let Some((punct, _)) = cursor.punct()
         && punct.as_char() == '$'
         && let Some((ident, _)) = cursor.skip().and_then(|cursor| cursor.ident())
@@ -377,7 +383,7 @@ fn peek_var(cursor: Cursor, ctx: &Ctx<Node>, kind: VarKind<NodeKind>) -> bool {
 fn kind_matches(
     ctx: &Ctx<Node>,
     ident: &Ident,
-    kind: VarKind<<Node as NodeType>::NodeKind>,
+    kind: VarKind<Kinds<<Node as NodeType>::NodeKind>>,
 ) -> bool {
     ctx.get_kind_by_name(ident).is_comparable_to(kind)
 }
@@ -589,7 +595,7 @@ impl<'a> ParseBuffer<'a> {
         peek_var(
             self.cursor(),
             &self.ctx.borrow(),
-            VarKind::Single(T::node_kind()),
+            VarKind::Single(Kinds::single(T::node_kind())),
         )
     }
 
@@ -597,7 +603,7 @@ impl<'a> ParseBuffer<'a> {
         peek_var(
             self.cursor(),
             &self.ctx.borrow(),
-            VarKind::List(T::node_kind()),
+            VarKind::List(Kinds::single(T::node_kind())),
         )
     }
 
@@ -607,7 +613,7 @@ impl<'a> ParseBuffer<'a> {
 
     fn parse_var(
         &self,
-        kind: VarKind<<Node as NodeType>::NodeKind>,
+        kind: VarKind<Kinds<<Node as NodeType>::NodeKind>>,
     ) -> Result<CtxVar<<Node as NodeType>::NodeKind>> {
         let _: Token![$] = self.parse()?;
         let ident = Ident::parse_any(self)?;
@@ -615,12 +621,12 @@ impl<'a> ParseBuffer<'a> {
     }
 
     fn parse_list_var<T: ToNode<Node>>(&self) -> Result<NodeId<T>> {
-        let var = self.parse_var(VarKind::List(T::node_kind()))?;
+        let var = self.parse_var(VarKind::List(Kinds::single(T::node_kind())))?;
         Ok(self.add_var::<T>(var))
     }
 
     pub(crate) fn parse_single_var<T: ToNode<Node>>(&self) -> Result<RawNodeId> {
-        let var = self.parse_var(VarKind::Single(T::node_kind()))?;
+        let var = self.parse_var(VarKind::Single(Kinds::single(T::node_kind())))?;
         Ok(self.add_var::<T>(var).into())
     }
 

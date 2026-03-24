@@ -124,7 +124,7 @@ impl<'a> Interpreter<'a> {
                 .real_ctx
                 .get::<Node>(node)
                 .unwrap_item()
-                .is_of_kind(*kind)
+                .is_of_kind(kind)
             {
                 return Ok(());
             }

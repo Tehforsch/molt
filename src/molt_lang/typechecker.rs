@@ -5,6 +5,7 @@ use crate::{
         BuiltinFn, LetLhs, MoltFile, MoltFn, PatId, ResolvedMoltFile, Stmt, UnparsedPat, VarId,
         type_definitions::TypeDefinitions,
     },
+    node::Kinds,
     rust_grammar::{Ident, NodeKind},
     storage::{Storage, StorageIndex},
 };
@@ -38,7 +39,7 @@ impl Storage<TypeId, Type> {
     fn get_qualified(&self, type_: &Type) -> QualifiedType {
         match type_ {
             Type::Var => QualifiedType::Var,
-            Type::Kind(kind) => QualifiedType::Kind(*kind),
+            Type::Kind(kind) => QualifiedType::Kind(kind.clone()),
             Type::Int => QualifiedType::Int,
             Type::Bool => QualifiedType::Bool,
             Type::Str => QualifiedType::Str,
@@ -131,7 +132,7 @@ impl std::fmt::Debug for Error {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
     Var,
-    Kind(NodeKind),
+    Kind(Kinds<NodeKind>),
     Int,
     Bool,
     Str,
@@ -171,8 +172,8 @@ pub struct Scheme {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum QualifiedType {
-    Var,
-    Kind(NodeKind),
+    Var, // TODO: should this even exist? why?
+    Kind(Kinds<NodeKind>),
     Int,
     Bool,
     Str,
@@ -181,10 +182,34 @@ pub enum QualifiedType {
     Fun(Vec<QualifiedType>, Box<QualifiedType>),
 }
 
+impl QualifiedType {
+    pub(crate) fn is_super_type(&self, ty: &QualifiedType) -> bool {
+        match (self, ty) {
+            (QualifiedType::Kind(k1), QualifiedType::Kind(k2)) => k1.is_superset_of(k2),
+            // We will probably never need these.
+            (QualifiedType::Var, QualifiedType::Var) => todo!(),
+            (QualifiedType::Int, QualifiedType::Int)
+            | (QualifiedType::Bool, QualifiedType::Bool)
+            | (QualifiedType::Str, QualifiedType::Str)
+            | (QualifiedType::Unit, QualifiedType::Unit) => todo!(),
+            (QualifiedType::List(_), QualifiedType::List(_)) => todo!(),
+            (QualifiedType::Fun(_, _), QualifiedType::Fun(_, _)) => todo!(),
+            (_, _) => false,
+        }
+    }
+}
+
 impl std::fmt::Display for QualifiedType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            QualifiedType::Kind(kind) => write!(f, "{}", kind),
+            QualifiedType::Kind(kinds) => {
+                write!(f, "[")?;
+                for k in kinds.iter() {
+                    write!(f, "{}", k)?;
+                }
+                write!(f, "]")?;
+                Ok(())
+            }
             QualifiedType::Var => write!(f, "var"),
             QualifiedType::Int => write!(f, "int"),
             QualifiedType::Bool => write!(f, "bool"),
@@ -363,7 +388,7 @@ impl<'a> Typechecker<'a> {
 
     fn convert_raw_type(&mut self, t: &super::Type) -> Type {
         match t {
-            super::Type::Kind(kind) => Type::Kind(*kind),
+            super::Type::Kind(kind) => Type::Kind(kind.clone()),
             super::Type::Unit => Type::Unit,
             super::Type::Int => Type::Int,
             super::Type::Bool => Type::Bool,
@@ -710,7 +735,7 @@ impl<'a> Typechecker<'a> {
                 self.substitutions.insert(t2, t1);
             }
             (Type::Kind(kind1), Type::Kind(kind2)) => {
-                if !kind1.is_comparable_to(*kind2) {
+                if !kind1.is_comparable_to(kind2) {
                     return make_error();
                 }
             }

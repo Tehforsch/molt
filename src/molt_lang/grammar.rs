@@ -4,6 +4,7 @@ use proc_macro2::TokenStream;
 
 use crate::Span;
 use crate::molt_lang::index_types::FnId;
+use crate::node::Kinds;
 use crate::parser::punctuated::Punctuated;
 use crate::parser::token::Comma;
 use crate::rust_grammar::{Ident, LitBool, LitInt, LitStr, NodeKind};
@@ -45,7 +46,7 @@ pub struct FnArg {
 
 #[derive(Debug, Clone)]
 pub enum Type {
-    Kind(NodeKind),
+    Kind(Kinds<NodeKind>),
     Int,
     Bool,
     Str,

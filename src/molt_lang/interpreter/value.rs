@@ -2,6 +2,7 @@ use crate::{
     NodeType,
     modify::NodeSpec,
     molt_lang::{BuiltinFn, FnId, RuntimeCtx, typechecker::QualifiedType},
+    node::Kinds,
     rust_grammar::Node,
 };
 
@@ -35,10 +36,9 @@ impl Value {
             Value::String(_) => QualifiedType::Str,
             Value::Int(_) => QualifiedType::Int,
             Value::Bool(_) => QualifiedType::Bool,
-            Value::Node(NodeSpec::Real(node)) => {
-                let kind = ctx.real_ctx.get::<Node>(*node).unwrap_item().node_kind();
-                QualifiedType::Kind(kind.into())
-            }
+            Value::Node(NodeSpec::Real(node)) => QualifiedType::Kind(Kinds::single(
+                ctx.real_ctx.get::<Node>(*node).unwrap_item().node_kind(),
+            )),
             Value::Node(_) => {
                 todo!()
             }

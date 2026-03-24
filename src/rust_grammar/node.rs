@@ -1,5 +1,6 @@
 use crate::ctx::VarKind;
 use crate::match_pattern::IsMatch;
+use crate::node::Kinds;
 use crate::rust_grammar::generics::Generics;
 use crate::{CmpSyn, Matcher, RawNodeId, ToNode};
 
@@ -40,7 +41,7 @@ macro_rules! define_node {
             }
         }
 
-        #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
         pub enum NodeKind {
             $(
                 $variant_name,
@@ -105,29 +106,34 @@ macro_rules! define_node {
             }
         )*
 
-        mod kind_kws {
-            $(
-                crate::custom_keyword!($variant_name);
-            )*
-        }
-
-        // TODO: Introduce proper kws here.
-        impl crate::parser::parse::Parse for NodeKind {
-            fn parse(input:crate::parser::parse:: ParseStream) -> crate::parser::Result<Self> {
+        pub fn parse_node_with_kinds(input: crate::parser::parse::ParseStream, kinds: &Kinds<NodeKind>) -> crate::parser::Result<RawNodeId> {
+             // TODO! Speculatively parse all? For now this just assumes they
+            // all parse the same.
+            let kind = kinds.get_first();
+            match kind {
                 $(
-                    if input.peek(kind_kws::$variant_name) {
-                        let _: kind_kws::$variant_name = input.parse()?;
-                        return Ok(NodeKind::$variant_name);
+                    NodeKind::$variant_name => {
+                        let parsed = input.parse_id::<$parse_ty>()?;
+                        Ok(parsed.into())
                     }
                 )*
-                Err(input.error("Invalid kind."))
             }
+        }
+    }
+}
+
+macro_rules! define_kind_kws {
+    ($(($kind_kw: ident, [$($node_kind: ident),* $(,)?])),* $(,)?) => {
+        mod kind_kws {
+            $(
+                crate::custom_keyword!($kind_kw);
+            )*
         }
 
         impl NodeKind {
             pub(crate) fn peek(lookahead: &mut crate::parser::lookahead::Lookahead1) -> bool {
                 $(
-                    if lookahead.peek(kind_kws::$variant_name) {
+                    if lookahead.peek(kind_kws::$kind_kw) {
                         return true
                     }
                 )*
@@ -135,37 +141,22 @@ macro_rules! define_node {
             }
         }
 
-        fn is_of_kind(node: &Node, term_kind: NodeKind) -> bool {
-            $(
-                match_impl!(node, term_kind, $variant_name, $parse_ty);
-            )*
-            unreachable!()
-        }
-
-        pub fn parse_node_with_kind(input: crate::parser::parse::ParseStream, kind: NodeKind) -> crate::parser::Result<RawNodeId> {
-            $(
-                parse_impl!(input, kind, $variant_name, $parse_ty);
-            )*
-            unreachable!()
+        impl crate::parser::parse::Parse for Kinds<NodeKind> {
+            fn parse(input:crate::parser::parse:: ParseStream) -> crate::parser::Result<Self> {
+                $(
+                    if input.peek(kind_kws::$kind_kw) {
+                        let _: kind_kws::$kind_kw = input.parse()?;
+                        return Ok(Kinds::new(vec![
+                            $(
+                                NodeKind::$node_kind
+                            ),*
+                        ]));
+                    }
+                )*
+                Err(input.error("Invalid kind."))
+            }
         }
     }
-}
-
-macro_rules! parse_impl {
-    ($input: ident, $kind: ident, $variant_name: ident, $parse_ty: ty) => {
-        if let NodeKind::$variant_name = $kind {
-            let parsed = $input.parse_id::<$parse_ty>()?;
-            return Ok(parsed.into());
-        }
-    };
-}
-
-macro_rules! match_impl {
-    ($node: ident, $term_kind: ident, $variant_name: ident, $parse_ty: ty) => {
-        if let NodeKind::$variant_name = $term_kind {
-            return matches!($node, Node::$variant_name(_));
-        }
-    };
 }
 
 define_node! {
@@ -181,6 +172,22 @@ define_node! {
     (Type, Type, Type),
     (Vis, Vis, Vis),
     (Generics, Generics, Generics),
+}
+
+define_kind_kws! {
+    (Arm, [Arm]),
+    (Expr, [Expr]),
+    (Field, [Field]),
+    (Ident, [Ident]),
+    (Item, [Item]),
+    (ImplItem, [ImplItem]),
+    (Lit, [Lit]),
+    (Pat, [Pat]),
+    (Stmt, [Stmt]),
+    (Type, [Type]),
+    (Vis, [Vis]),
+    (Generics, [Generics]),
+    (Fn, [Item, ImplItem]),
 }
 
 impl CmpSyn<Node> for Node {
@@ -228,11 +235,11 @@ impl ParseTerm for Field {
     }
 }
 
-impl VarKind<NodeKind> {
-    pub(crate) fn is_comparable_to(&self, kind: VarKind<NodeKind>) -> bool {
+impl VarKind<Kinds<NodeKind>> {
+    pub(crate) fn is_comparable_to(&self, kind: VarKind<Kinds<NodeKind>>) -> bool {
         match (self, kind) {
-            (VarKind::Single(k1), VarKind::Single(k2)) => k1.is_comparable_to(k2),
-            (VarKind::List(k1), VarKind::List(k2)) => k1.is_comparable_to(k2),
+            (VarKind::Single(k1), VarKind::Single(k2)) => k1.is_comparable_to(&k2),
+            (VarKind::List(k1), VarKind::List(k2)) => k1.is_comparable_to(&k2),
             (_, _) => false,
         }
     }
