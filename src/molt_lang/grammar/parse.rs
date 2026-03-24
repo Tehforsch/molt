@@ -1,13 +1,14 @@
 use proc_macro2::{Span, TokenStream};
 
 use crate::molt_lang::grammar::{
-    Assignment, Atom, Block, ExprStmt, FnCall, List, Lit, PatVar, PatVars, ReturnStmt, Type,
+    Assignment, AssignmentLhs, Atom, Block, ExprStmt, FnCall, List, Lit, PatVar, PatVars,
+    ReturnStmt, Type,
 };
 use crate::molt_lang::{INPUT_VAR_NAME, MAIN_FN_NAME};
 use crate::parser::parse::{self, Parse, ParseStream};
 use crate::parser::punctuated::Punctuated;
 use crate::parser::token::{Brace, Bracket};
-use crate::parser::{Result, token};
+use crate::parser::{self, Result, token};
 use crate::rust_grammar::ext::IdentExt;
 use crate::rust_grammar::{Ident, LitBool, LitInt, LitStr, NodeKind};
 use crate::storage::Storage;
@@ -137,7 +138,7 @@ impl Parse for Type {
             } else {
                 let e = lh.error();
                 let m = e.messages().last().unwrap();
-                Err(crate::parser::Error::new(
+                Err(parser::Error::new(
                     ident.span(),
                     format!("{} or primitives `bool`, `int`, `str`, `List`", m),
                 ))
@@ -161,20 +162,46 @@ impl Parse for Stmt {
             Ok(Stmt::Let(input.parse()?))
         } else if lookahead.peek(Token![return]) {
             Ok(Stmt::Return(input.parse()?))
-        } else if lookahead.peek(Ident::peek_any) && input.peek2(Token![=]) {
-            Ok(Stmt::Assignment(input.parse()?))
         } else {
             let expr: Expr = input.parse()?;
-            let has_trailing_semi = if input.peek(Token![;]) {
+            if input.peek(Token![=]) {
+                let lhs = AssignmentLhs::from_expr(expr).map_err(|msg| input.error(msg))?;
+                let _: Token![=] = input.parse()?;
+                let rhs = input.parse()?;
                 let _: Token![;] = input.parse()?;
-                true
+                Ok(Stmt::Assignment(Assignment { lhs, rhs }))
             } else {
-                false
-            };
-            Ok(Stmt::Expr(ExprStmt {
-                expr,
-                has_trailing_semi,
-            }))
+                let has_trailing_semi = if input.peek(Token![;]) {
+                    let _: Token![;] = input.parse()?;
+                    true
+                } else {
+                    false
+                };
+                Ok(Stmt::Expr(ExprStmt {
+                    expr,
+                    has_trailing_semi,
+                }))
+            }
+        }
+    }
+}
+
+impl AssignmentLhs {
+    fn from_expr(expr: Expr) -> Result<AssignmentLhs, String> {
+        let make_error = || Err("Invalid left hand side of assignment".to_string());
+        let get_ident = |atom| match atom {
+            Atom::Lit(_) => make_error(),
+            Atom::List(_) => make_error(),
+            Atom::Var(ident) => Ok(ident),
+        };
+        match expr {
+            Expr::FnCall(_) => todo!(),
+            Expr::Pat(_) => todo!(),
+            Expr::Atom(atom) => Ok(Self::Var(get_ident(atom)?)),
+            Expr::FieldAccess(fa) => Ok(Self::FieldAccess {
+                lhs: Box::new(AssignmentLhs::from_expr(*fa.lhs)?),
+                field: fa.field,
+            }),
         }
     }
 }
@@ -280,16 +307,6 @@ impl Parse for For {
             iterable,
             block,
         })
-    }
-}
-
-impl Parse for Assignment {
-    fn parse(input: ParseStream) -> Result<Self> {
-        let lhs = input.parse()?;
-        let _: Token![=] = input.parse()?;
-        let rhs = input.parse()?;
-        let _: Token![;] = input.parse()?;
-        Ok(Assignment { lhs, rhs })
     }
 }
 
@@ -406,7 +423,7 @@ impl Parse for Pat {
 }
 
 impl Parse for PatVars {
-    fn parse(input: ParseStream) -> crate::parser::Result<Self> {
+    fn parse(input: ParseStream) -> parser::Result<Self> {
         let mut vars = PatVars(vec![]);
         loop {
             let marker = input.marker();

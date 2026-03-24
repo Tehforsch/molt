@@ -122,8 +122,26 @@ pub struct For {
 
 #[derive(Debug)]
 pub struct Assignment {
-    pub lhs: VarId,
+    pub lhs: AssignmentLhs,
     pub rhs: Expr,
+}
+
+#[derive(Debug)]
+pub enum AssignmentLhs {
+    Var(VarId),
+    FieldAccess {
+        lhs: Box<AssignmentLhs>,
+        field: Ident,
+    },
+}
+
+impl AssignmentLhs {
+    pub fn base_var(&self) -> VarId {
+        match self {
+            AssignmentLhs::Var(id) => *id,
+            AssignmentLhs::FieldAccess { lhs, .. } => lhs.base_var(),
+        }
+    }
 }
 
 #[derive(Debug)]

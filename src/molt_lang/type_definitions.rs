@@ -4,11 +4,11 @@ use crate::{
     modify::NodeSpec,
     molt_lang::{RuntimeCtx, interpreter::Value, typechecker::QualifiedType},
     node::Kinds,
-    rust_grammar::NodeKind,
+    rust_grammar::{Ident, NodeKind},
     typechecker_bug,
 };
 
-use super::{FieldAccess, typechecker::Type};
+use super::typechecker::Type;
 
 type FieldAccessFn = dyn Fn(&RuntimeCtx, Value) -> Value;
 
@@ -46,13 +46,13 @@ impl TypeDefinitions {
         &self,
         ctx: &RuntimeCtx,
         lhs: Value,
-        fa: &FieldAccess,
+        field_name: &Ident,
     ) -> Value {
         let lhs_ty = lhs.get_type(ctx);
         let Some(def) = self.get(&lhs_ty) else {
             typechecker_bug!()
         };
-        let Some(field) = def.fields.get(&fa.field.to_string()) else {
+        let Some(field) = def.fields.get(&field_name.to_string()) else {
             typechecker_bug!()
         };
         (*field.field_access_fn)(ctx, lhs)

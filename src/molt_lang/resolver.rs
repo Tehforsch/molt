@@ -224,10 +224,20 @@ impl Resolver {
     }
 
     fn resolve_assignment(&mut self, s: grammar::Assignment) -> Result<Assignment> {
-        let lhs = self.lookup_var(&s.lhs)?;
+        let lhs = self.resolve_assignment_lhs(s.lhs)?;
         let rhs = self.resolve_expr(s.rhs)?;
 
         Ok(Assignment { lhs, rhs })
+    }
+
+    fn resolve_assignment_lhs(&mut self, lhs: grammar::AssignmentLhs) -> Result<AssignmentLhs> {
+        match lhs {
+            grammar::AssignmentLhs::Var(ident) => Ok(AssignmentLhs::Var(self.lookup_var(&ident)?)),
+            grammar::AssignmentLhs::FieldAccess { lhs, field } => Ok(AssignmentLhs::FieldAccess {
+                lhs: Box::new(self.resolve_assignment_lhs(*lhs)?),
+                field,
+            }),
+        }
     }
 
     fn resolve_if(&mut self, i: grammar::If) -> Result<If> {

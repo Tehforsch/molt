@@ -708,12 +708,27 @@ impl<'a> Typechecker<'a> {
     }
 
     fn check_assignment(&mut self, a: &super::Assignment) -> Result<()> {
-        let lhs = self.lookup(a.lhs).unwrap(); // Resolver makes sure this exists
+        let lhs = self.infer_assignment_lhs(&a.lhs)?;
         let rhs = self.infer_expr(&a.rhs)?;
-        let span = self.var_span(a.lhs);
         let lhs_type = self.get_qualified(&self.types[self.resolve(lhs)].clone());
-        self.unify(lhs, rhs)
-            .map_err(|e| e.with_label(span, format!("has type `{lhs_type}`")))
+        self.unify(lhs, rhs).map_err(|e| {
+            e.with_label(
+                self.var_span(a.lhs.base_var()),
+                format!("has type `{lhs_type}`"),
+            )
+        })
+    }
+
+    fn infer_assignment_lhs(&mut self, lhs: &super::AssignmentLhs) -> Result<TypeId> {
+        match lhs {
+            super::AssignmentLhs::Var(id) => Ok(self.lookup(*id).unwrap()),
+            super::AssignmentLhs::FieldAccess { lhs, field } => {
+                let lhs_ty = self.infer_assignment_lhs(lhs)?;
+                let lhs_ty = self.resolve(lhs_ty);
+                let ty = self.get_field_type(lhs_ty, field)?;
+                Ok(self.add_type(ty))
+            }
+        }
     }
 
     fn unify(&mut self, t1: TypeId, t2: TypeId) -> Result<()> {

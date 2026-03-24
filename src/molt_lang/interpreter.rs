@@ -8,7 +8,7 @@ use crate::{
     Matcher, ModMap, Node, RawNodeId,
     modify::{Modification, NodeSpec},
     molt_lang::{
-        Assignment, Expr, FnId, List, MoltFile, MoltFn, Stmt, Type, VarId,
+        Assignment, AssignmentLhs, Expr, FnId, List, MoltFile, MoltFn, Stmt, Type, VarId,
         interpreter::{
             value::StmtValue,
             var_stack::{VarHandle, VarStack, Vars},
@@ -234,7 +234,7 @@ impl<'a> Interpreter<'a> {
 
     fn eval_field_access(&mut self, fa: &FieldAccess) -> Result<Value> {
         let lhs = self.eval_expr(&fa.lhs)?;
-        let f = self.defs.get_field_access_fn(self.context, lhs, fa);
+        let f = self.defs.get_field_access_fn(self.context, lhs, &fa.field);
         Ok(f)
     }
 
@@ -299,27 +299,27 @@ impl<'a> Interpreter<'a> {
     fn eval_assignment(&mut self, assignment: &Assignment) -> Result<StmtValue> {
         // it seems natural to `pop` here, but we might
         // refer to the value of the var in the rhs, so we only `get` here.
-        let val = self.vars.get(assignment.lhs);
-        let new_val = match val {
+        let var = assignment.lhs.base_var();
+        let previous_value = self.vars.get(var);
+        match previous_value {
             Value::String(_)
             | Value::Int(_)
             | Value::Bool(_)
             | Value::Unit
             | Value::List(_)
             | Value::UserFn(_)
-            | Value::BuiltinFn(_) => self.eval_expr(&assignment.rhs)?,
-            Value::Node(id) => {
-                let Value::Node(new_val) = self.eval_expr(&assignment.rhs)? else {
-                    typechecker_bug!();
-                };
-                self.modifications.push(Modification {
-                    old: id,
-                    new: new_val.clone(),
-                });
-                Value::Node(new_val)
+            | Value::BuiltinFn(_) => {
+                if !matches!(&assignment.lhs, AssignmentLhs::Var(_)) {
+                    todo!()
+                }
+                let new_val = self.eval_expr(&assignment.rhs)?;
+                self.vars.replace(var, new_val);
+            }
+            Value::Node(previous_id) => {
+                let val = self.eval_expr(&assignment.rhs)?;
+                self.eval_node_assignment(&assignment.lhs, &previous_id, val)?;
             }
         };
-        self.vars.replace(assignment.lhs, new_val);
         Ok(StmtValue::Value(Value::Unit))
     }
 
@@ -475,5 +475,33 @@ impl<'a> Interpreter<'a> {
             self.eval_block(else_branch)?;
         }
         Ok(StmtValue::Value(Value::Unit))
+    }
+
+    fn eval_node_assignment(
+        &mut self,
+        lhs: &AssignmentLhs,
+        previous_id: &NodeSpec,
+        rhs: Value,
+    ) -> Result<Value> {
+        if let AssignmentLhs::FieldAccess { lhs, field } = lhs {
+            let field_val = self.defs.get_field_access_fn(
+                self.context,
+                Value::Node(previous_id.clone()),
+                field,
+            );
+            let Value::Node(field_val) = field_val else {
+                typechecker_bug!();
+            };
+            self.eval_node_assignment(lhs, &field_val, rhs)
+        } else {
+            let Value::Node(rhs) = rhs else {
+                typechecker_bug!();
+            };
+            self.modifications.push(Modification {
+                old: previous_id.clone(),
+                new: rhs.clone(),
+            });
+            Ok(Value::Node(rhs))
+        }
     }
 }

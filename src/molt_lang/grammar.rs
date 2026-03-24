@@ -86,8 +86,17 @@ pub struct For {
 
 #[derive(Debug)]
 pub struct Assignment {
-    pub lhs: Ident,
+    pub lhs: AssignmentLhs,
     pub rhs: Expr,
+}
+
+#[derive(Debug)]
+pub enum AssignmentLhs {
+    Var(Ident),
+    FieldAccess {
+        lhs: Box<AssignmentLhs>,
+        field: Ident,
+    },
 }
 
 #[derive(Debug)]
