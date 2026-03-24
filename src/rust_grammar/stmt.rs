@@ -1,5 +1,5 @@
 use crate::{NodeId, NodeList, Spanned, Term, WithSpan};
-use derive_macro::CmpSyn;
+use derive_macro::{CmpSyn, MoltFields};
 use proc_macro2::TokenStream;
 
 use crate::parser::error::Result;
@@ -31,7 +31,7 @@ pub struct Block {
 
 struct StmtAllowNoSemi;
 
-#[derive(Debug, CmpSyn)]
+#[derive(Debug, CmpSyn, MoltFields)]
 #[node(Node)]
 /// A statement, usually ending in a semicolon.
 pub enum Stmt {

@@ -18,6 +18,8 @@ pub(crate) use interpreter::Interpreter;
 use proc_macro2::TokenStream;
 pub(crate) use resolver::Error as ResolverError;
 pub(crate) use runtime_ctx::RuntimeCtx;
+pub(crate) use type_definitions::TypeDefinitionsBuilder;
+pub(crate) use type_definitions::{FieldDefBuilder, MoltFields};
 pub(crate) use typechecker::Error as TypeError;
 
 use codespan_reporting::files::Files;

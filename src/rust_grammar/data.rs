@@ -1,5 +1,5 @@
 use crate::{NodeId, NodeList, WithSpan};
-use derive_macro::CmpSyn;
+use derive_macro::{CmpSyn, MoltFields};
 
 use crate::parser::error::Result;
 use crate::parser::parse::{Parse, ParseList, ParseStream, ParseTerm, parse_list_items_default};
@@ -64,7 +64,7 @@ pub struct FieldsUnnamed {
     pub unnamed: NodeList<Field, Token![,]>,
 }
 
-#[derive(Debug, CmpSyn)]
+#[derive(Debug, CmpSyn, MoltFields)]
 #[node(Node)]
 /// A field of a struct or enum variant.
 pub struct Field {

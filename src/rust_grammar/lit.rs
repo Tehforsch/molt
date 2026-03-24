@@ -6,7 +6,7 @@ use std::str::{self, FromStr};
 
 use crate::match_pattern::IsMatch;
 use crate::{CmpSyn, Ctx, Mode};
-use derive_macro::CmpSyn;
+use derive_macro::{CmpSyn, MoltFields};
 use proc_macro2::{Literal, Punct, Span};
 
 use crate::parser::buffer::Cursor;
@@ -16,7 +16,7 @@ use crate::parser::{Error, Result, lookahead};
 use crate::rust_grammar::Ident;
 use crate::rust_grammar::Node;
 
-#[derive(Debug, CmpSyn)]
+#[derive(Debug, CmpSyn, MoltFields)]
 #[node(Node)]
 /// A Rust literal such as a string or integer or boolean.
 pub enum Lit {

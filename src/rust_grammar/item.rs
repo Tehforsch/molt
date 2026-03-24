@@ -2,7 +2,7 @@ use std::mem;
 
 use crate::match_pattern::IsMatch;
 use crate::{CmpSyn, NodeId, NodeList, SpannedTerm, Term, WithSpan, rule};
-use derive_macro::CmpSyn;
+use derive_macro::{CmpSyn, MoltFields};
 use proc_macro2::TokenStream;
 
 use crate::parser::error::{Error, Result};
@@ -66,7 +66,7 @@ pub enum Constness {
     NotConst,
 }
 
-#[derive(Debug, CmpSyn)]
+#[derive(Debug, CmpSyn, MoltFields)]
 #[node(Node)]
 /// Things that can appear directly inside of a module or scope.
 pub enum Item {
@@ -168,7 +168,7 @@ pub struct ItemExternCrate {
     pub semi_token: Token![;],
 }
 
-#[derive(Debug, CmpSyn)]
+#[derive(Debug, CmpSyn, MoltFields)]
 #[node(Node)]
 /// A free-standing function: `fn process(n: usize) -> Result<()> { ... }`.
 pub struct ItemFn {
@@ -179,7 +179,7 @@ pub struct ItemFn {
     pub block: Box<Block>,
 }
 
-#[derive(Debug, CmpSyn)]
+#[derive(Debug, CmpSyn, MoltFields)]
 #[node(Node)]
 /// A block of foreign items: `extern "C" { ... }`.
 pub struct ItemForeignMod {
@@ -577,7 +577,7 @@ pub struct TraitItemMacro {
     pub semi_token: Option<Token![;]>,
 }
 
-#[derive(Debug, CmpSyn)]
+#[derive(Debug, CmpSyn, MoltFields)]
 #[node(Node)]
 /// An item within an impl block.
 pub enum ImplItem {
@@ -616,7 +616,7 @@ pub struct ImplItemConst {
     pub semi_token: Token![;],
 }
 
-#[derive(Debug, CmpSyn)]
+#[derive(Debug, CmpSyn, MoltFields)]
 #[node(Node)]
 /// An associated function within an impl block.
 pub struct ImplItemFn {

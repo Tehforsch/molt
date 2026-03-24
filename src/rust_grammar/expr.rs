@@ -2,7 +2,7 @@ use std::hash::{Hash, Hasher};
 use std::mem;
 
 use crate::{NodeId, NodeList, RawNodeId, Spanned, SpannedTerm, Term, ToNode, WithSpan};
-use derive_macro::CmpSyn;
+use derive_macro::{CmpSyn, MoltFields};
 use proc_macro2::{Span, TokenStream};
 
 use crate::Node;
@@ -176,7 +176,7 @@ struct ExprNoEagerBrace;
 /// [`parse_without_eager_brace`]: Self::parse_without_eager_brace
 pub struct ExprEarlierBoundaryRule;
 
-#[derive(Debug, CmpSyn)]
+#[derive(Debug, CmpSyn, MoltFields)]
 #[node(Node)]
 /// A Rust expression.
 pub enum Expr {
@@ -925,7 +925,7 @@ pub struct Label {
     pub colon_token: Token![:],
 }
 
-#[derive(Debug, CmpSyn)]
+#[derive(Debug, CmpSyn, MoltFields)]
 #[node(Node)]
 /// One arm of a `match` expression: `0..=10 => { return true; }`.
 ///

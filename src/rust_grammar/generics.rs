@@ -1,6 +1,6 @@
 use crate::NodeId;
 use crate::term::Property;
-use derive_macro::CmpSyn;
+use derive_macro::{CmpSyn, MoltFields};
 use proc_macro2::TokenStream;
 
 use crate::parser::error::{self, Result};
@@ -18,7 +18,7 @@ use crate::rust_grammar::verbatim;
 
 use super::restriction::IsSome;
 
-#[derive(Debug, CmpSyn, Default)]
+#[derive(Debug, CmpSyn, MoltFields, Default)]
 #[node(Node)]
 /// Lifetimes and type parameters attached to a declaration of a function,
 /// enum, trait, etc.

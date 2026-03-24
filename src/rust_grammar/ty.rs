@@ -1,5 +1,5 @@
 use crate::{NodeId, NodeList, Term, WithSpan};
-use derive_macro::CmpSyn;
+use derive_macro::{CmpSyn, MoltFields};
 use proc_macro2::{Span, TokenStream};
 
 use crate::parser::error::{self, Result};
@@ -24,7 +24,7 @@ use crate::rust_grammar::mac::{
 use crate::rust_grammar::path::{ParenthesizedGenericArguments, Path, QSelf};
 use crate::rust_grammar::{path, verbatim};
 
-#[derive(Debug, CmpSyn)]
+#[derive(Debug, CmpSyn, MoltFields)]
 #[node(Node)]
 /// The possible types that a Rust value could have.
 pub enum Type {

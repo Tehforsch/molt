@@ -156,6 +156,14 @@ macro_rules! define_kind_kws {
                 Err(input.error("Invalid kind."))
             }
         }
+
+        pub fn add_field_defs_for_node_types(defs: &mut crate::molt_lang::TypeDefinitionsBuilder) {
+            $(
+                $(
+                    defs.add::<$node_kind>();
+                )*
+            )*
+        }
     }
 }
 

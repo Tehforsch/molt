@@ -34,4 +34,4 @@ pub use crate::rust_grammar::ty::Type;
 mod node;
 mod verbatim;
 mod whitespace;
-pub use node::{Node, NodeKind, parse_node_with_kinds};
+pub use node::{Node, NodeKind, add_field_defs_for_node_types, parse_node_with_kinds};

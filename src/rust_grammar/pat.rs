@@ -1,5 +1,5 @@
 use crate::{NodeId, NodeList, RawNodeId, Term, WithSpan};
-use derive_macro::CmpSyn;
+use derive_macro::{CmpSyn, MoltFields};
 use proc_macro2::TokenStream;
 
 use crate::parser::error::{self, Result};
@@ -25,7 +25,7 @@ use crate::rust_grammar::stmt::Block;
 use crate::rust_grammar::ty::Type;
 use crate::rust_grammar::verbatim;
 
-#[derive(Debug, CmpSyn)]
+#[derive(Debug, CmpSyn, MoltFields)]
 #[node(Node)]
 /// A pattern in a local binding, function signature, match expression, or
 /// various other places.

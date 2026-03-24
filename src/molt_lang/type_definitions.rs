@@ -5,7 +5,7 @@ use crate::{
     modify::NodeSpec,
     molt_lang::{RuntimeCtx, interpreter::Value, typechecker::QualifiedType},
     node::Kinds,
-    rust_grammar::{Ident, ImplItemFn, ItemFn, Node, NodeKind},
+    rust_grammar::{Ident, ImplItemFn, ItemFn, Node, NodeKind, add_field_defs_for_node_types},
     typechecker_bug,
 };
 
@@ -55,6 +55,12 @@ pub struct TypeDef {
 impl TypeDef {
     pub(crate) fn get_field_type(&self, s: &str) -> Option<&Type> {
         self.fields.get(s).map(|f| &f.ty)
+    }
+
+    fn merge_with(&mut self, other: TypeDef) {
+        for (k, v) in other.fields {
+            self.fields.insert(k, v);
+        }
     }
 }
 
@@ -134,38 +140,99 @@ impl TypeDefinitions {
     }
 }
 
-fn get_defs_for_type<T: MoltFields + ToNode<Node>>() -> (QualifiedType, TypeDef) {
+fn get_defs_for_type<T: MoltFields>() -> (QualifiedType, TypeDef)
+where
+    <T as MoltFields>::Target: ToNode<Node>,
+{
     let mut builder = FieldDefBuilder::default();
     T::add_fields(&mut builder);
     (
-        QualifiedType::Kind(Kinds::single(<T as ToNode<Node>>::node_kind())),
+        QualifiedType::Kind(Kinds::single(
+            <<T as MoltFields>::Target as ToNode<Node>>::node_kind(),
+        )),
         builder.build(),
     )
 }
 
+#[derive(Default)]
+pub(crate) struct TypeDefinitionsBuilder {
+    defs: Vec<(QualifiedType, TypeDef)>,
+}
+
+impl TypeDefinitionsBuilder {
+    pub fn add<T: MoltFields>(&mut self)
+    where
+        <T as MoltFields>::Target: ToNode<Node>,
+    {
+        let (ty, def) = get_defs_for_type::<T>();
+        for (existing_ty, existing_def) in self.defs.iter_mut() {
+            if &ty == existing_ty {
+                existing_def.merge_with(def);
+                return;
+            }
+        }
+        self.defs.push((ty, def));
+    }
+
+    fn build(self) -> Vec<(QualifiedType, TypeDef)> {
+        self.defs
+    }
+}
+
 impl Default for TypeDefinitions {
     fn default() -> Self {
-        let defs = vec![
-            get_defs_for_type::<ItemFn>(),
-            get_defs_for_type::<ImplItemFn>(),
-        ];
-        let mut s = Self { defs };
+        let mut defs = TypeDefinitionsBuilder::default();
+        add_field_defs_for_node_types(&mut defs);
+        defs.add::<ItemFn>();
+        defs.add::<SpecialItemFn>();
+        defs.add::<ImplItemFn>();
+        defs.add::<SpecialImplItemFn>();
+
+        let mut s = Self { defs: defs.build() };
         s.merge(NodeKind::ItemFn, NodeKind::ImplItemFn);
         s
     }
 }
 
-trait MoltFields {
+pub(crate) trait MoltFields {
+    type Target;
+
     fn add_fields(b: &mut FieldDefBuilder);
 }
 
+struct SpecialItemFn;
+
+impl MoltFields for SpecialItemFn {
+    type Target = ItemFn;
+
+    fn add_fields(b: &mut FieldDefBuilder) {
+        b.add("name", |f: &ItemFn| f.sig.ident);
+    }
+}
+
+struct SpecialImplItemFn;
+
+impl MoltFields for SpecialImplItemFn {
+    type Target = ImplItemFn;
+
+    fn add_fields(b: &mut FieldDefBuilder) {
+        b.add("name", |f: &ImplItemFn| f.sig.ident);
+    }
+}
+
+impl MoltFields for Ident {
+    type Target = Self;
+
+    fn add_fields(_: &mut FieldDefBuilder) {}
+}
+
 #[derive(Default)]
-struct FieldDefBuilder {
+pub(crate) struct FieldDefBuilder {
     fields: HashMap<String, FieldDef>,
 }
 
 impl FieldDefBuilder {
-    fn add<Struct: ToNode<Node>, Field: ToNode<Node>>(
+    pub(crate) fn add<Struct: ToNode<Node>, Field: ToNode<Node>>(
         &mut self,
         name: &str,
         field_getter: impl Fn(&Struct) -> NodeId<Field> + Send + Sync + Clone + 'static,
@@ -193,19 +260,5 @@ impl FieldDefBuilder {
         TypeDef {
             fields: self.fields,
         }
-    }
-}
-
-impl MoltFields for crate::rust_grammar::ItemFn {
-    fn add_fields(builder: &mut FieldDefBuilder) {
-        builder.add("name", |f: &Self| f.sig.ident);
-        builder.add("vis", |f: &Self| f.vis);
-    }
-}
-
-impl MoltFields for crate::rust_grammar::ImplItemFn {
-    fn add_fields(builder: &mut FieldDefBuilder) {
-        builder.add("name", |f: &Self| f.sig.ident);
-        builder.add("vis", |f: &Self| f.vis);
     }
 }

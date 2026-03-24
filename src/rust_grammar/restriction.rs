@@ -1,4 +1,4 @@
-use derive_macro::CmpSyn;
+use derive_macro::{CmpSyn, MoltFields};
 
 use crate::parser::error::Result;
 use crate::parser::parse::discouraged::Speculative as _;
@@ -9,7 +9,7 @@ use crate::rust_grammar::ident::AnyIdent;
 use crate::rust_grammar::path::Path;
 use crate::term::Property;
 
-#[derive(Debug, CmpSyn)]
+#[derive(Debug, CmpSyn, MoltFields)]
 #[node(Node)]
 /// The visibility level of an item: inherited or `pub` or
 /// `pub(restricted)`.
