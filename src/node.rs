@@ -95,4 +95,15 @@ impl<NodeKind: PartialOrd + Ord + Clone + Copy + PartialEq + Eq> Kinds<NodeKind>
     pub(crate) fn len(&self) -> usize {
         self.kinds.len()
     }
+
+    pub(crate) fn merge_with(&self, kinds2: &Kinds<NodeKind>) -> Kinds<NodeKind> {
+        Kinds {
+            kinds: self
+                .kinds
+                .iter()
+                .cloned()
+                .chain(kinds2.kinds.iter().cloned())
+                .collect(),
+        }
+    }
 }

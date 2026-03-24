@@ -15,6 +15,7 @@ mod ident;
 pub use crate::rust_grammar::ident::Ident;
 mod item;
 pub use crate::rust_grammar::item::Item;
+pub(crate) use crate::rust_grammar::item::{ImplItemFn, ItemFn};
 pub mod lifetime;
 mod lit;
 pub use crate::rust_grammar::lit::{Lit, LitBool, LitInt, LitStr};
