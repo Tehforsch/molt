@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    NodeType, ToNode,
+    NodeId, ToNode,
     modify::NodeSpec,
     molt_lang::{RuntimeCtx, interpreter::Value, typechecker::QualifiedType},
     node::Kinds,
@@ -89,6 +89,8 @@ impl TypeDefinitions {
         (*field.field_access_fn)(ctx, lhs)
     }
 
+    /// Merge field definitions for kinds that are very similar, such as
+    /// `ItemFn` and `ImplItemFn`.
     fn merge(&mut self, k1: NodeKind, k2: NodeKind) {
         let entries1: Vec<_> = self
             .defs
@@ -107,7 +109,11 @@ impl TypeDefinitions {
             };
             let mut fields = HashMap::new();
             let ty = QualifiedType::Kind(kinds1.merge_with(kinds2));
-            for ((field_name1, e1), (field_name2, e2)) in e1.fields.into_iter().zip(e2.fields) {
+            let mut fields1: Vec<_> = e1.fields.into_iter().collect();
+            let mut fields2: Vec<_> = e2.fields.into_iter().collect();
+            fields1.sort_by_key(|(k, _)| k.clone()); // TODO: unnecessary clone
+            fields2.sort_by_key(|(k, _)| k.clone()); // TODO: unnecessary clone
+            for ((field_name1, e1), (field_name2, e2)) in fields1.into_iter().zip(fields2) {
                 assert_eq!(field_name1, field_name2);
                 fields.insert(
                     field_name1,
@@ -128,10 +134,12 @@ impl TypeDefinitions {
     }
 }
 
-fn get_defs_for_type<T: MoltFields<Node> + ToNode<Node>>() -> (QualifiedType, TypeDef) {
+fn get_defs_for_type<T: MoltFields + ToNode<Node>>() -> (QualifiedType, TypeDef) {
+    let mut builder = FieldDefBuilder::default();
+    T::add_fields(&mut builder);
     (
         QualifiedType::Kind(Kinds::single(<T as ToNode<Node>>::node_kind())),
-        T::get_fields(),
+        builder.build(),
     )
 }
 
@@ -147,60 +155,57 @@ impl Default for TypeDefinitions {
     }
 }
 
-trait MoltFields<Node: NodeType> {
-    fn get_fields() -> TypeDef;
+trait MoltFields {
+    fn add_fields(b: &mut FieldDefBuilder);
 }
 
-impl MoltFields<Node> for crate::rust_grammar::ItemFn {
-    fn get_fields() -> TypeDef {
-        let mut fields = HashMap::default();
+#[derive(Default)]
+struct FieldDefBuilder {
+    fields: HashMap<String, FieldDef>,
+}
 
-        fn get_fn_name(i: &RuntimeCtx, val: Value) -> Value {
-            let Value::Node(NodeSpec::Real(val)) = val else {
-                typechecker_bug!();
-            };
-            let f: &crate::rust_grammar::Node = i.real_ctx.get(val).unwrap_item();
-            if let crate::rust_grammar::Node::ItemFn(f) = f {
-                Value::Node(NodeSpec::Real(f.sig.ident.into()))
-            } else {
-                typechecker_bug!()
-            }
-        }
-
-        fields.insert(
-            "name".into(),
+impl FieldDefBuilder {
+    fn add<Struct: ToNode<Node>, Field: ToNode<Node>>(
+        &mut self,
+        name: &str,
+        field_getter: impl Fn(&Struct) -> NodeId<Field> + Send + Sync + Clone + 'static,
+    ) {
+        self.fields.insert(
+            name.into(),
             FieldDef {
-                ty: Type::Kind(Kinds::single(NodeKind::Ident)),
-                field_access_fn: Box::new(get_fn_name),
+                ty: Type::Kind(Kinds::single(Field::node_kind())),
+                field_access_fn: Box::new(move |ctx, val| {
+                    let Value::Node(NodeSpec::Real(val)) = val else {
+                        typechecker_bug!();
+                    };
+                    let f: &crate::rust_grammar::Node = ctx.real_ctx.get(val).unwrap_item();
+                    if let Some(item) = Struct::from_node_ref(f) {
+                        Value::Node(NodeSpec::Real(field_getter(item).into()))
+                    } else {
+                        typechecker_bug!()
+                    }
+                }),
             },
         );
-        TypeDef { fields }
+    }
+
+    fn build(self) -> TypeDef {
+        TypeDef {
+            fields: self.fields,
+        }
     }
 }
 
-impl MoltFields<Node> for crate::rust_grammar::ImplItemFn {
-    fn get_fields() -> TypeDef {
-        let mut fields = HashMap::default();
+impl MoltFields for crate::rust_grammar::ItemFn {
+    fn add_fields(builder: &mut FieldDefBuilder) {
+        builder.add("name", |f: &Self| f.sig.ident);
+        builder.add("vis", |f: &Self| f.vis);
+    }
+}
 
-        fn get_fn_name(i: &RuntimeCtx, val: Value) -> Value {
-            let Value::Node(NodeSpec::Real(val)) = val else {
-                typechecker_bug!();
-            };
-            let f: &crate::rust_grammar::Node = i.real_ctx.get(val).unwrap_item();
-            if let crate::rust_grammar::Node::ImplItemFn(f) = f {
-                Value::Node(NodeSpec::Real(f.sig.ident.into()))
-            } else {
-                typechecker_bug!()
-            }
-        }
-
-        fields.insert(
-            "name".into(),
-            FieldDef {
-                ty: Type::Kind(Kinds::single(NodeKind::Ident)),
-                field_access_fn: Box::new(get_fn_name),
-            },
-        );
-        TypeDef { fields }
+impl MoltFields for crate::rust_grammar::ImplItemFn {
+    fn add_fields(builder: &mut FieldDefBuilder) {
+        builder.add("name", |f: &Self| f.sig.ident);
+        builder.add("vis", |f: &Self| f.vis);
     }
 }
