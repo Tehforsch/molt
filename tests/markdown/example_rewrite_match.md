@@ -3,13 +3,13 @@ fn main(input: Expr) {
     let name: Lit;
     let var: Ident;
     let arms: List<Arm>;
-    let { match $var.named($name) { $arms } } = input;
+    let { match $var.fn1($name) { $arms } } = input;
     let k: Pat;
     let result: Expr;
-    input = { match $var.named($name) { $arms } };
+    input = { Ok(match $var.fn2($name) { $arms }) };
     for arm in arms {
-        if let { Some(Foo::Value($k)) => $result } = arm {
-            arm = { Some($k) => $result, };
+        if let { Some(Foo::Value($k)) } = arm.pat {
+            arm.pat = { Some($k) };
         }
     }
 }
@@ -18,7 +18,7 @@ fn main(input: Expr) {
 
 ```rust
 fn main() {
-    match foo.named("name") {
+    match foo.fn1("name") {
         Some(Foo::Value(val)) => 1,
         None => 2,
     }
@@ -27,6 +27,6 @@ fn main() {
 
 ```rust reference
 fn main() {
-    match foo.named("name") { Some(val) => 1, None => 2, }
+    Ok(match foo.fn2("name") { Some(val) => 1, None => 2, })
 }
 ```
