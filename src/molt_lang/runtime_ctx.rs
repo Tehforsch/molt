@@ -3,7 +3,7 @@ use codespan_reporting::files::Files;
 use crate::{
     Config, Ctx, FileId, Input, Span,
     change_buffer::ChangeBuffer,
-    modify::NodeSpec,
+    modify::{RealNodeRef, NodeRef},
     molt_lang::{ParsedPat, PatId, type_definitions::TypeDefinitions},
     rust_grammar::Node,
     storage::Storage,
@@ -45,10 +45,10 @@ impl RuntimeCtx<'_> {
         &self.pats[id]
     }
 
-    pub(crate) fn get_span(&self, new: &NodeSpec) -> Span {
+    pub(crate) fn get_span(&self, new: &RealNodeRef) -> Span {
         match new {
-            NodeSpec::Real(id) => self.real_ctx.get_span(*id),
-            NodeSpec::List(ids) => {
+            RealNodeRef::Real(id) => self.real_ctx.get_span(*id),
+            RealNodeRef::List(ids) => {
                 if ids.is_empty() {
                     todo!()
                 }
@@ -58,23 +58,18 @@ impl RuntimeCtx<'_> {
                 }
                 span
             }
-            NodeSpec::Molt {
-                id: _,
-                vars: _,
-                pat: _,
-            } => todo!(),
         }
     }
 
-    pub(crate) fn print(&self, new: &NodeSpec) -> String {
+    pub(crate) fn print(&self, new: &NodeRef) -> String {
         match new {
-            NodeSpec::List(ids) => ids
+            NodeRef::List(ids) => ids
                 .iter()
                 .map(|id| self.print(id))
                 .collect::<Vec<String>>()
                 .join(" "),
-            NodeSpec::Real(id) => self.real_ctx.print(*id, self.real_code()).into(),
-            NodeSpec::Molt { pat, id, vars } => {
+            NodeRef::Real(id) => self.real_ctx.print(*id, self.real_code()).into(),
+            NodeRef::Molt { pat, id, vars } => {
                 let ctx = &self.pats[*pat].ctx;
                 let mut output =
                     ChangeBuffer::new_subspan(self.molt_code().into(), ctx.get_span(*id));

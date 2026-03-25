@@ -1,4 +1,6 @@
 use crate::{
+    ModMap,
+    modify::{RealNodeRef, NodeRef},
     molt_lang::{index_types::VarId, interpreter::value::Value},
     storage::Storage,
 };
@@ -66,11 +68,15 @@ impl VarStack {
 
 pub(super) struct Vars {
     storage: Storage<VarId, VarStack>,
+    modifications: ModMap,
 }
 
 impl Vars {
     pub(crate) fn new(inner: Storage<VarId, VarStack>) -> Self {
-        Self { storage: inner }
+        Self {
+            storage: inner,
+            modifications: ModMap::default(),
+        }
     }
 
     #[must_use]
@@ -79,8 +85,8 @@ impl Vars {
         VarHandle(id)
     }
 
-    pub(crate) fn get(&self, id: VarId) -> Value {
-        self.storage[id].get()
+    pub(crate) fn get(&self, var: VarId) -> Value {
+        self.storage[var].get()
     }
 
     pub(crate) fn pop(&mut self, handle: VarHandle) -> Value {
@@ -98,5 +104,14 @@ impl Vars {
         // there is another handle out there that will
         // take care of the var.
         self.set(id, new_val).leave_on_stack();
+    }
+
+    pub(crate) fn modifications(self) -> ModMap {
+        self.modifications
+    }
+
+    pub(crate) fn modify(&mut self, old: NodeRef, new: NodeRef) {
+        let old = RealNodeRef::from_target(old);
+        self.modifications.insert(old, new)
     }
 }

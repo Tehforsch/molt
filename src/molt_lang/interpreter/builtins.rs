@@ -2,7 +2,7 @@ use codespan_reporting::diagnostic::Label;
 
 use crate::{
     Diagnostic, FileId, RawNodeId,
-    modify::NodeSpec,
+    modify::NodeRef,
     molt_lang::{Interpreter, InterpreterError, builtin_fn::BuiltinFn, interpreter::value::Value},
 };
 
@@ -54,10 +54,10 @@ impl<'src> Interpreter<'src> {
     fn eval_dbg(&self, args: &[Value]) {
         for val in args.iter() {
             match val {
-                Value::Node(NodeSpec::Real(id)) => {
+                Value::Node(NodeRef::Real(id)) => {
                     self.emit_diagnostic(self.context.real_id, *id);
                 }
-                Value::Node(NodeSpec::Molt { id, .. }) => {
+                Value::Node(NodeRef::Molt { id, .. }) => {
                     self.emit_diagnostic(self.context.molt_id, *id);
                 }
                 val => self.print_val(val),
@@ -70,7 +70,7 @@ impl<'src> Interpreter<'src> {
             Value::String(s) => s.clone(),
             Value::Int(x) => format!("{}", x),
             Value::Bool(b) => format!("{}", b),
-            Value::Node(NodeSpec::Real(id)) => self
+            Value::Node(NodeRef::Real(id)) => self
                 .context
                 .real_ctx()
                 .print(*id, self.context.real_src())

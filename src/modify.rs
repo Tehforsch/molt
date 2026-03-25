@@ -6,6 +6,7 @@ use std::io::{self, Write};
 use std::path::Path;
 
 use crate::change_buffer::ChangeBuffer;
+use crate::ctx::Mode;
 use crate::input::FilePath;
 use crate::molt_lang::{PatId, PatVar, RuntimeCtx};
 use crate::rust_grammar::Node;
@@ -23,36 +24,56 @@ pub enum ModifyError {
 
 pub type Result<T, E = ModifyError> = std::result::Result<T, E>;
 
-#[derive(Default)]
-pub(crate) struct ModMap {
-    mods: Vec<Modification>,
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub enum RealNodeRef {
+    /// Represents a node in the real file.
+    Real(RawNodeId),
+    /// Represents a list in the real file.
+    List(Vec<RealNodeRef>),
 }
 
-impl ModMap {
-    fn iter(&self) -> impl Iterator<Item = &Modification> {
-        self.mods.iter()
+impl RealNodeRef {
+    pub(crate) fn from_target(old: NodeRef) -> RealNodeRef {
+        match old {
+            NodeRef::Real(id) => {
+                assert_eq!(id.mode(), Mode::Real);
+                Self::Real(id)
+            }
+            NodeRef::List(nodes) => {
+                Self::List(nodes.into_iter().map(RealNodeRef::from_target).collect())
+            }
+            NodeRef::Molt { id, pat, vars } => unreachable!(),
+        }
     }
-
-    pub(crate) fn extend(&mut self, modifications: Vec<Modification>) {
-        self.mods.extend(modifications);
-    }
-}
-
-#[derive(Debug)]
-pub struct Modification {
-    pub old: NodeSpec,
-    pub new: NodeSpec,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum NodeSpec {
-    Real(RawNodeId), // Refers to a node in the real file
+pub enum NodeRef {
+    /// Represents a node in the real file.
+    Real(RawNodeId),
+    /// Represents a list.
+    List(Vec<NodeRef>),
+    /// Represents a node in the molt file.
     Molt {
         id: RawNodeId,
         pat: PatId,
-        vars: Vec<NodeSpec>,
-    }, // Refers to a node in the molt file
-    List(Vec<NodeSpec>), // A list of nodes
+        vars: Vec<NodeRef>,
+    },
+}
+
+#[derive(Default)]
+pub(crate) struct ModMap {
+    mods: HashMap<RealNodeRef, NodeRef>,
+}
+
+impl ModMap {
+    pub(crate) fn extend(&mut self, other: ModMap) {
+        self.mods.extend(other.mods);
+    }
+
+    pub(crate) fn insert(&mut self, old: RealNodeRef, new: NodeRef) {
+        self.mods.insert(old, new);
+    }
 }
 
 #[derive(Clone)]
@@ -84,8 +105,8 @@ impl<'a> Modify<'a> {
             cargo_root,
         };
         let num_modifications = modifications.mods.len();
-        for m in modifications.mods.into_iter() {
-            modify.apply(m)?;
+        for (src, dst) in modifications.mods.into_iter() {
+            modify.apply(src, dst)?;
         }
         Ok(FileModificationResult {
             new_code: modify.code,
@@ -93,14 +114,14 @@ impl<'a> Modify<'a> {
         })
     }
 
-    fn apply(&mut self, m: Modification) -> Result<()> {
-        assert!(matches!(m.old, NodeSpec::Real(_))); // TODO: resolve chain if not the case
-        let span = self.ctx.get_span(&m.old);
-        self.code.make_change(span, &self.get_modified_code(&m.new));
+    fn apply(&mut self, old: RealNodeRef, new: NodeRef) -> Result<()> {
+        assert!(matches!(old, RealNodeRef::Real(_))); // TODO: work with lists?
+        let span = self.ctx.get_span(&old);
+        self.code.make_change(span, &self.get_modified_code(&new));
         Ok(())
     }
 
-    fn get_modified_code(&self, new: &NodeSpec) -> String {
+    fn get_modified_code(&self, new: &NodeRef) -> String {
         self.ctx.print(new)
     }
 }

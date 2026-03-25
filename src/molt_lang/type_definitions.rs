@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     NodeId, ToNode,
-    modify::NodeSpec,
+    modify::NodeRef,
     molt_lang::{RuntimeCtx, interpreter::Value, typechecker::QualifiedType},
     node::Kinds,
     rust_grammar::{Ident, ImplItemFn, ItemFn, Node, NodeKind, add_field_defs_for_node_types},
@@ -159,12 +159,12 @@ impl FieldDefBuilder {
             FieldDef {
                 ty: Type::Kind(Kinds::single(Field::node_kind())),
                 field_access_fn: Box::new(move |ctx, val| {
-                    let Value::Node(NodeSpec::Real(val)) = val else {
+                    let Value::Node(NodeRef::Real(val)) = val else {
                         typechecker_bug!();
                     };
                     let f: &crate::rust_grammar::Node = ctx.real_ctx.get(val).unwrap_item();
                     if let Some(item) = Struct::from_node_ref(f) {
-                        Value::Node(NodeSpec::Real(field_getter(item).into()))
+                        Value::Node(NodeRef::Real(field_getter(item).into()))
                     } else {
                         typechecker_bug!()
                     }
