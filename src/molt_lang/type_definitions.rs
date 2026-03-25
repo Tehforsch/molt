@@ -6,7 +6,7 @@ use crate::{
     molt_lang::{RuntimeCtx, interpreter::Value, typechecker::QualifiedType},
     node::Kinds,
     rust_grammar::{Ident, ImplItemFn, ItemFn, Node, NodeKind, add_field_defs_for_node_types},
-    typechecker_bug,
+    typeck_bug,
 };
 
 // Trick the trait solver into allowing a clone of the needed function.
@@ -92,10 +92,10 @@ impl TypeDefinitions {
     ) -> Value {
         let lhs_ty = lhs.get_type(ctx);
         let Some(def) = self.get(&lhs_ty) else {
-            typechecker_bug!()
+            typeck_bug!()
         };
         let Some(field) = def.fields.get(&field_name.to_string()) else {
-            typechecker_bug!()
+            typeck_bug!()
         };
         (*field.field_access_fn)(ctx, lhs)
     }
@@ -168,13 +168,13 @@ impl FieldDefBuilder {
                 ty: QualifiedType::Kind(Kinds::single(Field::node_kind())),
                 field_access_fn: Box::new(move |ctx, val| {
                     let Value::Node(NodeRef::Real(val)) = val else {
-                        typechecker_bug!();
+                        typeck_bug!();
                     };
                     let f: &crate::rust_grammar::Node = ctx.real_ctx.get(val).unwrap_item();
                     if let Some(item) = Struct::from_node_ref(f) {
                         Value::Node(NodeRef::Real(field_getter(item).into()))
                     } else {
-                        typechecker_bug!()
+                        typeck_bug!()
                     }
                 }),
             },
@@ -194,7 +194,7 @@ impl FieldDefBuilder {
                 )))),
                 field_access_fn: Box::new(move |ctx, val| {
                     let Value::Node(NodeRef::Real(val)) = val else {
-                        typechecker_bug!();
+                        typeck_bug!();
                     };
                     let f: &crate::rust_grammar::Node = ctx.real_ctx.get(val).unwrap_item();
                     if let Some(item) = Struct::from_node_ref(f) {
@@ -207,7 +207,7 @@ impl FieldDefBuilder {
                                 .collect(),
                         ))
                     } else {
-                        typechecker_bug!()
+                        typeck_bug!()
                     }
                 }),
             },

@@ -24,13 +24,21 @@ pub(super) use value::Value;
 use error::Result;
 
 #[macro_export]
-macro_rules! typechecker_bug {
+macro_rules! typeck_bug {
     () => {
         unreachable!("Expected different type, this is a bug in the typechecker.")
     };
 }
 
-use typechecker_bug;
+// Usage: typechecker_ensures!(Value::Node(node) = x);
+#[macro_export]
+macro_rules! typeck_ensures {
+    ($pat: pat = $expr: expr) => {
+        let $pat = $expr else {
+            unreachable!("Expected different type, this is a bug in the typechecker.")
+        };
+    };
+}
 
 #[derive(Default)]
 struct Scope {
@@ -110,9 +118,7 @@ impl<'a> Interpreter<'a> {
         if f.args.len() != 1 {
             return Err(Error::InvalidMainFn);
         } else {
-            let Type::Kind(kind) = &f.args[0].type_ else {
-                unreachable!() // TODO: Ensure type checker makes sure this never happens.
-            };
+            typeck_ensures!(Type::Kind(kind) = &f.args[0].type_);
             if !self
                 .context
                 .real_ctx
@@ -159,7 +165,7 @@ impl<'a> Interpreter<'a> {
             Value::BuiltinFn(builtin_fn) => {
                 self.eval_builtin(args, builtin_fn).map(StmtValue::Value)
             }
-            _ => unreachable!(), // TODO: verify in type checker.
+            _ => typeck_bug!(),
         }
     }
 
@@ -273,16 +279,13 @@ impl<'a> Interpreter<'a> {
                         inner
                             .into_iter()
                             .map(|val| {
-                                if let Value::Node(val) = val {
-                                    val
-                                } else {
-                                    typechecker_bug!()
-                                }
+                                typeck_ensures!(Value::Node(val) = val);
+                                val
                             })
                             .collect(),
                     )
                 } else {
-                    typechecker_bug!();
+                    typeck_bug!();
                 }
             })
             .collect();
@@ -350,7 +353,7 @@ impl<'a> Interpreter<'a> {
         let list = match iterable {
             Value::Node(NodeRef::List(list)) => list.into_iter().map(Value::Node).collect(),
             Value::List(values) => values,
-            _ => typechecker_bug!(),
+            _ => typeck_bug!(),
         };
         for val in list.into_iter() {
             self.eval_variable_init(scope, &for_.lhs, val)?;
@@ -397,43 +400,36 @@ impl<'a> Interpreter<'a> {
                 matcher.add_var(var.ctx_id, previous_binding);
             }
         }
-        if let Value::Node(NodeRef::Real(real)) = real_id {
-            let match_ = matcher.get_matches(pat.node, real);
-            if let Some(match_) = match_ {
-                for var in match_.iter_vars() {
-                    let bound_to = match_.get_binding(var).id.unwrap();
-                    let var_id = pat.get_var_id(var);
-                    scope.add(self.vars.set(var_id, Value::Node(NodeRef::Real(bound_to))));
-                }
-                for var in match_.iter_list_vars() {
-                    let ids = match_.get_list_binding(var).ids.as_ref().unwrap();
-                    let var_id = pat.get_var_id(var);
-                    let list = ids
-                        .iter()
-                        .map(|id| Value::Node(NodeRef::Real(*id)))
-                        .collect();
-                    scope.add(self.vars.set(var_id, Value::List(list)));
-                }
-            } else {
-                return Ok(Some(StmtValue::NoMatch));
+        typeck_ensures!(Value::Node(NodeRef::Real(real)) = real_id);
+        let match_ = matcher.get_matches(pat.node, real);
+        if let Some(match_) = match_ {
+            for var in match_.iter_vars() {
+                let bound_to = match_.get_binding(var).id.unwrap();
+                let var_id = pat.get_var_id(var);
+                scope.add(self.vars.set(var_id, Value::Node(NodeRef::Real(bound_to))));
+            }
+            for var in match_.iter_list_vars() {
+                let ids = match_.get_list_binding(var).ids.as_ref().unwrap();
+                let var_id = pat.get_var_id(var);
+                let list = ids
+                    .iter()
+                    .map(|id| Value::Node(NodeRef::Real(*id)))
+                    .collect();
+                scope.add(self.vars.set(var_id, Value::List(list)));
             }
         } else {
-            typechecker_bug!()
-        };
+            return Ok(Some(StmtValue::NoMatch));
+        }
         Ok(None)
     }
 
     fn get_list_binding(&mut self, var: &super::PatVar) -> Option<Vec<RawNodeId>> {
         self.vars.try_get(var.var_id).map(|val| {
-            let Value::List(items) = val else {
-                typechecker_bug!()
-            };
+            typeck_ensures!(Value::List(items) = val);
             items
                 .iter()
                 .map(|v| {
-                    let Value::Node(NodeRef::Real(id)) = v else {
-                        typechecker_bug!()
-                    };
+                    typeck_ensures!(Value::Node(NodeRef::Real(id)) = v);
                     *id
                 })
                 .collect()
@@ -442,9 +438,7 @@ impl<'a> Interpreter<'a> {
 
     fn get_single_binding(&mut self, var: &super::PatVar) -> Option<RawNodeId> {
         self.vars.try_get(var.var_id).map(|val| {
-            let Value::Node(NodeRef::Real(bound_to)) = val else {
-                typechecker_bug!()
-            };
+            typeck_ensures!(Value::Node(NodeRef::Real(bound_to)) = val);
             bound_to
         })
     }
@@ -470,9 +464,7 @@ impl<'a> Interpreter<'a> {
         let mut run_else = true;
         for (cond, block) in &if_.if_branches {
             let val = self.eval_expr(cond)?;
-            let Value::Bool(val) = val else {
-                typechecker_bug!()
-            };
+            typeck_ensures!(Value::Bool(val) = val);
             if val {
                 run_else = false;
                 self.eval_block(block)?;
@@ -498,14 +490,10 @@ impl<'a> Interpreter<'a> {
                 Value::Node(previous_id.clone()),
                 field,
             );
-            let Value::Node(field_val) = field_val else {
-                typechecker_bug!();
-            };
+            typeck_ensures!(Value::Node(field_val) = field_val);
             self.eval_node_assignment(lhs, &field_val, rhs)
         } else {
-            let Value::Node(rhs) = rhs else {
-                typechecker_bug!();
-            };
+            typeck_ensures!(Value::Node(rhs) = rhs);
             self.vars.modify(previous_id.clone(), rhs.clone());
             Ok(Value::Node(rhs))
         }

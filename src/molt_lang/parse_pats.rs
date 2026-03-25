@@ -15,7 +15,8 @@ use crate::parser;
 use crate::rust_grammar::Node;
 use crate::rust_grammar::parse_node_with_kinds;
 use crate::storage::Storage;
-use crate::typechecker_bug;
+use crate::typeck_bug;
+use crate::typeck_ensures;
 
 pub(crate) type Error = parser::Error;
 
@@ -51,12 +52,10 @@ fn parse_pat(
             let kind = match typeck.get_type(*var_id) {
                 QualifiedType::Kind(kind) => VarKind::Single(kind),
                 QualifiedType::List(ty) => {
-                    let QualifiedType::Kind(kind) = *ty else {
-                        typechecker_bug!()
-                    };
+                    typeck_ensures!(QualifiedType::Kind(kind) = *ty);
                     VarKind::List(kind)
                 }
-                _ => typechecker_bug!(),
+                _ => typeck_bug!(),
             };
             let ctx_id = pat_ctx.add_var::<Node>(CtxVar::new(name.clone(), kind));
             PatVar {

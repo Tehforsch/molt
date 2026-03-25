@@ -4,6 +4,7 @@ use crate::{
     Diagnostic, FileId, RawNodeId,
     modify::NodeRef,
     molt_lang::{Interpreter, InterpreterError, builtin_fn::BuiltinFn, interpreter::value::Value},
+    typeck_ensures,
 };
 
 use super::Result;
@@ -25,14 +26,11 @@ impl<'src> Interpreter<'src> {
 
     fn eval_assert(&self, args: &[Value]) -> Result<()> {
         assert_eq!(args.len(), 1); // Resolver makes sure
-        if let Value::Bool(b) = args[0] {
-            if !b {
-                Err(InterpreterError::Assertion)
-            } else {
-                Ok(())
-            }
+        typeck_ensures!(Value::Bool(b) = args[0]);
+        if !b {
+            Err(InterpreterError::Assertion)
         } else {
-            super::typechecker_bug!()
+            Ok(())
         }
     }
 
