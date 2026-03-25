@@ -1,6 +1,7 @@
 ```molt
 fn main(input: Fn) {
     input.name = { bar };
+    input.vis = { pub };
 }
 ```
 
@@ -16,12 +17,12 @@ impl Foo {
 ```
 
 ```rust reference
-fn bar() {
+pub fn bar() {
     println!("hello");
 }
 
 impl Foo {
-    fn bar(input: Fn) {
+    pub fn bar(input: Fn) {
     }
 }
 ```

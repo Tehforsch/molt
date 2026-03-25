@@ -1,6 +1,7 @@
 ```molt
 fn main(input: Fn) {
     print(input.name);
+    print(input.vis);
 }
 ```
 
@@ -10,12 +11,14 @@ fn main() {
 }
 
 impl Foo {
-    fn foo(input: Fn) {
+    pub fn foo(input: Fn) {
     }
 }
 ```
 
 ```output
 main
+
 foo
+pub
 ```
