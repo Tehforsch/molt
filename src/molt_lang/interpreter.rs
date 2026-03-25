@@ -289,6 +289,17 @@ impl<'a> Interpreter<'a> {
                 }
             })
             .collect();
+        // This takes care of a particular case of assignments to
+        // a molt variable enclosed in a pattern, i.e. `a = {$b}`.
+        // It ensures we replace the molt variable with whatever
+        // it is bound to instead of trying to perform a modification
+        // by rewriting it with a variable that is only meaningful
+        // within the interpreter. This feels hacky. See the markdown
+        // test `replace_with_var.md`
+        if pat.node.is_var() {
+            let var_id = pat.get_var_id(pat.node);
+            return Ok(self.vars.get(var_id));
+        }
         Ok(Value::Node(NodeRef::Molt {
             pat: *pat_id,
             id: pat.node,
