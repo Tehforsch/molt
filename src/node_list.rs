@@ -10,12 +10,25 @@ pub struct RealNodeList<T, P> {
     _marker: PhantomData<P>,
 }
 
+impl<T, P> Clone for RealNodeList<T, P> {
+    fn clone(&self) -> Self {
+        Self {
+            items: self.items.clone(),
+            _marker: PhantomData,
+        }
+    }
+}
+
 impl<T, P> RealNodeList<T, P> {
     pub fn new(items: Vec<NodeId<T>>) -> Self {
         Self {
             items,
             _marker: PhantomData,
         }
+    }
+
+    pub fn items(self) -> Vec<NodeId<T>> {
+        self.items
     }
 }
 

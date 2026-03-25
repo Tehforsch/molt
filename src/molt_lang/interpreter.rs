@@ -347,8 +347,10 @@ impl<'a> Interpreter<'a> {
 
     fn eval_for(&mut self, scope: &mut Scope, for_: &For) -> Result<StmtValue> {
         let iterable = self.eval_expr(&for_.iterable)?;
-        let Value::List(list) = iterable else {
-            typechecker_bug!()
+        let list = match iterable {
+            Value::Node(NodeRef::List(list)) => list.into_iter().map(Value::Node).collect(),
+            Value::List(values) => values,
+            _ => typechecker_bug!(),
         };
         for val in list.into_iter() {
             self.eval_variable_init(scope, &for_.lhs, val)?;

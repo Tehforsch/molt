@@ -1,15 +1,13 @@
 use std::collections::HashMap;
 
 use crate::{
-    NodeId, ToNode,
+    NodeId, NodeList, ToNode,
     modify::NodeRef,
     molt_lang::{RuntimeCtx, interpreter::Value, typechecker::QualifiedType},
     node::Kinds,
     rust_grammar::{Ident, ImplItemFn, ItemFn, Node, NodeKind, add_field_defs_for_node_types},
     typechecker_bug,
 };
-
-use super::typechecker::Type;
 
 // Trick the trait solver into allowing a clone of the needed function.
 trait FieldAcc: Fn(&RuntimeCtx, Value) -> Value + Sync + Send {
@@ -37,7 +35,7 @@ impl Clone for Box<dyn '_ + FieldAcc> {
 }
 
 pub struct FieldDef {
-    ty: Type,
+    ty: QualifiedType,
     field_access_fn: Box<dyn FieldAcc>,
 }
 
@@ -53,7 +51,7 @@ pub struct TypeDef {
 }
 
 impl TypeDef {
-    pub(crate) fn get_field_type(&self, s: &str) -> Option<&Type> {
+    pub(crate) fn get_field_type(&self, s: &str) -> Option<&QualifiedType> {
         self.fields.get(s).map(|f| &f.ty)
     }
 
@@ -131,6 +129,7 @@ impl MoltFields for SpecialItemFn {
     fn add_fields(b: &mut FieldDefBuilder) {
         b.add("name", |f: &ItemFn| f.sig.ident);
         b.add("generics", |f: &ItemFn| f.sig.generics);
+        b.add_list("stmts", |f: &ItemFn| f.block.stmts.clone());
     }
 }
 
@@ -142,6 +141,7 @@ impl MoltFields for SpecialImplItemFn {
     fn add_fields(b: &mut FieldDefBuilder) {
         b.add("name", |f: &ImplItemFn| f.sig.ident);
         b.add("generics", |f: &ItemFn| f.sig.generics);
+        b.add_list("stmts", |f: &ItemFn| f.block.stmts.clone());
     }
 }
 
@@ -165,7 +165,7 @@ impl FieldDefBuilder {
         self.fields.insert(
             name.into(),
             FieldDef {
-                ty: Type::Kind(Kinds::single(Field::node_kind())),
+                ty: QualifiedType::Kind(Kinds::single(Field::node_kind())),
                 field_access_fn: Box::new(move |ctx, val| {
                     let Value::Node(NodeRef::Real(val)) = val else {
                         typechecker_bug!();
@@ -181,6 +181,38 @@ impl FieldDefBuilder {
         );
     }
 
+    pub(crate) fn add_list<Struct: ToNode<Node>, Field: ToNode<Node>, P>(
+        &mut self,
+        name: &str,
+        field_getter: impl Fn(&Struct) -> NodeList<Field, P> + Send + Sync + Clone + 'static,
+    ) {
+        self.fields.insert(
+            name.into(),
+            FieldDef {
+                ty: QualifiedType::List(Box::new(QualifiedType::Kind(Kinds::single(
+                    Field::node_kind(),
+                )))),
+                field_access_fn: Box::new(move |ctx, val| {
+                    let Value::Node(NodeRef::Real(val)) = val else {
+                        typechecker_bug!();
+                    };
+                    let f: &crate::rust_grammar::Node = ctx.real_ctx.get(val).unwrap_item();
+                    if let Some(item) = Struct::from_node_ref(f) {
+                        Value::Node(NodeRef::List(
+                            field_getter(item)
+                                .unwrap_item()
+                                .items()
+                                .into_iter()
+                                .map(|item| NodeRef::Real(item.into()))
+                                .collect(),
+                        ))
+                    } else {
+                        typechecker_bug!()
+                    }
+                }),
+            },
+        );
+    }
     fn build(self) -> TypeDef {
         TypeDef {
             fields: self.fields,

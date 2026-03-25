@@ -40,6 +40,12 @@ fn generate_field_adds(fields: &Fields) -> Vec<proc_macro2::TokenStream> {
                 Some(quote! {
                     builder.add(#field_name_str, |f: &Self| f.#field_name);
                 })
+            } else if is_node_list_type(&field.ty) {
+                let field_name = field.ident.as_ref()?;
+                let field_name_str = field_name.to_string();
+                Some(quote! {
+                    builder.add_list(#field_name_str, |f: &Self| f.#field_name);
+                })
             } else {
                 None
             }
@@ -55,5 +61,16 @@ fn is_node_id_type(ty: &Type) -> bool {
         return false;
     };
     last_segment.ident == "NodeId"
+        && matches!(last_segment.arguments, PathArguments::AngleBracketed(_))
+}
+
+fn is_node_list_type(ty: &Type) -> bool {
+    let Type::Path(type_path) = ty else {
+        return false;
+    };
+    let Some(last_segment) = type_path.path.segments.last() else {
+        return false;
+    };
+    last_segment.ident == "NodeList"
         && matches!(last_segment.arguments, PathArguments::AngleBracketed(_))
 }

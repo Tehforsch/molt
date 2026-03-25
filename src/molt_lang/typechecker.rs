@@ -58,6 +58,26 @@ impl Storage<TypeId, Type> {
             ),
         }
     }
+
+    fn get_unqualified(&mut self, q: &QualifiedType) -> Type {
+        let mut make_type = |t: &QualifiedType| {
+            let t = self.get_unqualified(t);
+            self.add(t)
+        };
+        match q {
+            QualifiedType::Var => Type::Var,
+            QualifiedType::Kind(kinds) => Type::Kind(kinds.clone()),
+            QualifiedType::Int => Type::Int,
+            QualifiedType::Bool => Type::Bool,
+            QualifiedType::Str => Type::Str,
+            QualifiedType::Unit => Type::Unit,
+            QualifiedType::List(ty) => Type::List(make_type(&*ty)),
+            QualifiedType::Fun(inputs, output) => {
+                let output = make_type(&*output);
+                Type::Fun(inputs.into_iter().map(make_type).collect(), output)
+            }
+        }
+    }
 }
 
 impl Error {
@@ -220,14 +240,14 @@ impl std::fmt::Display for QualifiedType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             QualifiedType::Kind(kinds) => {
-                write!(f, "[")?;
+                write!(f, "Node(")?;
                 for (i, k) in kinds.iter().enumerate() {
                     write!(f, "{}", k)?;
                     if i != kinds.len() - 1 {
-                        write!(f, ", ")?;
+                        write!(f, " | ")?;
                     }
                 }
-                write!(f, "]")?;
+                write!(f, ")")?;
                 Ok(())
             }
             QualifiedType::Var => write!(f, "var"),
@@ -862,7 +882,7 @@ impl<'a> Typechecker<'a> {
         self.types.get_qualified(ty)
     }
 
-    fn get_field_type(&self, lhs: TypeId, field: &Ident) -> Result<Type> {
+    fn get_field_type(&mut self, lhs: TypeId, field: &Ident) -> Result<Type> {
         let lhs = &self.types[self.resolve(lhs)];
         let lhs = self.get_qualified(lhs);
         match &lhs {
@@ -870,7 +890,7 @@ impl<'a> Typechecker<'a> {
             ty => {
                 if let Some(def) = self.defs.get(ty) {
                     if let Some(field_type) = def.get_field_type(&field.to_string()) {
-                        Ok(field_type.clone())
+                        Ok(self.types.get_unqualified(field_type))
                     } else {
                         Err(Error::no_such_field(lhs, field, def.field_names()))
                     }
