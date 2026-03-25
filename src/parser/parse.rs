@@ -554,15 +554,16 @@ impl<'a> ParseBuffer<'a> {
     }
 
     pub(crate) fn span_from_marker(&self, marker: PosMarker) -> crate::Span {
-        let end = self.cursor().prev_span().byte_range().end;
+        let current_start = self.cursor().span().byte_range().start;
         // While parsing some items (notably visibilities),
         // we might end up parsing nothing (if no visibility
         // is given). With the naive approach, we would end up
         // returning an invalid span (with end < start), so we
         // add a special case here:
-        if end < marker.start {
+        if current_start == marker.start {
             crate::Span::new(marker.start, marker.start)
         } else {
+            let end = self.cursor().prev_span().byte_range().end;
             crate::Span::new(marker.start, end)
         }
     }
