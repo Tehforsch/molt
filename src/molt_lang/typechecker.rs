@@ -257,6 +257,7 @@ pub(super) struct TypecheckResult {
     substitutions: HashMap<TypeId, TypeId>,
     vars: HashMap<VarId, VarType>,
     pat_types: HashMap<PatId, TypeId>,
+    pub defs: TypeDefinitions,
 }
 
 impl TypecheckResult {
@@ -315,12 +316,12 @@ pub(super) struct Typechecker<'a> {
     var_names: &'a Storage<VarId, Ident>,
     pats: &'a Storage<PatId, UnparsedPat>,
     pat_types: HashMap<PatId, TypeId>,
-    definitions: &'a TypeDefinitions,
+    defs: TypeDefinitions,
 }
 
 impl<'a> Typechecker<'a> {
     fn new(
-        definitions: &'a TypeDefinitions,
+        definitions: TypeDefinitions,
         var_names: &'a Storage<VarId, Ident>,
         pats: &'a Storage<PatId, UnparsedPat>,
     ) -> Self {
@@ -331,15 +332,13 @@ impl<'a> Typechecker<'a> {
             var_names,
             pat_types: Default::default(),
             pats,
-            definitions,
+            defs: definitions,
         }
     }
 
-    pub(crate) fn check(
-        definitions: &'a TypeDefinitions,
-        file: &'a ResolvedMoltFile,
-    ) -> Result<TypecheckResult> {
-        let t = Self::new(definitions, &file.var_names, &file.pats);
+    pub(crate) fn check(file: &'a ResolvedMoltFile) -> Result<TypecheckResult> {
+        let defs = TypeDefinitions::default();
+        let t = Self::new(defs, &file.var_names, &file.pats);
         t.check_internal(file)
     }
 
@@ -357,6 +356,7 @@ impl<'a> Typechecker<'a> {
             substitutions: self.substitutions,
             vars: self.vars,
             pat_types: self.pat_types,
+            defs: self.defs,
         })
     }
 
@@ -851,7 +851,7 @@ impl<'a> Typechecker<'a> {
         match &lhs {
             QualifiedType::Var => Err(Error::need_type_annotation()),
             ty => {
-                if let Some(def) = self.definitions.get(ty)
+                if let Some(def) = self.defs.get(ty)
                     && let Some(field_type) = def.get_field_type(&field.to_string())
                 {
                     Ok(field_type.clone())

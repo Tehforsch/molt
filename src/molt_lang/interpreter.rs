@@ -14,7 +14,6 @@ use crate::{
             var_stack::{VarHandle, VarStack, Vars},
         },
         runtime_ctx::RuntimeCtx,
-        type_definitions::TypeDefinitions,
     },
     node::NodeType,
     storage::Storage,
@@ -49,7 +48,6 @@ pub(crate) use error::Error;
 pub(crate) struct Interpreter<'a> {
     vars: Vars,
     fns: Storage<FnId, &'a MoltFn>,
-    defs: TypeDefinitions,
     context: &'a RuntimeCtx<'a>,
     modifications: Vec<Modification>,
 }
@@ -62,11 +60,9 @@ impl<'a> Interpreter<'a> {
     }
 
     fn new(file: &'a MoltFile, context: &'a RuntimeCtx<'a>) -> Interpreter<'a> {
-        let defs = TypeDefinitions::default();
         let mut interpreter = Self {
             vars: Vars::new(file.var_names.iter().map(|_| VarStack::default()).collect()),
             fns: file.fns.iter().collect(),
-            defs,
             context,
             modifications: vec![],
         };
@@ -234,7 +230,10 @@ impl<'a> Interpreter<'a> {
 
     fn eval_field_access(&mut self, fa: &FieldAccess) -> Result<Value> {
         let lhs = self.eval_expr(&fa.lhs)?;
-        let f = self.defs.get_field_access_fn(self.context, lhs, &fa.field);
+        let f = self
+            .context
+            .type_defs
+            .get_field_access_fn(self.context, lhs, &fa.field);
         Ok(f)
     }
 
@@ -484,7 +483,7 @@ impl<'a> Interpreter<'a> {
         rhs: Value,
     ) -> Result<Value> {
         if let AssignmentLhs::FieldAccess { lhs, field } = lhs {
-            let field_val = self.defs.get_field_access_fn(
+            let field_val = self.context.type_defs.get_field_access_fn(
                 self.context,
                 Value::Node(previous_id.clone()),
                 field,

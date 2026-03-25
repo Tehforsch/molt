@@ -95,6 +95,7 @@ pub fn run_internal(
             writer,
             config: &config,
             pats: &molt_file.pats,
+            type_defs: &molt_file.type_defs,
         };
         crate::molt_lang::Interpreter::run_dry(&molt_file, &context).map_err(Error::Interpreter)?;
     } else {
@@ -109,6 +110,7 @@ pub fn run_internal(
                 writer,
                 config: &config,
                 pats: &molt_file.pats,
+                type_defs: &molt_file.type_defs,
             };
             let modifications = crate::molt_lang::Interpreter::run(&molt_file, context.clone())
                 .map_err(Error::Interpreter)?;

@@ -64,6 +64,7 @@ impl TypeDef {
     }
 }
 
+#[derive(Debug)]
 pub struct TypeDefinitions {
     defs: Vec<(QualifiedType, TypeDef)>,
 }
@@ -94,50 +95,6 @@ impl TypeDefinitions {
         };
         (*field.field_access_fn)(ctx, lhs)
     }
-
-    /// Merge field definitions for kinds that are very similar, such as
-    /// `ItemFn` and `ImplItemFn`.
-    fn merge(&mut self, k1: NodeKind, k2: NodeKind) {
-        let entries1: Vec<_> = self
-            .defs
-            .extract_if(.., |(ty, _)| *ty == QualifiedType::Kind(Kinds::single(k1)))
-            .collect();
-        let entries2: Vec<_> = self
-            .defs
-            .extract_if(.., |(ty, _)| *ty == QualifiedType::Kind(Kinds::single(k2)))
-            .collect();
-        for ((ty1, e1), (ty2, e2)) in entries1.into_iter().zip(entries2) {
-            let QualifiedType::Kind(ref kinds1) = ty1 else {
-                unimplemented!()
-            };
-            let QualifiedType::Kind(ref kinds2) = ty2 else {
-                unimplemented!()
-            };
-            let mut fields = HashMap::new();
-            let ty = QualifiedType::Kind(kinds1.merge_with(kinds2));
-            let mut fields1: Vec<_> = e1.fields.into_iter().collect();
-            let mut fields2: Vec<_> = e2.fields.into_iter().collect();
-            fields1.sort_by_key(|(k, _)| k.clone()); // TODO: unnecessary clone
-            fields2.sort_by_key(|(k, _)| k.clone()); // TODO: unnecessary clone
-            for ((field_name1, e1), (field_name2, e2)) in fields1.into_iter().zip(fields2) {
-                assert_eq!(field_name1, field_name2);
-                fields.insert(
-                    field_name1,
-                    FieldDef {
-                        field_access_fn: Box::new(move |ctx, val| {
-                            if val.get_type(ctx) == QualifiedType::Kind(Kinds::single(k1)) {
-                                (e1.field_access_fn.clone())(ctx, val)
-                            } else {
-                                (e2.field_access_fn.clone())(ctx, val)
-                            }
-                        }),
-                        ty: e1.ty,
-                    },
-                );
-            }
-            self.defs.push((ty, TypeDef { fields }));
-        }
-    }
 }
 
 fn get_defs_for_type<T: MoltFields>() -> (QualifiedType, TypeDef)
@@ -152,46 +109,6 @@ where
         )),
         builder.build(),
     )
-}
-
-#[derive(Default)]
-pub(crate) struct TypeDefinitionsBuilder {
-    defs: Vec<(QualifiedType, TypeDef)>,
-}
-
-impl TypeDefinitionsBuilder {
-    pub fn add<T: MoltFields>(&mut self)
-    where
-        <T as MoltFields>::Target: ToNode<Node>,
-    {
-        let (ty, def) = get_defs_for_type::<T>();
-        for (existing_ty, existing_def) in self.defs.iter_mut() {
-            if &ty == existing_ty {
-                existing_def.merge_with(def);
-                return;
-            }
-        }
-        self.defs.push((ty, def));
-    }
-
-    fn build(self) -> Vec<(QualifiedType, TypeDef)> {
-        self.defs
-    }
-}
-
-impl Default for TypeDefinitions {
-    fn default() -> Self {
-        let mut defs = TypeDefinitionsBuilder::default();
-        add_field_defs_for_node_types(&mut defs);
-        defs.add::<ItemFn>();
-        defs.add::<SpecialItemFn>();
-        defs.add::<ImplItemFn>();
-        defs.add::<SpecialImplItemFn>();
-
-        let mut s = Self { defs: defs.build() };
-        s.merge(NodeKind::ItemFn, NodeKind::ImplItemFn);
-        s
-    }
 }
 
 pub(crate) trait MoltFields {
@@ -260,5 +177,91 @@ impl FieldDefBuilder {
         TypeDef {
             fields: self.fields,
         }
+    }
+}
+
+#[derive(Default)]
+pub(crate) struct TypeDefinitionsBuilder {
+    defs: Vec<(QualifiedType, TypeDef)>,
+}
+
+impl TypeDefinitionsBuilder {
+    pub fn add<T: MoltFields>(&mut self)
+    where
+        <T as MoltFields>::Target: ToNode<Node>,
+    {
+        let (ty, def) = get_defs_for_type::<T>();
+        for (existing_ty, existing_def) in self.defs.iter_mut() {
+            if &ty == existing_ty {
+                existing_def.merge_with(def);
+                return;
+            }
+        }
+        self.defs.push((ty, def));
+    }
+
+    fn build(self) -> Vec<(QualifiedType, TypeDef)> {
+        self.defs
+    }
+}
+
+impl TypeDefinitionsBuilder {
+    /// Merge field definitions for kinds that are very similar, such as
+    /// `ItemFn` and `ImplItemFn`.
+    fn merge(&mut self, k1: NodeKind, k2: NodeKind) {
+        let entries1: Vec<_> = self
+            .defs
+            .extract_if(.., |(ty, _)| *ty == QualifiedType::Kind(Kinds::single(k1)))
+            .collect();
+        let entries2: Vec<_> = self
+            .defs
+            .extract_if(.., |(ty, _)| *ty == QualifiedType::Kind(Kinds::single(k2)))
+            .collect();
+        for ((ty1, e1), (ty2, e2)) in entries1.into_iter().zip(entries2) {
+            let QualifiedType::Kind(ref kinds1) = ty1 else {
+                unimplemented!()
+            };
+            let QualifiedType::Kind(ref kinds2) = ty2 else {
+                unimplemented!()
+            };
+            let mut fields = HashMap::new();
+            let ty = QualifiedType::Kind(kinds1.merge_with(kinds2));
+            let mut fields1: Vec<_> = e1.fields.into_iter().collect();
+            let mut fields2: Vec<_> = e2.fields.into_iter().collect();
+            fields1.sort_by_key(|(k, _)| k.clone()); // TODO: unnecessary clone
+            fields2.sort_by_key(|(k, _)| k.clone()); // TODO: unnecessary clone
+            for ((field_name1, e1), (field_name2, e2)) in fields1.into_iter().zip(fields2) {
+                assert_eq!(field_name1, field_name2);
+                fields.insert(
+                    field_name1,
+                    FieldDef {
+                        field_access_fn: Box::new(move |ctx, val| {
+                            if val.get_type(ctx) == QualifiedType::Kind(Kinds::single(k1)) {
+                                (e1.field_access_fn.clone())(ctx, val)
+                            } else {
+                                (e2.field_access_fn.clone())(ctx, val)
+                            }
+                        }),
+                        ty: e1.ty,
+                    },
+                );
+            }
+            self.defs.push((ty, TypeDef { fields }));
+        }
+    }
+}
+
+impl Default for TypeDefinitions {
+    fn default() -> Self {
+        let mut defs = TypeDefinitionsBuilder::default();
+        add_field_defs_for_node_types(&mut defs);
+        defs.add::<ItemFn>();
+        defs.add::<SpecialItemFn>();
+        defs.add::<ImplItemFn>();
+        defs.add::<SpecialImplItemFn>();
+
+        defs.merge(NodeKind::ItemFn, NodeKind::ImplItemFn);
+
+        Self { defs: defs.build() }
     }
 }

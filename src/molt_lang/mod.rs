@@ -59,6 +59,7 @@ pub struct MoltFile {
     pub var_names: Storage<VarId, Ident>,
     pub builtin_map: HashMap<VarId, BuiltinFn>,
     pub pats: Storage<PatId, ParsedPat>,
+    pub type_defs: TypeDefinitions,
 }
 
 impl MoltFile {
@@ -258,10 +259,9 @@ impl MoltFile {
             .item;
         let file = file.add_implicit_main().map_err(Error::FileStructure)?;
         let resolved = Resolver::resolve(file).map_err(|e| Error::Resolver(e, file_id))?;
-        let typeck = Typechecker::check(&TypeDefinitions::default(), &resolved)
-            .map_err(|e| Error::Typechecker(e, file_id))?;
+        let typeck = Typechecker::check(&resolved).map_err(|e| Error::Typechecker(e, file_id))?;
         resolved
-            .parse_pats(&typeck)
+            .parse_pats(typeck)
             .map_err(|e| Error::ParsePats(e, file_id))
     }
 

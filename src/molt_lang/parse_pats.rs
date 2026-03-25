@@ -20,17 +20,18 @@ use crate::typechecker_bug;
 pub(crate) type Error = parser::Error;
 
 impl ResolvedMoltFile {
-    pub(crate) fn parse_pats(self, typeck: &TypecheckResult) -> Result<MoltFile, Error> {
+    pub(crate) fn parse_pats(self, typeck: TypecheckResult) -> Result<MoltFile, Error> {
         let pats = self
             .pats
             .into_iter_enumerate()
-            .map(|(i, pat)| parse_pat(&self.var_names, typeck, pat, i))
+            .map(|(i, pat)| parse_pat(&self.var_names, &typeck, pat, i))
             .collect::<Result<_, _>>()?;
         Ok(MoltFile {
             fns: self.fns,
             var_names: self.var_names,
             builtin_map: self.builtin_map,
             pats,
+            type_defs: typeck.defs,
         })
     }
 }
