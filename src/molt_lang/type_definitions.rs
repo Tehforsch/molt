@@ -57,6 +57,12 @@ impl TypeDef {
         self.fields.get(s).map(|f| &f.ty)
     }
 
+    pub(crate) fn field_names(&self) -> Vec<String> {
+        let mut names: Vec<_> = self.fields.keys().cloned().collect();
+        names.sort();
+        names
+    }
+
     fn merge_with(&mut self, other: TypeDef) {
         for (k, v) in other.fields {
             self.fields.insert(k, v);

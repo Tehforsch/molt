@@ -32,7 +32,11 @@ pub(crate) enum ErrorKind {
     UntypedVar(Ident),
     NotIterable(QualifiedType),
     NeedTypeAnnotation,
-    NoSuchField(QualifiedType, Ident),
+    NoSuchField {
+        ty: QualifiedType,
+        field: Ident,
+        available_fields: Vec<String>,
+    },
 }
 
 impl Storage<TypeId, Type> {
@@ -85,9 +89,13 @@ impl Error {
         }
     }
 
-    fn no_such_field(lhs: QualifiedType, field: &Ident) -> Self {
+    fn no_such_field(lhs: QualifiedType, field: &Ident, available_fields: Vec<String>) -> Self {
         Self {
-            kind: ErrorKind::NoSuchField(lhs, field.clone()), // TODO: point to expr
+            kind: ErrorKind::NoSuchField {
+                ty: lhs,
+                field: field.clone(),
+                available_fields,
+            }, // TODO: point to expr
             labels: Vec::new(),
         }
     }
@@ -113,8 +121,17 @@ impl std::fmt::Display for Error {
             ErrorKind::NotIterable(ty) => {
                 write!(f, "cannot iterate over type `{ty}`")
             }
-            ErrorKind::NoSuchField(ty, ident) => {
-                write!(f, "No field `{ident}` for type `{ty}`")
+            ErrorKind::NoSuchField {
+                ty,
+                field,
+                available_fields,
+            } => {
+                write!(f, "No field `{field}` for type `{ty}`.")?;
+                if available_fields.is_empty() {
+                    write!(f, " Type `{ty}` has no fields.")
+                } else {
+                    write!(f, " Available fields: {}", available_fields.join(", "))
+                }
             }
             ErrorKind::NeedTypeAnnotation => {
                 write!(f, "Type annotation required")
@@ -851,12 +868,14 @@ impl<'a> Typechecker<'a> {
         match &lhs {
             QualifiedType::Var => Err(Error::need_type_annotation()),
             ty => {
-                if let Some(def) = self.defs.get(ty)
-                    && let Some(field_type) = def.get_field_type(&field.to_string())
-                {
-                    Ok(field_type.clone())
+                if let Some(def) = self.defs.get(ty) {
+                    if let Some(field_type) = def.get_field_type(&field.to_string()) {
+                        Ok(field_type.clone())
+                    } else {
+                        Err(Error::no_such_field(lhs, field, def.field_names()))
+                    }
                 } else {
-                    Err(Error::no_such_field(lhs, field))
+                    Err(Error::no_such_field(lhs, field, Vec::new()))
                 }
             }
         }
