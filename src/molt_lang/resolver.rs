@@ -17,6 +17,7 @@ pub(crate) enum Error {
     Parse(parser::Error),
     UndefinedVar(Ident),
     DuplicateDefinitionFn(Ident),
+    UninitializedVar(Ident),
 }
 
 impl std::fmt::Display for Error {
@@ -25,6 +26,9 @@ impl std::fmt::Display for Error {
         match self {
             Error::Parse(error) => write!(f, "{:?}", error),
             Error::UndefinedVar(ident) => write!(f, "Undefined variable: '{}'", ident),
+            Error::UninitializedVar(ref_name) => {
+                write!(f, "Variable not initialized: '{}'", ref_name)
+            }
             Error::DuplicateDefinitionFn(ident) => {
                 write!(f, "Function defined twice: '{}'", ident)
             }
@@ -40,6 +44,7 @@ type ScopeIndex = usize;
 struct Scope {
     parent: Option<ScopeIndex>,
     variables: HashMap<String, VarId>,
+    initialized: HashSet<VarId>,
     index: ScopeIndex,
 }
 
@@ -48,6 +53,7 @@ impl Scope {
         Self {
             parent: Some(active_scope.index),
             variables: HashMap::default(),
+            initialized: HashSet::default(),
             index,
         }
     }
@@ -57,9 +63,13 @@ impl Scope {
     }
 }
 
+struct Var {
+    name: Ident,
+}
+
 pub struct Resolver {
     scopes: Vec<Scope>,
-    var_names: Storage<VarId, Ident>,
+    vars: Storage<VarId, Var>,
     fn_map: HashMap<VarId, FnId>,
     builtin_map: HashMap<VarId, BuiltinFn>,
     pats: Storage<PatId, UnparsedPat>,
@@ -68,7 +78,7 @@ pub struct Resolver {
 impl Default for Resolver {
     fn default() -> Self {
         Self {
-            var_names: Storage::default(),
+            vars: Storage::default(),
             scopes: vec![Scope::default()],
             fn_map: HashMap::default(),
             builtin_map: HashMap::default(),
@@ -94,7 +104,7 @@ impl Resolver {
             .collect::<Result<_>>()?;
         check_names_unique(&fns)?;
         Ok(ResolvedMoltFile {
-            var_names: self.var_names,
+            var_names: self.vars.into_iter().map(|var| var.name).collect(),
             fns,
             builtin_map: self.builtin_map,
             pats: self.pats,
@@ -113,29 +123,61 @@ impl Resolver {
         self.scopes.len()
     }
 
-    fn register_var(&mut self, name: &Ident) -> VarId {
+    fn register_var(&mut self, name: &Ident, initialized: bool) -> VarId {
         let name_str = name.to_string();
-        let var_id = self.var_names.add(name.clone());
-        self.active_scope_mut().insert(&name_str, var_id);
+        let var_id = self.vars.add(Var { name: name.clone() });
+        let scope = self.active_scope_mut();
+        scope.insert(&name_str, var_id);
+        if initialized {
+            scope.initialized.insert(var_id);
+        }
         var_id
     }
 
-    fn lookup_var(&self, name: &Ident) -> Result<VarId> {
+    fn lookup_var_inner(&self, name: &Ident) -> Option<VarId> {
         let mut scope_idx = Some(self.scopes.len() - 1);
         while let Some(idx) = scope_idx {
             let scope = &self.scopes[idx];
             if let Some(val) = scope.variables.get(&name.to_string()) {
-                return Ok(*val);
+                return Some(*val);
             }
             scope_idx = scope.parent;
         }
-        Err(Error::UndefinedVar(name.clone()))
+        None
     }
 
-    fn lookup_or_register_var(&mut self, name: &Ident) -> Result<VarId> {
-        Ok(self
-            .lookup_var(name) // TODO: the implicit clone in the error variant here is ugly
-            .unwrap_or_else(|_| self.register_var(name)))
+    fn is_initialized(&self, id: VarId) -> bool {
+        let mut scope_idx = Some(self.scopes.len() - 1);
+        while let Some(idx) = scope_idx {
+            let scope = &self.scopes[idx];
+            if scope.initialized.contains(&id) {
+                return true;
+            }
+            scope_idx = scope.parent;
+        }
+        false
+    }
+
+    fn lookup_var(&self, name: &Ident) -> Result<VarId> {
+        let Some(id) = self.lookup_var_inner(name) else {
+            return Err(Error::UndefinedVar(name.clone()));
+        };
+        if !self.is_initialized(id) {
+            return Err(Error::UninitializedVar(name.clone()));
+        }
+        Ok(id)
+    }
+
+    fn initialize_var(&mut self, id: VarId) {
+        self.active_scope_mut().initialized.insert(id);
+    }
+
+    fn lookup_or_register_var(&mut self, name: &Ident) -> VarId {
+        let id = self
+            .lookup_var_inner(name)
+            .unwrap_or_else(|| self.register_var(name, true));
+        self.initialize_var(id);
+        id
     }
 
     fn make_scope(&mut self) -> Scope {
@@ -144,14 +186,14 @@ impl Resolver {
 
     fn register_builtins(&mut self) {
         for (name, f) in builtins_def() {
-            let var = self.register_var(&name);
+            let var = self.register_var(&name, true);
             self.builtin_map.insert(var, f);
         }
     }
 
     fn register_user_fns(&mut self, fns: &Storage<FnId, grammar::MoltFn>) {
         for (i, f) in fns.enumerate() {
-            let var = self.register_var(&f.name);
+            let var = self.register_var(&f.name, true);
             self.fn_map.insert(var, i);
         }
     }
@@ -193,7 +235,7 @@ impl Resolver {
     }
 
     fn resolve_fn_arg(&mut self, arg: grammar::FnArg) -> Result<FnArg> {
-        let var_id = self.register_var(&arg.var_name);
+        let var_id = self.register_var(&arg.var_name, true);
         Ok(FnArg {
             var_id,
             type_: self.resolve_type(arg.type_)?,
@@ -232,7 +274,13 @@ impl Resolver {
 
     fn resolve_assignment_lhs(&mut self, lhs: grammar::AssignmentLhs) -> Result<AssignmentLhs> {
         match lhs {
-            grammar::AssignmentLhs::Var(ident) => Ok(AssignmentLhs::Var(self.lookup_var(&ident)?)),
+            grammar::AssignmentLhs::Var(ident) => {
+                let Some(id) = self.lookup_var_inner(&ident) else {
+                    return Err(Error::UndefinedVar(ident));
+                };
+                self.initialize_var(id);
+                Ok(AssignmentLhs::Var(id))
+            }
             grammar::AssignmentLhs::FieldAccess { lhs, field } => Ok(AssignmentLhs::FieldAccess {
                 lhs: Box::new(self.resolve_assignment_lhs(*lhs)?),
                 field,
@@ -273,7 +321,8 @@ impl Resolver {
                 let expr = self.resolve_expr(expr)?;
                 let scope = self.make_scope();
                 self.scopes.push(scope);
-                let lhs = self.resolve_let_lhs(lhs)?;
+                let has_rhs = true;
+                let lhs = self.resolve_let_lhs(lhs, has_rhs)?;
                 let num_stmts = block.stmts.len();
                 let stmts = block
                     .stmts
@@ -302,7 +351,8 @@ impl Resolver {
         let iterable = self.resolve_expr(f.iterable)?;
         let scope = self.make_scope();
         self.scopes.push(scope);
-        let lhs = self.resolve_let_lhs(f.lhs)?;
+        let has_rhs = true;
+        let lhs = self.resolve_let_lhs(f.lhs, has_rhs)?;
         let num_stmts = f.block.stmts.len();
         let stmts = f
             .block
@@ -346,20 +396,25 @@ impl Resolver {
 
     fn resolve_let_stmt(&mut self, l: grammar::LetStmt) -> Result<LetStmt> {
         let type_ = l.type_.map(|t| self.resolve_type(t)).transpose()?;
+        let has_rhs = l.rhs.is_some();
         Ok(LetStmt {
-            lhs: self.resolve_let_lhs(l.lhs)?,
+            lhs: self.resolve_let_lhs(l.lhs, has_rhs)?,
             type_,
             rhs: l.rhs.map(|e| self.resolve_expr(e)).transpose()?,
         })
     }
 
-    fn resolve_let_lhs(&mut self, lhs: grammar::LetLhs) -> Result<LetLhs> {
+    fn resolve_let_lhs(&mut self, lhs: grammar::LetLhs, has_rhs: bool) -> Result<LetLhs> {
         Ok(match lhs {
             grammar::LetLhs::Var(ident) => {
-                let var_id = self.register_var(&ident);
+                let initialized = has_rhs;
+                let var_id = self.register_var(&ident, initialized);
                 LetLhs::Var(var_id)
             }
-            grammar::LetLhs::Pat(pat) => LetLhs::Pat(self.resolve_pat(pat)?),
+            grammar::LetLhs::Pat(pat) => {
+                assert!(has_rhs);
+                LetLhs::Pat(self.resolve_pat(pat)?)
+            }
         })
     }
 
@@ -424,7 +479,7 @@ impl Resolver {
             vars: p
                 .vars
                 .into_iter()
-                .map(|x| Ok((self.lookup_or_register_var(&x.name)?, x.span)))
+                .map(|x| Ok((self.lookup_or_register_var(&x.name), x.span)))
                 .collect::<Result<_>>()?,
         };
         Ok(self.pats.add(pat))

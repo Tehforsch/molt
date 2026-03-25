@@ -146,7 +146,7 @@ impl<'a> Interpreter<'a> {
                 };
                 Ok(StmtValue::Return(val))
             }
-            Stmt::Assignment(assignment) => self.eval_assignment(assignment),
+            Stmt::Assignment(assignment) => self.eval_assignment(scope, assignment),
             Stmt::If(if_) => self.eval_if(if_),
             Stmt::IfLet(if_let) => self.eval_if_let(scope, if_let),
             Stmt::For(for_) => self.eval_for(scope, for_),
@@ -293,28 +293,39 @@ impl<'a> Interpreter<'a> {
         }))
     }
 
-    fn eval_assignment(&mut self, assignment: &Assignment) -> Result<StmtValue> {
+    fn eval_assignment(&mut self, scope: &mut Scope, assignment: &Assignment) -> Result<StmtValue> {
         // it seems natural to `pop` here, but we might
         // refer to the value of the var in the rhs, so we only `get` here.
         let var = assignment.lhs.base_var();
-        let previous_value = self.vars.get(var);
+        let previous_value = self.vars.try_get(var);
         match previous_value {
-            Value::String(_)
-            | Value::Int(_)
-            | Value::Bool(_)
-            | Value::Unit
-            | Value::List(_)
-            | Value::UserFn(_)
-            | Value::BuiltinFn(_) => {
+            Some(Value::Node(previous_id)) => {
+                let val = self.eval_expr(&assignment.rhs)?;
+                self.eval_node_assignment(&assignment.lhs, &previous_id, val)?;
+            }
+            Some(Value::String(_))
+            | Some(Value::Int(_))
+            | Some(Value::Bool(_))
+            | Some(Value::Unit)
+            | Some(Value::List(_))
+            | Some(Value::UserFn(_))
+            | Some(Value::BuiltinFn(_)) => {
                 if !matches!(&assignment.lhs, AssignmentLhs::Var(_)) {
                     todo!()
                 }
                 let new_val = self.eval_expr(&assignment.rhs)?;
                 self.vars.replace(var, new_val);
             }
-            Value::Node(previous_id) => {
-                let val = self.eval_expr(&assignment.rhs)?;
-                self.eval_node_assignment(&assignment.lhs, &previous_id, val)?;
+            _ => {
+                let new_val = self.eval_expr(&assignment.rhs)?;
+                if let Value::Node(_) = new_val {
+                    // If there is no previous value for a node value
+                    // assignment, we do not know what modification to create,
+                    // so we throw an error. Ideally, this should be handled
+                    // in the resolver / typechecker.
+                    return Err(Error::AssignmentToUninitializedNode);
+                }
+                scope.add(self.vars.set(var, new_val));
             }
         };
         Ok(StmtValue::Value(Value::Unit))
@@ -355,15 +366,14 @@ impl<'a> Interpreter<'a> {
         match lhs {
             LetLhs::Var(var_id) => {
                 scope.add(self.vars.set(*var_id, rhs));
-                Ok(StmtValue::Value(Value::Unit))
             }
             LetLhs::Pat(pat) => {
                 if let Some(value) = self.eval_let_lhs_pat(scope, pat, rhs)? {
                     return Ok(value);
                 }
-                Ok(StmtValue::Value(Value::Unit))
             }
         }
+        Ok(StmtValue::Value(Value::Unit))
     }
 
     fn eval_let_lhs_pat(
