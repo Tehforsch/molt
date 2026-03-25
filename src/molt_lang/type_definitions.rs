@@ -124,6 +124,7 @@ impl MoltFields for SpecialItemFn {
 
     fn add_fields(b: &mut FieldDefBuilder) {
         b.add("name", |f: &ItemFn| f.sig.ident);
+        b.add("generics", |f: &ItemFn| f.sig.generics);
     }
 }
 
@@ -134,6 +135,7 @@ impl MoltFields for SpecialImplItemFn {
 
     fn add_fields(b: &mut FieldDefBuilder) {
         b.add("name", |f: &ImplItemFn| f.sig.ident);
+        b.add("generics", |f: &ItemFn| f.sig.generics);
     }
 }
 
