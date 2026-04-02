@@ -13,7 +13,7 @@ use crate::{
 use super::FieldAccess;
 
 pub(crate) struct Error {
-    pub(crate) kind: ErrorKind,
+    pub(crate) kind: Box<ErrorKind>,
     pub(crate) labels: Vec<ErrorLabel>,
 }
 
@@ -71,10 +71,10 @@ impl Storage<TypeId, Type> {
             QualifiedType::Bool => Type::Bool,
             QualifiedType::Str => Type::Str,
             QualifiedType::Unit => Type::Unit,
-            QualifiedType::List(ty) => Type::List(make_type(&*ty)),
+            QualifiedType::List(ty) => Type::List(make_type(ty)),
             QualifiedType::Fun(inputs, output) => {
-                let output = make_type(&*output);
-                Type::Fun(inputs.into_iter().map(make_type).collect(), output)
+                let output = make_type(output);
+                Type::Fun(inputs.iter().map(make_type).collect(), output)
             }
         }
     }
@@ -83,39 +83,39 @@ impl Storage<TypeId, Type> {
 impl Error {
     fn type_mismatch(expected: QualifiedType, found: QualifiedType) -> Self {
         Self {
-            kind: ErrorKind::TypeMismatch { expected, found },
+            kind: Box::new(ErrorKind::TypeMismatch { expected, found }),
             labels: Vec::new(),
         }
     }
 
     fn type_not_iterable(ty: QualifiedType) -> Self {
         Self {
-            kind: ErrorKind::NotIterable(ty),
+            kind: Box::new(ErrorKind::NotIterable(ty)),
             labels: Vec::new(),
         }
     }
 
     fn untyped_var(ident: Ident) -> Self {
         Self {
-            kind: ErrorKind::UntypedVar(ident),
+            kind: Box::new(ErrorKind::UntypedVar(ident)),
             labels: Vec::new(),
         }
     }
 
     fn need_type_annotation() -> Self {
         Self {
-            kind: ErrorKind::NeedTypeAnnotation, // TODO: point to expr
+            kind: Box::new(ErrorKind::NeedTypeAnnotation), // TODO: point to expr
             labels: Vec::new(),
         }
     }
 
     fn no_such_field(lhs: QualifiedType, field: &Ident, available_fields: Vec<String>) -> Self {
         Self {
-            kind: ErrorKind::NoSuchField {
+            kind: Box::new(ErrorKind::NoSuchField {
                 ty: lhs,
                 field: field.clone(),
                 available_fields,
-            }, // TODO: point to expr
+            }), // TODO: point to expr
             labels: Vec::new(),
         }
     }
@@ -131,7 +131,7 @@ impl Error {
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self.kind {
+        match &*self.kind {
             ErrorKind::TypeMismatch { expected, found } => {
                 write!(f, "type mismatch: expected `{expected}`, found `{found}`")
             }
