@@ -207,7 +207,7 @@ impl AssignmentLhs {
         };
         match expr {
             Expr::FnCall(_) => Err(make_error()),
-            Expr::Pat(_) => todo!(),
+            Expr::Pat(_) => Err(make_error()),
             Expr::Atom(atom) => Ok(Self::Var(get_ident(atom)?)),
             Expr::FieldAccess(fa) => Ok(Self::FieldAccess {
                 lhs: Box::new(AssignmentLhs::from_expr(*fa.lhs)?),
