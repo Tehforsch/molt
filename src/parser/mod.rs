@@ -13,6 +13,5 @@ pub mod lookahead;
 pub mod parse;
 pub mod punctuated;
 pub mod span;
-mod thread;
 
 pub(crate) use parse::{ParseCtx, parse_str, parse_with_ctx};

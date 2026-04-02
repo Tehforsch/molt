@@ -64,7 +64,12 @@ impl From<std::ops::Range<usize>> for Span {
 
 impl From<proc_macro2::Span> for Span {
     fn from(value: proc_macro2::Span) -> Self {
-        value.byte_range().into()
+        let br = value.byte_range();
+        Self {
+            start: br.start,
+            end: br.end,
+            fake: false,
+        }
     }
 }
 
