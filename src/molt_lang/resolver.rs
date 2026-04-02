@@ -451,7 +451,11 @@ impl Resolver {
                 LetLhs::Var(var_id)
             }
             grammar::LetLhs::Pat(pat) => {
-                assert!(has_rhs);
+                if !has_rhs {
+                    return Err(error!(
+                        "Let statement with pattern on left-hand side has no right-hand side."
+                    ));
+                }
                 LetLhs::Pat(self.resolve_pat(pat)?)
             }
         })
