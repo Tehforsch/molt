@@ -173,9 +173,10 @@ impl Parse for Stmt {
         } else if lookahead.peek(Token![return]) {
             Ok(Stmt::Return(input.parse()?))
         } else {
-            let expr: Expr = input.parse()?;
+            let (span, expr) = input.parse_spanned::<Expr>()?.decompose();
             if input.peek(Token![=]) {
-                let lhs = AssignmentLhs::from_expr(expr).map_err(|msg| input.error(msg))?;
+                let lhs = AssignmentLhs::from_expr(expr)
+                    .map_err(|msg| parser::Error::new_molt(span, msg))?;
                 let _: Token![=] = input.parse()?;
                 let rhs = input.parse()?;
                 let _: Token![;] = input.parse()?;
@@ -198,14 +199,14 @@ impl Parse for Stmt {
 
 impl AssignmentLhs {
     fn from_expr(expr: Expr) -> Result<AssignmentLhs, String> {
-        let make_error = || Err("Invalid left hand side of assignment".to_string());
+        let make_error = || "Invalid left hand side of assignment".to_string();
         let get_ident = |atom| match atom {
-            Atom::Lit(_) => make_error(),
-            Atom::List(_) => make_error(),
+            Atom::Lit(_) => Err(make_error()),
+            Atom::List(_) => Err(make_error()),
             Atom::Var(ident) => Ok(ident),
         };
         match expr {
-            Expr::FnCall(_) => todo!(),
+            Expr::FnCall(_) => Err(make_error()),
             Expr::Pat(_) => todo!(),
             Expr::Atom(atom) => Ok(Self::Var(get_ident(atom)?)),
             Expr::FieldAccess(fa) => Ok(Self::FieldAccess {

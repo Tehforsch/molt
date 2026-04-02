@@ -18,15 +18,20 @@ struct ErrorMessage {
 
 impl Error {
     pub fn new<T: Display>(span: Span, message: T) -> Self {
-        return new(span, message.to_string());
+        Error {
+            messages: vec![ErrorMessage {
+                span: span.into()..span.into(),
+                message: message.to_string(),
+            }],
+        }
+    }
 
-        fn new(span: Span, message: String) -> Error {
-            Error {
-                messages: vec![ErrorMessage {
-                    span: span.into()..span.into(),
-                    message,
-                }],
-            }
+    pub fn new_molt<T: Display>(span: crate::span::Span, message: T) -> Self {
+        Error {
+            messages: vec![ErrorMessage {
+                span: span..span,
+                message: message.to_string(),
+            }],
         }
     }
 
