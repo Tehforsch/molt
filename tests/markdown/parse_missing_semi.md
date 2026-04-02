@@ -10,7 +10,5 @@ error: expected semicolon
   ┌─ test input:3:5
   │
 3 │     input = { 5 };
-  │     ^^^^^ expected semicolon
-  │
-  = expected semicolon
+  │     ^^^^^ here
 ```

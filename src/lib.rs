@@ -6,6 +6,7 @@ mod cmp_syn;
 mod config;
 mod ctrl_c;
 mod ctx;
+pub(crate) mod diag;
 mod error;
 mod input;
 mod match_pattern;
@@ -60,7 +61,7 @@ impl RustFile {
     fn new(input: &Input, file_id: FileId) -> Result<ParseResult<Self>, Error> {
         let source = input.source(file_id).unwrap();
         let x: ParseResult<RustFile> = crate::rust_grammar::parse_file(source, Mode::Real)
-            .map_err(|e| Error::parse(e, file_id))?
+            .map_err(|e| Error::Diag(e.into(), file_id))?
             .map(|_| RustFile);
         Ok(x)
     }

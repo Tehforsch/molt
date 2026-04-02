@@ -5,5 +5,12 @@ fn foo() { }
 ```
 
 ```output
-error: Function defined twice: 'foo'
+error: function defined twice: 'foo'
+  ┌─ test input:3:4
+  │
+1 │ fn foo() { }
+  │    --- first defined here
+2 │ 
+3 │ fn foo() { }
+  │    ^^^ duplicate definition
 ```

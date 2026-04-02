@@ -5,5 +5,9 @@ fn main(input: Fn) {
 ```
 
 ```output
-error: No field `foo` for type `Node(ItemFn | ImplItemFn)`. Available fields: generics, name, stmts, vis
+error: no field `foo` for type `Node(ItemFn | ImplItemFn)`. Available fields: generics, name, stmts, vis
+  ┌─ test input:2:17
+  │
+2 │     print(input.foo);
+  │                 ^^^ unknown field
 ```

@@ -62,6 +62,12 @@ impl From<std::ops::Range<usize>> for Span {
     }
 }
 
+impl From<proc_macro2::Span> for Span {
+    fn from(value: proc_macro2::Span) -> Self {
+        value.byte_range().into()
+    }
+}
+
 pub trait WithSpan: Sized {
     fn with_span(self, span: Span) -> Spanned<Self> {
         Spanned::new(self, span)

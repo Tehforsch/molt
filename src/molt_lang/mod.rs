@@ -16,11 +16,9 @@ pub(crate) use index_types::PatId;
 pub(crate) use interpreter::Error as InterpreterError;
 pub(crate) use interpreter::Interpreter;
 use proc_macro2::TokenStream;
-pub(crate) use resolver::Error as ResolverError;
 pub(crate) use runtime_ctx::RuntimeCtx;
 pub(crate) use type_definitions::TypeDefinitionsBuilder;
 pub(crate) use type_definitions::{FieldDefBuilder, MoltFields};
-pub(crate) use typechecker::Error as TypeError;
 
 use codespan_reporting::files::Files;
 
@@ -255,14 +253,14 @@ impl MoltFile {
         let file_id = input.molt_file_id();
         let source = input.source(file_id).unwrap();
         let file: grammar::MoltFile = crate::parser::parse_str(source, Mode::Molt)
-            .map_err(|e| Error::parse(e, file_id))?
+            .map_err(|e| Error::Diag(e.into(), file_id))?
             .item;
         let file = file.add_implicit_main().map_err(Error::FileStructure)?;
-        let resolved = Resolver::resolve(file).map_err(|e| Error::Resolver(e, file_id))?;
-        let typeck = Typechecker::check(&resolved).map_err(|e| Error::Typechecker(e, file_id))?;
+        let resolved = Resolver::resolve(file).map_err(|e| Error::Diag(e, file_id))?;
+        let typeck = Typechecker::check(&resolved).map_err(|e| Error::Diag(e, file_id))?;
         resolved
             .parse_pats(typeck)
-            .map_err(|e| Error::ParsePats(e, file_id))
+            .map_err(|e| Error::Diag(e.into(), file_id))
     }
 
     pub(crate) fn check_has_main_fn_with_input(&self) -> Result<(), Error> {

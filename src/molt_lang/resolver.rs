@@ -5,6 +5,8 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 use super::*;
+use crate::diag::Diag;
+use crate::error;
 use crate::molt_lang::MoltFn;
 use crate::molt_lang::builtin_fn::BuiltinFn;
 use crate::molt_lang::builtin_fn::builtins_def;
@@ -12,31 +14,7 @@ use crate::molt_lang::grammar;
 use crate::parser;
 use crate::storage::Storage;
 
-#[derive(Debug)]
-pub(crate) enum Error {
-    Parse(parser::Error),
-    UndefinedVar(Ident),
-    DuplicateDefinitionFn(Ident),
-    UninitializedVar(Ident),
-}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // TODO format these
-        match self {
-            Error::Parse(error) => write!(f, "{:?}", error),
-            Error::UndefinedVar(ident) => write!(f, "Undefined variable: '{}'", ident),
-            Error::UninitializedVar(ref_name) => {
-                write!(f, "Variable not initialized: '{}'", ref_name)
-            }
-            Error::DuplicateDefinitionFn(ident) => {
-                write!(f, "Function defined twice: '{}'", ident)
-            }
-        }
-    }
-}
-
-type Result<T, E = Error> = std::result::Result<T, E>;
+type Result<T, E = Diag> = std::result::Result<T, E>;
 
 type ScopeIndex = usize;
 
@@ -160,10 +138,13 @@ impl Resolver {
 
     fn lookup_var(&self, name: &Ident) -> Result<VarId> {
         let Some(id) = self.lookup_var_inner(name) else {
-            return Err(Error::UndefinedVar(name.clone()));
+            return Err(error!("undefined variable: '{name}'")
+                .label(name.span(), "not found in this scope"));
         };
         if !self.is_initialized(id) {
-            return Err(Error::UninitializedVar(name.clone()));
+            return Err(error!("variable not initialized: '{name}'")
+                .label(name.span(), "used before initialization")
+                .label(self.vars[id].name.span(), "declared here without a value"));
         }
         Ok(id)
     }
@@ -276,7 +257,8 @@ impl Resolver {
         match lhs {
             grammar::AssignmentLhs::Var(ident) => {
                 let Some(id) = self.lookup_var_inner(&ident) else {
-                    return Err(Error::UndefinedVar(ident));
+                    return Err(error!("undefined variable: '{ident}'")
+                        .label(ident.span(), "not found in this scope"));
                 };
                 self.initialize_var(id);
                 Ok(AssignmentLhs::Var(id))
@@ -299,12 +281,11 @@ impl Resolver {
                 Ok((cond, stmts))
             })
             .collect::<Result<_>>()?;
-        let else_branch = i
+        let else_branch: Option<Vec<Stmt>> = i
             .else_branch
             .map(|stmts| {
                 let scope = self.make_scope();
-                let stmts = self.resolve_block(stmts, scope)?;
-                Ok(stmts)
+                self.resolve_block(stmts, scope)
             })
             .transpose()?;
         Ok(If {
@@ -455,7 +436,7 @@ impl Resolver {
                 let val = lit_int
                     .base10_digits()
                     .parse()
-                    .map_err(|err| Error::Parse(parser::Error::new(lit_int.span(), err)))?;
+                    .map_err::<Diag, _>(|err| parser::Error::new(lit_int.span(), err).into())?;
                 Ok(Lit::Int(val))
             }
             grammar::Lit::Str(lit_str) => Ok(Lit::Str(lit_str.value())),
@@ -487,10 +468,14 @@ impl Resolver {
 }
 
 fn check_names_unique(fns: &[MoltFn]) -> Result<()> {
-    let mut set = HashSet::new();
+    let mut seen: HashSet<&Ident> = HashSet::new();
     for f in fns.iter() {
-        if !set.insert(&f.name) {
-            return Err(ResolverError::DuplicateDefinitionFn(f.name.clone()));
+        if let Some(prev) = seen.get(&f.name) {
+            return Err(error!("function defined twice: '{}'", f.name)
+                .label(f.name.span(), "duplicate definition")
+                .label(prev.span(), "first defined here"));
+        } else {
+            seen.insert(&f.name);
         }
     }
     Ok(())

@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
 use crate::{
+    diag::Diag,
+    error,
     molt_lang::{
         BuiltinFn, LetLhs, MoltFile, MoltFn, PatId, ResolvedMoltFile, Stmt, UnparsedPat, VarId,
         type_definitions::TypeDefinitions,
@@ -12,32 +14,7 @@ use crate::{
 
 use super::FieldAccess;
 
-pub(crate) struct Error {
-    pub(crate) kind: Box<ErrorKind>,
-    pub(crate) labels: Vec<ErrorLabel>,
-}
-
-type Result<T, E = Error> = std::result::Result<T, E>;
-
-pub(crate) struct ErrorLabel {
-    pub(crate) span: crate::Span,
-    pub(crate) message: String,
-}
-
-pub(crate) enum ErrorKind {
-    TypeMismatch {
-        expected: QualifiedType,
-        found: QualifiedType,
-    },
-    UntypedVar(Ident),
-    NotIterable(QualifiedType),
-    NeedTypeAnnotation,
-    NoSuchField {
-        ty: QualifiedType,
-        field: Ident,
-        available_fields: Vec<String>,
-    },
-}
+type Result<T, E = Diag> = std::result::Result<T, E>;
 
 impl Storage<TypeId, Type> {
     fn get_qualified(&self, type_: &Type) -> QualifiedType {
@@ -80,90 +57,16 @@ impl Storage<TypeId, Type> {
     }
 }
 
-impl Error {
-    fn type_mismatch(expected: QualifiedType, found: QualifiedType) -> Self {
-        Self {
-            kind: Box::new(ErrorKind::TypeMismatch { expected, found }),
-            labels: Vec::new(),
-        }
-    }
-
-    fn type_not_iterable(ty: QualifiedType) -> Self {
-        Self {
-            kind: Box::new(ErrorKind::NotIterable(ty)),
-            labels: Vec::new(),
-        }
-    }
-
-    fn untyped_var(ident: Ident) -> Self {
-        Self {
-            kind: Box::new(ErrorKind::UntypedVar(ident)),
-            labels: Vec::new(),
-        }
-    }
-
-    fn need_type_annotation() -> Self {
-        Self {
-            kind: Box::new(ErrorKind::NeedTypeAnnotation), // TODO: point to expr
-            labels: Vec::new(),
-        }
-    }
-
-    fn no_such_field(lhs: QualifiedType, field: &Ident, available_fields: Vec<String>) -> Self {
-        Self {
-            kind: Box::new(ErrorKind::NoSuchField {
-                ty: lhs,
-                field: field.clone(),
-                available_fields,
-            }), // TODO: point to expr
-            labels: Vec::new(),
-        }
-    }
-
-    fn with_label(mut self, span: crate::Span, message: impl Into<String>) -> Self {
-        self.labels.push(ErrorLabel {
-            span,
-            message: message.into(),
-        });
-        self
-    }
-}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &*self.kind {
-            ErrorKind::TypeMismatch { expected, found } => {
-                write!(f, "type mismatch: expected `{expected}`, found `{found}`")
-            }
-            ErrorKind::UntypedVar(ident) => {
-                write!(f, "could not infer type for variable `{ident}`")
-            }
-            ErrorKind::NotIterable(ty) => {
-                write!(f, "cannot iterate over type `{ty}`")
-            }
-            ErrorKind::NoSuchField {
-                ty,
-                field,
-                available_fields,
-            } => {
-                write!(f, "No field `{field}` for type `{ty}`.")?;
-                if available_fields.is_empty() {
-                    write!(f, " Type `{ty}` has no fields.")
-                } else {
-                    write!(f, " Available fields: {}", available_fields.join(", "))
-                }
-            }
-            ErrorKind::NeedTypeAnnotation => {
-                write!(f, "Type annotation required")
-            }
-        }
-    }
-}
-
-impl std::fmt::Debug for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Display::fmt(self, f)
-    }
+fn error_no_such_field(lhs: QualifiedType, field: &Ident, available_fields: Vec<String>) -> Diag {
+    let diag = if available_fields.is_empty() {
+        error!("no field `{field}` for type `{lhs}`. Type `{lhs}` has no fields.")
+    } else {
+        error!(
+            "no field `{field}` for type `{lhs}`. Available fields: {}",
+            available_fields.join(", ")
+        )
+    };
+    diag.label(field.span(), "unknown field")
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -416,7 +319,7 @@ impl<'a> Typechecker<'a> {
     }
 
     fn var_span(&self, id: VarId) -> crate::Span {
-        self.var_names[id].span().byte_range().into()
+        self.var_names[id].span().into()
     }
 
     #[allow(unused)] // For now.
@@ -480,8 +383,9 @@ impl<'a> Typechecker<'a> {
     pub(crate) fn check_no_untyped_vars(&self) -> Result<()> {
         for id in self.vars.keys() {
             if let Some(Type::Var) = self.get_type(*id) {
-                let name = self.var_names[*id].clone();
-                return Err(Error::untyped_var(name));
+                let ident = &self.var_names[*id];
+                return Err(error!("could not infer type for variable `{ident}`")
+                    .label(ident.span(), "type unknown"));
             }
         }
         Ok(())
@@ -517,7 +421,7 @@ impl<'a> Typechecker<'a> {
             let span = self.var_span(f.id);
             let ret_type = self.get_qualified(&self.types[self.resolve(fn_return_type)].clone());
             self.unify(unit, fn_return_type)
-                .map_err(|e| e.with_label(span, format!("expects return type `{ret_type}`")))?;
+                .map_err(|e| e.label(span, format!("expects return type `{ret_type}`")))?;
         }
         Ok(())
     }
@@ -579,7 +483,7 @@ impl<'a> Typechecker<'a> {
                 let span = self.var_span(fn_call.id);
                 let fn_resolved = self.get_qualified(&self.types[self.resolve(lookup)].clone());
                 self.unify(fn_type, lookup)
-                    .map_err(|e| e.with_label(span, format!("has type `{fn_resolved}`")))?;
+                    .map_err(|e| e.label(span, format!("has type `{fn_resolved}`")))?;
                 Ok(output)
             }
             super::Expr::Atom(atom) => self.infer_atom(atom),
@@ -646,7 +550,7 @@ impl<'a> Typechecker<'a> {
             };
             let lhs_type = self.get_qualified(&self.types[self.resolve(type_id)].clone());
             self.unify(type_id, rhs)
-                .map_err(|e| e.with_label(span, format!("expected `{lhs_type}`")))?;
+                .map_err(|e| e.label(span, format!("expected `{lhs_type}`")))?;
         }
         Ok(())
     }
@@ -738,7 +642,10 @@ impl<'a> Typechecker<'a> {
                 Ok(item_type)
             }
             Type::Kind(_) | Type::Int | Type::Bool | Type::Str | Type::Unit | Type::Fun(_, _) => {
-                Err(Error::type_not_iterable(self.get_qualified(ty)))
+                Err({
+                    let ty = self.get_qualified(ty);
+                    error!("cannot iterate over type `{ty}`")
+                })
             }
             Type::List(inner) => Ok(*inner),
         }
@@ -749,7 +656,7 @@ impl<'a> Typechecker<'a> {
         let rhs = self.infer_expr(&a.rhs)?;
         let lhs_type = self.get_qualified(&self.types[self.resolve(lhs)].clone());
         self.unify(lhs, rhs).map_err(|e| {
-            e.with_label(
+            e.label(
                 self.var_span(a.lhs.base_var()),
                 format!("has type `{lhs_type}`"),
             )
@@ -777,10 +684,11 @@ impl<'a> Typechecker<'a> {
         let type1 = self.types[t1].clone();
         let type2 = self.types[t2].clone();
         let make_error = || {
-            Err(Error::type_mismatch(
-                self.get_qualified(&type1),
-                self.get_qualified(&type2),
-            ))
+            Err({
+                let expected = self.get_qualified(&type1);
+                let found = self.get_qualified(&type2);
+                error!("type mismatch: expected `{expected}`, found `{found}`")
+            })
         };
         match (&type1, &type2) {
             (Type::Var, _) => {
@@ -886,16 +794,16 @@ impl<'a> Typechecker<'a> {
         let lhs = &self.types[self.resolve(lhs)];
         let lhs = self.get_qualified(lhs);
         match &lhs {
-            QualifiedType::Var => Err(Error::need_type_annotation()),
+            QualifiedType::Var => Err(error!("type annotation required")),
             ty => {
                 if let Some(def) = self.defs.get(ty) {
                     if let Some(field_type) = def.get_field_type(&field.to_string()) {
                         Ok(self.types.get_unqualified(field_type))
                     } else {
-                        Err(Error::no_such_field(lhs, field, def.field_names()))
+                        Err(error_no_such_field(lhs, field, def.field_names()))
                     }
                 } else {
-                    Err(Error::no_such_field(lhs, field, Vec::new()))
+                    Err(error_no_such_field(lhs, field, Vec::new()))
                 }
             }
         }

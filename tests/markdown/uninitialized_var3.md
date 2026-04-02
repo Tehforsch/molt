@@ -13,5 +13,12 @@ fn main(input: Expr) {
 ```
 
 ```output
-error: Variable not initialized: 'var1'
+error: variable not initialized: 'var1'
+  ┌─ test input:9:22
+  │
+4 │     let var1: Expr;
+  │         ---- declared here without a value
+  ·
+9 │         do_something(var1);
+  │                      ^^^^ used before initialization
 ```
