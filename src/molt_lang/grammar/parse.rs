@@ -37,6 +37,7 @@ impl Parse for MoltFile {
 pub enum FileStructureError {
     MainFnAndTopLevelStmtExist,
     NoInputVarName,
+    UntypedInputVariable, // This is a little bit of an ugly error
 }
 
 impl std::fmt::Display for FileStructureError {
@@ -47,6 +48,12 @@ impl std::fmt::Display for FileStructureError {
             }
             FileStructureError::NoInputVarName => {
                 write!(f, "No `input` variable declared.")
+            }
+            FileStructureError::UntypedInputVariable => {
+                write!(
+                    f,
+                    "Could not determine type of `input`. Consider adding an annotation."
+                )
             }
         }
     }
@@ -66,7 +73,10 @@ impl MoltFile {
             {
                 args.push(FnArg {
                     var_name: var_name.clone(),
-                    type_: l.type_.clone().unwrap(), // TODO: Error handling
+                    type_: l
+                        .type_
+                        .clone()
+                        .ok_or(FileStructureError::UntypedInputVariable)?,
                 });
                 self.stmts.remove(0);
             }
