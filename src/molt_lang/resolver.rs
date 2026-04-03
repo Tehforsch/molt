@@ -6,6 +6,8 @@ use std::collections::HashSet;
 
 use super::*;
 use crate::diag::Diag;
+use crate::diag::WithWarnings;
+use crate::diag::has_errors;
 use crate::error;
 use crate::molt_lang::MoltFn;
 use crate::molt_lang::builtin_fn::BuiltinFn;
@@ -71,27 +73,47 @@ impl Default for Resolver {
 }
 
 impl Resolver {
-    pub fn resolve(file: grammar::MoltFile) -> Result<ResolvedMoltFile> {
+    pub fn resolve(
+        file: grammar::MoltFile,
+    ) -> std::result::Result<WithWarnings<ResolvedMoltFile>, Vec<Diag>> {
         let r = Resolver::default();
         r.resolve_internal(file)
     }
 
-    fn resolve_internal(mut self, file: grammar::MoltFile) -> Result<ResolvedMoltFile> {
+    fn resolve_internal(
+        mut self,
+        file: grammar::MoltFile,
+    ) -> std::result::Result<WithWarnings<ResolvedMoltFile>, Vec<Diag>> {
         let grammar::MoltFile { fns, stmts: _ } = file;
         self.register_builtins();
         self.register_user_fns(&fns);
-        let fns: Storage<_, _> = fns
-            .into_iter()
-            .map(|f| self.resolve_fn(f))
-            .collect::<Result<_>>()?;
-        check_names_unique(&fns)?;
-        self.check_used()?;
-        Ok(ResolvedMoltFile {
-            var_names: self.vars.into_iter().map(|var| var.name).collect(),
-            fns,
-            builtin_map: self.builtin_map,
-            pats: self.pats,
-        })
+        let mut errors = Vec::new();
+        let mut resolved_fns = Vec::new();
+        for f in fns.into_iter() {
+            match self.resolve_fn(f) {
+                Ok(f) => resolved_fns.push(f),
+                Err(e) => errors.push(e),
+            }
+        }
+        // TODO: Check if this is necessary
+        if has_errors(&errors) {
+            return Err(errors);
+        }
+        let fns: Storage<_, _> = resolved_fns.into_iter().collect();
+        errors.extend(check_names_unique(&fns));
+        errors.extend(self.check_used());
+        if has_errors(&errors) {
+            return Err(errors);
+        }
+        Ok(WithWarnings::new(
+            ResolvedMoltFile {
+                var_names: self.vars.into_iter().map(|var| var.name).collect(),
+                fns,
+                builtin_map: self.builtin_map,
+                pats: self.pats,
+            },
+            errors,
+        ))
     }
 
     fn active_scope(&self) -> &Scope {
@@ -517,7 +539,8 @@ impl Resolver {
         Ok(id)
     }
 
-    fn check_used(&self) -> Result<()> {
+    fn check_used(&self) -> Vec<Diag> {
+        let mut diags = Vec::new();
         for (id, var) in self.vars.enumerate() {
             if !self.used.contains(&id)
                 && !var
@@ -525,26 +548,31 @@ impl Resolver {
                     .to_string()
                     .starts_with(IDENTIFIER_PREFIX_ALLOW_UNUSED)
             {
-                return Err(warn!("Variable is never used: {}", var.name)
-                    .label(var.name.span(), "declared here"));
+                diags.push(
+                    warn!("Variable is never used: {}", var.name)
+                        .label(var.name.span(), "declared here"),
+                );
             }
         }
-        Ok(())
+        diags
     }
 }
 
-fn check_names_unique(fns: &[MoltFn]) -> Result<()> {
+fn check_names_unique(fns: &[MoltFn]) -> Vec<Diag> {
+    let mut diags = Vec::new();
     let mut seen: HashSet<&Ident> = HashSet::new();
     for f in fns.iter() {
         if let Some(prev) = seen.get(&f.name) {
-            return Err(error!("function defined twice: '{}'", f.name)
-                .label(f.name.span(), "duplicate definition")
-                .label(prev.span(), "first defined here"));
+            diags.push(
+                error!("function defined twice: '{}'", f.name)
+                    .label(f.name.span(), "duplicate definition")
+                    .label(prev.span(), "first defined here"),
+            );
         } else {
             seen.insert(&f.name);
         }
     }
-    Ok(())
+    diags
 }
 
 fn default_function_type() -> Type {

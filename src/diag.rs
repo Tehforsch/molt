@@ -26,6 +26,14 @@ pub enum Severity {
     Error,
     Warning,
 }
+impl Severity {
+    fn is_error(&self) -> bool {
+        match self {
+            Severity::Error => true,
+            Severity::Warning => false,
+        }
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum LabelKind {
@@ -135,5 +143,30 @@ impl From<crate::parser::Error> for Diag {
 impl std::fmt::Display for Diag {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.message)
+    }
+}
+
+pub(crate) fn has_errors(diags: &[Diag]) -> bool {
+    diags.iter().any(|diag| diag.severity.is_error())
+}
+
+pub struct WithWarnings<T> {
+    t: T,
+    warnings: Vec<Diag>,
+}
+
+impl<T> WithWarnings<T> {
+    pub(crate) fn new(t: T, warnings: Vec<Diag>) -> Self {
+        Self { t, warnings }
+    }
+
+    pub(crate) fn emit_warnings(
+        self,
+        input: &crate::Input,
+        writer: &crate::Writer,
+        file_id: FileId,
+    ) -> T {
+        crate::error::emit_diags(writer, input, file_id, self.warnings);
+        self.t
     }
 }

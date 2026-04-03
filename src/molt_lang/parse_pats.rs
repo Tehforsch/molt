@@ -11,27 +11,33 @@ use crate::ctx::VarKind;
 use crate::molt_lang::MoltFile;
 use crate::molt_lang::typechecker::QualifiedType;
 use crate::molt_lang::typechecker::TypecheckResult;
-use crate::parser;
 use crate::rust_grammar::Node;
 use crate::rust_grammar::parse_node_with_kinds;
 use crate::storage::Storage;
 use crate::typeck_bug;
 use crate::typeck_ensures;
 
-pub(crate) type Error = parser::Error;
-
 impl ResolvedMoltFile {
-    pub(crate) fn parse_pats(self, typeck: TypecheckResult) -> Result<MoltFile, Error> {
-        let pats = self
-            .pats
-            .into_iter_enumerate()
-            .map(|(i, pat)| parse_pat(&self.var_names, &typeck, pat, i))
-            .collect::<Result<_, _>>()?;
+    pub(crate) fn parse_pats(
+        self,
+        typeck: TypecheckResult,
+    ) -> Result<MoltFile, Vec<crate::diag::Diag>> {
+        let mut errors = Vec::new();
+        let mut parsed_pats = Vec::new();
+        for (i, pat) in self.pats.into_iter_enumerate() {
+            match parse_pat(&self.var_names, &typeck, pat, i) {
+                Ok(p) => parsed_pats.push(p),
+                Err(e) => errors.push(crate::diag::Diag::from(e)),
+            }
+        }
+        if !errors.is_empty() {
+            return Err(errors);
+        }
         Ok(MoltFile {
             fns: self.fns,
             var_names: self.var_names,
             builtin_map: self.builtin_map,
-            pats,
+            pats: parsed_pats.into_iter().collect(),
             type_defs: typeck.defs,
         })
     }
@@ -42,7 +48,7 @@ fn parse_pat(
     typeck: &TypecheckResult,
     p: UnparsedPat,
     id: PatId,
-) -> Result<ParsedPat, Error> {
+) -> Result<ParsedPat, crate::parser::Error> {
     let mut pat_ctx = Ctx::<Node>::new(Mode::MoltPat);
     let vars = p
         .vars

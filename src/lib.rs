@@ -61,7 +61,7 @@ impl RustFile {
     fn new(input: &Input, file_id: FileId) -> Result<ParseResult<Self>, Error> {
         let source = input.source(file_id).unwrap();
         let x: ParseResult<RustFile> = crate::rust_grammar::parse_file(source, Mode::Real)
-            .map_err(|e| Error::Diag(e.into(), file_id))?
+            .map_err(|e| Error::Diag(vec![e.into()], file_id))?
             .map(|_| RustFile);
         Ok(x)
     }
@@ -77,7 +77,7 @@ pub fn run_internal(
     config: crate::Config,
     cargo_root: Option<&PathBuf>,
 ) -> Result<RunResult, Error> {
-    let molt_file = molt_lang::MoltFile::new(input)?;
+    let molt_file = molt_lang::MoltFile::new(input, writer)?;
     let mut result = RunResult {
         modifications_by_file: HashMap::default(),
     };

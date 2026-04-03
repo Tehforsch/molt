@@ -9,7 +9,7 @@ use crate::molt_lang::{FileStructureError, InterpreterError};
 
 #[derive(Debug)]
 pub enum Error {
-    Diag(Diag, FileId),
+    Diag(Vec<Diag>, FileId),
     FileStructure(FileStructureError),
     Misc(String),
     Modify(ModifyError),
@@ -17,12 +17,26 @@ pub enum Error {
     Interpreter(InterpreterError),
 }
 
-pub(crate) fn make_error_diagnostic(
+pub(crate) fn make_error_diagnostics(
     err: &Error,
-) -> codespan_reporting::diagnostic::Diagnostic<FileId> {
+) -> Vec<codespan_reporting::diagnostic::Diagnostic<FileId>> {
     match err {
-        Error::Diag(diag, file_id) => diag.clone().into_codespan(*file_id),
-        _ => codespan_reporting::diagnostic::Diagnostic::error().with_message(format!("{err}")),
+        Error::Diag(diags, file_id) => diags
+            .iter()
+            .map(|diag| diag.clone().into_codespan(*file_id))
+            .collect(),
+        _ => {
+            vec![codespan_reporting::diagnostic::Diagnostic::error().with_message(format!("{err}"))]
+        }
+    }
+}
+
+pub fn emit_diags(writer: &Writer, input: &Input, file_id: FileId, e: Vec<Diag>) {
+    for diagnostic in e
+        .into_iter()
+        .map(|diag| diag.clone().into_codespan(file_id))
+    {
+        writer.emit_diagnostic(input, diagnostic);
     }
 }
 
@@ -30,8 +44,9 @@ pub fn emit_error<T>(writer: &Writer, input: &Input, err: Result<T, Error>) -> R
     match err {
         Ok(t) => Ok(t),
         Err(e) => {
-            let diagnostic = make_error_diagnostic(&e);
-            writer.emit_diagnostic(input, diagnostic);
+            for diagnostic in make_error_diagnostics(&e) {
+                writer.emit_diagnostic(input, diagnostic);
+            }
             Err(e)
         }
     }
@@ -52,7 +67,15 @@ impl From<io::Error> for Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::Diag(diag, _) => write!(f, "{diag}"),
+            Error::Diag(diags, _) => {
+                for (i, diag) in diags.iter().enumerate() {
+                    if i > 0 {
+                        writeln!(f)?;
+                    }
+                    write!(f, "{diag}")?;
+                }
+                Ok(())
+            }
             Error::FileStructure(error) => write!(f, "{error}"),
             Error::Misc(s) => write!(f, "{s}"),
             Error::Modify(s) => write!(f, "{s}"),

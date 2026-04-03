@@ -276,21 +276,32 @@ impl<'a> Typechecker<'a> {
         }
     }
 
-    pub(crate) fn check(file: &'a ResolvedMoltFile) -> Result<TypecheckResult> {
+    pub(crate) fn check(
+        file: &'a ResolvedMoltFile,
+    ) -> std::result::Result<TypecheckResult, Vec<Diag>> {
         let defs = TypeDefinitions::default();
         let t = Self::new(defs, &file.var_names, &file.pats);
         t.check_internal(file)
     }
 
-    fn check_internal(mut self, file: &ResolvedMoltFile) -> Result<TypecheckResult> {
+    fn check_internal(
+        mut self,
+        file: &ResolvedMoltFile,
+    ) -> std::result::Result<TypecheckResult, Vec<Diag>> {
         let fn_return_types: Vec<_> = file.fns.iter().map(|f| self.declare_fn(f)).collect();
         for (id, f) in file.builtin_map.iter() {
             self.declare_builtin(*id, *f);
         }
+        let mut errors = Vec::new();
         for (f, type_id) in file.fns.iter().zip(fn_return_types) {
-            self.check_fn(f, type_id)?;
+            if let Err(e) = self.check_fn(f, type_id) {
+                errors.push(e);
+            }
         }
-        self.check_no_untyped_vars()?;
+        errors.extend(self.check_no_untyped_vars());
+        if !errors.is_empty() {
+            return Err(errors);
+        }
         Ok(TypecheckResult {
             types: self.types,
             substitutions: self.substitutions,
@@ -380,15 +391,18 @@ impl<'a> Typechecker<'a> {
             .unwrap_or(id)
     }
 
-    pub(crate) fn check_no_untyped_vars(&self) -> Result<()> {
+    pub(crate) fn check_no_untyped_vars(&self) -> Vec<Diag> {
+        let mut diags = Vec::new();
         for id in self.vars.keys() {
             if let Some(Type::Var) = self.get_type(*id) {
                 let ident = &self.var_names[*id];
-                return Err(error!("could not infer type for variable `{ident}`")
-                    .label(ident.span(), "type unknown"));
+                diags.push(
+                    error!("could not infer type for variable `{ident}`")
+                        .label(ident.span(), "type unknown"),
+                );
             }
         }
-        Ok(())
+        diags
     }
 
     fn declare_fn(&mut self, f: &MoltFn) -> TypeId {

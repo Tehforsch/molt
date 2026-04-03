@@ -25,6 +25,7 @@ use codespan_reporting::files::Files;
 use crate::Ctx;
 use crate::RawNodeId;
 use crate::Span;
+use crate::Writer;
 use crate::molt_lang::resolver::Resolver;
 use crate::molt_lang::type_definitions::TypeDefinitions;
 use crate::molt_lang::typechecker::Typechecker;
@@ -249,18 +250,19 @@ pub struct PatVar {
 }
 
 impl MoltFile {
-    pub fn new(input: &Input) -> Result<Self, Error> {
+    pub fn new(input: &Input, writer: &Writer) -> Result<Self, Error> {
         let file_id = input.molt_file_id();
         let source = input.source(file_id).unwrap();
         let file: grammar::MoltFile = crate::parser::parse_str(source, Mode::Molt)
-            .map_err(|e| Error::Diag(e.into(), file_id))?
+            .map_err(|e| Error::Diag(vec![e.into()], file_id))?
             .item;
         let file = file.add_implicit_main().map_err(Error::FileStructure)?;
         let resolved = Resolver::resolve(file).map_err(|e| Error::Diag(e, file_id))?;
+        let resolved = resolved.emit_warnings(input, writer, file_id);
         let typeck = Typechecker::check(&resolved).map_err(|e| Error::Diag(e, file_id))?;
         resolved
             .parse_pats(typeck)
-            .map_err(|e| Error::Diag(e.into(), file_id))
+            .map_err(|e| Error::Diag(e, file_id))
     }
 
     pub(crate) fn check_has_main_fn_with_input(&self) -> Result<(), Error> {
