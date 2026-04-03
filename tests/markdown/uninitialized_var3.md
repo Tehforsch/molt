@@ -1,13 +1,13 @@
 ```molt error
-fn do_something(e: Expr) { }
+fn do_something(_e: Expr) { }
 
 fn main(input: Expr) {
     let var1: Expr;
     let var2: Expr;
     if let { Ok($var1) } = input {
-        do_something(var1);
+        do_something(var1); // This is ok
     } else if let { Some($var2) } = input {
-        do_something(var1);
+        do_something(var1); // This is not ok
     }
 }
 ```
@@ -19,6 +19,6 @@ error: variable not initialized: 'var1'
 4 │     let var1: Expr;
   │         ---- declared here without a value
   ·
-9 │         do_something(var1);
+9 │         do_something(var1); // This is not ok
   │                      ^^^^ used before initialization
 ```

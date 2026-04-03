@@ -13,6 +13,9 @@ use crate::molt_lang::builtin_fn::builtins_def;
 use crate::molt_lang::grammar;
 use crate::parser;
 use crate::storage::Storage;
+use crate::warn;
+
+const IDENTIFIER_PREFIX_ALLOW_UNUSED: &str = "_";
 
 type Result<T, E = Diag> = std::result::Result<T, E>;
 
@@ -51,6 +54,7 @@ pub struct Resolver {
     fn_map: HashMap<VarId, FnId>,
     builtin_map: HashMap<VarId, BuiltinFn>,
     pats: Storage<PatId, UnparsedPat>,
+    used: HashSet<VarId>,
 }
 
 impl Default for Resolver {
@@ -61,6 +65,7 @@ impl Default for Resolver {
             fn_map: HashMap::default(),
             builtin_map: HashMap::default(),
             pats: Storage::default(),
+            used: HashSet::default(),
         }
     }
 }
@@ -73,7 +78,6 @@ impl Resolver {
 
     fn resolve_internal(mut self, file: grammar::MoltFile) -> Result<ResolvedMoltFile> {
         let grammar::MoltFile { fns, stmts: _ } = file;
-        // Register all user defined functions
         self.register_builtins();
         self.register_user_fns(&fns);
         let fns: Storage<_, _> = fns
@@ -81,6 +85,7 @@ impl Resolver {
             .map(|f| self.resolve_fn(f))
             .collect::<Result<_>>()?;
         check_names_unique(&fns)?;
+        self.check_used()?;
         Ok(ResolvedMoltFile {
             var_names: self.vars.into_iter().map(|var| var.name).collect(),
             fns,
@@ -165,29 +170,47 @@ impl Resolver {
         Scope::child_of(self.active_scope(), self.next_scope_index())
     }
 
+    fn mark_used(&mut self, id: VarId) {
+        self.used.insert(id);
+    }
+
     fn register_builtins(&mut self) {
         for (name, f) in builtins_def() {
             let var = self.register_var(&name, true);
             self.builtin_map.insert(var, f);
+            self.mark_used(var);
         }
     }
 
     fn register_user_fns(&mut self, fns: &Storage<FnId, grammar::MoltFn>) {
         for (i, f) in fns.enumerate() {
             let var = self.register_var(&f.name, true);
+            // The main function is implicitly used
+            if f.name == MAIN_FN_NAME {
+                self.mark_used(var);
+            }
             self.fn_map.insert(var, i);
         }
     }
 
     fn resolve_fn(&mut self, f: grammar::MoltFn) -> Result<MoltFn> {
+        let id = self.lookup_var(&f.name).unwrap();
+        let scope = self.make_scope();
+        self.scopes.push(scope);
         let args = f
             .args
             .into_iter()
-            .map(|a| self.resolve_fn_arg(a))
+            .map(|a| {
+                let arg = self.resolve_fn_arg(a)?;
+                // The input argument to the main fn is implicitly used.
+                if f.name == MAIN_FN_NAME && self.vars[arg.var_id].name == INPUT_VAR_NAME {
+                    self.mark_used(arg.var_id);
+                }
+                Ok(arg)
+            })
             .collect::<Result<_>>()?;
-        let id = self.lookup_var(&f.name).unwrap();
-        let scope = self.make_scope();
-        let stmts = self.resolve_block(f.stmts, scope)?;
+        let stmts = self.resolve_block_stmts(f.stmts)?;
+        self.scopes.pop();
         let result = MoltFn {
             id,
             name: f.name,
@@ -204,15 +227,18 @@ impl Resolver {
 
     fn resolve_block(&mut self, f: grammar::Block, scope: Scope) -> Result<Vec<Stmt>> {
         self.scopes.push(scope);
+        let result = self.resolve_block_stmts(f);
+        self.scopes.pop();
+        result
+    }
+
+    fn resolve_block_stmts(&mut self, f: grammar::Block) -> Result<Vec<Stmt>> {
         let num_stmts = f.stmts.len();
-        let result = f
-            .stmts
+        f.stmts
             .into_iter()
             .enumerate()
             .map(|(i, s)| self.resolve_stmt(s, i == num_stmts - 1))
-            .collect::<Result<_>>();
-        self.scopes.pop();
-        result
+            .collect::<Result<_>>()
     }
 
     fn resolve_fn_arg(&mut self, arg: grammar::FnArg) -> Result<FnArg> {
@@ -261,6 +287,16 @@ impl Resolver {
                         .label(ident.span(), "not found in this scope"));
                 };
                 self.initialize_var(id);
+                // TODO: Due to the way the molt grammar works,
+                // assignments (a = b) have side effects due to
+                // modifications happening when values are assigned
+                // to a node LHS. This means we need to consider a variable
+                // used even if it only appears on the LHS of a statement.
+                // Unfortunately we don't have type information at this point
+                // so we cannot check if it the LHS is of node type or not.
+                // Eventually, we might want to re-think the assignment syntax
+                // for modifications anyways.
+                self.mark_used(id);
                 Ok(AssignmentLhs::Var(id))
             }
             grammar::AssignmentLhs::FieldAccess { lhs, field } => Ok(AssignmentLhs::FieldAccess {
@@ -400,8 +436,10 @@ impl Resolver {
     }
 
     fn resolve_fn_call(&mut self, f: grammar::FnCall) -> Result<FnCall> {
+        let id = self.lookup_var(&f.fn_name)?;
+        self.mark_used(id);
         Ok(FnCall {
-            id: self.lookup_var(&f.fn_name)?,
+            id,
             args: f
                 .args
                 .into_iter()
@@ -425,7 +463,7 @@ impl Resolver {
     fn resolve_atom(&mut self, atom: grammar::Atom) -> Result<Atom> {
         match atom {
             grammar::Atom::Lit(lit) => Ok(Atom::Lit(self.resolve_lit(&lit)?)),
-            grammar::Atom::Var(ident) => Ok(Atom::Var(self.lookup_var(&ident)?)),
+            grammar::Atom::Var(ident) => Ok(Atom::Var(self.resolve_var_atom(&ident)?)),
             grammar::Atom::List(list) => Ok(Atom::List(self.resolve_list(list)?)),
         }
     }
@@ -460,10 +498,38 @@ impl Resolver {
             vars: p
                 .vars
                 .into_iter()
-                .map(|x| Ok((self.lookup_or_register_var(&x.name), x.span)))
+                .map(|x| {
+                    let id = self.lookup_or_register_var(&x.name);
+                    // Variables in patterns can merely be used for pattern
+                    // matching but never referred to afterwards. This is
+                    // perfectly fine and does not mean the variable is unused.
+                    self.mark_used(id);
+                    Ok((id, x.span))
+                })
                 .collect::<Result<_>>()?,
         };
         Ok(self.pats.add(pat))
+    }
+
+    fn resolve_var_atom(&mut self, ident: &Ident) -> Result<VarId> {
+        let id = self.lookup_var(ident)?;
+        self.mark_used(id);
+        Ok(id)
+    }
+
+    fn check_used(&self) -> Result<()> {
+        for (id, var) in self.vars.enumerate() {
+            if !self.used.contains(&id)
+                && !var
+                    .name
+                    .to_string()
+                    .starts_with(IDENTIFIER_PREFIX_ALLOW_UNUSED)
+            {
+                return Err(warn!("Variable is never used: {}", var.name)
+                    .label(var.name.span(), "declared here"));
+            }
+        }
+        Ok(())
     }
 }
 

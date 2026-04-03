@@ -11,9 +11,20 @@ macro_rules! error {
     }
 }
 
+#[macro_export]
+macro_rules! warn {
+    ($lit: literal) => {
+        Diag::warning(format!($lit))
+    };
+    ($lit: literal, $($expr: expr),*) => {
+        Diag::warning(format!($lit, $($expr),*))
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Severity {
     Error,
+    Warning,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -47,6 +58,15 @@ impl Diag {
         }
     }
 
+    pub(crate) fn warning(message: impl Into<String>) -> Self {
+        Self {
+            severity: Severity::Warning,
+            message: message.into(),
+            labels: Vec::new(),
+            notes: Vec::new(),
+        }
+    }
+
     pub(crate) fn label(mut self, span: impl Into<Span>, message: impl Into<String>) -> Self {
         self.labels.push(DiagLabel {
             span: span.into(),
@@ -73,6 +93,7 @@ impl Diag {
 
         let mut diag = match self.severity {
             Severity::Error => Diagnostic::error(),
+            Severity::Warning => Diagnostic::warning(),
         };
 
         diag = diag.with_message(&self.message);

@@ -1,5 +1,5 @@
 ```molt
-fn foo() -> List<int> {
+fn _foo() -> List<int> {
     [1, 2, 3]
 }
 

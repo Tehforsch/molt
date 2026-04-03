@@ -1,5 +1,5 @@
 ```molt
-fn rewrite(e1: Expr, e2: Expr) -> Expr {
+fn rewrite(_e1: Expr, e2: Expr) -> Expr {
     if let { 2 } = e2 {
         { foo() }
     } else if let { 3 } = e2 {
