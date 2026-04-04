@@ -2,7 +2,7 @@ use crate::ctx::VarKind;
 use crate::match_pattern::IsMatch;
 use crate::node::Kinds;
 use crate::rust_grammar::generics::Generics;
-use crate::{CmpSyn, Matcher, RawNodeId, ToNode};
+use crate::{CmpSyn, Matcher, NodeType, RawNodeId, ToNode};
 
 use crate::parser::parse::discouraged::Speculative;
 use crate::parser::parse::{ParseStream, ParseTerm};
@@ -257,5 +257,20 @@ impl VarKind<Kinds<NodeKind>> {
             (VarKind::List(k1), VarKind::List(k2)) => k1.is_comparable_to(&k2),
             (_, _) => false,
         }
+    }
+}
+
+// Not sure where else to put these impls.
+impl<Node: NodeType> CmpSyn<Node> for proc_macro2::TokenStream {
+    fn cmp_syn(&self, match_: &mut Matcher<Node>, other: &Self) -> IsMatch {
+        // Needed for macros and verbatim items.
+        // TODO: Do this properly
+        match_.eq(self.to_string(), other.to_string())
+    }
+}
+
+impl<Node: NodeType> CmpSyn<Node> for proc_macro2::Span {
+    fn cmp_syn(&self, _: &mut Matcher<Node>, _: &Self) -> IsMatch {
+        IsMatch::Ok(())
     }
 }

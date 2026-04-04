@@ -31,7 +31,7 @@ use crate::{NodeId, NodeType};
 /// This structure exists to make sure one does not accidentally
 /// forget to check for the correct rule in custom impls of this
 /// trait.
-pub trait CmpSyn<Node: NodeType, T = Self, Rule = DoesNotRequireRule> {
+pub(crate) trait CmpSyn<Node: NodeType, T = Self, Rule = DoesNotRequireRule> {
     fn cmp_syn(&self, ctx: &mut Matcher<Node>, rhs: &T) -> IsMatch;
 }
 
@@ -108,36 +108,3 @@ macro_rules! impl_cmp_syn_with_partial_eq {
 impl_cmp_syn_with_partial_eq!(bool);
 impl_cmp_syn_with_partial_eq!(u32);
 impl_cmp_syn_with_partial_eq!(usize);
-
-// The following impls exist because of the orphan rule.
-// I can't do them within `rust_grammar` since they are
-// simply reexported types from `proc_macro2`.
-//
-// (TODO: remove this since the crate change made this
-// possible.)
-impl<Node: NodeType> CmpSyn<Node> for proc_macro2::Literal {
-    fn cmp_syn(&self, ctx: &mut Matcher<Node>, rhs: &Self) -> IsMatch {
-        ctx.eq(&self.to_string(), &rhs.to_string())
-    }
-}
-
-impl<Node: NodeType> CmpSyn<Node> for proc_macro2::TokenStream {
-    fn cmp_syn(&self, match_: &mut Matcher<Node>, other: &Self) -> IsMatch {
-        // Needed for macros and verbatim items.
-        // This impl isnt perfect but good enough
-        // for my purposes so far.
-        match_.eq(self.to_string(), other.to_string())
-    }
-}
-
-impl<Node: NodeType> CmpSyn<Node> for proc_macro2::Ident {
-    fn cmp_syn(&self, ctx: &mut Matcher<Node>, rhs: &Self) -> IsMatch {
-        ctx.eq(self.to_string(), rhs.to_string())
-    }
-}
-
-impl<Node: NodeType> CmpSyn<Node> for proc_macro2::Span {
-    fn cmp_syn(&self, _: &mut Matcher<Node>, _: &Self) -> IsMatch {
-        IsMatch::Ok(())
-    }
-}

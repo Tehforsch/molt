@@ -38,9 +38,7 @@ use crate::{
 };
 use codespan_reporting::files::Files;
 
-// TODO make the CmpSyn trait private
-// and fix the resulting warnings.
-pub use cmp_syn::CmpSyn;
+use cmp_syn::CmpSyn;
 pub use config::Config;
 pub use error::{Error, emit_error};
 pub use input::{Contents, Input, Source};

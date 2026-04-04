@@ -5,7 +5,7 @@ use std::rc::Rc;
 use std::str::{self, FromStr};
 
 use crate::match_pattern::IsMatch;
-use crate::{CmpSyn, Ctx, Mode};
+use crate::{CmpSyn, Ctx, Matcher, Mode, NodeType};
 use derive_macro::{CmpSyn, MoltFields};
 use proc_macro2::{Literal, Punct, Span};
 
@@ -1441,5 +1441,11 @@ mod value {
         } else {
             None
         }
+    }
+}
+
+impl<Node: NodeType> CmpSyn<Node> for proc_macro2::Literal {
+    fn cmp_syn(&self, ctx: &mut Matcher<Node>, rhs: &Self) -> IsMatch {
+        ctx.eq(&self.to_string(), &rhs.to_string())
     }
 }

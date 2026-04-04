@@ -174,7 +174,7 @@ impl<'a> Interpreter<'a> {
         args: &[Value],
         user_fn: &MoltFn,
     ) -> Result<StmtValue, Error> {
-        assert_eq!(user_fn.args.len(), args.len()); // todo verify this at resolution time
+        assert_eq!(user_fn.args.len(), args.len());
         let mut handles = vec![];
         for (arg, val) in user_fn.args.iter().zip(args.iter()) {
             handles.push(self.vars.set(arg.var_id, val.clone()));

@@ -46,7 +46,6 @@ impl Drop for VarHandle {
 }
 
 impl VarStack {
-    // TODO document why this is push/pop and not set/get (see recursion)
     fn push(&mut self, val: Value) {
         self.values.push(val)
     }

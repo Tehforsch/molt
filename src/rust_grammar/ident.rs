@@ -1,10 +1,12 @@
 pub use proc_macro2::Ident;
 
+use crate::match_pattern::IsMatch;
 use crate::parser::buffer::Cursor;
 use crate::parser::error::Result;
 use crate::parser::lookahead;
 use crate::parser::parse::{Parse, ParseStream, ParseTerm, PeekTerm};
 use crate::parser::token::Token;
+use crate::{CmpSyn, Matcher, NodeType};
 
 pub struct AnyIdent;
 pub struct TokenIdent<T>(T);
@@ -153,5 +155,11 @@ impl Token for Ident {
 
     fn display() -> &'static str {
         "identifier"
+    }
+}
+
+impl<Node: NodeType> CmpSyn<Node> for proc_macro2::Ident {
+    fn cmp_syn(&self, ctx: &mut Matcher<Node>, rhs: &Self) -> IsMatch {
+        ctx.eq(self.to_string(), rhs.to_string())
     }
 }
