@@ -472,19 +472,15 @@ impl<'a> Interpreter<'a> {
     }
 
     fn eval_if(&mut self, if_: &If) -> Result<StmtValue> {
-        let mut run_else = true;
         for (cond, block) in &if_.if_branches {
             let val = self.eval_expr(cond)?;
             typeck_ensures!(Value::Bool(val) = val);
             if val {
-                run_else = false;
-                self.eval_block(block)?;
+                return self.eval_block(block);
             }
         }
-        if let Some(ref else_branch) = if_.else_branch
-            && run_else
-        {
-            self.eval_block(else_branch)?;
+        if let Some(ref else_branch) = if_.else_branch {
+            return self.eval_block(else_branch);
         }
         Ok(StmtValue::Value(Value::Unit))
     }

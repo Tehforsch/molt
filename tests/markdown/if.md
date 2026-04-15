@@ -12,5 +12,4 @@ if false {
 
 ```output
 1
-2
 ```
