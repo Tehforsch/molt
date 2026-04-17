@@ -14,7 +14,7 @@ fn main(input: Item) {
     let { fn foo() { $stmts } } = input;
     for stmt in stmts {
         if let { $e1 + $e2; } = stmt {
-            e1 = rewrite(e1, e2);
+            e1 -> rewrite(e1, e2);
         }
     }
 }

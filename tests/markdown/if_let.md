@@ -4,11 +4,11 @@ let e1: Expr;
 let e2: Expr;
 let { $e1 + $e2 } = input;
 if let { 2 } = e2 {
-    e1 = { foo() };
+    e1 -> { foo() };
 } else if let { 3 } = e2 {
-    e1 = { bar() };
+    e1 -> { bar() };
 } else {
-    e1 = { baz() };
+    e1 -> { baz() };
 }
 ```
 

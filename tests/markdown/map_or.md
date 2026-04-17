@@ -6,7 +6,7 @@ let expr: Expr;
 let closure: Expr;
 let val: Expr;
 let { $expr.map($closure).unwrap_or($val) } = input;
-input = { $expr.map_or($val, $closure) };
+input -> { $expr.map_or($val, $closure) };
 ```
 
 ```rust

@@ -13,7 +13,7 @@ fn main(input: Expr) {
     print(list);
     for item in list {
         print(item);
-        item = { 5 };
+        item -> { 5 };
     }
 }
 ```

@@ -8,7 +8,8 @@ use crate::{
     Matcher, ModMap, Node, RawNodeId,
     modify::NodeRef,
     molt_lang::{
-        Assignment, AssignmentLhs, Expr, FnId, List, MoltFile, MoltFn, Stmt, Type, VarId,
+        Assignment, AssignmentLhs, Expr, FnId, List, Modification, MoltFile, MoltFn, Stmt, Type,
+        VarId,
         interpreter::{
             value::StmtValue,
             var_stack::{VarHandle, VarStack, Vars},
@@ -153,6 +154,7 @@ impl<'a> Interpreter<'a> {
                 Ok(StmtValue::Return(val))
             }
             Stmt::Assignment(assignment) => self.eval_assignment(scope, assignment),
+            Stmt::Modification(modification) => self.eval_modification(modification),
             Stmt::If(if_) => self.eval_if(if_),
             Stmt::IfLet(if_let) => self.eval_if_let(scope, if_let),
             Stmt::For(for_) => self.eval_for(scope, for_),
@@ -313,9 +315,8 @@ impl<'a> Interpreter<'a> {
         let var = assignment.lhs.base_var();
         let previous_value = self.vars.try_get(var);
         match previous_value {
-            Some(Value::Node(previous_id)) => {
-                let val = self.eval_expr(&assignment.rhs)?;
-                self.eval_node_assignment(&assignment.lhs, &previous_id, val)?;
+            Some(Value::Node(_)) => {
+                typeck_bug!();
             }
             Some(Value::String(_))
             | Some(Value::Int(_))
@@ -482,6 +483,21 @@ impl<'a> Interpreter<'a> {
         if let Some(ref else_branch) = if_.else_branch {
             return self.eval_block(else_branch);
         }
+        Ok(StmtValue::Value(Value::Unit))
+    }
+
+    fn eval_modification(&mut self, modification: &Modification) -> Result<StmtValue> {
+        let var = modification.lhs.base_var();
+        let previous_value = self.vars.try_get(var);
+        match previous_value {
+            Some(Value::Node(previous_id)) => {
+                let val = self.eval_expr(&modification.rhs)?;
+                self.eval_node_assignment(&modification.lhs, &previous_id, val)?;
+            }
+            _ => {
+                return Err(Error::AssignmentToUninitializedNode);
+            }
+        };
         Ok(StmtValue::Value(Value::Unit))
     }
 

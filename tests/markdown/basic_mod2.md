@@ -2,7 +2,7 @@
 let input: Expr;
 let expr: Expr;
 let { $expr + 3 } = input;
-expr = { 10 };
+expr -> { 10 };
 ```
 
 ```rust

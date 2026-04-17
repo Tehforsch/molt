@@ -98,6 +98,7 @@ pub enum Stmt {
     Let(LetStmt),
     Return(ReturnStmt),
     Assignment(Assignment),
+    Modification(Modification),
     If(If),
     IfLet(IfLet),
     For(For),
@@ -124,6 +125,12 @@ pub struct For {
 
 #[derive(Debug)]
 pub struct Assignment {
+    pub lhs: AssignmentLhs,
+    pub rhs: Expr,
+}
+
+#[derive(Debug)]
+pub struct Modification {
     pub lhs: AssignmentLhs,
     pub rhs: Expr,
 }

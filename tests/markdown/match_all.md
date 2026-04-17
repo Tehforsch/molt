@@ -16,9 +16,9 @@ fn main(input: Expr) {
     if all_match {
         for arm in arms {
             let { Ok($val) } = arm.body;
-            arm.body = val;
+            arm.body -> val;
         }
-        input = { Ok($input) };
+        input -> { Ok($input) };
     }
 }
 ```

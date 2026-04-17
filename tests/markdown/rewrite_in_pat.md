@@ -7,7 +7,7 @@ let {
         $stmts
     }
 } = input;
-name = { bar };
+name -> { bar };
 print(name);
 ```
 

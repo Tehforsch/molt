@@ -2,7 +2,7 @@
 let input: Expr;
 let e: Expr;
 let { foo(!$e) } = input;
-input = { bar($e) };
+input -> { bar($e) };
 ```
 
 ```rust

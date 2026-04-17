@@ -288,6 +288,7 @@ impl Resolver {
             grammar::Stmt::Let(l) => Ok(Stmt::Let(self.resolve_let_stmt(l)?)),
             grammar::Stmt::Return(s) => Ok(Stmt::Return(self.resolve_return_stmt(s)?)),
             grammar::Stmt::Assignment(a) => Ok(Stmt::Assignment(self.resolve_assignment(a)?)),
+            grammar::Stmt::Modification(r) => Ok(Stmt::Modification(self.resolve_modification(r)?)),
             grammar::Stmt::If(i) => Ok(Stmt::If(self.resolve_if(i)?)),
             grammar::Stmt::IfLet(i) => Ok(Stmt::IfLet(self.resolve_if_let(i)?)),
             grammar::Stmt::For(f) => Ok(Stmt::For(self.resolve_for(f)?)),
@@ -299,6 +300,13 @@ impl Resolver {
         let rhs = self.resolve_expr(s.rhs)?;
 
         Ok(Assignment { lhs, rhs })
+    }
+
+    fn resolve_modification(&mut self, s: grammar::Modification) -> Result<Modification> {
+        let lhs = self.resolve_assignment_lhs(s.lhs)?;
+        let rhs = self.resolve_expr(s.rhs)?;
+
+        Ok(Modification { lhs, rhs })
     }
 
     fn resolve_assignment_lhs(&mut self, lhs: grammar::AssignmentLhs) -> Result<AssignmentLhs> {

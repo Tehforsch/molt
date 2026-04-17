@@ -1,8 +1,8 @@
 use proc_macro2::{Span, TokenStream};
 
 use crate::molt_lang::grammar::{
-    Assignment, AssignmentLhs, Atom, Block, ExprStmt, FnCall, List, Lit, PatVar, PatVars,
-    ReturnStmt, Type,
+    Assignment, AssignmentLhs, Atom, Block, ExprStmt, FnCall, List, Lit, Modification, PatVar,
+    PatVars, ReturnStmt, Type,
 };
 use crate::molt_lang::{INPUT_VAR_NAME, MAIN_FN_NAME};
 use crate::parser::parse::{self, Parse, ParseStream};
@@ -174,7 +174,14 @@ impl Parse for Stmt {
             Ok(Stmt::Return(input.parse()?))
         } else {
             let (span, expr) = input.parse_spanned::<Expr>()?.decompose();
-            if input.peek(Token![=]) {
+            if input.peek(Token![->]) {
+                let lhs = AssignmentLhs::from_expr(expr)
+                    .map_err(|msg| parser::Error::new_molt(span, msg))?;
+                let _: Token![->] = input.parse()?;
+                let rhs = input.parse()?;
+                let _: Token![;] = input.parse()?;
+                Ok(Stmt::Modification(Modification { lhs, rhs }))
+            } else if input.peek(Token![=]) {
                 let lhs = AssignmentLhs::from_expr(expr)
                     .map_err(|msg| parser::Error::new_molt(span, msg))?;
                 let _: Token![=] = input.parse()?;

@@ -2,13 +2,13 @@
 fn main(input: Expr) {
     let exprs: List<Expr>;
     let { [$exprs] } = input;
-    input = { Some($input) };
+    input -> { Some($input) };
     for expr in exprs {
         let inner_exprs: List<Expr>;
         let { [$inner_exprs] } = expr;
-        expr = { Ok($expr) };
+        expr -> { Ok($expr) };
         for inner_expr in inner_exprs {
-            inner_expr = { 0 };
+            inner_expr -> { 0 };
         }
     }
 }

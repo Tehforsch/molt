@@ -3,7 +3,7 @@ fn main(input: Expr) {
     let var: Expr;
     let val: Expr;
     let { $var.old_name($val) } = input;
-    input = { $var.new_name($val) };
+    input -> { $var.new_name($val) };
 }
 ```
 

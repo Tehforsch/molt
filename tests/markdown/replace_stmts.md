@@ -3,7 +3,7 @@ fn main(input: Fn) {
     if let { main } = input.name {
         for stmt in input.stmts {
             if let {foo();} = stmt {
-                stmt = { bar(); };
+                stmt -> { bar(); };
             }
         }
     }

@@ -1,7 +1,7 @@
 ```molt
 fn rewrite_type(inner: Type) {
     if let { &Handle<Image> } = inner {
-        inner = { &Foo };
+        inner -> { &Foo };
     }
 }
 

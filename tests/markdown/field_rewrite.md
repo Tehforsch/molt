@@ -1,7 +1,7 @@
 ```molt
 fn main(input: Fn) {
-    input.name = { bar };
-    input.vis = { pub };
+    input.name -> { bar };
+    input.vis -> { pub };
 }
 ```
 

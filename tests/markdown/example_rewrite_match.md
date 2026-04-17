@@ -5,10 +5,10 @@ fn main(input: Expr) {
     let arms: List<Arm>;
     let { match $var.fn1($name) { $arms } } = input;
     let k: Pat;
-    input = { Ok(match $var.fn2($name) { $arms }) };
+    input -> { Ok(match $var.fn2($name) { $arms }) };
     for arm in arms {
         if let { Some(Foo::Value($k)) } = arm.pat {
-            arm.pat = { Some($k) };
+            arm.pat -> { Some($k) };
         }
     }
 }

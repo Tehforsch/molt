@@ -1,7 +1,7 @@
 ```molt error
 fn main(input: Expr) {
     print(input)
-    input = { 5 };
+    input -> { 5 };
 }
 ```
 
@@ -9,6 +9,6 @@ fn main(input: Expr) {
 error: expected semicolon
   ┌─ test input:3:5
   │
-3 │     input = { 5 };
+3 │     input -> { 5 };
   │     ^^^^^ here
 ```

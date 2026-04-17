@@ -1,7 +1,7 @@
 ```molt
 fn main(input: Expr) {
-    input = { 3 };
-    input = { 5 };
+    input -> { 3 };
+    input -> { 5 };
 }
 ```
 

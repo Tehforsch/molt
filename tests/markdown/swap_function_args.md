@@ -4,7 +4,7 @@ fn main(input: Expr) {
     let a: Expr;
     let b: Expr;
     let { foo($a, $b) } = input;
-    input = { foo($b, $a) };
+    input -> { foo($b, $a) };
 }
 ```
 

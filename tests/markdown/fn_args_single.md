@@ -14,7 +14,7 @@ fn main(input: Fn) {
         }
     } = input {
         if let { i32 } = arg_ty {
-            arg_ty = { u64 };
+            arg_ty -> { u64 };
         }
     }
 }

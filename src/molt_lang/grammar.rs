@@ -60,6 +60,7 @@ pub enum Stmt {
     Let(LetStmt),
     Return(ReturnStmt),
     Assignment(Assignment),
+    Modification(Modification),
     If(If),
     IfLet(IfLet),
     For(For),
@@ -97,6 +98,12 @@ pub enum AssignmentLhs {
         lhs: Box<AssignmentLhs>,
         field: Ident,
     },
+}
+
+#[derive(Debug)]
+pub struct Modification {
+    pub lhs: AssignmentLhs,
+    pub rhs: Expr,
 }
 
 #[derive(Debug)]

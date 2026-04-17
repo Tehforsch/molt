@@ -462,6 +462,9 @@ impl<'a> Typechecker<'a> {
             Stmt::Assignment(assignment) => {
                 self.check_assignment(assignment)?;
             }
+            Stmt::Modification(modification) => {
+                self.check_modification(modification)?;
+            }
             Stmt::If(if_stmt) => {
                 if let Returns::Always = self.check_if(if_stmt, surrounding_fn_return_type)? {
                     return Ok(Returns::Always);
@@ -669,9 +672,29 @@ impl<'a> Typechecker<'a> {
         let lhs = self.infer_assignment_lhs(&a.lhs)?;
         let rhs = self.infer_expr(&a.rhs)?;
         let lhs_type = self.get_qualified(&self.types[self.resolve(lhs)].clone());
+        if matches!(self.types[self.resolve(lhs)], Type::Kind(_)) {
+            return Err(
+                error!("cannot assign to a node variable, use `->` to modify").label(
+                    self.var_span(a.lhs.base_var()),
+                    format!("has type `{lhs_type}`"),
+                ),
+            );
+        }
         self.unify(lhs, rhs).map_err(|e| {
             e.label(
                 self.var_span(a.lhs.base_var()),
+                format!("has type `{lhs_type}`"),
+            )
+        })
+    }
+
+    fn check_modification(&mut self, r: &super::Modification) -> Result<()> {
+        let lhs = self.infer_assignment_lhs(&r.lhs)?;
+        let rhs = self.infer_expr(&r.rhs)?;
+        let lhs_type = self.get_qualified(&self.types[self.resolve(lhs)].clone());
+        self.unify(lhs, rhs).map_err(|e| {
+            e.label(
+                self.var_span(r.lhs.base_var()),
                 format!("has type `{lhs_type}`"),
             )
         })

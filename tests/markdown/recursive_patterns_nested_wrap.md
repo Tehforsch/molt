@@ -2,9 +2,9 @@
 fn main(input: Expr) {
     let exprs: List<Expr>;
     let { [$exprs] } = input;
-    input = { Some($input) };
+    input -> { Some($input) };
     for expr in exprs {
-        expr = { Box::new($expr) };
+        expr -> { Box::new($expr) };
     }
 }
 

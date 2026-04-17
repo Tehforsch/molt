@@ -1,7 +1,7 @@
 ```molt
 let input: Fn;
 if let { foo } = input.name {
-    input.generics = { <T> };
+    input.generics -> { <T> };
 }
 ```
 
