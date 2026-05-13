@@ -22,7 +22,7 @@ use crate::rust_grammar::lit::LitStr;
 use crate::rust_grammar::mac::{
     Macro, {self},
 };
-use crate::rust_grammar::pat::{Pat, PatSingle, PatType};
+use crate::rust_grammar::pat::{PatSingle, PatType};
 use crate::rust_grammar::path::Path;
 use crate::rust_grammar::restriction::Vis;
 use crate::rust_grammar::stmt::Block;
@@ -671,23 +671,11 @@ pub struct Signature {
     pub generics: NodeId<Generics>,
     pub where_clause: Option<WhereClause>,
     pub paren_token: token::Paren,
-    pub inputs: Punctuated<FnArg, Token![,]>,
-    pub variadic: Option<Variadic>,
+    pub inputs: NodeList<FnArg, Token![,]>,
     pub output: ReturnType,
 }
 
-impl Signature {
-    /// A method's `self` receiver, such as `&self` or `self: Box<Self>`.
-    pub fn receiver(&self) -> Option<&Receiver> {
-        let arg = self.inputs.first()?;
-        match arg {
-            FnArg::Receiver(receiver) => Some(receiver),
-            FnArg::Typed(_) => None,
-        }
-    }
-}
-
-#[derive(Debug, CmpSyn)]
+#[derive(Debug, CmpSyn, MoltFields)]
 #[node(Node)]
 /// An argument in a function signature: the `n: usize` in `fn f(n: usize)`.
 pub enum FnArg {
@@ -714,16 +702,6 @@ pub struct Receiver {
     pub self_token: Token![self],
     pub colon_token: Option<Token![:]>,
     pub ty: Option<NodeId<Type>>,
-}
-
-#[derive(Debug, CmpSyn)]
-#[node(Node)]
-/// The variadic argument of a foreign function.
-pub struct Variadic {
-    pub attrs: Vec<Attribute>,
-    pub pat: Option<(NodeId<Pat>, Token![:])>,
-    pub dots: Token![...],
-    pub comma: Option<Token![,]>,
 }
 
 #[derive(Debug, CmpSyn)]
@@ -1331,7 +1309,7 @@ fn parse_signature(input: ParseStream, allow_safe: bool) -> Result<Option<Signat
 
     let content;
     let paren_token = parenthesized!(content in input);
-    let (inputs, variadic) = parse_fn_args(&content)?;
+    let inputs = content.parse_list::<FnDeclArgs>()?;
 
     let output: ReturnType = input.parse()?;
     let where_clause = input.parse::<Option<WhereClause>>()?;
@@ -1350,7 +1328,6 @@ fn parse_signature(input: ParseStream, allow_safe: bool) -> Result<Option<Signat
             where_clause,
             paren_token,
             inputs,
-            variadic,
             output,
         })
     })
@@ -1386,52 +1363,28 @@ fn parse_rest_of_fn(
     })
 }
 
-impl Parse for FnArg {
-    fn parse(input: ParseStream) -> Result<Self> {
-        let allow_variadic = false;
+impl ParseTerm for FnArg {
+    type Target = Self;
+
+    fn parse_item(input: ParseStream) -> Result<Self::Target> {
         let attrs = input.call(Attribute::parse_outer)?;
-        match parse_fn_arg_or_variadic(input, attrs, allow_variadic)? {
-            FnArgOrVariadic::FnArg(arg) => Ok(arg),
-            FnArgOrVariadic::Variadic(_) => unreachable!(),
+        let ahead = input.fork();
+        if let Ok(mut receiver) = ahead.parse::<Receiver>() {
+            receiver.attrs = attrs;
+            input.advance_to(&ahead);
+            return Ok(FnArg::Receiver(receiver));
         }
-    }
-}
 
-enum FnArgOrVariadic {
-    FnArg(FnArg),
-    Variadic(Variadic),
-}
+        let pat = input.parse_id::<PatSingle>()?;
+        let colon_token: Token![:] = input.parse()?;
 
-fn parse_fn_arg_or_variadic(
-    input: ParseStream,
-    attrs: Vec<Attribute>,
-    allow_variadic: bool,
-) -> Result<FnArgOrVariadic> {
-    let ahead = input.fork();
-    if let Ok(mut receiver) = ahead.parse::<Receiver>() {
-        input.advance_to(&ahead);
-        receiver.attrs = attrs;
-        return Ok(FnArgOrVariadic::FnArg(FnArg::Receiver(receiver)));
-    }
-
-    let pat = input.parse_id::<PatSingle>()?;
-    let colon_token: Token![:] = input.parse()?;
-
-    if allow_variadic && let Some(dots) = input.parse::<Option<Token![...]>>()? {
-        return Ok(FnArgOrVariadic::Variadic(Variadic {
+        Ok(FnArg::Typed(PatType {
             attrs,
-            pat: Some((pat, colon_token)),
-            dots,
-            comma: None,
-        }));
+            pat,
+            colon_token,
+            ty: input.parse()?,
+        }))
     }
-
-    Ok(FnArgOrVariadic::FnArg(FnArg::Typed(PatType {
-        attrs,
-        pat,
-        colon_token,
-        ty: input.parse()?,
-    })))
 }
 
 impl Parse for Receiver {
@@ -1470,71 +1423,47 @@ impl Parse for Receiver {
     }
 }
 
-fn parse_fn_args(input: ParseStream) -> Result<(Punctuated<FnArg, Token![,]>, Option<Variadic>)> {
-    let mut args = Punctuated::new();
-    let mut variadic = None;
-    let mut has_receiver = false;
+struct FnDeclArgs;
 
-    while !input.is_empty() {
-        let attrs = input.call(Attribute::parse_outer)?;
+impl ParseList for FnDeclArgs {
+    type Item = FnArg;
+    type Punct = Token![,];
 
-        if let Some(dots) = input.parse::<Option<Token![...]>>()? {
-            variadic = Some(Variadic {
-                attrs,
-                pat: None,
-                dots,
-                comma: if input.is_empty() {
-                    None
-                } else {
-                    Some(input.parse()?)
-                },
-            });
-            break;
-        }
+    fn parse_list_items(input: ParseStream) -> Result<Vec<NodeId<Self::Item>>> {
+        let mut has_receiver = false;
 
-        let allow_variadic = true;
-        let arg = match parse_fn_arg_or_variadic(input, attrs, allow_variadic)? {
-            FnArgOrVariadic::FnArg(arg) => arg,
-            FnArgOrVariadic::Variadic(arg) => {
-                variadic = Some(Variadic {
-                    comma: if input.is_empty() {
-                        None
-                    } else {
-                        Some(input.parse()?)
-                    },
-                    ..arg
-                });
+        let mut args = vec![];
+        while !input.is_empty() {
+            let arg: NodeId<FnArg> = input.parse()?;
+
+            match input.ctx().get(arg) {
+                Term::Item(FnArg::Receiver(receiver)) if has_receiver => {
+                    return Err(Error::new(
+                        receiver.self_token.span,
+                        "unexpected second method receiver",
+                    ));
+                }
+                Term::Item(FnArg::Receiver(receiver)) if !args.is_empty() => {
+                    return Err(Error::new(
+                        receiver.self_token.span,
+                        "unexpected method receiver",
+                    ));
+                }
+                Term::Item(FnArg::Receiver(_)) => has_receiver = true,
+                Term::Item(FnArg::Typed(_)) => {}
+                Term::Var(_) => {}
+            }
+            args.push(arg);
+
+            if input.is_empty() {
                 break;
             }
-        };
 
-        match &arg {
-            FnArg::Receiver(receiver) if has_receiver => {
-                return Err(Error::new(
-                    receiver.self_token.span,
-                    "unexpected second method receiver",
-                ));
-            }
-            FnArg::Receiver(receiver) if !args.is_empty() => {
-                return Err(Error::new(
-                    receiver.self_token.span,
-                    "unexpected method receiver",
-                ));
-            }
-            FnArg::Receiver(_) => has_receiver = true,
-            FnArg::Typed(_) => {}
-        }
-        args.push_value(arg);
-
-        if input.is_empty() {
-            break;
+            let _: Token![,] = input.parse()?;
         }
 
-        let comma: Token![,] = input.parse()?;
-        args.push_punct(comma);
+        Ok(args)
     }
-
-    Ok((args, variadic))
 }
 
 impl Parse for ItemMod {

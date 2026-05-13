@@ -7,7 +7,7 @@ use crate::{CmpSyn, Matcher, NodeType, RawNodeId, ToNode};
 use crate::parser::parse::discouraged::Speculative;
 use crate::parser::parse::{ParseStream, ParseTerm};
 use crate::rust_grammar::expr::Arm;
-use crate::rust_grammar::item::{ImplItem, ImplItemFn, ItemFn};
+use crate::rust_grammar::item::{FnArg, ImplItem, ImplItemFn, ItemFn};
 use crate::rust_grammar::pat::Pat;
 use crate::rust_grammar::{
     Expr, Field, FieldNamed, FieldUnnamed, Ident, Item, Lit, PatMulti, Stmt, Type, Vis,
@@ -180,6 +180,7 @@ define_node! {
     (Type, Type, Type),
     (Vis, Vis, Vis),
     (Generics, Generics, Generics),
+    (FnArg, FnArg, FnArg),
     (ItemFn, ItemFn, ItemFn),
     (ImplItemFn, ImplItemFn, ImplItemFn),
 }
@@ -197,6 +198,7 @@ define_kind_kws! {
     (Type, [Type]),
     (Vis, [Vis]),
     (Generics, [Generics]),
+    (FnArg, [FnArg]),
     (Fn, [ItemFn, ImplItemFn]),
 }
 
@@ -226,6 +228,7 @@ impl CmpSyn<Node> for Node {
             | (Node::Item(_), _)
             | (Node::ImplItem(_), _)
             | (Node::Generics(_), _)
+            | (Node::FnArg(_), _)
             | (Node::ItemFn(_), _)
             | (Node::ImplItemFn(_), _)
             | (Node::Vis(_), _) => ctx.no_match(),

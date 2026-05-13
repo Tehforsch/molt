@@ -599,7 +599,7 @@ impl<'a> ParseBuffer<'a> {
         )
     }
 
-    fn peek_list_var<T: ToNode<Node>>(&self) -> bool {
+    pub(crate) fn peek_list_var<T: ToNode<Node>>(&self) -> bool {
         peek_var(
             self.cursor(),
             &self.ctx.borrow(),
