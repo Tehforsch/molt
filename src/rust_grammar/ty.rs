@@ -270,6 +270,17 @@ impl ParseTerm for (Type, NoPlus) {
     }
 }
 
+pub struct WithPlus;
+
+impl ParseTerm for (Type, WithPlus) {
+    type Target = Type;
+
+    fn parse_item(input: ParseStream) -> Result<Self::Target> {
+        let allow_plus = true;
+        ambig_ty(input, allow_plus)
+    }
+}
+
 fn ambig_ty(input: ParseStream, allow_plus: bool) -> Result<Type> {
     let begin = input.fork();
 
@@ -670,7 +681,11 @@ impl ReturnType {
     fn parse(input: ParseStream, allow_plus: bool) -> Result<Self> {
         if input.peek(Token![->]) {
             let arrow = input.parse()?;
-            let ty = input.add(input.call_spanned(|input| ambig_ty(input, allow_plus))?);
+            let ty = if allow_plus {
+                input.parse_id::<(Type, WithPlus)>()?
+            } else {
+                input.parse_id::<(Type, NoPlus)>()?
+            };
             Ok(ReturnType::Type(arrow, ty))
         } else {
             Ok(ReturnType::Default)
