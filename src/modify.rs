@@ -17,14 +17,6 @@ use codespan_reporting::files::Files;
 use crate::ctrl_c::FileRestorer;
 use crate::{Error, FileId, Input};
 
-#[derive(Debug, thiserror::Error)]
-pub enum ModifyError {
-    #[error("Overlapping spans.")]
-    Overlap,
-}
-
-pub type Result<T, E = ModifyError> = std::result::Result<T, E>;
-
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum RealNodeRef {
     /// Represents a node in the real file.
@@ -131,10 +123,7 @@ pub struct Modify<'a> {
 }
 
 impl<'a> Modify<'a> {
-    pub fn run(
-        ctx: RuntimeCtx<'a>,
-        modifications: ModMap,
-    ) -> Result<FileModificationResult, Error> {
+    pub fn run(ctx: RuntimeCtx<'a>, modifications: ModMap) -> FileModificationResult {
         let code = ctx.input.source(ctx.real_id).unwrap().to_owned();
         let filename = ctx.input.name(ctx.real_id).unwrap();
         let num_modifications = modifications.mods.len();
@@ -148,10 +137,10 @@ impl<'a> Modify<'a> {
             let new_code = modify.print_with_children(&root.new, &root.children);
             modify.code.make_change(root.span, &new_code);
         }
-        Ok(FileModificationResult {
+        FileModificationResult {
             new_code: modify.code,
             num_modifications,
-        })
+        }
     }
 
     fn print_with_children(&self, node: &NodeRef, children: &[ModNode]) -> String {

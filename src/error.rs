@@ -4,7 +4,6 @@ use crate::diag::Diag;
 use crate::writer::Writer;
 
 use crate::input::{FileId, Input};
-use crate::modify::ModifyError;
 use crate::molt_lang::{FileStructureError, InterpreterError};
 
 #[derive(Debug)]
@@ -12,7 +11,6 @@ pub enum Error {
     Diag(Vec<Diag>, FileId),
     FileStructure(FileStructureError),
     Misc(String),
-    Modify(ModifyError),
     Io(io::Error),
     Interpreter(InterpreterError),
 }
@@ -52,12 +50,6 @@ pub fn emit_error<T>(writer: &Writer, input: &Input, err: Result<T, Error>) -> R
     }
 }
 
-impl From<ModifyError> for Error {
-    fn from(t: ModifyError) -> Self {
-        Self::Modify(t)
-    }
-}
-
 impl From<io::Error> for Error {
     fn from(t: io::Error) -> Self {
         Self::Io(t)
@@ -78,7 +70,6 @@ impl std::fmt::Display for Error {
             }
             Error::FileStructure(error) => write!(f, "{error}"),
             Error::Misc(s) => write!(f, "{s}"),
-            Error::Modify(s) => write!(f, "{s}"),
             Error::Io(s) => write!(f, "{s}"),
             Error::Interpreter(s) => write!(f, "{s}"),
         }

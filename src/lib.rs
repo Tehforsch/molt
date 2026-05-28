@@ -115,7 +115,7 @@ pub fn run_internal(
             };
             let modifications = crate::molt_lang::Interpreter::run(&molt_file, context.clone())
                 .map_err(Error::Interpreter)?;
-            let new_code = Modify::run(context, modifications)?;
+            let new_code = Modify::run(context, modifications);
             result
                 .modifications_by_file
                 .insert(rust_file_id, new_code.clone());
