@@ -134,12 +134,11 @@ pub struct Modify<'a> {
 impl<'a> Modify<'a> {
     pub fn run(
         ctx: RuntimeCtx<'a>,
-        rust_file_id: FileId,
         cargo_root: Option<&'a Path>,
         modifications: ModMap,
     ) -> Result<FileModificationResult, Error> {
-        let code = ctx.input.source(rust_file_id).unwrap().to_owned();
-        let filename = ctx.input.name(rust_file_id).unwrap();
+        let code = ctx.input.source(ctx.real_id).unwrap().to_owned();
+        let filename = ctx.input.name(ctx.real_id).unwrap();
         let num_modifications = modifications.mods.len();
         let roots = build_mod_tree(modifications, &ctx);
         let mut modify = Self {

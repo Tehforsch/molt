@@ -115,7 +115,6 @@ pub fn run_internal(
                 .map_err(Error::Interpreter)?;
             let new_code = Modify::run(
                 context,
-                rust_file_id,
                 cargo_root.map(|path| path.as_path()),
                 modifications,
             )?;
