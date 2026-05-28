@@ -93,8 +93,6 @@ fn main() -> Result<ExitCode> {
     let config = molt::Config {
         debug_print: args.debug_print,
         cargo_fmt: args.cargo_fmt,
-        interactive: args.interactive,
-        check: args.check,
     };
 
     let writer = Writer::default();
