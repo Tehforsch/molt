@@ -73,6 +73,7 @@ fn get_cargo_source_files(path: &Path) -> Result<Vec<PathBuf>> {
 }
 
 fn main() -> Result<ExitCode> {
+    molt::CtrlCHandler::setup();
     let args = CliArgs::parse();
     let from_cargo = |path| {
         let cargo_toml = get_cargo_toml(path)?;

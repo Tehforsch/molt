@@ -6,8 +6,6 @@ mod var_stack;
 use super::{FieldAccess, For, If, IfLet, LetLhs, LetStmt, Lit};
 use crate::{
     Matcher, ModMap, Node, RawNodeId,
-    ctrl_c::FileRestorer,
-    input::FilePath,
     modify::{Modify, NodeRef, RealNodeRef},
     molt_lang::{
         Assignment, AssignmentLhs, Expr, FnId, List, Modification, MoltFile, MoltFn, Stmt, Type,
@@ -20,6 +18,7 @@ use crate::{
     },
     node::NodeType,
     storage::Storage,
+    temporary_modification::{self, TemporaryModification},
 };
 
 use codespan_reporting::files::Files;
@@ -527,28 +526,16 @@ impl<'a> Interpreter<'a> {
         } else {
             typeck_ensures!(Value::Node(rhs) = rhs);
             if let Some(condition) = condition {
-                // Make a temporary modification
-                let mut modifications = ModMap::default();
-                let old = RealNodeRef::from_target(previous_id.clone());
-                let old_code = self
-                    .context
-                    .input
-                    .source(self.context.real_id)
-                    .unwrap()
-                    .to_owned();
-                modifications.insert(old, rhs.clone());
-                let result = Modify::run(self.context.clone(), modifications);
-                match self.context.input().name(self.context.real_id).unwrap() {
-                    FilePath::Path(path) => {
-                        std::fs::write(path, result.new_code.code()).unwrap(); // todo
-                        FileRestorer::global()
-                            .remember_original_file_contents(path, old_code)
-                            .unwrap() //todo
-                    }
-                    FilePath::FromString => {}
-                }
-                // TODO restore if error
+                // A conditional modification is evaluated by
+                // 1. Performing the modification on the actual file
+                // 2. Checking the condition (which may use the modified files via the shell)
+                // 3. Restoring the temporary modification to the file
+                // 4. Remembering the modification to apply later if the condition was true
+                let handle = self.make_temporary_modification(previous_id, &rhs)?;
                 typeck_ensures!(Value::Bool(cond) = self.eval_expr(condition)?);
+                if let Some(handle) = handle {
+                    handle.restore();
+                }
                 if cond {
                     self.vars.modify(previous_id.clone(), rhs.clone());
                 }
@@ -556,6 +543,32 @@ impl<'a> Interpreter<'a> {
                 self.vars.modify(previous_id.clone(), rhs.clone());
             }
             Ok(Value::Node(rhs))
+        }
+    }
+
+    fn make_temporary_modification(
+        &self,
+        src: &NodeRef,
+        target: &NodeRef,
+    ) -> Result<Option<temporary_modification::TemporaryModification>> {
+        let mut modifications = ModMap::default();
+        let old = RealNodeRef::from_target(src.clone());
+        modifications.insert(old, target.clone());
+        let old_code = self
+            .context
+            .input
+            .source(self.context.real_id)
+            .unwrap()
+            .to_owned();
+        let result = Modify::run(self.context.clone(), modifications);
+        if let Some(path) = self.context.input().path(self.context.real_id) {
+            Ok(Some(TemporaryModification::new(
+                path.to_owned(),
+                old_code,
+                result.new_code.code(),
+            )?))
+        } else {
+            Ok(None)
         }
     }
 }

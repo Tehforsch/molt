@@ -155,6 +155,13 @@ impl Input {
             FileId::Molt => &self.molt_src,
         }
     }
+
+    pub(crate) fn path(&self, id: FileId) -> Option<&Path> {
+        match self.name(id).unwrap() {
+            FilePath::Path(path) => Some(path),
+            FilePath::FromString => None,
+        }
+    }
 }
 
 impl<'a> std::fmt::Display for FilePath<'a> {

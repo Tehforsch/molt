@@ -14,7 +14,6 @@ use crate::rust_grammar::Node;
 use crate::{Config, CtxVar, Match, RawNodeId, Span};
 use codespan_reporting::files::Files;
 
-use crate::ctrl_c::FileRestorer;
 use crate::{Error, FileId, Input};
 
 #[derive(Debug, PartialEq, Eq, Hash)]

@@ -4,7 +4,6 @@ mod parser;
 mod change_buffer;
 mod cmp_syn;
 mod config;
-mod ctrl_c;
 mod ctx;
 pub(crate) mod diag;
 mod error;
@@ -18,6 +17,7 @@ pub(crate) mod rule;
 mod rust_grammar;
 mod span;
 mod storage;
+mod temporary_modification;
 mod term;
 #[cfg(test)]
 mod tests;
@@ -42,6 +42,7 @@ use cmp_syn::CmpSyn;
 pub use config::Config;
 pub use error::{Error, emit_error};
 pub use input::{Contents, Input, Source};
+pub use temporary_modification::CtrlCHandler;
 pub use writer::Writer;
 
 pub(crate) use ctx::{Ctx, CtxVar, NodeId, RawNodeId};

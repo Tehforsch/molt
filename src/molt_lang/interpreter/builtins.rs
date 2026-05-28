@@ -1,4 +1,4 @@
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 use codespan_reporting::diagnostic::Label;
 
@@ -82,11 +82,9 @@ impl<'src> Interpreter<'src> {
         for arg in args[1..].iter() {
             cmd.arg(arg);
         }
-        let status = cmd.status();
-        match status {
-            Ok(_) => Ok(Value::Bool(true)),
-            Err(_) => Ok(Value::Bool(false)),
-        }
+        cmd.stdout(Stdio::null()).stderr(Stdio::null());
+        let status = cmd.status()?;
+        Ok(Value::Bool(status.success()))
     }
 
     fn value_to_string(&self, val: &Value) -> String {
