@@ -8,6 +8,7 @@ pub enum BuiltinFn {
     AssertEq,
     Print,
     Dbg,
+    Shell,
 }
 
 pub fn builtins_def() -> Vec<(Ident, BuiltinFn)> {
@@ -19,5 +20,6 @@ pub fn builtins_def() -> Vec<(Ident, BuiltinFn)> {
         ),
         (Ident::new("print", Span::call_site()), BuiltinFn::Print),
         (Ident::new("dbg", Span::call_site()), BuiltinFn::Dbg),
+        (Ident::new("shell", Span::call_site()), BuiltinFn::Shell),
     ]
 }

@@ -3,6 +3,7 @@ pub enum Error {
     InvalidMainFn,
     Assertion,
     AssignmentToUninitializedNode,
+    EmptyStringInShell,
 }
 
 pub(crate) type Result<T, E = Error> = std::result::Result<T, E>;

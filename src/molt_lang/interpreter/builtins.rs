@@ -1,3 +1,5 @@
+use std::process::Command;
+
 use codespan_reporting::diagnostic::Label;
 
 use crate::{
@@ -7,7 +9,7 @@ use crate::{
     typeck_ensures,
 };
 
-use super::Result;
+use super::{Result, error::Error};
 
 impl<'src> Interpreter<'src> {
     pub fn eval_builtin(&mut self, args: &[Value], builtin_fn: BuiltinFn) -> Result<Value> {
@@ -19,6 +21,9 @@ impl<'src> Interpreter<'src> {
             }
             BuiltinFn::Dbg => {
                 self.eval_dbg(args);
+            }
+            BuiltinFn::Shell => {
+                return self.eval_shell(args);
             }
         };
         Ok(Value::Unit)
@@ -60,6 +65,27 @@ impl<'src> Interpreter<'src> {
                 }
                 val => self.print_val(val),
             }
+        }
+    }
+
+    fn eval_shell(&self, args: &[Value]) -> Result<Value> {
+        // TODO: Allow variadic args so we can do this
+        // the "proper" way instead of splitting the string
+        assert_eq!(args.len(), 1);
+
+        typeck_ensures!(Value::String(cmd) = &args[0]);
+        if cmd.is_empty() {
+            return Err(Error::EmptyStringInShell);
+        }
+        let args: Vec<&str> = cmd.split(' ').collect();
+        let mut cmd = Command::new(args[0]);
+        for arg in args[1..].iter() {
+            cmd.arg(arg);
+        }
+        let status = cmd.status();
+        match status {
+            Ok(_) => Ok(Value::Bool(true)),
+            Err(_) => Ok(Value::Bool(false)),
         }
     }
 

@@ -801,6 +801,12 @@ impl<'a> Typechecker<'a> {
                     generalized: vec![t],
                 })
             }
+            BuiltinFn::Shell => {
+                let string = self.add_type(Type::Str);
+                let ret = self.add_type(Type::Bool);
+                let type_id = self.add_type(Type::Fun(vec![string], ret));
+                VarType::Mono(type_id)
+            }
         }
     }
 
