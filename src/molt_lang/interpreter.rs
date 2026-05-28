@@ -6,7 +6,9 @@ mod var_stack;
 use super::{FieldAccess, For, If, IfLet, LetLhs, LetStmt, Lit};
 use crate::{
     Matcher, ModMap, Node, RawNodeId,
-    modify::NodeRef,
+    ctrl_c::FileRestorer,
+    input::FilePath,
+    modify::{Modify, NodeRef, RealNodeRef},
     molt_lang::{
         Assignment, AssignmentLhs, Expr, FnId, List, Modification, MoltFile, MoltFn, Stmt, Type,
         VarId,
@@ -20,6 +22,7 @@ use crate::{
     storage::Storage,
 };
 
+use codespan_reporting::files::Files;
 pub(super) use value::Value;
 
 use error::Result;
@@ -492,7 +495,12 @@ impl<'a> Interpreter<'a> {
         match previous_value {
             Some(Value::Node(previous_id)) => {
                 let val = self.eval_expr(&modification.rhs)?;
-                self.eval_node_assignment(&modification.lhs, &previous_id, val)?;
+                self.eval_node_assignment(
+                    &modification.lhs,
+                    &previous_id,
+                    val,
+                    &modification.condition,
+                )?;
             }
             _ => {
                 return Err(Error::AssignmentToUninitializedNode);
@@ -506,6 +514,7 @@ impl<'a> Interpreter<'a> {
         lhs: &AssignmentLhs,
         previous_id: &NodeRef,
         rhs: Value,
+        condition: &Option<Expr>,
     ) -> Result<Value> {
         if let AssignmentLhs::FieldAccess { lhs, field } = lhs {
             let field_val = self.context.type_defs.get_field_access_fn(
@@ -514,10 +523,38 @@ impl<'a> Interpreter<'a> {
                 field,
             );
             typeck_ensures!(Value::Node(field_val) = field_val);
-            self.eval_node_assignment(lhs, &field_val, rhs)
+            self.eval_node_assignment(lhs, &field_val, rhs, condition)
         } else {
             typeck_ensures!(Value::Node(rhs) = rhs);
-            self.vars.modify(previous_id.clone(), rhs.clone());
+            if let Some(condition) = condition {
+                // Make a temporary modification
+                let mut modifications = ModMap::default();
+                let old = RealNodeRef::from_target(previous_id.clone());
+                let old_code = self
+                    .context
+                    .input
+                    .source(self.context.real_id)
+                    .unwrap()
+                    .to_owned();
+                modifications.insert(old, rhs.clone());
+                let result = Modify::run(self.context.clone(), modifications);
+                match self.context.input().name(self.context.real_id).unwrap() {
+                    FilePath::Path(path) => {
+                        std::fs::write(path, result.new_code.code()).unwrap(); // todo
+                        FileRestorer::global()
+                            .remember_original_file_contents(path, old_code)
+                            .unwrap() //todo
+                    }
+                    FilePath::FromString => {}
+                }
+                // TODO restore if error
+                typeck_ensures!(Value::Bool(cond) = self.eval_expr(condition)?);
+                if cond {
+                    self.vars.modify(previous_id.clone(), rhs.clone());
+                }
+            } else {
+                self.vars.modify(previous_id.clone(), rhs.clone());
+            }
             Ok(Value::Node(rhs))
         }
     }

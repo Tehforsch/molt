@@ -305,8 +305,16 @@ impl Resolver {
     fn resolve_modification(&mut self, s: grammar::Modification) -> Result<Modification> {
         let lhs = self.resolve_assignment_lhs(s.lhs)?;
         let rhs = self.resolve_expr(s.rhs)?;
+        let condition = s
+            .condition
+            .map(|cond| self.resolve_expr(cond))
+            .transpose()?;
 
-        Ok(Modification { lhs, rhs })
+        Ok(Modification {
+            lhs,
+            rhs,
+            condition,
+        })
     }
 
     fn resolve_assignment_lhs(&mut self, lhs: grammar::AssignmentLhs) -> Result<AssignmentLhs> {

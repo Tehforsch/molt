@@ -179,8 +179,18 @@ impl Parse for Stmt {
                     .map_err(|msg| parser::Error::new_molt(span, msg))?;
                 let _: Token![->] = input.parse()?;
                 let rhs = input.parse()?;
+                let condition = if input.peek(Token![if]) {
+                    let _: Token![if] = input.parse()?;
+                    Some(input.parse()?)
+                } else {
+                    None
+                };
                 let _: Token![;] = input.parse()?;
-                Ok(Stmt::Modification(Modification { lhs, rhs }))
+                Ok(Stmt::Modification(Modification {
+                    lhs,
+                    rhs,
+                    condition,
+                }))
             } else if input.peek(Token![=]) {
                 let lhs = AssignmentLhs::from_expr(expr)
                     .map_err(|msg| parser::Error::new_molt(span, msg))?;

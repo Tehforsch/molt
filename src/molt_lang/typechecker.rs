@@ -691,6 +691,11 @@ impl<'a> Typechecker<'a> {
     fn check_modification(&mut self, r: &super::Modification) -> Result<()> {
         let lhs = self.infer_assignment_lhs(&r.lhs)?;
         let rhs = self.infer_expr(&r.rhs)?;
+        if let Some(ref condition) = r.condition {
+            let cond_ty = self.infer_expr(condition)?;
+            let bool_ty = self.add_type(Type::Bool);
+            self.unify(cond_ty, bool_ty)?;
+        }
         let lhs_type = self.get_qualified(&self.types[self.resolve(lhs)].clone());
         self.unify(lhs, rhs).map_err(|e| {
             e.label(

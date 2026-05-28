@@ -133,6 +133,7 @@ pub struct Assignment {
 pub struct Modification {
     pub lhs: AssignmentLhs,
     pub rhs: Expr,
+    pub condition: Option<Expr>,
 }
 
 #[derive(Debug)]
