@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use codespan_reporting::files::Files;
 
 use crate::{
@@ -21,6 +23,8 @@ pub struct RuntimeCtx<'a> {
     pub pats: &'a Storage<PatId, ParsedPat>,
 
     pub type_defs: &'a TypeDefinitions,
+
+    pub cargo_root: Option<&'a Path>,
 }
 
 impl RuntimeCtx<'_> {

@@ -95,6 +95,7 @@ pub fn run_internal(
             config: &config,
             pats: &molt_file.pats,
             type_defs: &molt_file.type_defs,
+            cargo_root: cargo_root.map(|path| path.as_path()),
         };
         crate::molt_lang::Interpreter::run_dry(&molt_file, &context).map_err(Error::Interpreter)?;
     } else {
@@ -110,14 +111,11 @@ pub fn run_internal(
                 config: &config,
                 pats: &molt_file.pats,
                 type_defs: &molt_file.type_defs,
+                cargo_root: cargo_root.map(|path| path.as_path()),
             };
             let modifications = crate::molt_lang::Interpreter::run(&molt_file, context.clone())
                 .map_err(Error::Interpreter)?;
-            let new_code = Modify::run(
-                context,
-                cargo_root.map(|path| path.as_path()),
-                modifications,
-            )?;
+            let new_code = Modify::run(context, modifications)?;
             result
                 .modifications_by_file
                 .insert(rust_file_id, new_code.clone());

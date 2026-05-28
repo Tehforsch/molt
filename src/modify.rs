@@ -127,14 +127,12 @@ fn insert_into_tree(nodes: &mut Vec<ModNode>, new_node: ModNode) {
 pub struct Modify<'a> {
     code: ChangeBuffer,
     rust_file_path: FilePath<'a>,
-    cargo_root: Option<&'a Path>,
     ctx: RuntimeCtx<'a>,
 }
 
 impl<'a> Modify<'a> {
     pub fn run(
         ctx: RuntimeCtx<'a>,
-        cargo_root: Option<&'a Path>,
         modifications: ModMap,
     ) -> Result<FileModificationResult, Error> {
         let code = ctx.input.source(ctx.real_id).unwrap().to_owned();
@@ -145,7 +143,6 @@ impl<'a> Modify<'a> {
             code: ChangeBuffer::new(code),
             ctx,
             rust_file_path: filename,
-            cargo_root,
         };
         for root in &roots {
             let new_code = modify.print_with_children(&root.new, &root.children);
