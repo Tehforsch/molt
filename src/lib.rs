@@ -151,6 +151,14 @@ pub fn run(
     )
 }
 
+pub fn check(input: &Input, writer: &Writer) -> Result<(), Error> {
+    emit_error(
+        writer,
+        input,
+        molt_lang::MoltFile::new(input, writer).map(|_| ()),
+    )
+}
+
 fn write_to_file(path: &Path, modification: FileModificationResult) -> Result<(), Error> {
     std::fs::write(path, modification.new_code.code()).map_err(Error::Io)?;
     Ok(())

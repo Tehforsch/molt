@@ -20,25 +20,60 @@ enum Lang {
 }
 
 impl Lang {
-    fn new(lang: &str) -> Option<Self> {
-        match lang {
-            "molt" => Some(Self::Molt),
-            "molt error" => Some(Self::MoltError),
-            "rust" => Some(Self::Rust),
-            "rust reference" => Some(Self::RustReference),
-            "output" => Some(Self::Output),
-            _ => None,
-        }
+    fn new(info: &str) -> Option<(Self, CodeBlockConfig)> {
+        let mut parts = info.split_whitespace();
+        let lang = parts.next()?;
+        let mut config = CodeBlockConfig::default();
+        let lang = match lang {
+            "molt" => {
+                let mut should_error = false;
+                for part in parts {
+                    match part {
+                        "error" => should_error = true,
+                        "check_only" => config.check_only = true,
+                        _ => return None,
+                    }
+                }
+                if should_error {
+                    Self::MoltError
+                } else {
+                    Self::Molt
+                }
+            }
+            "rust" => {
+                let rest: Vec<_> = parts.collect();
+                match rest.as_slice() {
+                    [] => Self::Rust,
+                    ["reference"] => Self::RustReference,
+                    _ => return None,
+                }
+            }
+            "output" => {
+                if parts.next().is_some() {
+                    return None;
+                }
+                Self::Output
+            }
+            _ => return None,
+        };
+        Some((lang, config))
     }
 }
 
 struct CodeBlock {
     lang: Lang,
+    config: CodeBlockConfig,
     content: String,
+}
+
+#[derive(Clone, Copy, Default)]
+struct CodeBlockConfig {
+    check_only: bool,
 }
 
 struct TestConfig {
     should_error: bool,
+    check_only: bool,
 }
 
 fn parse_markdown(content: &str) -> Vec<Section> {
@@ -84,9 +119,11 @@ fn parse_markdown(content: &str) -> Vec<Section> {
             }
             Event::End(TagEnd::CodeBlock) => {
                 in_code_block = false;
+                let (lang, config) = Lang::new(&current_lang)
+                    .unwrap_or_else(|| panic!("Unexpected lang in md block: {current_lang}"));
                 current_section.code_blocks.push(CodeBlock {
-                    lang: Lang::new(&current_lang)
-                        .unwrap_or_else(|| panic!("Unexpected lang in md block: {current_lang}")),
+                    lang,
+                    config,
                     content: current_code.clone(),
                 });
             }
@@ -152,12 +189,24 @@ fn run_on_str(
     let (sources, references): (Vec<_>, Vec<_>) = rust_sources
         .iter()
         .partition::<Vec<&CodeBlock>, _>(|src| matches!(src.lang, Lang::Rust));
-    for src in sources {
+    for src in &sources {
         input = input.with_rust_src(src.content.to_string())?;
     }
     let writer = Writer::buffer();
     let mut errors = Vec::new();
-    if c.should_error {
+    if c.check_only {
+        let result = molt::check(&input, &writer);
+        if result.is_err() {
+            let error_writer = Writer::buffer();
+            let _ = emit_error(&error_writer, &input, result);
+            let rendered = error_writer.into_string().unwrap();
+            errors.push(format!(
+                "{}: section {:?}: molt check failed\n{rendered}",
+                md_file.display(),
+                section_name,
+            ));
+        }
+    } else if c.should_error {
         // If an error is expected, ignore the result since any error will be
         // written to the `writer` and therefore appear in the output so we can
         // test against it.
@@ -308,8 +357,24 @@ fn run_section(md_file: &Path, section: &Section) {
         Lang::MoltError => true,
         Lang::Rust | Lang::RustReference | Lang::Output => unreachable!(),
     };
+    let check_only = molt_blocks[0].config.check_only;
+    assert!(
+        !(check_only && should_error),
+        "{}: section {:?}: `check_only` is not supported for `molt error` blocks",
+        md_file.display(),
+        section.name,
+    );
     let section_name = section.name.as_deref();
-    let config = TestConfig { should_error };
+    let config = TestConfig {
+        should_error,
+        check_only,
+    };
+    assert!(
+        !(check_only && (!rust_blocks.is_empty() || !output_blocks.is_empty())),
+        "{}: section {:?}: `check_only` blocks should not have rust, rust reference, or output blocks",
+        md_file.display(),
+        section.name,
+    );
     let test_output = run_on_str(
         md_file,
         section_name,
